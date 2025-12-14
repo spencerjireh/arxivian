@@ -223,6 +223,10 @@ web_modules/
 .env.production.local
 .env.local
 
+# Service-specific environment files
+backend/.env
+frontend/.env
+
 # parcel-bundler cache
 .cache
 .parcel-cache
