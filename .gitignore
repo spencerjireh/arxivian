@@ -363,6 +363,9 @@ $RECYCLE.BIN/
 # Claude AI settings
 .claude/
 
+# Crush AI settings
+.crush/
+
 # Database files
 *.db
 *.sqlite

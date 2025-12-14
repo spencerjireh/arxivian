@@ -2,9 +2,9 @@
 
 from functools import lru_cache
 from src.config import get_settings
-from src.services.arxiv_client import ArxivClient
-from src.services.embeddings_client import JinaEmbeddingsClient
-from src.services.openai_client import OpenAIClient
+from src.clients.arxiv_client import ArxivClient
+from src.clients.embeddings_client import JinaEmbeddingsClient
+from src.clients.openai_client import OpenAIClient
 
 
 @lru_cache(maxsize=1)

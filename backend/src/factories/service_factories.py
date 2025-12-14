@@ -5,10 +5,17 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import get_settings
 from src.services.search_service import SearchService
-from src.services.chunking_service import ChunkingService
-from src.services.pdf_parser import PDFParser
 from src.services.agentic_rag_service import AgenticRAGService
-from src.services.factories.client_factories import get_embeddings_client, get_openai_client
+from src.services.ingest_service import IngestService
+from src.utils.chunking_service import ChunkingService
+from src.utils.pdf_parser import PDFParser
+from src.factories.client_factories import (
+    get_embeddings_client,
+    get_openai_client,
+    get_arxiv_client,
+)
+from src.repositories.paper_repository import PaperRepository
+from src.repositories.chunk_repository import ChunkRepository
 from src.repositories.search_repository import SearchRepository
 
 
@@ -58,6 +65,35 @@ def get_pdf_parser() -> PDFParser:
         PDFParser instance
     """
     return PDFParser()
+
+
+def get_ingest_service(db_session: AsyncSession) -> IngestService:
+    """
+    Create IngestService with dependencies.
+
+    Note: Not cached because depends on request-scoped db session.
+
+    Args:
+        db_session: Database session
+
+    Returns:
+        IngestService instance
+    """
+    arxiv_client = get_arxiv_client()
+    pdf_parser = get_pdf_parser()
+    embeddings_client = get_embeddings_client()
+    chunking_service = get_chunking_service()
+    paper_repository = PaperRepository(db_session)
+    chunk_repository = ChunkRepository(db_session)
+
+    return IngestService(
+        arxiv_client=arxiv_client,
+        pdf_parser=pdf_parser,
+        embeddings_client=embeddings_client,
+        chunking_service=chunking_service,
+        paper_repository=paper_repository,
+        chunk_repository=chunk_repository,
+    )
 
 
 def get_agentic_rag_service(
