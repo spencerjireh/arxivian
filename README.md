@@ -1,0 +1,50 @@
+# Jireh's Agent
+
+An intelligent RAG (Retrieval Augmented Generation) system for arXiv papers with agentic workflows.
+
+## Stack
+
+- **Backend**: FastAPI + Python 3.11
+- **Frontend**: React 19 + TypeScript + Vite
+- **Database**: PostgreSQL 16 + pgvector
+- **AI**: OpenAI + LangChain + LangGraph
+
+## Quick Start
+
+1. Install [just](https://github.com/casey/just):
+   ```bash
+   brew install just
+   ```
+
+2. Setup environment:
+   ```bash
+   just setup
+   ```
+   Edit `.env` and add your API keys.
+
+3. Start the application:
+   ```bash
+   just dev
+   ```
+
+4. Access the application:
+   - Frontend: http://localhost:5173
+   - Backend API: http://localhost:8000
+   - API Docs: http://localhost:8000/docs
+
+## Common Commands
+
+```bash
+just --list      # Show all commands
+just up          # Start services
+just down        # Stop services
+just logs        # View logs
+just db-shell    # Access database
+just clean       # Clean up everything
+```
+
+## Requirements
+
+- Docker & Docker Compose
+- OpenAI API key
+- Jina AI API key

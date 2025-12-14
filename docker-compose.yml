@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database Service
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: jirehs-agent-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-arxiv_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-arxiv_password}
+      POSTGRES_DB: ${POSTGRES_DB:-arxiv_rag}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-arxiv_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jirehs-agent-network
+
+  # FastAPI Backend Service
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jirehs-agent-backend
+    environment:
+      POSTGRES_URL: postgresql+asyncpg://${POSTGRES_USER:-arxiv_user}:${POSTGRES_PASSWORD:-arxiv_password}@db:5432/${POSTGRES_DB:-arxiv_rag}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      JINA_API_KEY: ${JINA_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      DEBUG: ${DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-https://cloud.langfuse.com}
+      LANGFUSE_ENABLED: ${LANGFUSE_ENABLED:-false}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/data:/app/data
+    networks:
+      - jirehs-agent-network
+    profiles:
+      - prod
+      - dev
+
+  # React Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: jirehs-agent-frontend
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      - app
+    networks:
+      - jirehs-agent-network
+    profiles:
+      - prod
+      - dev
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  jirehs-agent-network:
+    driver: bridge
