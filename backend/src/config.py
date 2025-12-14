@@ -32,12 +32,6 @@ class Settings(BaseSettings):
     guardrail_threshold: int = 75
     max_retrieval_attempts: int = 3
 
-    # Langfuse (optional)
-    langfuse_public_key: str = ""
-    langfuse_secret_key: str = ""
-    langfuse_host: str = "https://cloud.langfuse.com"
-    langfuse_enabled: bool = False
-
     # App
     debug: bool = False
     log_level: str = "INFO"
