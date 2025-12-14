@@ -377,7 +377,6 @@ downloads/
 papers/
 
 # Model files and caches
-models/
 *.pkl
 *.pickle
 *.joblib
