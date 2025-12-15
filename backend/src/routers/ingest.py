@@ -28,12 +28,11 @@ async def ingest_papers(
         IngestResponse with processing summary
     """
     # Delegate to service layer
+    # Transaction management handled by middleware
     response = await ingest_service.ingest_papers(request)
 
-    # Commit transaction if successful
-    if response.status == "completed":
-        await db.commit()
-    else:
-        await db.rollback()
+    # Commit transaction explicitly for ingestion
+    # (since it may have partial success with errors)
+    await db.commit()
 
     return response

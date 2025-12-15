@@ -1,6 +1,6 @@
 """Agent router with LangGraph."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from time import time
 
 from src.schemas.ask_agent import AgentAskRequest, AgentAskResponse
@@ -39,43 +39,35 @@ async def ask_agent(request: AgentAskRequest, db: DbSession) -> AgentAskResponse
     """
     start_time = time()
 
-    try:
-        # Create service with request parameters
-        # get_agent_service will validate provider/model
-        agent_service = get_agent_service(
-            db_session=db,
-            provider=request.provider,
-            model=request.model,
-            guardrail_threshold=request.guardrail_threshold,
-            top_k=request.top_k,
-            max_retrieval_attempts=request.max_retrieval_attempts,
-            temperature=request.temperature,
-        )
+    # Create service with request parameters
+    # get_agent_service will validate provider/model and raise exceptions if invalid
+    agent_service = get_agent_service(
+        db_session=db,
+        provider=request.provider,
+        model=request.model,
+        guardrail_threshold=request.guardrail_threshold,
+        top_k=request.top_k,
+        max_retrieval_attempts=request.max_retrieval_attempts,
+        temperature=request.temperature,
+    )
 
-        # Execute workflow
-        result = await agent_service.ask(request.query)
+    # Execute workflow
+    result = await agent_service.ask(request.query)
 
-        # Convert sources to schema
-        sources = [SourceInfo(**source) for source in result["sources"]]
+    # Convert sources to schema
+    sources = [SourceInfo(**source) for source in result["sources"]]
 
-        execution_time = (time() - start_time) * 1000
+    execution_time = (time() - start_time) * 1000
 
-        return AgentAskResponse(
-            query=result["query"],
-            answer=result["answer"],
-            sources=sources,
-            reasoning_steps=result["reasoning_steps"],
-            retrieval_attempts=result["retrieval_attempts"],
-            rewritten_query=result.get("rewritten_query"),
-            guardrail_score=result["guardrail_score"],
-            provider=result["provider"],
-            model=result["model"],
-            execution_time_ms=execution_time,
-        )
-
-    except ValueError as e:
-        # Handle validation errors (invalid provider/model)
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        # Handle other errors
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    return AgentAskResponse(
+        query=result["query"],
+        answer=result["answer"],
+        sources=sources,
+        reasoning_steps=result["reasoning_steps"],
+        retrieval_attempts=result["retrieval_attempts"],
+        rewritten_query=result.get("rewritten_query"),
+        guardrail_score=result["guardrail_score"],
+        provider=result["provider"],
+        model=result["model"],
+        execution_time_ms=execution_time,
+    )

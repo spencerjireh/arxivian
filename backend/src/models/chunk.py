@@ -1,7 +1,6 @@
 """Chunk model for text chunks with embeddings."""
 
 import uuid
-from datetime import datetime
 from sqlalchemy import Column, String, Text, Integer, TIMESTAMP, ForeignKey, Index, func
 from sqlalchemy.dialects.postgresql import UUID, TSVECTOR
 from pgvector.sqlalchemy import Vector

@@ -12,6 +12,11 @@ from src.utils.pdf_parser import PDFParser
 from src.utils.chunking_service import ChunkingService
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.chunk_repository import ChunkRepository
+from src.exceptions import (
+    EmbeddingServiceError,
+    InsufficientChunksError,
+    PDFProcessingError,
+)
 
 
 class IngestService:
@@ -143,13 +148,17 @@ class IngestService:
             try:
                 await self.arxiv_client.download_pdf(pdf_url=paper_meta.pdf_url, save_path=pdf_path)
             except Exception as e:
-                raise Exception(f"PDF download failed: {str(e)}")
+                raise PDFProcessingError(
+                    arxiv_id=paper_meta.arxiv_id, stage="download", message=str(e)
+                )
 
             # Parse PDF
             try:
                 parsed = await self.pdf_parser.parse_pdf(pdf_path)
             except Exception as e:
-                raise Exception(f"PDF parsing failed: {str(e)}")
+                raise PDFProcessingError(
+                    arxiv_id=paper_meta.arxiv_id, stage="parsing", message=str(e)
+                )
 
         # Create or update paper record
         paper_data = {
@@ -179,14 +188,17 @@ class IngestService:
         )
 
         if not chunks:
-            raise Exception("No chunks created from document")
+            raise InsufficientChunksError(arxiv_id=paper_meta.arxiv_id, chunks_count=0)
 
         # Generate embeddings
         chunk_texts = [c.chunk_text for c in chunks]
         try:
             embeddings = await self.embeddings_client.embed_documents(chunk_texts)
         except Exception as e:
-            raise Exception(f"Embedding generation failed: {str(e)}")
+            raise EmbeddingServiceError(
+                message=f"Failed to generate embeddings for {paper_meta.arxiv_id}",
+                details={"arxiv_id": paper_meta.arxiv_id, "error": str(e)},
+            )
 
         # Store chunks
         chunks_data = []

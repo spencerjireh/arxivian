@@ -1,7 +1,6 @@
 """Paper model for arXiv papers."""
 
 import uuid
-from datetime import datetime
 from sqlalchemy import Column, String, Text, Boolean, TIMESTAMP, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from src.database import Base

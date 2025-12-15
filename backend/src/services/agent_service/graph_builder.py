@@ -19,6 +19,15 @@ from .edges import continue_after_guardrail, continue_after_grading
 from .tools import create_retrieve_tool
 
 
+def create_node_wrapper(node_func, context):
+    """Wrap async node functions with context binding."""
+
+    async def wrapper(state):
+        return await node_func(state, context)
+
+    return wrapper
+
+
 def build_agent_graph(
     llm_client: BaseLLMClient,
     search_service: SearchService,
@@ -51,19 +60,21 @@ def build_agent_graph(
     tool_node = ToolNode([retrieve_tool])
 
     # Add nodes (with context binding)
-    workflow.add_node("guardrail", lambda s: guardrail_node(s, context))
-    workflow.add_node("out_of_scope", lambda s: out_of_scope_node(s, context))
-    workflow.add_node("retrieve", lambda s: retrieve_node(s, context))
+    workflow.add_node("guardrail", create_node_wrapper(guardrail_node, context))
+    workflow.add_node("out_of_scope", create_node_wrapper(out_of_scope_node, context))
+    workflow.add_node("retrieve", create_node_wrapper(retrieve_node, context))
     workflow.add_node("tool_retrieve", tool_node)
-    workflow.add_node("grade_documents", lambda s: grade_documents_node(s, context))
-    workflow.add_node("rewrite_query", lambda s: rewrite_query_node(s, context))
-    workflow.add_node("generate_answer", lambda s: generate_answer_node(s, context))
+    workflow.add_node("grade_documents", create_node_wrapper(grade_documents_node, context))
+    workflow.add_node("rewrite_query", create_node_wrapper(rewrite_query_node, context))
+    workflow.add_node("generate_answer", create_node_wrapper(generate_answer_node, context))
 
     # Add edges
     workflow.add_edge(START, "guardrail")
 
     workflow.add_conditional_edges(
-        "guardrail", continue_after_guardrail, {"continue": "retrieve", "out_of_scope": "out_of_scope"}
+        "guardrail",
+        continue_after_guardrail,
+        {"continue": "retrieve", "out_of_scope": "out_of_scope"},
     )
 
     workflow.add_edge("out_of_scope", END)

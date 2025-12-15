@@ -9,6 +9,7 @@ from src.clients.embeddings_client import JinaEmbeddingsClient
 from src.clients.base_llm_client import BaseLLMClient
 from src.clients.openai_client import OpenAIClient
 from src.clients.zai_client import ZAIClient
+from src.exceptions import ConfigurationError, InvalidModelError, InvalidProviderError
 
 
 @lru_cache(maxsize=1)
@@ -56,7 +57,7 @@ def get_llm_client(provider: Optional[str] = None, model: Optional[str] = None) 
 
     # Validate provider
     if provider not in ["openai", "zai"]:
-        raise ValueError(f"Invalid provider '{provider}'. Must be 'openai' or 'zai'.")
+        raise InvalidProviderError(provider=provider, valid_providers=["openai", "zai"])
 
     # Use default model if not specified
     if model is None:
@@ -65,26 +66,27 @@ def get_llm_client(provider: Optional[str] = None, model: Optional[str] = None) 
     # Validate model
     if not settings.validate_model(provider, model):
         allowed = settings.get_allowed_models(provider)
-        raise ValueError(
-            f"Model '{model}' not allowed for provider '{provider}'. "
-            f"Allowed models: {', '.join(allowed)}"
-        )
+        raise InvalidModelError(model=model, provider=provider, valid_models=allowed)
 
     # Create appropriate client
     if provider == "openai":
         if not settings.openai_api_key:
-            raise ValueError(
-                "OpenAI API key not configured. Set OPENAI_API_KEY environment variable."
+            raise ConfigurationError(
+                message="OpenAI API key not configured",
+                details={"required_env_var": "OPENAI_API_KEY"},
             )
         openai_key: str = settings.openai_api_key
         return OpenAIClient(api_key=openai_key, model=model)
     elif provider == "zai":
         if not settings.zai_api_key:
-            raise ValueError("Z.AI API key not configured. Set ZAI_API_KEY environment variable.")
+            raise ConfigurationError(
+                message="Z.AI API key not configured",
+                details={"required_env_var": "ZAI_API_KEY"},
+            )
         zai_key: str = settings.zai_api_key
         return ZAIClient(api_key=zai_key, model=model)
 
-    raise ValueError(f"Provider '{provider}' not implemented")
+    raise InvalidProviderError(provider=provider, valid_providers=["openai", "zai"])
 
 
 @lru_cache(maxsize=1)

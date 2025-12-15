@@ -9,6 +9,10 @@ from src.database import engine, init_db
 # Import routers
 from src.routers import health, ingest, search, ask_agent
 
+# Import middleware
+from src.middleware import LoggingMiddleware, TransactionMiddleware, register_exception_handlers
+from src.utils.logger import logger
+
 settings = get_settings()
 
 
@@ -16,10 +20,14 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
+    logger.info("Starting application...")
     await init_db()
+    logger.info("Database initialized")
     yield
     # Shutdown
+    logger.info("Shutting down application...")
     await engine.dispose()
+    logger.info("Database connections closed")
 
 
 app = FastAPI(
@@ -29,7 +37,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS middleware
+# Register exception handlers first
+register_exception_handlers(app)
+
+# CORS middleware (must be first in middleware stack)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Configure appropriately for production
@@ -37,6 +48,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Request logging middleware
+app.add_middleware(LoggingMiddleware)
+
+# Database transaction middleware
+app.add_middleware(TransactionMiddleware)
 
 # Register routers
 app.include_router(health.router, prefix="/api/v1", tags=["Health"])
