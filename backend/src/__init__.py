@@ -1,3 +1,3 @@
-"""YSE Agent System with LangGraph."""
+"""Jireh's Agent System with LangGraph."""
 
 __version__ = "0.1.0"

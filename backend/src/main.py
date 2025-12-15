@@ -23,8 +23,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="YSE Agent System API",
-    description="YSE Agent system for AI/ML research papers from arXiv",
+    title="Jireh's Agent System API",
+    description="Jireh's Agent system for AI/ML research papers from arXiv",
     version="0.2.0",
     lifespan=lifespan,
 )
@@ -49,10 +49,10 @@ app.include_router(ask_agent.router, prefix="/api/v1", tags=["Ask"])
 async def root():
     """Root endpoint with API information."""
     return {
-        "name": "YSE Agent System API",
+        "name": "Jireh's Agent System API",
         "version": "0.2.0",
         "features": [
-            "YSE Agent with LangGraph",
+            "Jireh's Agent with LangGraph",
             "Multi-provider LLM support (OpenAI, Z.AI)",
             "Hybrid search (vector + full-text)",
             "arXiv paper ingestion",

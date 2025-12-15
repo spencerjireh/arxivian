@@ -14,7 +14,7 @@ router = APIRouter()
 @router.post("/ask-agent", response_model=AgentAskResponse)
 async def ask_agent(request: AgentAskRequest, db: DbSession) -> AgentAskResponse:
     """
-    YSE Agent with LangGraph workflow.
+    Jireh's Agent with LangGraph workflow.
 
     Features:
     - Multi-provider LLM support (OpenAI, Z.AI)
