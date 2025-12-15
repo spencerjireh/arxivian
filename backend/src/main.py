@@ -7,7 +7,7 @@ from src.config import get_settings
 from src.database import engine, init_db
 
 # Import routers
-from src.routers import health, ingest, search, ask_agent
+from src.routers import health, ingest, search, ask_agent, papers
 
 # Import middleware
 from src.middleware import LoggingMiddleware, TransactionMiddleware, register_exception_handlers
@@ -60,6 +60,7 @@ app.include_router(health.router, prefix="/api/v1", tags=["Health"])
 app.include_router(search.router, prefix="/api/v1", tags=["Search"])
 app.include_router(ingest.router, prefix="/api/v1", tags=["Ingest"])
 app.include_router(ask_agent.router, prefix="/api/v1", tags=["Ask"])
+app.include_router(papers.router, prefix="/api/v1", tags=["Papers"])
 
 
 @app.get("/")
@@ -79,6 +80,7 @@ async def root():
             "search": "/api/v1/search",
             "ingest": "/api/v1/ingest",
             "ask_agent": "/api/v1/ask-agent",
+            "papers": "/api/v1/papers",
         },
         "docs": "/docs",
     }
