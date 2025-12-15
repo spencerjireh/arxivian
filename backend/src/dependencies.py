@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_db
 from src.clients.arxiv_client import ArxivClient
 from src.clients.embeddings_client import JinaEmbeddingsClient
-from src.clients.openai_client import OpenAIClient
 from src.services.search_service import SearchService
 from src.services.ingest_service import IngestService
 from src.utils.chunking_service import ChunkingService
@@ -19,7 +18,6 @@ from src.repositories.search_repository import SearchRepository
 from src.factories.client_factories import (
     get_arxiv_client,
     get_embeddings_client,
-    get_openai_client,
 )
 from src.factories.service_factories import (
     get_search_service,
@@ -47,7 +45,6 @@ DbSession = Annotated[AsyncSession, Depends(get_db_session)]
 # Client dependencies (singletons)
 ArxivClientDep = Annotated[ArxivClient, Depends(get_arxiv_client)]
 EmbeddingsClientDep = Annotated[JinaEmbeddingsClient, Depends(get_embeddings_client)]
-OpenAIClientDep = Annotated[OpenAIClient, Depends(get_openai_client)]
 
 
 # Service dependencies

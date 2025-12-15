@@ -11,7 +11,6 @@ from alembic import context
 # Import your models and config
 from src.config import get_settings
 from src.database import Base
-from src.models import Paper, Chunk, IngestionLog
 
 # this is the Alembic Config object
 config = context.config

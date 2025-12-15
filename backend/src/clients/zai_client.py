@@ -1,4 +1,4 @@
-"""OpenAI API client for LLM generation and reasoning."""
+"""Z.AI API client using OpenAI-compatible interface."""
 
 from typing import List, AsyncIterator, Type, Optional, Any, cast
 from pydantic import BaseModel
@@ -8,24 +8,24 @@ from openai.types.chat import ChatCompletionMessageParam
 from src.clients.base_llm_client import BaseLLMClient
 
 
-class OpenAIClient(BaseLLMClient):
-    """Client for OpenAI API with support for completion and structured outputs."""
+class ZAIClient(BaseLLMClient):
+    """Client for Z.AI API with OpenAI-compatible interface."""
 
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
+    def __init__(self, api_key: str, model: str = "glm-4.6"):
         """
-        Initialize OpenAI client.
+        Initialize Z.AI client.
 
         Args:
-            api_key: OpenAI API key
+            api_key: Z.AI API key
             model: Default model to use
         """
-        self.client = AsyncOpenAI(api_key=api_key)
+        self.client = AsyncOpenAI(api_key=api_key, base_url="https://api.z.ai/api/paas/v4/")
         self._model = model
 
     @property
     def provider_name(self) -> str:
         """Return provider name."""
-        return "openai"
+        return "zai"
 
     @property
     def model(self) -> str:
@@ -41,7 +41,7 @@ class OpenAIClient(BaseLLMClient):
         stream: bool = False,
     ) -> str | AsyncIterator[str]:
         """
-        Generate completion from OpenAI.
+        Generate completion from Z.AI.
 
         Args:
             messages: List of message dicts with 'role' and 'content'
@@ -98,7 +98,7 @@ class OpenAIClient(BaseLLMClient):
         model: Optional[str] = None,
     ) -> BaseModel:
         """
-        Generate structured output using OpenAI's structured outputs.
+        Generate structured output using Z.AI.
 
         Args:
             messages: List of message dicts

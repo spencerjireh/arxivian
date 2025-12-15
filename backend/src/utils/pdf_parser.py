@@ -1,9 +1,8 @@
 """PDF parser service using Docling."""
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 from dataclasses import dataclass
 import asyncio
-from pathlib import Path
 
 
 @dataclass

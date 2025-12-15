@@ -1,13 +1,15 @@
-# Jirehs Agent
+# YSE Agent
 
 A document processing and search service built with Python and FastAPI.
 
 ## Features
 
+- YSE Agent with LangGraph workflow
 - Document ingestion and processing
 - PDF parsing and text extraction
 - Vector embeddings generation
 - Semantic search capabilities
+- Multi-provider LLM support (OpenAI, Z.AI)
 - REST API endpoints for document management and search
 
 ## Setup
@@ -29,10 +31,10 @@ uv run main.py
 
 ## API Endpoints
 
-- `POST /ingest` - Ingest documents
-- `POST /search` - Search documents
-- `POST /ask` - Ask questions about documents
-- `GET /health` - Health check
+- `POST /api/v1/ingest` - Ingest documents
+- `POST /api/v1/search` - Search documents
+- `POST /api/v1/ask-agent` - Ask questions using YSE Agent
+- `GET /api/v1/health` - Health check
 
 ## Database
 

@@ -56,7 +56,7 @@ class PaperRepository:
     async def get_unprocessed_papers(self, limit: int = 100) -> List[Paper]:
         """Get papers that haven't been processed yet."""
         result = await self.session.execute(
-            select(Paper).where(Paper.pdf_processed == False).limit(limit)
+            select(Paper).where(Paper.pdf_processed.is_(False)).limit(limit)
         )
         return list(result.scalars().all())
 

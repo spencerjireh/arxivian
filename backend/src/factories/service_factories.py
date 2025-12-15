@@ -5,13 +5,13 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import get_settings
 from src.services.search_service import SearchService
-from src.services.agentic_rag_service import AgenticRAGService
+from src.services.agent_service import AgentService
 from src.services.ingest_service import IngestService
 from src.utils.chunking_service import ChunkingService
 from src.utils.pdf_parser import PDFParser
 from src.factories.client_factories import (
     get_embeddings_client,
-    get_openai_client,
+    get_llm_client,
     get_arxiv_client,
 )
 from src.repositories.paper_repository import PaperRepository
@@ -52,7 +52,7 @@ def get_chunking_service() -> ChunkingService:
     return ChunkingService(
         target_words=settings.chunk_size_words,
         overlap_words=settings.chunk_overlap_words,
-        min_words=settings.min_chunk_words,
+        min_chunk_words=settings.min_chunk_words,
     )
 
 
@@ -96,40 +96,41 @@ def get_ingest_service(db_session: AsyncSession) -> IngestService:
     )
 
 
-def get_agentic_rag_service(
+def get_agent_service(
     db_session: AsyncSession,
-    model_name: Optional[str] = None,
-    guardrail_threshold: Optional[int] = None,
-    top_k: Optional[int] = None,
-    max_retrieval_attempts: Optional[int] = None,
-) -> AgenticRAGService:
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
+    guardrail_threshold: int = 75,
+    top_k: int = 3,
+    max_retrieval_attempts: int = 3,
+    temperature: float = 0.3,
+) -> AgentService:
     """
-    Create AgenticRAGService with dependencies.
-
-    Note: Not cached because depends on request-scoped db session.
-    Args from request override settings defaults.
+    Create agent service with specified LLM provider.
 
     Args:
         db_session: Database session
-        model_name: Optional model override
-        guardrail_threshold: Optional threshold override
-        top_k: Optional top_k override
-        max_retrieval_attempts: Optional max attempts override
+        provider: LLM provider ('openai' or 'zai'). Uses system default if None.
+        model: Model name. Uses provider's default if None.
+        guardrail_threshold: Minimum guardrail score
+        top_k: Number of chunks to use
+        max_retrieval_attempts: Max query rewrites
+        temperature: Generation temperature
 
     Returns:
-        AgenticRAGService instance
+        AgentService instance
     """
-    settings = get_settings()
+    # Get LLM client (validates provider/model)
+    llm_client = get_llm_client(provider=provider, model=model)
 
+    # Get search service
     search_service = get_search_service(db_session)
-    openai_client = get_openai_client()
 
-    return AgenticRAGService(
-        openai_client=openai_client,
+    return AgentService(
+        llm_client=llm_client,
         search_service=search_service,
-        model_name=model_name or settings.openai_model,
-        guardrail_threshold=guardrail_threshold or settings.guardrail_threshold,
-        top_k=top_k or settings.default_top_k,
-        max_retrieval_attempts=max_retrieval_attempts or settings.max_retrieval_attempts,
-        temperature=0.3,
+        guardrail_threshold=guardrail_threshold,
+        top_k=top_k,
+        max_retrieval_attempts=max_retrieval_attempts,
+        temperature=temperature,
     )

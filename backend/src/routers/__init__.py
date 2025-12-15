@@ -1,5 +1,5 @@
 """API routers."""
 
-from src.routers import health, ingest, search, ask, ask_agentic
+from src.routers import health, ingest, search, ask_agent
 
-__all__ = ["health", "ingest", "search", "ask", "ask_agentic"]
+__all__ = ["health", "ingest", "search", "ask_agent"]

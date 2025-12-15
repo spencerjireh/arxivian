@@ -1,6 +1,6 @@
 """Hybrid search service with RRF fusion."""
 
-from typing import List, Optional
+from typing import List
 from collections import defaultdict
 from src.repositories.search_repository import SearchRepository, SearchResult
 from src.services.embeddings_client import JinaEmbeddingsClient

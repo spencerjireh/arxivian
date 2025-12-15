@@ -7,7 +7,7 @@ from src.config import get_settings
 from src.database import engine, init_db
 
 # Import routers
-from src.routers import health, ingest, search, ask, ask_agentic
+from src.routers import health, ingest, search, ask_agent
 
 settings = get_settings()
 
@@ -23,9 +23,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="arXiv RAG System",
-    description="Agentic RAG system for arXiv papers with LangGraph",
-    version="0.1.0",
+    title="YSE Agent System API",
+    description="YSE Agent system for AI/ML research papers from arXiv",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -39,21 +39,31 @@ app.add_middleware(
 )
 
 # Register routers
-app.include_router(health.router, prefix="/api/v1", tags=["health"])
-app.include_router(ingest.router, prefix="/api/v1", tags=["ingestion"])
-app.include_router(search.router, prefix="/api/v1", tags=["search"])
-app.include_router(ask.router, prefix="/api/v1", tags=["rag"])
-app.include_router(ask_agentic.router, prefix="/api/v1", tags=["agentic-rag"])
+app.include_router(health.router, prefix="/api/v1", tags=["Health"])
+app.include_router(search.router, prefix="/api/v1", tags=["Search"])
+app.include_router(ingest.router, prefix="/api/v1", tags=["Ingest"])
+app.include_router(ask_agent.router, prefix="/api/v1", tags=["Ask"])
 
 
 @app.get("/")
 async def root():
-    """Root endpoint."""
+    """Root endpoint with API information."""
     return {
-        "message": "arXiv RAG System API",
-        "version": "0.1.0",
+        "name": "YSE Agent System API",
+        "version": "0.2.0",
+        "features": [
+            "YSE Agent with LangGraph",
+            "Multi-provider LLM support (OpenAI, Z.AI)",
+            "Hybrid search (vector + full-text)",
+            "arXiv paper ingestion",
+        ],
+        "endpoints": {
+            "health": "/api/v1/health",
+            "search": "/api/v1/search",
+            "ingest": "/api/v1/ingest",
+            "ask_agent": "/api/v1/ask-agent",
+        },
         "docs": "/docs",
-        "health": "/api/v1/health",
     }
 
 

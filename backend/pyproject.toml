@@ -1,7 +1,7 @@
 [project]
-name = "arxiv-rag-system"
+name = "jirehs-agent-system"
 version = "0.1.0"
-description = "Agentic RAG system for arXiv papers with LangGraph"
+description = "Jireh's Agent system for arXiv papers with LangGraph"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -48,9 +48,8 @@ dev = [
     "pytest-cov>=6.0.0",
     
     # Development
-    "black>=24.10.0",
     "ruff>=0.7.4",
-    "mypy>=1.13.0",
+    "pyright>=1.1.390",
 ]
 
 [build-system]
@@ -60,19 +59,16 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
 
-[tool.black]
-line-length = 100
-target-version = ['py311']
-
 [tool.ruff]
 line-length = 100
 target-version = "py311"
 
-[tool.mypy]
-python_version = "3.11"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = false
+[tool.pyright]
+pythonVersion = "3.13"
+pythonPlatform = "All"
+typeCheckingMode = "basic"
+venvPath = "."
+venv = ".venv"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

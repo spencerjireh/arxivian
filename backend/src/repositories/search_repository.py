@@ -2,10 +2,8 @@
 
 from typing import List, Optional
 from dataclasses import dataclass
-from sqlalchemy import select, text, func
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.models.chunk import Chunk
-from src.models.paper import Paper
 
 
 @dataclass

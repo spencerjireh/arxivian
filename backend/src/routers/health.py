@@ -3,7 +3,8 @@
 from fastapi import APIRouter
 from datetime import datetime
 from src.schemas.health import HealthResponse, ServiceStatus
-from src.dependencies import DbSession, OpenAIClientDep, EmbeddingsClientDep, PaperRepoDep, ChunkRepoDep
+from src.dependencies import DbSession, EmbeddingsClientDep, PaperRepoDep, ChunkRepoDep
+from src.config import get_settings
 
 router = APIRouter()
 
@@ -11,7 +12,6 @@ router = APIRouter()
 @router.get("/health", response_model=HealthResponse)
 async def health_check(
     db: DbSession,
-    openai_client: OpenAIClientDep,
     embeddings_client: EmbeddingsClientDep,
     paper_repo: PaperRepoDep,
     chunk_repo: ChunkRepoDep,
@@ -21,7 +21,7 @@ async def health_check(
 
     Checks:
     - Database connectivity and counts
-    - OpenAI API reachability
+    - LLM provider configuration
     - Jina embeddings API reachability
 
     Returns:
@@ -29,6 +29,7 @@ async def health_check(
     """
     services = {}
     overall_status = "ok"
+    settings = get_settings()
 
     # Check database
     try:
@@ -44,14 +45,27 @@ async def health_check(
         services["database"] = ServiceStatus(status="unhealthy", message=f"Error: {str(e)}")
         overall_status = "degraded"
 
-    # Check OpenAI (simple configuration check)
+    # Check LLM provider configuration
     try:
-        if openai_client.client.api_key:
-            services["openai"] = ServiceStatus(status="healthy", message="API key configured")
+        provider = settings.default_llm_provider
+
+        # Check if API key is configured for default provider
+        if provider == "openai" and settings.openai_api_key:
+            services["llm"] = ServiceStatus(
+                status="healthy",
+                message=f"LLM provider configured: {provider}",
+                details={"provider": provider, "models": settings.get_allowed_models(provider)},
+            )
+        elif provider == "zai" and settings.zai_api_key:
+            services["llm"] = ServiceStatus(
+                status="healthy",
+                message=f"LLM provider configured: {provider}",
+                details={"provider": provider, "models": settings.get_allowed_models(provider)},
+            )
         else:
-            raise ValueError("No API key")
+            raise ValueError(f"No API key configured for provider: {provider}")
     except Exception as e:
-        services["openai"] = ServiceStatus(status="unhealthy", message=f"Error: {str(e)}")
+        services["llm"] = ServiceStatus(status="unhealthy", message=f"Error: {str(e)}")
         overall_status = "degraded"
 
     # Check Jina
@@ -66,7 +80,7 @@ async def health_check(
 
     return HealthResponse(
         status=overall_status,
-        version="0.1.0",
+        version="0.2.0",
         services=services,
         timestamp=datetime.utcnow().isoformat() + "Z",
     )
