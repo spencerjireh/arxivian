@@ -6,7 +6,7 @@ from src.schemas.langgraph_state import AgentState
 from ..context import AgentContext
 
 
-async def retrieve_node(state: AgentState, context: AgentContext) -> dict:
+async def retrieve_node(state: AgentState, context: AgentContext) -> AgentState:
     """
     Create tool call for document retrieval.
 

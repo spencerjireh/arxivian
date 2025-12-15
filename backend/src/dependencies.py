@@ -27,20 +27,8 @@ from src.factories.service_factories import (
 )
 
 
-# Database dependency
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Get database session for request.
-
-    Yields:
-        AsyncSession instance
-    """
-    async for session in get_db():
-        yield session
-
-
 # Type aliases for cleaner router signatures
-DbSession = Annotated[AsyncSession, Depends(get_db_session)]
+DbSession = Annotated[AsyncSession, Depends(get_db)]
 
 # Client dependencies (singletons)
 ArxivClientDep = Annotated[ArxivClient, Depends(get_arxiv_client)]

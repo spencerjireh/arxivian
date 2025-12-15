@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     default_llm_provider: Literal["openai", "zai"] = "openai"
 
     # OpenAI Configuration
-    openai_api_key: str
+    openai_api_key: str = ""
     openai_allowed_models: str = "gpt-4o-mini,gpt-4o,gpt-4-turbo"
 
     # Z.AI Configuration
@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     zai_allowed_models: str = "glm-4.6,glm-4.5,glm-4-32b-0414-128k"
 
     # Embeddings
-    jina_api_key: str
+    jina_api_key: str = ""
 
     # Search configuration
     default_top_k: int = 3

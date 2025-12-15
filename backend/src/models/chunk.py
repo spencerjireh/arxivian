@@ -1,7 +1,7 @@
 """Chunk model for text chunks with embeddings."""
 
 import uuid
-from sqlalchemy import Column, String, Text, Integer, TIMESTAMP, ForeignKey, Index, func
+from sqlalchemy import Column, String, Text, Integer, TIMESTAMP, ForeignKey, Index, func, Computed
 from sqlalchemy.dialects.postgresql import UUID, TSVECTOR
 from pgvector.sqlalchemy import Vector
 from src.database import Base
@@ -36,11 +36,11 @@ class Chunk(Base):
     # Embedding (1024 dimensions for Jina v3)
     embedding = Column(Vector(1024), nullable=False)
 
-    # Full-text search vector (generated column)
-    search_vector = Column(TSVECTOR)
+    # Full-text search vector (generated column - computed by database)
+    search_vector = Column(TSVECTOR, Computed("to_tsvector('english', chunk_text)"))
 
     # Timestamps
-    created_at = Column(TIMESTAMP, server_default=func.now())
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
     __table_args__ = (
         Index("idx_chunks_paper_chunk_unique", "paper_id", "chunk_index", unique=True),

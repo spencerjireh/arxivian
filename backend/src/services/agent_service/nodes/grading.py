@@ -8,7 +8,7 @@ from ..context import AgentContext
 from ..prompts import get_grading_prompt
 
 
-async def grade_documents_node(state: AgentState, context: AgentContext) -> dict:
+async def grade_documents_node(state: AgentState, context: AgentContext) -> AgentState:
     """
     Grade retrieved chunks for relevance to query.
 
@@ -20,14 +20,18 @@ async def grade_documents_node(state: AgentState, context: AgentContext) -> dict
     chunks = []
     for msg in reversed(state["messages"]):
         if isinstance(msg, ToolMessage):
-            chunks = json.loads(msg.content)
+            content = msg.content
+            if isinstance(content, str):
+                chunks = json.loads(content)
+            else:
+                chunks = content
             break
 
     state["retrieved_chunks"] = chunks
 
     # Grade all chunks in parallel
     async def grade_single_chunk(chunk: dict) -> GradingResult:
-        prompt = get_grading_prompt(query, chunk)
+        prompt = get_grading_prompt(query or "", chunk)
 
         result = await context.llm_client.generate_structured(
             messages=[{"role": "user", "content": prompt}],
@@ -56,7 +60,9 @@ async def grade_documents_node(state: AgentState, context: AgentContext) -> dict
         state["routing_decision"] = "generate_answer"
     elif state["retrieval_attempts"] >= context.max_retrieval_attempts:
         state["routing_decision"] = "generate_answer"  # Use what we have
-        state["metadata"]["reasoning_steps"].append("Max attempts reached, proceeding with available documents")
+        state["metadata"]["reasoning_steps"].append(
+            "Max attempts reached, proceeding with available documents"
+        )
     else:
         state["routing_decision"] = "rewrite_query"
 

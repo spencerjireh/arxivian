@@ -5,7 +5,11 @@ from src.schemas.langgraph_state import AgentState
 
 def continue_after_guardrail(state: AgentState) -> str:
     """Route based on guardrail score."""
-    score = state["guardrail_result"].score
+    guardrail_result = state.get("guardrail_result")
+    if not guardrail_result:
+        return "out_of_scope"
+
+    score = guardrail_result.score
     threshold = state["metadata"].get("guardrail_threshold", 75)
 
     if score >= threshold:
@@ -16,4 +20,5 @@ def continue_after_guardrail(state: AgentState) -> str:
 
 def continue_after_grading(state: AgentState) -> str:
     """Route based on grading results."""
-    return state["routing_decision"]
+    decision = state.get("routing_decision")
+    return decision if decision else "generate"

@@ -6,14 +6,14 @@ from ..context import AgentContext
 from ..prompts import get_answer_generation_prompts
 
 
-async def generate_answer_node(state: AgentState, context: AgentContext) -> dict:
+async def generate_answer_node(state: AgentState, context: AgentContext) -> AgentState:
     """Generate final answer from relevant chunks."""
-    query = state["original_query"]
+    query = state.get("original_query") or ""
     chunks = state["relevant_chunks"][: context.top_k]
 
     context_str = "\n\n".join(
         [
-            f"[Source {i+1} - {c['arxiv_id']}]\n"
+            f"[Source {i + 1} - {c['arxiv_id']}]\n"
             f"Title: {c['title']}\n"
             f"Section: {c.get('section_name', 'N/A')}\n"
             f"Content: {c['chunk_text']}"

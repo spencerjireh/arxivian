@@ -69,6 +69,12 @@ pythonPlatform = "All"
 typeCheckingMode = "basic"
 venvPath = "."
 venv = ".venv"
+# Downgrade false positives from FastAPI/LangChain/SQLAlchemy type stubs to warnings
+reportArgumentType = "warning"
+reportAttributeAccessIssue = "warning"
+reportCallIssue = "warning"
+reportGeneralTypeIssues = "warning"
+reportReturnType = "warning"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

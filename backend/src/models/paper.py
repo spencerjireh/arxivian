@@ -20,7 +20,7 @@ class Paper(Base):
     authors = Column(JSONB, nullable=False)  # List of author names
     abstract = Column(Text, nullable=False)
     categories = Column(JSONB, nullable=False)  # List of arXiv categories
-    published_date = Column(TIMESTAMP, nullable=False, index=True)
+    published_date = Column(TIMESTAMP(timezone=True), nullable=False, index=True)
     pdf_url = Column(Text, nullable=False)
 
     # Parsed content
@@ -30,13 +30,13 @@ class Paper(Base):
 
     # Processing metadata
     pdf_processed = Column(Boolean, default=False, index=True)
-    pdf_processing_date = Column(TIMESTAMP, nullable=True)
+    pdf_processing_date = Column(TIMESTAMP(timezone=True), nullable=True)
     parser_used = Column(String(50), nullable=True)
     parser_metadata = Column(JSONB, nullable=True)
 
     # Timestamps
-    created_at = Column(TIMESTAMP, server_default=func.now())
-    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
 
     def __repr__(self):
         return f"<Paper(arxiv_id='{self.arxiv_id}', title='{self.title[:50]}...')>"

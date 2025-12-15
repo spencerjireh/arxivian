@@ -5,9 +5,9 @@ from ..context import AgentContext
 from ..prompts import get_rewrite_prompt
 
 
-async def rewrite_query_node(state: AgentState, context: AgentContext) -> dict:
+async def rewrite_query_node(state: AgentState, context: AgentContext) -> AgentState:
     """Rewrite query based on grading feedback for better retrieval."""
-    original_query = state["original_query"]
+    original_query = state.get("original_query") or ""
     grading_results = state["grading_results"]
 
     feedback = "\n".join(
@@ -24,7 +24,17 @@ async def rewrite_query_node(state: AgentState, context: AgentContext) -> dict:
         messages=[{"role": "user", "content": prompt}], temperature=0.5
     )
 
-    state["rewritten_query"] = rewritten.strip()
-    state["metadata"]["reasoning_steps"].append(f"Rewrote query: '{rewritten.strip()}'")
+    # Handle both str and AsyncIterator responses
+    if isinstance(rewritten, str):
+        rewritten_text = rewritten.strip()
+    else:
+        # AsyncIterator case - collect all chunks
+        chunks = []
+        async for chunk in rewritten:
+            chunks.append(chunk)
+        rewritten_text = "".join(chunks).strip()
+
+    state["rewritten_query"] = rewritten_text
+    state["metadata"]["reasoning_steps"].append(f"Rewrote query: '{rewritten_text}'")
 
     return state

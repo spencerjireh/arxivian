@@ -39,7 +39,7 @@ class ChunkRepository:
         """Delete all chunks for a paper. Returns count deleted."""
         result = await self.session.execute(delete(Chunk).where(Chunk.paper_id == paper_id))
         await self.session.commit()
-        return result.rowcount
+        return result.rowcount or 0
 
     async def count_by_paper_id(self, paper_id: str) -> int:
         """Count chunks for a paper."""

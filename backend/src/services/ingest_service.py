@@ -176,11 +176,19 @@ class IngestService:
         }
 
         if existing:
-            paper = await self.paper_repository.update(existing.id, paper_data)
+            existing_id = str(existing.id)
+            paper = await self.paper_repository.update(existing_id, paper_data)
             # Delete old chunks
-            await self.chunk_repository.delete_by_paper_id(existing.id)
+            await self.chunk_repository.delete_by_paper_id(existing_id)
         else:
             paper = await self.paper_repository.create(paper_data)
+
+        if not paper:
+            raise PDFProcessingError(
+                arxiv_id=paper_meta.arxiv_id,
+                stage="database_save",
+                message="Failed to create or update paper record",
+            )
 
         # Chunk text
         chunks = self.chunking_service.chunk_document(
@@ -191,7 +199,7 @@ class IngestService:
             raise InsufficientChunksError(arxiv_id=paper_meta.arxiv_id, chunks_count=0)
 
         # Generate embeddings
-        chunk_texts = [c.chunk_text for c in chunks]
+        chunk_texts = [c.text for c in chunks]
         try:
             embeddings = await self.embeddings_client.embed_documents(chunk_texts)
         except Exception as e:
@@ -201,13 +209,17 @@ class IngestService:
             )
 
         # Store chunks
+        paper_id = str(paper.id)
+        paper_arxiv_id = str(paper.arxiv_id)
+        paper_title = str(paper.title)
+
         chunks_data = []
         for chunk, embedding in zip(chunks, embeddings):
             chunks_data.append(
                 {
-                    "paper_id": paper.id,
-                    "arxiv_id": paper.arxiv_id,
-                    "chunk_text": chunk.chunk_text,
+                    "paper_id": paper_id,
+                    "arxiv_id": paper_arxiv_id,
+                    "chunk_text": chunk.text,
                     "chunk_index": chunk.chunk_index,
                     "section_name": chunk.section_name,
                     "page_number": chunk.page_number,
@@ -220,8 +232,8 @@ class IngestService:
         paper_chunks_count = len(chunks_data)
 
         return PaperResult(
-            arxiv_id=paper.arxiv_id,
-            title=paper.title,
+            arxiv_id=paper_arxiv_id,
+            title=paper_title,
             chunks_created=paper_chunks_count,
             status="success",
         )
