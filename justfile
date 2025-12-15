@@ -10,21 +10,21 @@ setup:
     @test -f .env || (cp .env.example .env && echo ".env file created. Please update with your API keys.")
     @test -f .env && echo ".env file exists."
 
-# Build all services
+# Build all services (with hot reload)
 build:
-    docker-compose --profile dev build
+    BUILD_TARGET=development docker-compose --profile dev build
 
 # Build with no cache (clean build)
 rebuild:
-    docker-compose --profile dev build --no-cache
+    BUILD_TARGET=development docker-compose --profile dev build --no-cache
 
-# Start all services
+# Start all services (with hot reload)
 up:
-    docker-compose --profile dev up
+    BUILD_TARGET=development docker-compose --profile dev up
 
 # Start all services (detached)
 up-d:
-    docker-compose --profile dev up -d
+    BUILD_TARGET=development docker-compose --profile dev up -d
 
 # Stop all services
 down:
@@ -86,5 +86,5 @@ clean:
 # Full reset: clean everything and rebuild
 reset: clean setup build up-d
 
-# Development workflow: rebuild and start
+# Development workflow: rebuild and start with hot reload
 dev: rebuild up

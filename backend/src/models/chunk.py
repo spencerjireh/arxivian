@@ -2,8 +2,8 @@
 
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Text, Integer, TIMESTAMP, ForeignKey, Index
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Text, Integer, TIMESTAMP, ForeignKey, Index, func
+from sqlalchemy.dialects.postgresql import UUID, TSVECTOR
 from pgvector.sqlalchemy import Vector
 from src.database import Base
 
@@ -23,9 +23,7 @@ class Chunk(Base):
         nullable=False,
         index=True,
     )
-    arxiv_id = Column(
-        String(50), nullable=False, index=True
-    )  # Denormalized for faster queries
+    arxiv_id = Column(String(50), nullable=False, index=True)  # Denormalized for faster queries
 
     # Chunk content
     chunk_text = Column(Text, nullable=False)
@@ -39,8 +37,11 @@ class Chunk(Base):
     # Embedding (1024 dimensions for Jina v3)
     embedding = Column(Vector(1024), nullable=False)
 
+    # Full-text search vector (generated column)
+    search_vector = Column(TSVECTOR)
+
     # Timestamps
-    created_at = Column(TIMESTAMP, default=datetime.utcnow)
+    created_at = Column(TIMESTAMP, server_default=func.now())
 
     __table_args__ = (
         Index("idx_chunks_paper_chunk_unique", "paper_id", "chunk_index", unique=True),
@@ -51,6 +52,7 @@ class Chunk(Base):
             postgresql_with={"m": 16, "ef_construction": 64},
             postgresql_ops={"embedding": "vector_cosine_ops"},
         ),
+        Index("idx_chunks_search_vector", "search_vector", postgresql_using="gin"),
     )
 
     def __repr__(self):

@@ -3,7 +3,7 @@
 from typing import List
 from collections import defaultdict
 from src.repositories.search_repository import SearchRepository, SearchResult
-from src.services.embeddings_client import JinaEmbeddingsClient
+from src.clients.embeddings_client import JinaEmbeddingsClient
 
 
 class SearchService:

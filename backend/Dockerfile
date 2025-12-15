@@ -1,4 +1,5 @@
-FROM python:3.11-slim
+# Base stage - common dependencies
+FROM python:3.11-slim AS base
 
 WORKDIR /app
 
@@ -12,19 +13,31 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --no-cache-dir uv
 
 # Copy project files for dependency installation
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 
 # Install dependencies using UV
 RUN uv sync --frozen --no-editable
-
-# Copy application code
-COPY . .
 
 # Create directory for PDFs
 RUN mkdir -p /app/data/pdfs
 
 # Expose port
 EXPOSE 8000
+
+# Development stage
+FROM base AS development
+
+# Copy application code (will be overridden by volume mount in dev)
+COPY . .
+
+# Run migrations and start server with hot reload
+CMD ["sh", "-c", "uv run alembic upgrade head && uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"]
+
+# Production stage
+FROM base AS production
+
+# Copy application code
+COPY . .
 
 # Run migrations and start server
 CMD ["sh", "-c", "uv run alembic upgrade head && uv run uvicorn src.main:app --host 0.0.0.0 --port 8000"]

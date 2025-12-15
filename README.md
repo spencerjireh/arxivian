@@ -32,11 +32,20 @@ An intelligent RAG (Retrieval Augmented Generation) system for arXiv papers with
    - Backend API: http://localhost:8000
    - API Docs: http://localhost:8000/docs
 
+## Hot Reload
+
+The development environment includes hot reloading for both services:
+
+- **Backend**: Auto-reloads on code changes (FastAPI with `--reload`)
+- **Frontend**: Vite HMR (Hot Module Replacement) for instant updates
+- Source code is mounted as volumes for live editing
+
 ## Common Commands
 
 ```bash
 just --list      # Show all commands
-just up          # Start services
+just dev         # Build and start with hot reload
+just up          # Start services (after building)
 just down        # Stop services
 just logs        # View logs
 just db-shell    # Access database
