@@ -1,0 +1,15 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/api/v1/health
+  body: none
+  auth: none
+}
+
+docs {
+  Comprehensive health check for all services. Checks database connectivity and counts, LLM provider configuration, and Jina embeddings API reachability.
+}

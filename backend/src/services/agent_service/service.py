@@ -4,6 +4,8 @@ from langchain_core.messages import HumanMessage
 
 from src.clients.base_llm_client import BaseLLMClient
 from src.services.search_service import SearchService
+from src.repositories.conversation_repository import ConversationRepository
+from src.schemas.conversation import ConversationMessage, TurnData
 from .graph_builder import build_agent_graph
 
 
@@ -18,6 +20,8 @@ class AgentService:
         self,
         llm_client: BaseLLMClient,
         search_service: SearchService,
+        conversation_repo: ConversationRepository | None = None,
+        conversation_window: int = 5,
         guardrail_threshold: int = 75,
         top_k: int = 3,
         max_retrieval_attempts: int = 3,
@@ -32,20 +36,31 @@ class AgentService:
             temperature=temperature,
         )
         self.llm_client = llm_client
+        self.conversation_repo = conversation_repo
+        self.conversation_window = conversation_window
         self.guardrail_threshold = guardrail_threshold
         self.top_k = top_k
         self.max_retrieval_attempts = max_retrieval_attempts
 
-    async def ask(self, query: str) -> dict:
+    async def ask(self, query: str, session_id: str | None = None) -> dict:
         """
         Execute agent workflow.
 
         Args:
             query: User question
+            session_id: Optional session ID for conversation continuity
 
         Returns:
             Dict with answer, sources, reasoning steps, etc.
         """
+        # Load conversation history if session provided
+        history: list[ConversationMessage] = []
+        if session_id and self.conversation_repo:
+            turns = await self.conversation_repo.get_history(session_id, self.conversation_window)
+            for t in turns:
+                history.append({"role": "user", "content": t.user_query})
+                history.append({"role": "assistant", "content": t.agent_response})
+
         # Initial state
         initial_state = {
             "messages": [HumanMessage(content=query)],
@@ -58,6 +73,8 @@ class AgentService:
             "relevant_chunks": [],
             "grading_results": [],
             "metadata": {"guardrail_threshold": self.guardrail_threshold, "reasoning_steps": []},
+            "conversation_history": history,
+            "session_id": session_id,
         }
 
         # Run graph
@@ -80,6 +97,27 @@ class AgentService:
             for chunk in result["relevant_chunks"][: self.top_k]
         ]
 
+        # Save turn if session provided
+        turn_number = 0
+        if session_id and self.conversation_repo:
+            turn = await self.conversation_repo.save_turn(
+                session_id,
+                TurnData(
+                    user_query=query,
+                    agent_response=answer,
+                    provider=self.llm_client.provider_name,
+                    model=self.llm_client.model,
+                    guardrail_score=(
+                        result["guardrail_result"].score if result["guardrail_result"] else None
+                    ),
+                    retrieval_attempts=result.get("retrieval_attempts", 1),
+                    rewritten_query=result.get("rewritten_query"),
+                    sources=sources,
+                    reasoning_steps=result.get("metadata", {}).get("reasoning_steps"),
+                ),
+            )
+            turn_number = turn.turn_number
+
         return {
             "query": query,
             "answer": answer,
@@ -90,4 +128,6 @@ class AgentService:
             "guardrail_score": result["guardrail_result"].score if result["guardrail_result"] else None,
             "provider": self.llm_client.provider_name,
             "model": self.llm_client.model,
+            "session_id": session_id,
+            "turn_number": turn_number,
         }

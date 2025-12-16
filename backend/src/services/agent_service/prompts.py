@@ -1,5 +1,72 @@
 """Prompt templates for agent workflow."""
 
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.schemas.conversation import ConversationMessage
+    from .context import ConversationFormatter
+
+
+# System prompt constants
+ANSWER_SYSTEM_PROMPT = """You are a research assistant specializing in AI/ML papers.
+Answer based ONLY on provided context. Cite sources as [arxiv_id].
+Be precise, technical, and conversational. Avoid robotic phrases."""
+
+OUT_OF_SCOPE_SYSTEM_PROMPT = """You are an AI/ML research assistant.
+The user's query is outside your scope. Respond helpfully:
+- Explain you specialize in AI/ML research papers
+- Suggest how they might rephrase for AI/ML relevance
+- Be concise (2-3 sentences), professional, not over-apologetic"""
+
+
+class PromptBuilder:
+    """Composable prompt builder for LLM calls."""
+
+    def __init__(self, system_base: str):
+        self._system = system_base
+        self._user_parts: list[str] = []
+
+    def with_conversation(
+        self,
+        formatter: ConversationFormatter,
+        history: list[ConversationMessage],
+    ) -> PromptBuilder:
+        """Add conversation history to the prompt."""
+        formatted = formatter.format_for_prompt(history)
+        if formatted:
+            self._user_parts.append(formatted)
+        return self
+
+    def with_retrieval_context(self, chunks: list[dict]) -> PromptBuilder:
+        """Add retrieval context from chunks."""
+        if chunks:
+            context_parts = []
+            for i, c in enumerate(chunks):
+                context_parts.append(
+                    f"[Source {i + 1} - {c['arxiv_id']}]\n"
+                    f"Title: {c['title']}\n"
+                    f"Section: {c.get('section_name', 'N/A')}\n"
+                    f"Content: {c['chunk_text']}"
+                )
+            context = "\n\n".join(context_parts)
+            self._user_parts.append(f"Retrieved context:\n{context}")
+        return self
+
+    def with_query(self, query: str, label: str = "Question") -> PromptBuilder:
+        """Add the user's query."""
+        self._user_parts.append(f"{label}: {query}")
+        return self
+
+    def with_note(self, note: str) -> PromptBuilder:
+        """Add a note to the prompt."""
+        self._user_parts.append(f"Note: {note}")
+        return self
+
+    def build(self) -> tuple[str, str]:
+        """Build the final system and user prompts."""
+        return self._system, "\n\n".join(self._user_parts)
+
 
 def get_guardrail_prompt(query: str, threshold: int) -> str:
     """
@@ -103,24 +170,3 @@ Provide a detailed answer based on the context above. Cite sources."""
     return system_prompt, user_prompt
 
 
-def get_out_of_scope_message(query: str, score: int, reasoning: str) -> str:
-    """
-    Generate out-of-scope rejection message.
-
-    Args:
-        query: User's query
-        score: Guardrail score
-        reasoning: Guardrail reasoning
-
-    Returns:
-        Formatted rejection message
-    """
-    return f"""I'm sorry, but this query doesn't appear to be related to AI/ML research.
-
-Your query: {query}
-
-Relevance score: {score}/100
-Reasoning: {reasoning}
-
-I can only answer questions about artificial intelligence and machine learning research papers.
-Please try rephrasing your question to focus on AI/ML topics."""

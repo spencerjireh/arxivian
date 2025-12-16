@@ -1,0 +1,27 @@
+meta {
+  name: Ask Agent (Conversation Continuity)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{base_url}}/api/v1/ask-agent
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "query": "Follow up: Can you give me more details about the architecture you just described?",
+    "session_id": "same-uuid-as-previous-question",
+    "conversation_window": 5
+  }
+}
+
+docs {
+  Example of conversation continuity using the same session_id. The agent will remember previous context and provide contextual responses. Response includes session_id and turn_number to track conversation flow.
+}

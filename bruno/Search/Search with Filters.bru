@@ -1,0 +1,36 @@
+meta {
+  name: Search with Filters
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/api/v1/search
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "query": "computer vision models",
+    "top_k": 15,
+    "search_mode": "hybrid",
+    "min_score": 0.3,
+    "categories": [
+      "cs.CV",
+      "cs.AI"
+    ],
+    "date_range": {
+      "start": "2023-01-01",
+      "end": "2024-12-31"
+    }
+  }
+}
+
+docs {
+  Hybrid search with category and date range filters.
+}

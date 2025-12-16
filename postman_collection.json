@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "jirehs-agent-api-collection",
 		"name": "Jireh's Agent System API",
-		"description": "Jireh's Agent system for AI/ML research papers from arXiv with LangGraph workflow, multi-provider LLM support (OpenAI, Z.AI), hybrid search (vector + full-text), and arXiv paper ingestion.",
+		"description": "Jireh's Agent system for AI/ML research papers from arXiv with LangGraph workflow, multi-provider LLM support (OpenAI, Z.AI), hybrid search (vector + full-text), arXiv paper ingestion, papers management, and multi-turn conversation memory.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "jirehs-agent"
 	},
@@ -246,7 +246,7 @@
 			]
 		},
 		{
-			"name": "Agent",
+			"name": "Ask",
 			"item": [
 				{
 					"name": "Ask Agent (Basic)",
@@ -260,7 +260,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"query\": \"What are the key innovations in transformer architecture?\"\n}"
+							"raw": "{\n  \"query\": \"What are the key innovations in transformer architecture?\",\n  \"session_id\": \"optional-uuid-for-conversation\",\n  \"conversation_window\": 5\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/ask-agent",
@@ -273,7 +273,7 @@
 								"ask-agent"
 							]
 						},
-						"description": "Ask Jireh's Agent a question using default LLM provider and model. Features guardrail validation, document grading, query rewriting, and transparent reasoning steps."
+						"description": "Ask Jireh's Agent a question using default LLM provider and model. Features guardrail validation, document grading, query rewriting, transparent reasoning steps, and optional multi-turn conversation memory."
 					},
 					"response": []
 				},
@@ -289,7 +289,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"query\": \"Explain how attention mechanisms work in neural networks\",\n  \"provider\": \"openai\",\n  \"model\": \"gpt-4o-mini\",\n  \"top_k\": 5,\n  \"temperature\": 0.3\n}"
+							"raw": "{\n  \"query\": \"Explain how attention mechanisms work in neural networks\",\n  \"provider\": \"openai\",\n  \"model\": \"gpt-4o-mini\",\n  \"top_k\": 5,\n  \"temperature\": 0.3,\n  \"session_id\": \"optional-uuid-for-conversation\",\n  \"conversation_window\": 5\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/ask-agent",
@@ -302,7 +302,7 @@
 								"ask-agent"
 							]
 						},
-						"description": "Ask agent with OpenAI provider explicitly specified. Uses gpt-4o-mini model with custom parameters."
+						"description": "Ask agent with OpenAI provider explicitly specified. Uses gpt-4o-mini model with custom parameters and conversation memory support."
 					},
 					"response": []
 				},
@@ -318,7 +318,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"query\": \"What are the latest developments in large language models?\",\n  \"provider\": \"zai\",\n  \"model\": \"glm-4.6\",\n  \"top_k\": 3,\n  \"temperature\": 0.5\n}"
+							"raw": "{\n  \"query\": \"What are the latest developments in large language models?\",\n  \"provider\": \"zai\",\n  \"model\": \"glm-4.6\",\n  \"top_k\": 3,\n  \"temperature\": 0.5,\n  \"session_id\": \"optional-uuid-for-conversation\",\n  \"conversation_window\": 5\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/ask-agent",
@@ -331,7 +331,7 @@
 								"ask-agent"
 							]
 						},
-						"description": "Ask agent with Z.AI provider explicitly specified. Uses glm-4.6 model with custom parameters."
+						"description": "Ask agent with Z.AI provider explicitly specified. Uses glm-4.6 model with custom parameters and conversation memory support."
 					},
 					"response": []
 				},
@@ -347,7 +347,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"query\": \"How do diffusion models generate images?\",\n  \"provider\": \"openai\",\n  \"model\": \"gpt-4o\",\n  \"top_k\": 10,\n  \"guardrail_threshold\": 80,\n  \"max_retrieval_attempts\": 5,\n  \"temperature\": 0.7\n}"
+							"raw": "{\n  \"query\": \"How do diffusion models generate images?\",\n  \"provider\": \"openai\",\n  \"model\": \"gpt-4o\",\n  \"top_k\": 10,\n  \"guardrail_threshold\": 80,\n  \"max_retrieval_attempts\": 5,\n  \"temperature\": 0.7,\n  \"session_id\": \"optional-uuid-for-conversation\",\n  \"conversation_window\": 5\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/ask-agent",
@@ -360,7 +360,197 @@
 								"ask-agent"
 							]
 						},
-						"description": "Ask agent with advanced parameters including higher guardrail threshold, more retrieval attempts, and higher temperature for more creative responses."
+						"description": "Ask agent with advanced parameters including higher guardrail threshold, more retrieval attempts, higher temperature for creative responses, and conversation memory support."
+					},
+					"response": []
+				},
+				{
+					"name": "Ask Agent (Conversation Continuity)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"Follow up: Can you give me more details about the architecture you just described?\",\n  \"session_id\": \"same-uuid-as-previous-question\",\n  \"conversation_window\": 5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/ask-agent",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"ask-agent"
+							]
+						},
+						"description": "Example of conversation continuity using the same session_id. The agent will remember previous context and provide contextual responses. Response includes session_id and turn_number to track conversation flow."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Papers",
+			"item": [
+				{
+					"name": "List Papers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/papers?offset=0&limit=20&sort_by=created_at&sort_order=desc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"papers"
+							],
+							"query": [
+								{
+									"key": "offset",
+									"value": "0",
+									"description": "Number of papers to skip"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Maximum number of papers to return (1-100)"
+								},
+								{
+									"key": "processed_only",
+									"value": null,
+									"description": "Filter by pdf_processed status"
+								},
+								{
+									"key": "category",
+									"value": null,
+									"description": "Filter by category (substring match, case-insensitive)"
+								},
+								{
+									"key": "author",
+									"value": null,
+									"description": "Filter by author name (substring match, case-insensitive)"
+								},
+								{
+									"key": "start_date",
+									"value": null,
+									"description": "Filter papers published on or after this date (YYYY-MM-DD)"
+								},
+								{
+									"key": "end_date",
+									"value": null,
+									"description": "Filter papers published on or before this date (YYYY-MM-DD)"
+								},
+								{
+									"key": "sort_by",
+									"value": "created_at",
+									"description": "Field to sort by (created_at, published_date, updated_at)"
+								},
+								{
+									"key": "sort_order",
+									"value": "desc",
+									"description": "Sort order (asc or desc)"
+								}
+							]
+						},
+						"description": "Get paginated list of papers with optional filters. Results exclude raw_text for performance."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Paper by arXiv ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/papers/:arxiv_id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"papers",
+								":arxiv_id"
+							]
+						},
+						"description": "Get a single paper by arXiv ID including all fields and raw_text."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Paper",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/papers/:arxiv_id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"papers",
+								":arxiv_id"
+							]
+						},
+						"description": "Delete a paper and all its associated chunks by arXiv ID. This performs a hard delete."
+					},
+					"response": []
+				},
+				{
+					"name": "List Papers with Filters",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/papers?category=cs.LG&processed_only=true&limit=10&sort_by=published_date&sort_order=desc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"papers"
+							],
+							"query": [
+								{
+									"key": "category",
+									"value": "cs.LG",
+									"description": "Filter by category"
+								},
+								{
+									"key": "processed_only",
+									"value": "true",
+									"description": "Only processed papers"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Maximum results"
+								},
+								{
+									"key": "sort_by",
+									"value": "published_date",
+									"description": "Sort by publication date"
+								},
+								{
+									"key": "sort_order",
+									"value": "desc",
+									"description": "Most recent first"
+								}
+							]
+						},
+						"description": "Example of listing papers with category and processing status filters."
 					},
 					"response": []
 				}
@@ -383,7 +573,7 @@
 								""
 							]
 						},
-						"description": "Root endpoint with API information including version, features, and available endpoints."
+						"description": "Root endpoint with API information including version (0.2.0), features, and available endpoints."
 					},
 					"response": []
 				}

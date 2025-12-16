@@ -1,0 +1,28 @@
+meta {
+  name: Full-Text Search
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/api/v1/search
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "query": "BERT model training",
+    "top_k": 10,
+    "search_mode": "fulltext",
+    "min_score": 0.0
+  }
+}
+
+docs {
+  Pure keyword search using full-text search only.
+}

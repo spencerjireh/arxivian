@@ -1,0 +1,28 @@
+meta {
+  name: Hybrid Search
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/v1/search
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "query": "transformer architecture in natural language processing",
+    "top_k": 10,
+    "search_mode": "hybrid",
+    "min_score": 0.0
+  }
+}
+
+docs {
+  Hybrid search endpoint with vector + full-text + RRF. Supports three modes: vector (pure semantic search), fulltext (pure keyword search), and hybrid (RRF fusion - recommended).
+}

@@ -1,0 +1,31 @@
+meta {
+  name: Ask Agent (Z.AI)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/api/v1/ask-agent
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "query": "What are the latest developments in large language models?",
+    "provider": "zai",
+    "model": "glm-4.6",
+    "top_k": 3,
+    "temperature": 0.5,
+    "session_id": "optional-uuid-for-conversation",
+    "conversation_window": 5
+  }
+}
+
+docs {
+  Ask agent with Z.AI provider explicitly specified. Uses glm-4.6 model with custom parameters and conversation memory support.
+}

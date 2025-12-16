@@ -4,6 +4,7 @@ from typing import List, Optional, TypedDict, Annotated
 from pydantic import BaseModel, Field
 from langchain_core.messages import AnyMessage
 from langgraph.graph.message import add_messages
+from src.schemas.conversation import ConversationMessage
 
 
 class GuardrailScoring(BaseModel):
@@ -50,3 +51,7 @@ class AgentState(TypedDict):
 
     # Metadata
     metadata: dict
+
+    # Conversation memory
+    conversation_history: List[ConversationMessage]
+    session_id: Optional[str]

@@ -1,0 +1,27 @@
+meta {
+  name: Ingest Papers (Force Reprocess)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/api/v1/ingest
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "query": "deep learning",
+    "max_results": 5,
+    "force_reprocess": true
+  }
+}
+
+docs {
+  Re-process existing papers by setting force_reprocess to true. Useful for updating embeddings or chunks.
+}

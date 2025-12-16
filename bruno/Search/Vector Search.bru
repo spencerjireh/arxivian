@@ -1,0 +1,28 @@
+meta {
+  name: Vector Search
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/v1/search
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "query": "attention mechanisms in deep learning",
+    "top_k": 5,
+    "search_mode": "vector",
+    "min_score": 0.5
+  }
+}
+
+docs {
+  Pure semantic search using vector embeddings only.
+}

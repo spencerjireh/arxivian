@@ -2,6 +2,7 @@
 
 from src.schemas.ask_agent import AgentAskRequest, AgentAskResponse
 from src.schemas.langgraph_state import GuardrailScoring, GradingResult, AgentState
+from src.schemas.conversation import ConversationMessage, TurnData
 
 __all__ = [
     "AgentAskRequest",
@@ -9,4 +10,6 @@ __all__ = [
     "GuardrailScoring",
     "GradingResult",
     "AgentState",
+    "ConversationMessage",
+    "TurnData",
 ]

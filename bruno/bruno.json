@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "Jireh's Agent System API",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

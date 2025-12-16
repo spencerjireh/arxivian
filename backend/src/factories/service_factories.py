@@ -17,6 +17,7 @@ from src.factories.client_factories import (
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.chunk_repository import ChunkRepository
 from src.repositories.search_repository import SearchRepository
+from src.repositories.conversation_repository import ConversationRepository
 
 
 def get_search_service(db_session: AsyncSession) -> SearchService:
@@ -104,6 +105,8 @@ def get_agent_service(
     top_k: int = 3,
     max_retrieval_attempts: int = 3,
     temperature: float = 0.3,
+    session_id: Optional[str] = None,
+    conversation_window: int = 5,
 ) -> AgentService:
     """
     Create agent service with specified LLM provider.
@@ -116,6 +119,8 @@ def get_agent_service(
         top_k: Number of chunks to use
         max_retrieval_attempts: Max query rewrites
         temperature: Generation temperature
+        session_id: Optional session ID for conversation continuity
+        conversation_window: Number of previous turns to include in context
 
     Returns:
         AgentService instance
@@ -126,9 +131,14 @@ def get_agent_service(
     # Get search service
     search_service = get_search_service(db_session)
 
+    # Get conversation repository if session_id is provided
+    conversation_repo = ConversationRepository(db_session) if session_id else None
+
     return AgentService(
         llm_client=llm_client,
         search_service=search_service,
+        conversation_repo=conversation_repo,
+        conversation_window=conversation_window,
         guardrail_threshold=guardrail_threshold,
         top_k=top_k,
         max_retrieval_attempts=max_retrieval_attempts,

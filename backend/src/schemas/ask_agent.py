@@ -34,6 +34,14 @@ class AgentAskRequest(BaseModel):
         0.3, ge=0.0, le=1.0, description="Generation temperature"
     )
 
+    # Conversation Parameters
+    session_id: Optional[str] = Field(
+        None, description="Session UUID for conversation continuity"
+    )
+    conversation_window: int = Field(
+        5, ge=1, le=10, description="Number of previous turns to include in context"
+    )
+
 
 class AgentAskResponse(BaseModel):
     """Response from agent-based workflow."""
@@ -46,9 +54,13 @@ class AgentAskResponse(BaseModel):
     reasoning_steps: List[str]
     retrieval_attempts: int
     rewritten_query: Optional[str]
-    guardrail_score: int
+    guardrail_score: Optional[int] = None
 
     # Execution metadata
     provider: str = Field(..., description="LLM provider used")
     model: str = Field(..., description="Model used")
     execution_time_ms: float
+
+    # Conversation metadata
+    session_id: Optional[str] = None
+    turn_number: int = 0

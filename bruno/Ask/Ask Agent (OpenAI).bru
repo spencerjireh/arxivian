@@ -1,0 +1,31 @@
+meta {
+  name: Ask Agent (OpenAI)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/v1/ask-agent
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "query": "Explain how attention mechanisms work in neural networks",
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "top_k": 5,
+    "temperature": 0.3,
+    "session_id": "optional-uuid-for-conversation",
+    "conversation_window": 5
+  }
+}
+
+docs {
+  Ask agent with OpenAI provider explicitly specified. Uses gpt-4o-mini model with custom parameters and conversation memory support.
+}

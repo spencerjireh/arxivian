@@ -22,6 +22,7 @@ async def ask_agent(request: AgentAskRequest, db: DbSession) -> AgentAskResponse
     - Document grading (filters irrelevant chunks)
     - Query rewriting (improves retrieval iteratively)
     - Transparent reasoning steps
+    - Multi-turn conversation memory (optional)
 
     Process:
     1. Guardrail: Validate query is about AI/ML research
@@ -31,11 +32,11 @@ async def ask_agent(request: AgentAskRequest, db: DbSession) -> AgentAskResponse
     5. Generate: Create answer from relevant chunks
 
     Args:
-        request: Question and parameters (including optional provider/model)
+        request: Question and parameters (including optional provider/model and session_id)
         db: Database session
 
     Returns:
-        AgentAskResponse with answer, sources, and reasoning
+        AgentAskResponse with answer, sources, reasoning, and session info
     """
     start_time = time()
 
@@ -49,10 +50,12 @@ async def ask_agent(request: AgentAskRequest, db: DbSession) -> AgentAskResponse
         top_k=request.top_k,
         max_retrieval_attempts=request.max_retrieval_attempts,
         temperature=request.temperature,
+        session_id=request.session_id,
+        conversation_window=request.conversation_window,
     )
 
-    # Execute workflow
-    result = await agent_service.ask(request.query)
+    # Execute workflow with session_id for conversation continuity
+    result = await agent_service.ask(request.query, session_id=request.session_id)
 
     # Convert sources to schema
     sources = [SourceInfo(**source) for source in result["sources"]]
@@ -70,4 +73,6 @@ async def ask_agent(request: AgentAskRequest, db: DbSession) -> AgentAskResponse
         provider=result["provider"],
         model=result["model"],
         execution_time_ms=execution_time,
+        session_id=result.get("session_id"),
+        turn_number=result.get("turn_number", 0),
     )

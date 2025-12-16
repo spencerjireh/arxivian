@@ -1,0 +1,26 @@
+meta {
+  name: Ingest Papers (Basic)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/v1/ingest
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "query": "machine learning",
+    "max_results": 10
+  }
+}
+
+docs {
+  Ingest papers from arXiv with a basic query. Fetches, downloads, parses PDFs, chunks text, generates embeddings, and stores in database.
+}

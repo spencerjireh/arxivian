@@ -1,0 +1,27 @@
+meta {
+  name: Ask Agent (Basic)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/v1/ask-agent
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "query": "What are the key innovations in transformer architecture?",
+    "session_id": "optional-uuid-for-conversation",
+    "conversation_window": 5
+  }
+}
+
+docs {
+  Ask Jireh's Agent a question using default LLM provider and model. Features guardrail validation, document grading, query rewriting, transparent reasoning steps, and optional multi-turn conversation memory.
+}

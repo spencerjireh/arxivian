@@ -1,0 +1,33 @@
+meta {
+  name: Ask Agent (Advanced Parameters)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/api/v1/ask-agent
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "query": "How do diffusion models generate images?",
+    "provider": "openai",
+    "model": "gpt-4o",
+    "top_k": 10,
+    "guardrail_threshold": 80,
+    "max_retrieval_attempts": 5,
+    "temperature": 0.7,
+    "session_id": "optional-uuid-for-conversation",
+    "conversation_window": 5
+  }
+}
+
+docs {
+  Ask agent with advanced parameters including higher guardrail threshold, more retrieval attempts, higher temperature for creative responses, and conversation memory support.
+}
