@@ -1,6 +1,6 @@
 # Jireh's Agent
 
- A full-stack agentic app utilizing RAG workflows for working with arXiv papers.
+ A full-stack app utilizing agentic RAG workflows for working with arXiv papers.
 
 ## Stack
 

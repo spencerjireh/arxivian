@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: {{base_url}}/api/v1/ask-agent
+  url: {{base_url}}/api/v1/stream
   body: json
   auth: none
 }
@@ -29,5 +29,5 @@ body:json {
 }
 
 docs {
-  Ask agent with advanced parameters including higher guardrail threshold, more retrieval attempts, higher temperature for creative responses, and conversation memory support.
+  Stream agent response with advanced parameters including higher guardrail threshold, more retrieval attempts, higher temperature for creative responses, and conversation memory support. Streams via Server-Sent Events (SSE) with status, content, sources, and metadata events.
 }

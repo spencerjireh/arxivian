@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: {{base_url}}/api/v1/ask-agent
+  url: {{base_url}}/api/v1/stream
   body: json
   auth: none
 }
@@ -23,5 +23,5 @@ body:json {
 }
 
 docs {
-  Example of conversation continuity using the same session_id. The agent will remember previous context and provide contextual responses. Response includes session_id and turn_number to track conversation flow.
+  Example of conversation continuity using the same session_id. The agent will remember previous context and provide contextual responses via SSE streaming. Metadata events include session_id and turn_number to track conversation flow.
 }

@@ -2,6 +2,11 @@
 
 This repository uses [Bruno](https://www.usebruno.com/) as the API client for testing and development. Bruno is a fast, git-friendly, open-source alternative to Postman that stores collections as plain text files directly in your repository.
 
+## Requirements
+
+- Bruno version from November 2025 or later (required for SSE streaming support)
+- The streaming endpoints use Server-Sent Events (SSE) which requires a recent Bruno version with streaming support
+
 ## Installation
 
 ### macOS
@@ -48,7 +53,7 @@ bruno/
 ├── Health/                   # Health check endpoint
 ├── Search/                   # Search endpoints (hybrid, vector, fulltext)
 ├── Ingest/                   # Paper ingestion endpoints
-├── Ask/                      # Ask agent endpoints (with conversation support)
+├── Ask/                      # Streaming agent endpoints with SSE (with conversation support)
 ├── Papers/                   # Paper management endpoints (CRUD)
 └── Root/                     # Root API information endpoint
 ```
@@ -101,13 +106,15 @@ vars {
 - **Ingest Papers (Advanced)**: POST `/api/v1/ingest` - With categories and date filters
 - **Ingest Papers (Force Reprocess)**: POST `/api/v1/ingest` - Re-process existing papers
 
-### Ask
+### Ask (Streaming with SSE)
 
-- **Ask Agent (Basic)**: POST `/api/v1/ask-agent` - Ask with default settings
-- **Ask Agent (OpenAI)**: POST `/api/v1/ask-agent` - Use OpenAI provider (gpt-4o-mini)
-- **Ask Agent (Z.AI)**: POST `/api/v1/ask-agent` - Use Z.AI provider (glm-4.6)
-- **Ask Agent (Advanced Parameters)**: POST `/api/v1/ask-agent` - Custom parameters
-- **Ask Agent (Conversation Continuity)**: POST `/api/v1/ask-agent` - Multi-turn conversation
+- **Ask Agent (Basic)**: POST `/api/v1/stream` - Stream with default settings via SSE
+- **Ask Agent (OpenAI)**: POST `/api/v1/stream` - Use OpenAI provider (gpt-4o-mini)
+- **Ask Agent (Z.AI)**: POST `/api/v1/stream` - Use Z.AI provider (glm-4.6)
+- **Ask Agent (Advanced Parameters)**: POST `/api/v1/stream` - Custom parameters with streaming
+- **Ask Agent (Conversation Continuity)**: POST `/api/v1/stream` - Multi-turn conversation with streaming
+
+All Ask Agent endpoints use Server-Sent Events (SSE) to stream responses in real-time. You will see status updates, content tokens, sources, and metadata as separate events.
 
 ### Papers
 
@@ -136,14 +143,23 @@ just dev
 
 The API will be available at `http://localhost:8000`.
 
-### Testing Conversation Flow
+### Testing Streaming and Conversation Flow
+
+The Ask Agent endpoints use Server-Sent Events (SSE) for real-time streaming. When you send a request:
+
+1. Bruno will display events as they arrive in real-time
+2. You'll see status updates (guardrail, retrieval, grading, generation)
+3. Content tokens will stream as they're generated
+4. Sources and metadata appear as separate events
+5. The stream completes with a "done" event
 
 To test multi-turn conversations with the Ask Agent:
 
 1. Run "Ask Agent (Basic)" with a question
-2. Copy the `session_id` from the response
-3. Paste it into "Ask Agent (Conversation Continuity)" request body
-4. Ask follow-up questions using the same `session_id`
+2. Watch the streaming response in real-time
+3. Copy the `session_id` from the metadata event
+4. Paste it into "Ask Agent (Conversation Continuity)" request body
+5. Ask follow-up questions using the same `session_id`
 
 The agent will remember context from previous turns in the conversation.
 
@@ -195,6 +211,13 @@ These provide an alternative way to explore and test the API endpoints.
 - Ensure the API server is running (`just up` or `just dev`)
 - Check that you're using the correct environment (local)
 - Verify the `base_url` is set to `http://localhost:8000`
+
+### SSE streaming not working
+
+- Ensure you're using Bruno version from November 2025 or later
+- Check that your Bruno installation is up to date: `brew upgrade bruno` (macOS)
+- If streaming still doesn't work, try the FastAPI docs at `http://localhost:8000/docs` which has built-in SSE support
+- Alternative: Use curl for testing SSE: `curl -N http://localhost:8000/api/v1/stream -H "Content-Type: application/json" -d '{"query":"test"}'`
 
 ### Environment variables not working
 

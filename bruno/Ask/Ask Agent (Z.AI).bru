@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: {{base_url}}/api/v1/ask-agent
+  url: {{base_url}}/api/v1/stream
   body: json
   auth: none
 }
@@ -27,5 +27,5 @@ body:json {
 }
 
 docs {
-  Ask agent with Z.AI provider explicitly specified. Uses glm-4.6 model with custom parameters and conversation memory support.
+  Stream agent response with Z.AI provider explicitly specified. Uses glm-4.6 model with custom parameters and conversation memory support. Streams via Server-Sent Events (SSE) with real-time status updates and content tokens.
 }

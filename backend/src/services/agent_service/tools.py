@@ -31,7 +31,9 @@ def create_retrieve_tool(search_service: SearchService):
                 "authors": r.authors if hasattr(r, "authors") else [],
                 "section_name": r.section_name,
                 "score": r.score,
-                "pdf_url": r.pdf_url if hasattr(r, "pdf_url") else f"https://arxiv.org/pdf/{r.arxiv_id}.pdf",
+                "pdf_url": r.pdf_url
+                if hasattr(r, "pdf_url")
+                else f"https://arxiv.org/pdf/{r.arxiv_id}.pdf",
                 "published_date": r.published_date if hasattr(r, "published_date") else None,
             }
             for r in results

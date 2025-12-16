@@ -1,6 +1,6 @@
 """FastAPI dependency injection providers."""
 
-from typing import Annotated, AsyncGenerator
+from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +14,7 @@ from src.utils.pdf_parser import PDFParser
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.chunk_repository import ChunkRepository
 from src.repositories.search_repository import SearchRepository
+from src.repositories.conversation_repository import ConversationRepository
 
 from src.factories.client_factories import (
     get_arxiv_client,
@@ -108,6 +109,20 @@ def get_search_repository(db: DbSession) -> SearchRepository:
     return SearchRepository(db)
 
 
+def get_conversation_repository(db: DbSession) -> ConversationRepository:
+    """
+    Get ConversationRepository with database session.
+
+    Args:
+        db: Database session
+
+    Returns:
+        ConversationRepository instance
+    """
+    return ConversationRepository(db)
+
+
 PaperRepoDep = Annotated[PaperRepository, Depends(get_paper_repository)]
 ChunkRepoDep = Annotated[ChunkRepository, Depends(get_chunk_repository)]
 SearchRepoDep = Annotated[SearchRepository, Depends(get_search_repository)]
+ConversationRepoDep = Annotated[ConversationRepository, Depends(get_conversation_repository)]

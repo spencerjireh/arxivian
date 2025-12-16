@@ -110,8 +110,8 @@ def get_grading_prompt(query: str, chunk: dict) -> str:
 
 Query: {query}
 
-Chunk (from paper {chunk['arxiv_id']}):
-{chunk['chunk_text'][:500]}...
+Chunk (from paper {chunk["arxiv_id"]}):
+{chunk["chunk_text"][:500]}...
 
 Respond with:
 - is_relevant: Boolean (true if this chunk helps answer the query)
@@ -168,5 +168,3 @@ Question: {query}
 Provide a detailed answer based on the context above. Cite sources."""
 
     return system_prompt, user_prompt
-
-

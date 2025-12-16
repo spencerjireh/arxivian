@@ -1,9 +1,10 @@
 """Repository for Conversation model operations."""
 
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload
 from src.models.conversation import Conversation, ConversationTurn
 from src.schemas.conversation import TurnData
 from src.utils.logger import get_logger
@@ -207,3 +208,48 @@ class ConversationRepository:
             select(func.count()).where(ConversationTurn.conversation_id == conv.id)
         )
         return result.scalar_one() or 0
+
+    async def get_all(self, offset: int = 0, limit: int = 20) -> Tuple[List[Conversation], int]:
+        """
+        Get paginated list of all conversations with turn counts.
+
+        Args:
+            offset: Number of conversations to skip
+            limit: Maximum conversations to return
+
+        Returns:
+            Tuple of (list of Conversations, total count)
+        """
+        # Get total count
+        count_result = await self.session.execute(select(func.count(Conversation.id)))
+        total = count_result.scalar_one() or 0
+
+        # Get paginated conversations ordered by updated_at desc
+        result = await self.session.execute(
+            select(Conversation)
+            .options(selectinload(Conversation.turns))
+            .order_by(desc(Conversation.updated_at))
+            .offset(offset)
+            .limit(limit)
+        )
+        conversations = list(result.scalars().all())
+
+        log.debug("conversations listed", total=total, returned=len(conversations))
+        return conversations, total
+
+    async def get_with_turns(self, session_id: str) -> Optional[Conversation]:
+        """
+        Get conversation with eager-loaded turns.
+
+        Args:
+            session_id: Session identifier
+
+        Returns:
+            Conversation with turns if found, None otherwise
+        """
+        result = await self.session.execute(
+            select(Conversation)
+            .options(selectinload(Conversation.turns))
+            .where(Conversation.session_id == session_id)
+        )
+        return result.scalar_one_or_none()

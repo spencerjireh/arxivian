@@ -59,8 +59,14 @@ class ConversationTurn(Base):
 
     # Unique constraint on (conversation_id, turn_number)
     __table_args__ = (
-        UniqueConstraint("conversation_id", "turn_number", name="uq_conversation_turns_conversation_id_turn_number"),
+        UniqueConstraint(
+            "conversation_id",
+            "turn_number",
+            name="uq_conversation_turns_conversation_id_turn_number",
+        ),
     )
 
     def __repr__(self):
-        return f"<ConversationTurn(conversation_id='{self.conversation_id}', turn={self.turn_number})>"
+        return (
+            f"<ConversationTurn(conversation_id='{self.conversation_id}', turn={self.turn_number})>"
+        )

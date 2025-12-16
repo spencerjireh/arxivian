@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: {{base_url}}/api/v1/ask-agent
+  url: {{base_url}}/api/v1/stream
   body: json
   auth: none
 }
@@ -22,5 +22,5 @@ body:json {
 }
 
 docs {
-  Ask Jireh's Agent a question using default LLM provider and model. Features guardrail validation, document grading, query rewriting, transparent reasoning steps, and optional multi-turn conversation memory.
+  Stream agent response via Server-Sent Events (SSE) using default LLM provider and model. Features guardrail validation, document grading, query rewriting, and optional multi-turn conversation memory. Response includes status updates, content tokens, sources, and metadata as separate SSE events.
 }
