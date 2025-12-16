@@ -1,0 +1,31 @@
+meta {
+  name: List Papers
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/api/v1/papers?offset=0&limit=20&sort_by=created_at&sort_order=desc
+  body: none
+  auth: none
+}
+
+params:query {
+  offset: 0
+  limit: 20
+  sort_by: created_at
+  sort_order: desc
+}
+
+docs {
+  Get paginated list of papers with optional filters. Results exclude raw_text for performance.
+  
+  Optional query parameters:
+  - processed_only: Filter by pdf_processed status
+  - category: Filter by category (substring match, case-insensitive)
+  - author: Filter by author name (substring match, case-insensitive)
+  - start_date: Filter papers published on or after this date (YYYY-MM-DD)
+  - end_date: Filter papers published on or before this date (YYYY-MM-DD)
+  - sort_by: Field to sort by (created_at, published_date, updated_at)
+  - sort_order: Sort order (asc or desc)
+}

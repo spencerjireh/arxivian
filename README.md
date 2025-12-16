@@ -1,6 +1,6 @@
 # Jireh's Agent
 
-An intelligent RAG (Retrieval Augmented Generation) system for arXiv papers with agentic workflows.
+ A full-stack agentic app utilizing RAG workflows for working with arXiv papers.
 
 ## Stack
 

@@ -38,6 +38,9 @@ dependencies = [
     # Utilities
     "python-multipart>=0.0.12",
     "tenacity>=9.0.0",
+    
+    # Logging
+    "structlog>=24.4.0",
 ]
 
 [project.optional-dependencies]

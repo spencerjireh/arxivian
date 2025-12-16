@@ -6,7 +6,10 @@ from src.clients.base_llm_client import BaseLLMClient
 from src.services.search_service import SearchService
 from src.repositories.conversation_repository import ConversationRepository
 from src.schemas.conversation import ConversationMessage, TurnData
+from src.utils.logger import get_logger
 from .graph_builder import build_agent_graph
+
+log = get_logger(__name__)
 
 
 class AgentService:
@@ -53,6 +56,14 @@ class AgentService:
         Returns:
             Dict with answer, sources, reasoning steps, etc.
         """
+        log.info(
+            "agent query started",
+            query=query[:200],
+            session_id=session_id,
+            provider=self.llm_client.provider_name,
+            model=self.llm_client.model,
+        )
+
         # Load conversation history if session provided
         history: list[ConversationMessage] = []
         if session_id and self.conversation_repo:
@@ -60,6 +71,7 @@ class AgentService:
             for t in turns:
                 history.append({"role": "user", "content": t.user_query})
                 history.append({"role": "assistant", "content": t.agent_response})
+            log.debug("loaded conversation history", session_id=session_id, turns=len(turns))
 
         # Initial state
         initial_state = {
@@ -92,7 +104,7 @@ class AgentService:
                 "pdf_url": chunk["pdf_url"],
                 "relevance_score": chunk["score"],
                 "published_date": chunk.get("published_date"),
-                "was_graded_relevant": True,  # All in relevant_chunks were graded relevant
+                "was_graded_relevant": True,
             }
             for chunk in result["relevant_chunks"][: self.top_k]
         ]
@@ -118,6 +130,18 @@ class AgentService:
             )
             turn_number = turn.turn_number
 
+        guardrail_score = result["guardrail_result"].score if result["guardrail_result"] else None
+
+        log.info(
+            "agent query complete",
+            session_id=session_id,
+            sources=len(sources),
+            retrieval_attempts=result["retrieval_attempts"],
+            guardrail_score=guardrail_score,
+            turn_number=turn_number,
+            answer_len=len(answer),
+        )
+
         return {
             "query": query,
             "answer": answer,
@@ -125,7 +149,7 @@ class AgentService:
             "reasoning_steps": result["metadata"]["reasoning_steps"],
             "retrieval_attempts": result["retrieval_attempts"],
             "rewritten_query": result.get("rewritten_query"),
-            "guardrail_score": result["guardrail_result"].score if result["guardrail_result"] else None,
+            "guardrail_score": guardrail_score,
             "provider": self.llm_client.provider_name,
             "model": self.llm_client.model,
             "session_id": session_id,

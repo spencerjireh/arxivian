@@ -11,23 +11,25 @@ from src.routers import health, ingest, search, ask_agent, papers
 
 # Import middleware
 from src.middleware import LoggingMiddleware, TransactionMiddleware, register_exception_handlers
-from src.utils.logger import logger
+from src.utils.logger import configure_logging, get_logger
 
 settings = get_settings()
+
+# Configure logging early
+configure_logging(log_level=settings.log_level, debug=settings.debug)
+log = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
-    # Startup
-    logger.info("Starting application...")
+    log.info("starting application", debug=settings.debug, log_level=settings.log_level)
     await init_db()
-    logger.info("Database initialized")
+    log.info("database initialized")
     yield
-    # Shutdown
-    logger.info("Shutting down application...")
+    log.info("shutting down application")
     await engine.dispose()
-    logger.info("Database connections closed")
+    log.info("database connections closed")
 
 
 app = FastAPI(

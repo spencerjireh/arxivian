@@ -378,11 +378,6 @@ $RECYCLE.BIN/
 # alembic/versions/*.py
 # !alembic/versions/__init__.py
 
-# PDF downloads and data
-data/pdfs/
-downloads/
-papers/
-
 # Model files and caches
 *.pkl
 *.pickle

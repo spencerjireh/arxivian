@@ -1,10 +1,14 @@
 """Repository for Conversation model operations."""
 
 from typing import Optional, List
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, func, desc, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 from src.models.conversation import Conversation, ConversationTurn
 from src.schemas.conversation import TurnData
+from src.utils.logger import get_logger
+
+log = get_logger(__name__)
 
 
 class ConversationRepository:
@@ -33,12 +37,13 @@ class ConversationRepository:
             self.session.add(conv)
             await self.session.commit()
             await self.session.refresh(conv)
+            log.debug("conversation created", session_id=session_id)
+        else:
+            log.debug("conversation found", session_id=session_id)
 
         return conv
 
-    async def get_history(
-        self, session_id: str, limit: int = 5
-    ) -> List[ConversationTurn]:
+    async def get_history(self, session_id: str, limit: int = 5) -> List[ConversationTurn]:
         """
         Get conversation history for a session.
 
@@ -49,7 +54,6 @@ class ConversationRepository:
         Returns:
             List of ConversationTurn in chronological order
         """
-        # First get the conversation
         result = await self.session.execute(
             select(Conversation).where(Conversation.session_id == session_id)
         )
@@ -58,7 +62,6 @@ class ConversationRepository:
         if not conv:
             return []
 
-        # Get turns ordered by turn_number descending, then reverse for chronological order
         result = await self.session.execute(
             select(ConversationTurn)
             .where(ConversationTurn.conversation_id == conv.id)
@@ -67,12 +70,14 @@ class ConversationRepository:
         )
         turns = list(result.scalars().all())
 
-        # Reverse to chronological order
+        log.debug("history loaded", session_id=session_id, turns=len(turns))
         return turns[::-1]
 
     async def save_turn(self, session_id: str, turn: TurnData) -> ConversationTurn:
         """
-        Save a conversation turn.
+        Save a conversation turn with optimistic retry.
+
+        Retries on unique constraint violation to handle concurrent requests.
 
         Args:
             session_id: Session identifier
@@ -80,36 +85,67 @@ class ConversationRepository:
 
         Returns:
             Created ConversationTurn
+
+        Raises:
+            IntegrityError: If unable to save after max retries
         """
-        conv = await self.get_or_create(session_id)
+        max_retries = 3
 
-        # Get max turn number for this conversation
-        result = await self.session.execute(
-            select(func.max(ConversationTurn.turn_number)).where(
-                ConversationTurn.conversation_id == conv.id
-            )
-        )
-        max_turn = result.scalar_one_or_none()
-        turn_number = (max_turn or -1) + 1
+        for attempt in range(max_retries):
+            try:
+                await self.session.execute(
+                    text("SELECT pg_advisory_xact_lock(hashtext(:session_id))"),
+                    {"session_id": session_id},
+                )
 
-        ct = ConversationTurn(
-            conversation_id=conv.id,
-            turn_number=turn_number,
-            user_query=turn.user_query,
-            agent_response=turn.agent_response,
-            guardrail_score=turn.guardrail_score,
-            retrieval_attempts=turn.retrieval_attempts,
-            rewritten_query=turn.rewritten_query,
-            sources=turn.sources,
-            reasoning_steps=turn.reasoning_steps,
-            provider=turn.provider,
-            model=turn.model,
-        )
-        self.session.add(ct)
-        await self.session.commit()
-        await self.session.refresh(ct)
+                result = await self.session.execute(
+                    select(Conversation).where(Conversation.session_id == session_id)
+                )
+                conv = result.scalar_one_or_none()
 
-        return ct
+                if not conv:
+                    conv = Conversation(session_id=session_id)
+                    self.session.add(conv)
+                    await self.session.flush()
+
+                result = await self.session.execute(
+                    select(func.max(ConversationTurn.turn_number)).where(
+                        ConversationTurn.conversation_id == conv.id
+                    )
+                )
+                max_turn = result.scalar_one_or_none()
+                turn_number = (max_turn or -1) + 1
+
+                ct = ConversationTurn(
+                    conversation_id=conv.id,
+                    turn_number=turn_number,
+                    user_query=turn.user_query,
+                    agent_response=turn.agent_response,
+                    guardrail_score=turn.guardrail_score,
+                    retrieval_attempts=turn.retrieval_attempts,
+                    rewritten_query=turn.rewritten_query,
+                    sources=turn.sources,
+                    reasoning_steps=turn.reasoning_steps,
+                    provider=turn.provider,
+                    model=turn.model,
+                )
+                self.session.add(ct)
+                await self.session.commit()
+                await self.session.refresh(ct)
+
+                log.debug("turn saved", session_id=session_id, turn_number=turn_number)
+                return ct
+
+            except IntegrityError:
+                await self.session.rollback()
+                self.session.expire_all()
+                log.warning("turn save retry", session_id=session_id, attempt=attempt + 1)
+                if attempt == max_retries - 1:
+                    raise
+                continue
+
+        # Should never reach here, but satisfy type checker
+        raise IntegrityError("Failed to save turn after max retries", None, None)
 
     async def delete(self, session_id: str) -> bool:
         """
@@ -129,6 +165,7 @@ class ConversationRepository:
         if conv:
             await self.session.delete(conv)
             await self.session.commit()
+            log.info("conversation deleted", session_id=session_id)
             return True
 
         return False

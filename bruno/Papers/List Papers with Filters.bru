@@ -1,0 +1,29 @@
+meta {
+  name: List Papers with Filters
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{base_url}}/api/v1/papers?category=cs.LG&processed_only=true&limit=10&sort_by=published_date&sort_order=desc
+  body: none
+  auth: none
+}
+
+params:query {
+  category: cs.LG
+  processed_only: true
+  limit: 10
+  sort_by: published_date
+  sort_order: desc
+}
+
+docs {
+  Example of listing papers with category and processing status filters.
+  
+  This request demonstrates filtering by:
+  - category: cs.LG (Machine Learning)
+  - processed_only: true (only show processed papers)
+  - sort_by: published_date (sort by publication date)
+  - sort_order: desc (most recent first)
+}

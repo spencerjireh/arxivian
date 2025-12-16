@@ -4,6 +4,9 @@ from typing import List, Optional
 from dataclasses import dataclass
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.utils.logger import get_logger
+
+log = get_logger(__name__)
 
 
 @dataclass
@@ -45,11 +48,14 @@ class SearchRepository:
         Returns:
             List of SearchResult objects ordered by similarity
         """
-        # Convert embedding to string format for pgvector
+        log.debug(
+            "vector search", top_k=top_k, min_score=min_score, embedding_dim=len(query_embedding)
+        )
+
         embedding_str = f"[{','.join(map(str, query_embedding))}]"
 
         query = text("""
-            SELECT 
+            SELECT
                 c.id as chunk_id,
                 c.paper_id,
                 c.arxiv_id,
@@ -58,13 +64,13 @@ class SearchRepository:
                 c.chunk_text,
                 c.section_name,
                 c.page_number,
-                1 - (c.embedding <=> :embedding::vector) as score,
+                1 - (c.embedding <=> CAST(:embedding AS vector)) as score,
                 p.published_date,
                 p.pdf_url
             FROM chunks c
             JOIN papers p ON c.paper_id = p.id
-            WHERE 1 - (c.embedding <=> :embedding::vector) >= :min_score
-            ORDER BY c.embedding <=> :embedding::vector
+            WHERE 1 - (c.embedding <=> CAST(:embedding AS vector)) >= :min_score
+            ORDER BY c.embedding <=> CAST(:embedding AS vector)
             LIMIT :limit
         """)
 
@@ -72,7 +78,7 @@ class SearchRepository:
             query, {"embedding": embedding_str, "min_score": min_score, "limit": top_k}
         )
 
-        return [
+        results = [
             SearchResult(
                 chunk_id=str(row.chunk_id),
                 paper_id=str(row.paper_id),
@@ -90,6 +96,9 @@ class SearchRepository:
             for row in result.fetchall()
         ]
 
+        log.debug("vector search results", count=len(results))
+        return results
+
     async def fulltext_search(self, query: str, top_k: int = 10) -> List[SearchResult]:
         """
         Full-text search using PostgreSQL tsvector.
@@ -101,6 +110,8 @@ class SearchRepository:
         Returns:
             List of SearchResult objects ordered by text rank
         """
+        log.debug("fulltext search", query=query[:50], top_k=top_k)
+
         search_query = text("""
             SELECT 
                 c.id as chunk_id,
@@ -121,12 +132,11 @@ class SearchRepository:
             LIMIT :limit
         """)
 
-        # Prepare query for tsquery (handle spaces and special chars)
         prepared_query = " & ".join(query.split())
 
         result = await self.session.execute(search_query, {"query": prepared_query, "limit": top_k})
 
-        return [
+        results = [
             SearchResult(
                 chunk_id=str(row.chunk_id),
                 paper_id=str(row.paper_id),
@@ -143,3 +153,6 @@ class SearchRepository:
             )
             for row in result.fetchall()
         ]
+
+        log.debug("fulltext search results", count=len(results))
+        return results

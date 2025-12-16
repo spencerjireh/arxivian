@@ -5,6 +5,9 @@ from datetime import datetime
 from sqlalchemy import select, update, delete, func, desc, asc
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.paper import Paper
+from src.utils.logger import get_logger
+
+log = get_logger(__name__)
 
 
 class PaperRepository:
@@ -15,13 +18,19 @@ class PaperRepository:
 
     async def get_by_id(self, paper_id: str) -> Optional[Paper]:
         """Get paper by UUID."""
+        log.debug("query paper by id", paper_id=paper_id)
         result = await self.session.execute(select(Paper).where(Paper.id == paper_id))
-        return result.scalar_one_or_none()
+        paper = result.scalar_one_or_none()
+        log.debug("query result", found=paper is not None)
+        return paper
 
     async def get_by_arxiv_id(self, arxiv_id: str) -> Optional[Paper]:
         """Get paper by arXiv ID."""
+        log.debug("query paper by arxiv_id", arxiv_id=arxiv_id)
         result = await self.session.execute(select(Paper).where(Paper.arxiv_id == arxiv_id))
-        return result.scalar_one_or_none()
+        paper = result.scalar_one_or_none()
+        log.debug("query result", found=paper is not None)
+        return paper
 
     async def create(self, paper_data: dict) -> Paper:
         """Create a new paper."""
@@ -29,6 +38,7 @@ class PaperRepository:
         self.session.add(paper)
         await self.session.commit()
         await self.session.refresh(paper)
+        log.debug("paper created", arxiv_id=paper.arxiv_id)
         return paper
 
     async def update(self, paper_id: str, update_data: dict) -> Optional[Paper]:
@@ -36,6 +46,7 @@ class PaperRepository:
         update_data["updated_at"] = datetime.utcnow()
         await self.session.execute(update(Paper).where(Paper.id == paper_id).values(**update_data))
         await self.session.commit()
+        log.debug("paper updated", paper_id=paper_id)
         return await self.get_by_id(paper_id)
 
     async def mark_as_processed(
@@ -58,7 +69,9 @@ class PaperRepository:
         result = await self.session.execute(
             select(Paper).where(Paper.pdf_processed.is_(False)).limit(limit)
         )
-        return list(result.scalars().all())
+        papers = list(result.scalars().all())
+        log.debug("unprocessed papers query", count=len(papers))
+        return papers
 
     async def exists(self, arxiv_id: str) -> bool:
         """Check if paper exists by arXiv ID."""
@@ -99,17 +112,23 @@ class PaperRepository:
         Returns:
             Tuple of (list of papers, total count matching filters)
         """
-        # Build base queries
+        log.debug(
+            "papers query",
+            offset=offset,
+            limit=limit,
+            processed_only=processed_only,
+            category_filter=category_filter,
+            sort_by=sort_by,
+        )
+
         query = select(Paper)
         count_query = select(func.count()).select_from(Paper)
 
-        # Helper to apply filter to both queries
         def apply_filter(condition):
             nonlocal query, count_query
             query = query.where(condition)
             count_query = count_query.where(condition)
 
-        # Apply filters
         if processed_only is not None:
             apply_filter(Paper.pdf_processed == processed_only)
 
@@ -139,18 +158,16 @@ class PaperRepository:
         if end_date:
             apply_filter(Paper.published_date <= end_date)
 
-        # Get total count
         total = await self.session.scalar(count_query) or 0
 
-        # Apply sorting and pagination
         sort_column = getattr(Paper, sort_by)
         order_func = desc if sort_order == "desc" else asc
         query = query.order_by(order_func(sort_column)).offset(offset).limit(limit)
 
-        # Execute query
         result = await self.session.execute(query)
         papers = list(result.scalars().all())
 
+        log.debug("papers query result", count=len(papers), total=total)
         return papers, total
 
     async def delete(self, paper_id: str) -> bool:
@@ -166,7 +183,10 @@ class PaperRepository:
             True if paper was deleted, False if not found
         """
         result = await self.session.execute(delete(Paper).where(Paper.id == paper_id))
-        return (result.rowcount or 0) > 0
+        deleted = (result.rowcount or 0) > 0
+        if deleted:
+            log.info("paper deleted", paper_id=paper_id)
+        return deleted
 
     async def delete_by_arxiv_id(self, arxiv_id: str) -> bool:
         """
@@ -181,4 +201,7 @@ class PaperRepository:
             True if paper was deleted, False if not found
         """
         result = await self.session.execute(delete(Paper).where(Paper.arxiv_id == arxiv_id))
-        return (result.rowcount or 0) > 0
+        deleted = (result.rowcount or 0) > 0
+        if deleted:
+            log.info("paper deleted", arxiv_id=arxiv_id)
+        return deleted

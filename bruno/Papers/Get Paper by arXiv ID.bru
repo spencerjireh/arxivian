@@ -1,0 +1,21 @@
+meta {
+  name: Get Paper by arXiv ID
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/api/v1/papers/:arxiv_id
+  body: none
+  auth: none
+}
+
+params:path {
+  arxiv_id: 
+}
+
+docs {
+  Get a single paper by arXiv ID including all fields and raw_text.
+  
+  Replace :arxiv_id in the URL with the actual arXiv ID (e.g., 2301.12345).
+}

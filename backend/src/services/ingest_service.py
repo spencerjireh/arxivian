@@ -12,11 +12,14 @@ from src.utils.pdf_parser import PDFParser
 from src.utils.chunking_service import ChunkingService
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.chunk_repository import ChunkRepository
+from src.utils.logger import get_logger
 from src.exceptions import (
     EmbeddingServiceError,
     InsufficientChunksError,
     PDFProcessingError,
 )
+
+log = get_logger(__name__)
 
 
 class IngestService:
@@ -31,17 +34,6 @@ class IngestService:
         paper_repository: PaperRepository,
         chunk_repository: ChunkRepository,
     ):
-        """
-        Initialize IngestService with dependencies.
-
-        Args:
-            arxiv_client: Client for arXiv API interactions
-            pdf_parser: Parser for extracting text from PDFs
-            embeddings_client: Client for generating embeddings
-            chunking_service: Service for chunking documents
-            paper_repository: Repository for paper data access
-            chunk_repository: Repository for chunk data access
-        """
         self.arxiv_client = arxiv_client
         self.pdf_parser = pdf_parser
         self.embeddings_client = embeddings_client
@@ -55,22 +47,17 @@ class IngestService:
 
         Process:
         1. Search arXiv API for papers
-        2. For each paper:
-           - Check if exists (skip if not force_reprocess)
-           - Download PDF
-           - Parse PDF to extract text
-           - Chunk text
-           - Generate embeddings
-           - Store in database
+        2. For each paper: download, parse, chunk, embed, store
         3. Return summary with counts and errors
-
-        Args:
-            request: Ingestion parameters
-
-        Returns:
-            IngestResponse with processing summary
         """
         start_time = time()
+        log.info(
+            "ingest started",
+            query=request.query,
+            max_results=request.max_results,
+            categories=request.categories,
+            force_reprocess=request.force_reprocess,
+        )
 
         papers_fetched = 0
         papers_processed = 0
@@ -79,7 +66,7 @@ class IngestService:
         paper_results: List[PaperResult] = []
 
         try:
-            # 1. Search arXiv for papers
+            # Search arXiv for papers
             papers = await self.arxiv_client.search_papers(
                 query=request.query,
                 max_results=request.max_results,
@@ -88,8 +75,9 @@ class IngestService:
                 end_date=request.end_date,
             )
             papers_fetched = len(papers)
+            log.info("arxiv search complete", papers_found=papers_fetched)
 
-            # 2. Process each paper
+            # Process each paper
             for paper_meta in papers:
                 try:
                     result = await self._process_single_paper(paper_meta, request.force_reprocess)
@@ -98,11 +86,15 @@ class IngestService:
                         chunks_created += result.chunks_created
                         paper_results.append(result)
                 except Exception as e:
-                    # Collect per-paper errors
+                    log.warning(
+                        "paper processing failed",
+                        arxiv_id=paper_meta.arxiv_id,
+                        error=str(e),
+                    )
                     errors.append(PaperError(arxiv_id=paper_meta.arxiv_id, error=str(e)))
 
         except Exception as e:
-            # Fatal error during search or setup
+            log.error("ingest failed", error=str(e))
             return IngestResponse(
                 status="failed",
                 papers_fetched=0,
@@ -113,6 +105,14 @@ class IngestService:
             )
 
         duration = time() - start_time
+        log.info(
+            "ingest complete",
+            papers_fetched=papers_fetched,
+            papers_processed=papers_processed,
+            chunks_created=chunks_created,
+            errors=len(errors),
+            duration_s=round(duration, 2),
+        )
 
         return IngestResponse(
             status="completed",
@@ -125,44 +125,42 @@ class IngestService:
         )
 
     async def _process_single_paper(self, paper_meta, force_reprocess: bool):
-        """
-        Process a single paper: download, parse, chunk, and embed.
+        """Process a single paper: download, parse, chunk, and embed."""
+        arxiv_id = paper_meta.arxiv_id
 
-        Args:
-            paper_meta: Paper metadata from arXiv
-            force_reprocess: Whether to reprocess existing papers
-
-        Returns:
-            PaperResult if processed, None if skipped
-        """
         # Check if exists
-        existing = await self.paper_repository.get_by_arxiv_id(paper_meta.arxiv_id)
+        existing = await self.paper_repository.get_by_arxiv_id(arxiv_id)
         if existing and not force_reprocess:
-            # Skip already processed papers
+            log.debug("paper skipped (exists)", arxiv_id=arxiv_id)
             return None
+
+        log.info("processing paper", arxiv_id=arxiv_id, title=paper_meta.title[:80])
 
         # Download PDF to temp directory
         with tempfile.TemporaryDirectory() as temp_dir:
-            pdf_path = os.path.join(temp_dir, f"{paper_meta.arxiv_id}.pdf")
+            pdf_path = os.path.join(temp_dir, f"{arxiv_id}.pdf")
 
             try:
                 await self.arxiv_client.download_pdf(pdf_url=paper_meta.pdf_url, save_path=pdf_path)
+                log.debug("pdf downloaded", arxiv_id=arxiv_id)
             except Exception as e:
-                raise PDFProcessingError(
-                    arxiv_id=paper_meta.arxiv_id, stage="download", message=str(e)
-                )
+                raise PDFProcessingError(arxiv_id=arxiv_id, stage="download", message=str(e))
 
             # Parse PDF
             try:
                 parsed = await self.pdf_parser.parse_pdf(pdf_path)
-            except Exception as e:
-                raise PDFProcessingError(
-                    arxiv_id=paper_meta.arxiv_id, stage="parsing", message=str(e)
+                log.debug(
+                    "pdf parsed",
+                    arxiv_id=arxiv_id,
+                    text_len=len(parsed.raw_text),
+                    sections=len(parsed.sections),
                 )
+            except Exception as e:
+                raise PDFProcessingError(arxiv_id=arxiv_id, stage="parsing", message=str(e))
 
         # Create or update paper record
         paper_data = {
-            "arxiv_id": paper_meta.arxiv_id,
+            "arxiv_id": arxiv_id,
             "title": paper_meta.title,
             "authors": paper_meta.authors,
             "abstract": paper_meta.abstract,
@@ -178,14 +176,15 @@ class IngestService:
         if existing:
             existing_id = str(existing.id)
             paper = await self.paper_repository.update(existing_id, paper_data)
-            # Delete old chunks
             await self.chunk_repository.delete_by_paper_id(existing_id)
+            log.debug("paper updated", arxiv_id=arxiv_id)
         else:
             paper = await self.paper_repository.create(paper_data)
+            log.debug("paper created", arxiv_id=arxiv_id)
 
         if not paper:
             raise PDFProcessingError(
-                arxiv_id=paper_meta.arxiv_id,
+                arxiv_id=arxiv_id,
                 stage="database_save",
                 message="Failed to create or update paper record",
             )
@@ -196,16 +195,19 @@ class IngestService:
         )
 
         if not chunks:
-            raise InsufficientChunksError(arxiv_id=paper_meta.arxiv_id, chunks_count=0)
+            raise InsufficientChunksError(arxiv_id=arxiv_id, chunks_count=0)
+
+        log.debug("text chunked", arxiv_id=arxiv_id, chunks=len(chunks))
 
         # Generate embeddings
         chunk_texts = [c.text for c in chunks]
         try:
             embeddings = await self.embeddings_client.embed_documents(chunk_texts)
+            log.debug("embeddings generated", arxiv_id=arxiv_id, count=len(embeddings))
         except Exception as e:
             raise EmbeddingServiceError(
-                message=f"Failed to generate embeddings for {paper_meta.arxiv_id}",
-                details={"arxiv_id": paper_meta.arxiv_id, "error": str(e)},
+                message=f"Failed to generate embeddings for {arxiv_id}",
+                details={"arxiv_id": arxiv_id, "error": str(e)},
             )
 
         # Store chunks
@@ -229,11 +231,12 @@ class IngestService:
             )
 
         await self.chunk_repository.create_bulk(chunks_data)
-        paper_chunks_count = len(chunks_data)
+
+        log.info("paper processed", arxiv_id=arxiv_id, chunks=len(chunks_data))
 
         return PaperResult(
             arxiv_id=paper_arxiv_id,
             title=paper_title,
-            chunks_created=paper_chunks_count,
+            chunks_created=len(chunks_data),
             status="success",
         )

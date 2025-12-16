@@ -2,8 +2,11 @@
 
 from langchain_core.messages import AIMessage
 from src.schemas.langgraph_state import AgentState
+from src.utils.logger import get_logger
 from ..context import AgentContext
 from ..prompts import PromptBuilder, OUT_OF_SCOPE_SYSTEM_PROMPT
+
+log = get_logger(__name__)
 
 
 async def out_of_scope_node(state: AgentState, context: AgentContext) -> AgentState:
@@ -11,6 +14,9 @@ async def out_of_scope_node(state: AgentState, context: AgentContext) -> AgentSt
     guardrail_result = state.get("guardrail_result")
     original_query = state.get("original_query") or ""
     history = state.get("conversation_history", [])
+
+    score = guardrail_result.score if guardrail_result else None
+    log.info("out of scope response", query=original_query[:100], guardrail_score=score)
 
     if guardrail_result:
         system, user = (
@@ -31,6 +37,8 @@ async def out_of_scope_node(state: AgentState, context: AgentContext) -> AgentSt
         )
     else:
         message = "I specialize in AI/ML research papers. How can I help with that?"
+
+    log.debug("out of scope message", message_len=len(str(message)))
 
     state["messages"].append(AIMessage(content=message))
     return state

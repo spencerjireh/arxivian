@@ -2,15 +2,6 @@
 
 This repository uses [Bruno](https://www.usebruno.com/) as the API client for testing and development. Bruno is a fast, git-friendly, open-source alternative to Postman that stores collections as plain text files directly in your repository.
 
-## Why Bruno?
-
-- **Git-friendly**: Collections are stored as `.bru` files that can be version controlled
-- **Open Source**: Free and open-source
-- **Fast & Lightweight**: No Electron overhead
-- **Privacy-focused**: No cloud sync required
-- **Offline-first**: Works completely offline
-- **Simple**: Clean and intuitive interface
-
 ## Installation
 
 ### macOS
@@ -190,15 +181,6 @@ In addition to Bruno, you can also use the interactive FastAPI documentation:
 - ReDoc: `http://localhost:8000/redoc`
 
 These provide an alternative way to explore and test the API endpoints.
-
-## Postman Migration
-
-This repository previously used Postman. The original Postman collection is still available at `postman_collection.json` for backward compatibility. However, we recommend using Bruno for:
-
-- Better git integration
-- Faster performance
-- Privacy and offline-first approach
-- Open-source transparency
 
 ## Troubleshooting
 

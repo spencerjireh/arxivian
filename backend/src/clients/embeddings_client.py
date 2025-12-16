@@ -4,6 +4,10 @@ from typing import List
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
+from src.utils.logger import get_logger
+
+log = get_logger(__name__)
+
 
 class JinaEmbeddingsClient:
     """Client for Jina AI embeddings API."""
@@ -19,11 +23,9 @@ class JinaEmbeddingsClient:
         self.api_key = api_key
         self.model = model
         self.api_url = "https://api.jina.ai/v1/embeddings"
-        self.dimension = 1024  # Jina v3 outputs 1024-dim embeddings
+        self.dimension = 1024
 
-    @retry(
-        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10)
-    )
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     async def embed_query(self, query: str) -> List[float]:
         """
         Generate embedding for a search query.
@@ -34,6 +36,8 @@ class JinaEmbeddingsClient:
         Returns:
             1024-dimensional embedding vector
         """
+        log.debug("embedding query", query_len=len(query))
+
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
                 self.api_url,
@@ -49,11 +53,11 @@ class JinaEmbeddingsClient:
             )
             response.raise_for_status()
             data = response.json()
-            return data["data"][0]["embedding"]
 
-    @retry(
-        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10)
-    )
+        log.debug("query embedded", dimension=len(data["data"][0]["embedding"]))
+        return data["data"][0]["embedding"]
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     async def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """
         Generate embeddings for multiple documents.
@@ -64,12 +68,20 @@ class JinaEmbeddingsClient:
         Returns:
             List of 1024-dimensional embedding vectors
         """
-        # Batch processing (Jina supports up to 100 texts per request)
         batch_size = 100
         all_embeddings = []
 
+        log.info(
+            "embedding documents",
+            count=len(texts),
+            batches=(len(texts) + batch_size - 1) // batch_size,
+        )
+
         for i in range(0, len(texts), batch_size):
             batch = texts[i : i + batch_size]
+            batch_num = i // batch_size + 1
+
+            log.debug("embedding batch", batch=batch_num, size=len(batch))
 
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(
@@ -89,4 +101,5 @@ class JinaEmbeddingsClient:
                 embeddings = [item["embedding"] for item in data["data"]]
                 all_embeddings.extend(embeddings)
 
+        log.info("documents embedded", count=len(all_embeddings))
         return all_embeddings

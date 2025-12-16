@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     # App
     debug: bool = False
     log_level: str = "INFO"
+    log_request_body: bool = True
+    log_response_body: bool = True
 
     # Helper methods
     def get_allowed_models(self, provider: str) -> List[str]:

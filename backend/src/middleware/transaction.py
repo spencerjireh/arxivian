@@ -6,7 +6,9 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.utils.logger import logger
+from src.utils.logger import get_logger
+
+log = get_logger(__name__)
 
 
 class TransactionMiddleware(BaseHTTPMiddleware):
@@ -27,19 +29,15 @@ class TransactionMiddleware(BaseHTTPMiddleware):
         Returns:
             Response from handler
         """
-        # Process request
         try:
             response = await call_next(request)
 
             # Auto-commit on success (2xx status codes)
-            # Note: DB session commit/rollback is handled via dependency injection
-            # This middleware is here for future enhancements or explicit transaction control
             if 200 <= response.status_code < 300:
-                # Get DB session from request state if available
                 if hasattr(request.state, "db_session"):
                     db: AsyncSession = request.state.db_session
                     await db.commit()
-                    logger.debug("Transaction committed")
+                    log.debug("transaction committed")
 
             return response
 
@@ -48,7 +46,6 @@ class TransactionMiddleware(BaseHTTPMiddleware):
             if hasattr(request.state, "db_session"):
                 db: AsyncSession = request.state.db_session
                 await db.rollback()
-                logger.debug("Transaction rolled back due to exception")
+                log.debug("transaction rolled back")
 
-            # Re-raise to be handled by exception handlers
             raise

@@ -7,12 +7,16 @@ import arxiv
 import httpx
 from pathlib import Path
 
+from src.utils.logger import get_logger
+
+log = get_logger(__name__)
+
 
 class ArxivPaper:
     """arXiv paper metadata."""
 
     def __init__(self, entry: arxiv.Result):
-        self.arxiv_id = entry.entry_id.split("/")[-1].split("v")[0]  # Remove version
+        self.arxiv_id = entry.entry_id.split("/")[-1].split("v")[0]
         self.title = entry.title
         self.authors = [author.name for author in entry.authors]
         self.abstract = entry.summary
@@ -56,40 +60,37 @@ class ArxivClient:
         Returns:
             List of ArxivPaper objects
         """
-        # Build query with filters
         full_query = query
 
         if categories:
             cat_query = " OR ".join([f"cat:{cat}" for cat in categories])
             full_query = f"({query}) AND ({cat_query})"
 
-        # Create search
+        log.debug("arxiv search", query=full_query, max_results=max_results)
+
         search = arxiv.Search(
             query=full_query,
             max_results=max_results,
             sort_by=arxiv.SortCriterion.Relevance,
         )
 
-        # Execute search (run in thread pool since arxiv lib is sync)
         results = []
         loop = asyncio.get_event_loop()
 
-        for result in await loop.run_in_executor(
-            None, lambda: list(self.client.results(search))
-        ):
+        for result in await loop.run_in_executor(None, lambda: list(self.client.results(search))):
             paper = ArxivPaper(result)
 
-            # Filter by date if specified
             if start_date and paper.published_date < datetime.fromisoformat(start_date):
                 continue
             if end_date and paper.published_date > datetime.fromisoformat(end_date):
                 continue
 
             results.append(paper)
+            log.debug("arxiv paper found", arxiv_id=paper.arxiv_id, title=paper.title[:60])
 
-            # Rate limiting
             await asyncio.sleep(self.rate_limit_delay)
 
+        log.info("arxiv search complete", query=query[:50], results=len(results))
         return results
 
     async def download_pdf(self, pdf_url: str, save_path: str) -> str:
@@ -103,15 +104,16 @@ class ArxivClient:
         Returns:
             Path to downloaded PDF
         """
-        # Ensure directory exists
         Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+
+        log.debug("downloading pdf", url=pdf_url)
 
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.get(pdf_url, follow_redirects=True)
             response.raise_for_status()
 
-            # Save to file
             with open(save_path, "wb") as f:
                 f.write(response.content)
 
+        log.debug("pdf downloaded", path=save_path, size_kb=len(response.content) // 1024)
         return save_path

@@ -6,6 +6,9 @@ from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
 from src.clients.base_llm_client import BaseLLMClient
+from src.utils.logger import get_logger, truncate
+
+log = get_logger(__name__)
 
 
 class OpenAIClient(BaseLLMClient):
@@ -55,6 +58,24 @@ class OpenAIClient(BaseLLMClient):
         """
         model_to_use = model or self.model
 
+        # Log full prompt at debug level
+        for msg in messages:
+            content = msg.get("content", "")
+            log.debug(
+                "llm prompt message",
+                role=msg.get("role"),
+                content=truncate(str(content), 2000),
+            )
+
+        log.debug(
+            "openai request",
+            model=model_to_use,
+            messages=len(messages),
+            temperature=temperature,
+            max_tokens=max_tokens,
+            stream=stream,
+        )
+
         if stream:
             return self._generate_streaming(
                 messages=cast(Any, messages),
@@ -69,7 +90,19 @@ class OpenAIClient(BaseLLMClient):
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
-            return response.choices[0].message.content or ""
+            content = response.choices[0].message.content or ""
+            usage = response.usage
+
+            log.debug(
+                "openai response",
+                model=model_to_use,
+                content=truncate(content, 2000),
+                prompt_tokens=usage.prompt_tokens if usage else None,
+                completion_tokens=usage.completion_tokens if usage else None,
+                total_tokens=usage.total_tokens if usage else None,
+            )
+
+            return content
 
     async def _generate_streaming(
         self,
@@ -110,6 +143,12 @@ class OpenAIClient(BaseLLMClient):
         """
         model_to_use = model or self.model
 
+        log.debug(
+            "openai structured request",
+            model=model_to_use,
+            response_format=response_format.__name__,
+        )
+
         response = await self.client.beta.chat.completions.parse(
             model=model_to_use,
             messages=cast(Any, messages),
@@ -119,4 +158,7 @@ class OpenAIClient(BaseLLMClient):
         parsed = response.choices[0].message.parsed
         if parsed is None:
             raise ValueError("Failed to parse response")
+
+        log.debug("openai structured response", parsed=str(parsed)[:500])
+
         return parsed

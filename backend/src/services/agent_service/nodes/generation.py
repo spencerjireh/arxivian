@@ -2,8 +2,11 @@
 
 from langchain_core.messages import AIMessage
 from src.schemas.langgraph_state import AgentState
+from src.utils.logger import get_logger
 from ..context import AgentContext
 from ..prompts import PromptBuilder, ANSWER_SYSTEM_PROMPT
+
+log = get_logger(__name__)
 
 
 async def generate_answer_node(state: AgentState, context: AgentContext) -> AgentState:
@@ -12,6 +15,14 @@ async def generate_answer_node(state: AgentState, context: AgentContext) -> Agen
     chunks = state["relevant_chunks"][: context.top_k]
     history = state.get("conversation_history", [])
     attempts = state.get("retrieval_attempts", 1)
+
+    log.debug(
+        "generating answer",
+        query=query[:100],
+        chunks=len(chunks),
+        history_len=len(history),
+        attempts=attempts,
+    )
 
     builder = (
         PromptBuilder(ANSWER_SYSTEM_PROMPT)
@@ -26,6 +37,8 @@ async def generate_answer_node(state: AgentState, context: AgentContext) -> Agen
 
     system, user = builder.build()
 
+    log.debug("llm prompt", system_len=len(system), user_len=len(user))
+
     answer = await context.llm_client.generate_completion(
         messages=[
             {"role": "system", "content": system},
@@ -35,6 +48,8 @@ async def generate_answer_node(state: AgentState, context: AgentContext) -> Agen
         max_tokens=1000,
         stream=False,
     )
+
+    log.info("answer generated", answer_len=len(str(answer)), chunks_used=len(chunks))
 
     state["messages"].append(AIMessage(content=answer))
     state["metadata"]["reasoning_steps"].append("Generated answer with conversation context")

@@ -1,6 +1,6 @@
 # Jireh's Agent System - Development Guidelines
 
-## Docker Development via Justfile (Default way for running the program locally)
+## Docker Development via Justfile (Default way for running the program locally with Hot Reload)
 - **Development**: `just up`
 - **Build & run**: `just dev`
 - **Clean**: `just clean`
