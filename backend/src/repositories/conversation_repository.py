@@ -1,7 +1,7 @@
 """Repository for Conversation model operations."""
 
 from typing import Optional, List
-from sqlalchemy import select, func, desc, text
+from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from src.models.conversation import Conversation, ConversationTurn
@@ -93,13 +93,10 @@ class ConversationRepository:
 
         for attempt in range(max_retries):
             try:
-                await self.session.execute(
-                    text("SELECT pg_advisory_xact_lock(hashtext(:session_id))"),
-                    {"session_id": session_id},
-                )
-
                 result = await self.session.execute(
-                    select(Conversation).where(Conversation.session_id == session_id)
+                    select(Conversation)
+                    .where(Conversation.session_id == session_id)
+                    .with_for_update()
                 )
                 conv = result.scalar_one_or_none()
 
@@ -108,13 +105,16 @@ class ConversationRepository:
                     self.session.add(conv)
                     await self.session.flush()
 
+                # Lock the last turn to prevent concurrent inserts
                 result = await self.session.execute(
-                    select(func.max(ConversationTurn.turn_number)).where(
-                        ConversationTurn.conversation_id == conv.id
-                    )
+                    select(ConversationTurn.turn_number)
+                    .where(ConversationTurn.conversation_id == conv.id)
+                    .order_by(ConversationTurn.turn_number.desc())
+                    .limit(1)
+                    .with_for_update()
                 )
                 max_turn = result.scalar_one_or_none()
-                turn_number = (max_turn or -1) + 1
+                turn_number = (max_turn if max_turn is not None else -1) + 1
 
                 ct = ConversationTurn(
                     conversation_id=conv.id,

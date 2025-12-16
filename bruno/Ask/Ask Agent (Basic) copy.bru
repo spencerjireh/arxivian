@@ -1,0 +1,26 @@
+meta {
+  name: Ask Agent (Basic) copy
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/v1/ask-agent
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "query": "Hello. Can you tell me about neural networks",
+    "session_id": "optional-uuid-for-conversation"
+  }
+}
+
+docs {
+  Ask Jireh's Agent a question using default LLM provider and model. Features guardrail validation, document grading, query rewriting, transparent reasoning steps, and optional multi-turn conversation memory.
+}
