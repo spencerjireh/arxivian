@@ -3,6 +3,7 @@
 from src.clients.base_llm_client import BaseLLMClient
 from src.services.search_service import SearchService
 from src.schemas.conversation import ConversationMessage
+from .tools import ToolRegistry, RetrieveChunksTool, WebSearchTool
 
 
 class ConversationFormatter:
@@ -55,10 +56,12 @@ class AgentContext:
         self,
         llm_client: BaseLLMClient,
         search_service: SearchService,
+        tool_registry: ToolRegistry | None = None,
         conversation_formatter: ConversationFormatter | None = None,
         guardrail_threshold: int = 75,
         top_k: int = 3,
         max_retrieval_attempts: int = 3,
+        max_iterations: int = 5,
         temperature: float = 0.3,
     ):
         self.llm_client = llm_client
@@ -67,4 +70,16 @@ class AgentContext:
         self.guardrail_threshold = guardrail_threshold
         self.top_k = top_k
         self.max_retrieval_attempts = max_retrieval_attempts
+        self.max_iterations = max_iterations
         self.temperature = temperature
+
+        # Initialize tool registry with default tools if not provided
+        if tool_registry:
+            self.tool_registry = tool_registry
+        else:
+            self.tool_registry = ToolRegistry()
+            # Register default tools
+            self.tool_registry.register(
+                RetrieveChunksTool(search_service=search_service, default_top_k=top_k * 2)
+            )
+            self.tool_registry.register(WebSearchTool())

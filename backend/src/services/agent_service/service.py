@@ -27,20 +27,19 @@ log = get_logger(__name__)
 NODE_TO_STEP = {
     "guardrail": "guardrail",
     "out_of_scope": "out_of_scope",
-    "retrieve": "retrieval",
-    "tool_retrieve": "retrieval",
+    "router": "routing",
+    "executor": "executing",
     "grade_documents": "grading",
-    "rewrite_query": "rewrite",
-    "generate_answer": "generation",
+    "generate": "generation",
 }
 
 NODE_MESSAGES = {
     "guardrail": "Validating query relevance...",
     "out_of_scope": "Generating out-of-scope response...",
-    "retrieve": "Searching documents...",
+    "router": "Deciding next action...",
+    "executor": "Executing tool...",
     "grade_documents": "Grading document relevance...",
-    "rewrite_query": "Rewriting query for better retrieval...",
-    "generate_answer": "Generating answer...",
+    "generate": "Generating answer...",
 }
 
 
@@ -49,6 +48,7 @@ class AgentService:
     Service for executing agent workflows.
 
     Wraps LangGraph workflow with streaming SSE events.
+    Uses router-based architecture for dynamic tool selection.
     """
 
     def __init__(
@@ -60,6 +60,7 @@ class AgentService:
         guardrail_threshold: int = 75,
         top_k: int = 3,
         max_retrieval_attempts: int = 3,
+        max_iterations: int = 5,
         temperature: float = 0.3,
     ):
         self.graph = build_agent_graph(
@@ -68,6 +69,7 @@ class AgentService:
             guardrail_threshold=guardrail_threshold,
             top_k=top_k,
             max_retrieval_attempts=max_retrieval_attempts,
+            max_iterations=max_iterations,
             temperature=temperature,
         )
         self.llm_client = llm_client
@@ -77,6 +79,7 @@ class AgentService:
         self.guardrail_threshold = guardrail_threshold
         self.top_k = top_k
         self.max_retrieval_attempts = max_retrieval_attempts
+        self.max_iterations = max_iterations
         self.temperature = temperature
 
     async def ask_stream(
@@ -113,18 +116,30 @@ class AgentService:
                 history.append({"role": "assistant", "content": t.agent_response})
             log.debug("loaded conversation history", session_id=session_id, turns=len(turns))
 
-        # Initial state
+        # Initial state with new router architecture fields
         initial_state = {
             "messages": [HumanMessage(content=query)],
-            "original_query": None,
+            "original_query": query,
             "rewritten_query": None,
+            # Router architecture fields
+            "status": "running",
+            "iteration": 0,
+            "max_iterations": self.max_iterations,
+            "router_decision": None,
+            "tool_history": [],
+            "pause_reason": None,
+            # Legacy fields (kept for grading)
             "retrieval_attempts": 0,
             "guardrail_result": None,
             "routing_decision": None,
             "retrieved_chunks": [],
             "relevant_chunks": [],
             "grading_results": [],
-            "metadata": {"guardrail_threshold": self.guardrail_threshold, "reasoning_steps": []},
+            "metadata": {
+                "guardrail_threshold": self.guardrail_threshold,
+                "top_k": self.top_k,
+                "reasoning_steps": [],
+            },
             "conversation_history": history,
             "session_id": session_id,
         }
@@ -173,6 +188,41 @@ class AgentService:
                         ),
                     )
 
+                # Emit router decision details
+                elif node_name == "router" and output.get("router_decision"):
+                    decision = output["router_decision"]
+                    yield StreamEvent(
+                        event=StreamEventType.STATUS,
+                        data=StatusEventData(
+                            step="routing",
+                            message=f"Decided to {decision.action}",
+                            details={
+                                "action": decision.action,
+                                "tool": decision.tool_name,
+                                "iteration": output.get("iteration", 0),
+                                "reasoning": decision.reasoning,
+                            },
+                        ),
+                    )
+
+                # Emit executor tool details
+                elif node_name == "executor" and output.get("tool_history"):
+                    tool_history = output["tool_history"]
+                    if tool_history:
+                        last_exec = tool_history[-1]
+                        yield StreamEvent(
+                            event=StreamEventType.STATUS,
+                            data=StatusEventData(
+                                step="executing",
+                                message=f"Executed {last_exec.tool_name}",
+                                details={
+                                    "tool": last_exec.tool_name,
+                                    "success": last_exec.success,
+                                    "result": last_exec.result_summary,
+                                },
+                            ),
+                        )
+
                 # Emit grading results
                 elif node_name == "grade_documents":
                     relevant = output.get("relevant_chunks", [])
@@ -208,17 +258,6 @@ class AgentService:
                         )
                         sources_emitted = True
 
-                # Emit rewrite details
-                elif node_name == "rewrite_query" and output.get("rewritten_query"):
-                    yield StreamEvent(
-                        event=StreamEventType.STATUS,
-                        data=StatusEventData(
-                            step="rewrite",
-                            message="Query rewritten",
-                            details={"rewritten_query": output["rewritten_query"]},
-                        ),
-                    )
-
             # Stream custom events (tokens from our LLM client)
             elif kind == "on_custom_event" and event.get("name") == "token":
                 token = event.get("data")
@@ -227,6 +266,30 @@ class AgentService:
                         event=StreamEventType.CONTENT,
                         data=ContentEventData(token=token),
                     )
+
+            # Handle tool events from executor
+            elif kind == "on_custom_event" and event.get("name") == "tool_start":
+                data = event.get("data", {})
+                yield StreamEvent(
+                    event=StreamEventType.STATUS,
+                    data=StatusEventData(
+                        step="executing",
+                        message=f"Calling {data.get('tool_name', 'tool')}...",
+                        details=data,
+                    ),
+                )
+
+            elif kind == "on_custom_event" and event.get("name") == "tool_end":
+                data = event.get("data", {})
+                status = "completed" if data.get("success") else "failed"
+                yield StreamEvent(
+                    event=StreamEventType.STATUS,
+                    data=StatusEventData(
+                        step="executing",
+                        message=f"Tool {status}",
+                        details=data,
+                    ),
+                )
 
         # Extract final answer from state
         answer = ""
@@ -275,11 +338,16 @@ class AgentService:
 
         execution_time = (time.time() - start_time) * 1000
 
+        # Get tool history for metadata
+        tool_history = final_state.get("tool_history", [])
+        tools_used = [t.tool_name for t in tool_history] if tool_history else []
+
         log.info(
             "streaming query complete",
             session_id=session_id,
             sources=len(sources_dicts),
-            retrieval_attempts=final_state.get("retrieval_attempts", 0),
+            iterations=final_state.get("iteration", 0),
+            tools_used=tools_used,
             guardrail_score=guardrail_score,
             turn_number=turn_number,
             answer_len=len(answer),

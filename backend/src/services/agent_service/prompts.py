@@ -19,6 +19,25 @@ The user's query is outside your scope. Respond helpfully:
 - Suggest how they might rephrase for AI/ML relevance
 - Be concise (2-3 sentences), professional, not over-apologetic"""
 
+ROUTER_SYSTEM_PROMPT = """You are a routing agent for an AI/ML research assistant.
+Your job is to decide the next action based on the conversation and available tools.
+
+Available tools:
+{tool_descriptions}
+
+Guidelines:
+1. Use retrieve_chunks when you need information from research papers
+2. Use web_search for recent information (2024+) or current events
+3. Choose "generate" when you have enough context to answer the user's question
+4. Consider the conversation history - avoid redundant tool calls
+5. If previous retrieval found relevant documents, you likely have enough context
+
+Decision criteria:
+- New query about AI/ML concepts -> retrieve_chunks
+- Question about recent developments -> web_search
+- Follow-up on retrieved context -> likely generate
+- Query already has sufficient context from tool_history -> generate"""
+
 
 class PromptBuilder:
     """Composable prompt builder for LLM calls."""
@@ -166,5 +185,56 @@ Be precise, technical, and thorough."""
 Question: {query}
 
 Provide a detailed answer based on the context above. Cite sources."""
+
+    return system_prompt, user_prompt
+
+
+def get_router_prompt(
+    query: str,
+    tool_schemas: list[dict],
+    tool_history: list[dict] | None = None,
+    conversation_context: str = "",
+) -> tuple[str, str]:
+    """
+    Generate router prompt for tool selection.
+
+    Args:
+        query: User's current query
+        tool_schemas: List of tool schemas with name and description
+        tool_history: Previous tool executions in this session
+        conversation_context: Formatted conversation history
+
+    Returns:
+        Tuple of (system_prompt, user_prompt)
+    """
+    # Format tool descriptions
+    tool_desc_lines = []
+    for schema in tool_schemas:
+        tool_desc_lines.append(f"- {schema['name']}: {schema['description']}")
+    tool_descriptions = "\n".join(tool_desc_lines)
+
+    system_prompt = ROUTER_SYSTEM_PROMPT.format(tool_descriptions=tool_descriptions)
+
+    # Build user prompt
+    user_parts = []
+
+    if conversation_context:
+        user_parts.append(f"Conversation history:\n{conversation_context}")
+
+    if tool_history:
+        history_lines = ["Previous tool calls in this turn:"]
+        for exec_info in tool_history:
+            status = "success" if exec_info.get("success") else "failed"
+            history_lines.append(
+                f"- {exec_info['tool_name']}: {status} - {exec_info.get('result_summary', 'no summary')}"
+            )
+        user_parts.append("\n".join(history_lines))
+
+    user_parts.append(f"Current query: {query}")
+    user_parts.append(
+        "Decide: Should you call a tool (and which one with what arguments), or generate a response?"
+    )
+
+    user_prompt = "\n\n".join(user_parts)
 
     return system_prompt, user_prompt
