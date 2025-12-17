@@ -1,8 +1,10 @@
 """Answer generation node."""
 
 from langchain_core.messages import AIMessage
+from langchain_core.callbacks import adispatch_custom_event
+
 from src.schemas.langgraph_state import AgentState
-from src.utils.logger import get_logger
+from src.utils.logger import get_logger, truncate
 from ..context import AgentContext
 from ..prompts import PromptBuilder, ANSWER_SYSTEM_PROMPT
 
@@ -39,17 +41,34 @@ async def generate_answer_node(state: AgentState, context: AgentContext) -> Agen
 
     log.debug("llm prompt", system_len=len(system), user_len=len(user))
 
-    answer = await context.llm_client.generate_completion(
+    # Use stream=True and emit tokens via custom events
+    response = await context.llm_client.generate_completion(
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
         temperature=context.temperature,
         max_tokens=1000,
-        stream=False,
+        stream=True,
     )
 
-    log.info("answer generated", answer_len=len(str(answer)), chunks_used=len(chunks))
+    # Collect streamed tokens and emit as custom events
+    if isinstance(response, str):
+        answer = response
+        await adispatch_custom_event("token", response)
+    else:
+        tokens: list[str] = []
+        async for token in response:
+            tokens.append(token)
+            await adispatch_custom_event("token", token)
+        answer = "".join(tokens)
+
+    log.info(
+        "answer generated",
+        answer=truncate(answer, 3000),
+        answer_len=len(answer),
+        chunks_used=len(chunks),
+    )
 
     state["messages"].append(AIMessage(content=answer))
     state["metadata"]["reasoning_steps"].append("Generated answer with conversation context")

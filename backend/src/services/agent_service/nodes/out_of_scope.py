@@ -1,8 +1,10 @@
 """Out of scope handler node."""
 
 from langchain_core.messages import AIMessage
+from langchain_core.callbacks import adispatch_custom_event
+
 from src.schemas.langgraph_state import AgentState
-from src.utils.logger import get_logger
+from src.utils.logger import get_logger, truncate
 from ..context import AgentContext
 from ..prompts import PromptBuilder, OUT_OF_SCOPE_SYSTEM_PROMPT
 
@@ -26,19 +28,37 @@ async def out_of_scope_node(state: AgentState, context: AgentContext) -> AgentSt
             .with_note(f"Score: {guardrail_result.score}/100. Reason: {guardrail_result.reasoning}")
             .build()
         )
-        message = await context.llm_client.generate_completion(
+
+        # Use stream=True and emit tokens via custom events
+        response = await context.llm_client.generate_completion(
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
             temperature=0.7,
             max_tokens=300,
-            stream=False,
+            stream=True,
         )
+
+        # Collect streamed tokens and emit as custom events
+        if isinstance(response, str):
+            message = response
+            await adispatch_custom_event("token", response)
+        else:
+            tokens: list[str] = []
+            async for token in response:
+                tokens.append(token)
+                await adispatch_custom_event("token", token)
+            message = "".join(tokens)
     else:
         message = "I specialize in AI/ML research papers. How can I help with that?"
+        await adispatch_custom_event("token", message)
 
-    log.debug("out of scope message", message_len=len(str(message)))
+    log.info(
+        "out of scope response generated",
+        message=truncate(message, 500),
+        message_len=len(message),
+    )
 
     state["messages"].append(AIMessage(content=message))
     return state
