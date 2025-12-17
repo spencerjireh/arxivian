@@ -1,8 +1,6 @@
 """Grading node for document relevance evaluation."""
 
 import asyncio
-import json
-from langchain_core.messages import ToolMessage
 from src.schemas.langgraph_state import AgentState, GradingResult
 from src.utils.logger import get_logger
 from ..context import AgentContext
@@ -19,18 +17,8 @@ async def grade_documents_node(state: AgentState, context: AgentContext) -> Agen
     """
     query = state.get("rewritten_query") or state["original_query"]
 
-    # Extract chunks from tool messages
-    chunks = []
-    for msg in reversed(state["messages"]):
-        if isinstance(msg, ToolMessage):
-            content = msg.content
-            if isinstance(content, str):
-                chunks = json.loads(content)
-            else:
-                chunks = content
-            break
-
-    state["retrieved_chunks"] = chunks
+    # Get chunks from state (set by executor_node)
+    chunks = state.get("retrieved_chunks", [])
     log.debug("grading started", query=query[:100] if query else "", chunks=len(chunks))
 
     # Grade all chunks in parallel
