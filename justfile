@@ -72,7 +72,7 @@ db-shell:
 
 # Check backend health
 health:
-    curl http://localhost:8000/api/v1/health
+    curl http://localhost:${BACKEND_PORT:-8000}/api/v1/health
 
 # Run database migrations
 migrate:

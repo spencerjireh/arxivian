@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage'
 import SearchPage from './pages/SearchPage'
 import DocumentsPage from './pages/DocumentsPage'
 import AskPage from './pages/AskPage'
+import ChatPage from './pages/ChatPage'
 
 const router = createBrowserRouter([
   {
@@ -25,6 +26,10 @@ const router = createBrowserRouter([
       {
         path: 'ask',
         element: <AskPage />,
+      },
+      {
+        path: 'ask/:sessionId',
+        element: <ChatPage />,
       },
     ],
   },

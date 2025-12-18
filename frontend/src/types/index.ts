@@ -4,7 +4,7 @@ export interface RouteParams {
   [key: string]: string | undefined
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data?: T
   error?: string
   message?: string
