@@ -14,7 +14,7 @@ export default function ConversationList() {
   const deleteConversation = useDeleteConversation()
 
   const handleNavigate = (sessionId: string) => {
-    navigate(`/ask/${sessionId}`)
+    navigate(`/${sessionId}`)
   }
 
   const handleDelete = (sessionId: string) => {

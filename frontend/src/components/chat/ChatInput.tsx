@@ -2,7 +2,8 @@
 
 import { useState, type FormEvent, type KeyboardEvent } from 'react'
 import type { LLMProvider } from '../../types/api'
-import type { ChatOptions } from '../../hooks/useStreamChat'
+import type { ChatOptions } from '../../hooks/useChat'
+import { useSettingsStore } from '../../stores/settingsStore'
 
 interface ChatInputProps {
   onSend: (query: string, options: ChatOptions) => void
@@ -13,17 +14,41 @@ interface ChatInputProps {
 export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputProps) {
   const [query, setQuery] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const [options, setOptions] = useState<ChatOptions>({
-    provider: undefined,
-    model: '',
-    temperature: 0.3,
-    top_k: 3,
-    guardrail_threshold: 75,
-  })
+  
+  // Use settings from store
+  const {
+    provider,
+    model,
+    temperature,
+    top_k,
+    guardrail_threshold,
+    max_retrieval_attempts,
+    conversation_window,
+    setProvider,
+    setModel,
+    setTemperature,
+    setTopK,
+    setGuardrailThreshold,
+    setMaxRetrievalAttempts,
+    setConversationWindow,
+    resetToDefaults,
+  } = useSettingsStore()
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     if (!query.trim() || isStreaming) return
+    
+    // Build options from current settings
+    const options: ChatOptions = {
+      provider,
+      model,
+      temperature,
+      top_k,
+      guardrail_threshold,
+      max_retrieval_attempts,
+      conversation_window,
+    }
+    
     onSend(query.trim(), options)
     setQuery('')
   }
@@ -41,17 +66,25 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
         {/* Advanced options panel */}
         {showAdvanced && (
           <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 transition-all duration-200">
+            {/* Reset button */}
+            <div className="flex justify-end mb-3">
+              <button
+                type="button"
+                onClick={resetToDefaults}
+                className="px-3 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-200 bg-gray-100 rounded-md transition-colors"
+              >
+                Reset to Defaults
+              </button>
+            </div>
+            
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {/* Provider */}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Provider</label>
                 <select
-                  value={options.provider ?? ''}
+                  value={provider ?? ''}
                   onChange={(e) =>
-                    setOptions({
-                      ...options,
-                      provider: (e.target.value || undefined) as LLMProvider | undefined,
-                    })
+                    setProvider((e.target.value || undefined) as LLMProvider | undefined)
                   }
                   className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-200"
                 >
@@ -66,8 +99,8 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
                 <label className="block text-xs text-gray-500 mb-1">Model</label>
                 <input
                   type="text"
-                  value={options.model}
-                  onChange={(e) => setOptions({ ...options, model: e.target.value })}
+                  value={model ?? ''}
+                  onChange={(e) => setModel(e.target.value || undefined)}
                   placeholder="Default model"
                   className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-200"
                 />
@@ -76,17 +109,15 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
               {/* Temperature */}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  Temperature: {options.temperature?.toFixed(1)}
+                  Temperature: {temperature.toFixed(1)}
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="1"
                   step="0.1"
-                  value={options.temperature}
-                  onChange={(e) =>
-                    setOptions({ ...options, temperature: parseFloat(e.target.value) })
-                  }
+                  value={temperature}
+                  onChange={(e) => setTemperature(parseFloat(e.target.value))}
                   className="w-full"
                 />
               </div>
@@ -94,17 +125,15 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
               {/* Top K */}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  Top K: {options.top_k}
+                  Top K: {top_k}
                 </label>
                 <input
                   type="range"
                   min="1"
                   max="10"
                   step="1"
-                  value={options.top_k}
-                  onChange={(e) =>
-                    setOptions({ ...options, top_k: parseInt(e.target.value) })
-                  }
+                  value={top_k}
+                  onChange={(e) => setTopK(parseInt(e.target.value))}
                   className="w-full"
                 />
               </div>
@@ -112,17 +141,47 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
               {/* Guardrail Threshold */}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  Guardrail: {options.guardrail_threshold}%
+                  Guardrail: {guardrail_threshold}%
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="100"
                   step="5"
-                  value={options.guardrail_threshold}
-                  onChange={(e) =>
-                    setOptions({ ...options, guardrail_threshold: parseInt(e.target.value) })
-                  }
+                  value={guardrail_threshold}
+                  onChange={(e) => setGuardrailThreshold(parseInt(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Max Retrieval Attempts */}
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Max Retrieval: {max_retrieval_attempts}
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="5"
+                  step="1"
+                  value={max_retrieval_attempts}
+                  onChange={(e) => setMaxRetrievalAttempts(parseInt(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Conversation Window */}
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Conversation Window: {conversation_window}
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  step="1"
+                  value={conversation_window}
+                  onChange={(e) => setConversationWindow(parseInt(e.target.value))}
                   className="w-full"
                 />
               </div>

@@ -1,12 +1,23 @@
 // Message list container component
 
 import { useRef, useEffect } from 'react'
-import { useChatStore } from '../../stores/chatStore'
+import type { Message, SourceInfo } from '../../types/api'
 import ChatMessage from './ChatMessage'
 
-export default function ChatMessages() {
+interface ChatMessagesProps {
+  messages: Message[]
+  isStreaming: boolean
+  streamingContent: string
+  sources: SourceInfo[]
+}
+
+export default function ChatMessages({
+  messages,
+  isStreaming,
+  streamingContent,
+  sources,
+}: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const { messages, isStreaming, streamingContent, sources } = useChatStore()
 
   // Auto-scroll to bottom when new messages or streaming content
   useEffect(() => {

@@ -61,8 +61,39 @@ export function useDeleteConversation() {
 
   return useMutation({
     mutationFn: deleteConversation,
-    onSuccess: () => {
-      // Invalidate conversation list to refetch
+    // Optimistic update - remove from list immediately
+    onMutate: async (sessionId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: conversationKeys.lists() })
+
+      // Snapshot the previous value
+      const previousLists = queryClient.getQueriesData({ queryKey: conversationKeys.lists() })
+
+      // Optimistically remove from all list caches
+      queryClient.setQueriesData<ConversationListResponse>(
+        { queryKey: conversationKeys.lists() },
+        (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            total: old.total - 1,
+            conversations: old.conversations.filter((c) => c.session_id !== sessionId),
+          }
+        }
+      )
+
+      return { previousLists }
+    },
+    // If mutation fails, rollback
+    onError: (_err, _sessionId, context) => {
+      if (context?.previousLists) {
+        context.previousLists.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data)
+        })
+      }
+    },
+    // Always refetch after error or success
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: conversationKeys.lists() })
     },
   })

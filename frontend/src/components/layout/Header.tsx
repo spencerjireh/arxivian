@@ -10,32 +10,7 @@ const Header = () => {
               Jirehs Agent
             </Link>
           </div>
-          <nav className="flex space-x-8">
-            <Link
-              to="/"
-              className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium"
-            >
-              Home
-            </Link>
-            <Link
-              to="/search"
-              className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium"
-            >
-              Search
-            </Link>
-            <Link
-              to="/documents"
-              className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium"
-            >
-              Documents
-            </Link>
-            <Link
-              to="/ask"
-              className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium"
-            >
-              Ask
-            </Link>
-          </nav>
+
         </div>
       </div>
     </header>

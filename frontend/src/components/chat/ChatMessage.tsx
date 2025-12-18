@@ -3,6 +3,7 @@
 import type { Message } from '../../types/api'
 import SourceCard from './SourceCard'
 import MetadataPanel from './MetadataPanel'
+import MarkdownRenderer from './MarkdownRenderer'
 
 interface ChatMessageProps {
   message: Message
@@ -28,10 +29,18 @@ export default function ChatMessage({
         } px-4 py-3`}
       >
         {/* Message content */}
-        <div className="text-gray-800 whitespace-pre-wrap break-words">
-          {content}
-          {isStreaming && (
-            <span className="inline-block w-2 h-4 ml-1 bg-gray-400 animate-pulse" />
+        <div className="text-gray-800 break-words">
+          {isUser ? (
+            // User messages: render as plain text with whitespace preserved
+            <div className="whitespace-pre-wrap">{content}</div>
+          ) : (
+            // Assistant messages: render as markdown
+            <>
+              <MarkdownRenderer content={content || ''} />
+              {isStreaming && (
+                <span className="inline-block w-2 h-4 ml-1 bg-gray-400 animate-pulse" />
+              )}
+            </>
           )}
         </div>
 

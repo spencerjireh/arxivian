@@ -1,49 +1,51 @@
 // Chat page - active chat with message history
 
 import { useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { useConversation } from '../api/conversations'
-import { useChatStore } from '../stores/chatStore'
-import { useStreamChat } from '../hooks/useStreamChat'
+import { useChat } from '../hooks/useChat'
 import ChatMessages from '../components/chat/ChatMessages'
 import ChatInput from '../components/chat/ChatInput'
 import StreamStatus from '../components/chat/StreamStatus'
 
 export default function ChatPage() {
   const { sessionId } = useParams<{ sessionId: string }>()
-  const navigate = useNavigate()
   const isNewChat = sessionId === 'new'
 
-  const { setSessionId, loadHistory, reset, sessionId: storeSessionId, error } = useChatStore()
-  const { sendMessage, cancelStream, isStreaming } = useStreamChat()
+  // Use null for new chats, actual sessionId for existing ones
+  const effectiveSessionId = isNewChat ? null : sessionId ?? null
+
+  const {
+    messages,
+    isStreaming,
+    streamingContent,
+    currentStatus,
+    sources,
+    error,
+    sendMessage,
+    cancelStream,
+    loadFromHistory,
+    clearMessages,
+  } = useChat(effectiveSessionId)
 
   // Fetch conversation history for existing sessions
   const { data: conversation, isLoading } = useConversation(
     isNewChat ? undefined : sessionId
   )
 
-  // Initialize session ID from URL
-  useEffect(() => {
-    if (isNewChat) {
-      reset()
-    } else if (sessionId) {
-      setSessionId(sessionId)
-    }
-  }, [sessionId, isNewChat, setSessionId, reset])
-
   // Load history when conversation data arrives
   useEffect(() => {
-    if (conversation?.turns) {
-      loadHistory(conversation.turns)
+    if (conversation?.turns && conversation.turns.length > 0) {
+      loadFromHistory(conversation.turns)
     }
-  }, [conversation, loadHistory])
+  }, [conversation, loadFromHistory])
 
-  // Update URL when new session is created
+  // Clear messages when navigating to new chat
   useEffect(() => {
-    if (isNewChat && storeSessionId && storeSessionId !== sessionId) {
-      navigate(`/ask/${storeSessionId}`, { replace: true })
+    if (isNewChat) {
+      clearMessages()
     }
-  }, [isNewChat, storeSessionId, sessionId, navigate])
+  }, [isNewChat, clearMessages])
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
@@ -51,7 +53,7 @@ export default function ChatPage() {
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
         <div className="flex items-center gap-3">
           <Link
-            to="/ask"
+            to="/"
             className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,7 +78,7 @@ export default function ChatPage() {
         </div>
 
         <Link
-          to="/ask/new"
+          to="/new"
           className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
           title="New chat"
         >
@@ -120,10 +122,17 @@ export default function ChatPage() {
       )}
 
       {/* Messages */}
-      {!isLoading && <ChatMessages />}
+      {!isLoading && (
+        <ChatMessages
+          messages={messages}
+          isStreaming={isStreaming}
+          streamingContent={streamingContent}
+          sources={sources}
+        />
+      )}
 
       {/* Status indicator */}
-      <StreamStatus />
+      <StreamStatus status={currentStatus} />
 
       {/* Input */}
       <ChatInput

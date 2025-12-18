@@ -1,4 +1,5 @@
-// Custom hooks will be added here
+// Custom hooks
 
 export { useDebounce } from './useDebounce'
-export { useStreamChat } from './useStreamChat'
+export { useChat, chatKeys } from './useChat'
+export type { ChatOptions } from './useChat'

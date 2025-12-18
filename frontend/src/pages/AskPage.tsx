@@ -17,7 +17,7 @@ export default function AskPage() {
           </p>
         </div>
         <button
-          onClick={() => navigate('/ask/new')}
+          onClick={() => navigate('/new')}
           className="inline-flex items-center px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
         >
           <svg
