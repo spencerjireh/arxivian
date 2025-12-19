@@ -1,28 +1,27 @@
 // Message list container component
 
 import { useRef, useEffect } from 'react'
-import type { Message, SourceInfo } from '../../types/api'
+import type { Message } from '../../types/api'
+import { useChatStore } from '../../stores/chatStore'
 import ChatMessage from './ChatMessage'
 
 interface ChatMessagesProps {
   messages: Message[]
-  isStreaming: boolean
-  streamingContent: string
-  sources: SourceInfo[]
 }
 
-export default function ChatMessages({
-  messages,
-  isStreaming,
-  streamingContent,
-  sources,
-}: ChatMessagesProps) {
+export default function ChatMessages({ messages }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll to bottom when new messages or streaming content
+  // Subscribe directly to streaming state from Zustand store for real-time updates
+  const isStreaming = useChatStore((state) => state.isStreaming)
+  const streamingContent = useChatStore((state) => state.streamingContent)
+  const sources = useChatStore((state) => state.sources)
+  const thinkingSteps = useChatStore((state) => state.thinkingSteps)
+
+  // Auto-scroll to bottom when new messages, streaming content, or thinking steps change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, streamingContent])
+  }, [messages, streamingContent, thinkingSteps])
 
   if (messages.length === 0 && !isStreaming) {
     return (
@@ -53,6 +52,7 @@ export default function ChatMessages({
           }}
           isStreaming
           streamingContent={streamingContent}
+          streamingThinkingSteps={thinkingSteps}
         />
       )}
 

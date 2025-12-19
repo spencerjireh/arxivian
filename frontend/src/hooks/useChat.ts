@@ -14,6 +14,7 @@ import type {
   Message,
   SourceInfo,
   MetadataEventData,
+  ThinkingStep,
 } from '../types/api'
 
 export interface ChatOptions {
@@ -40,18 +41,16 @@ export function useChat(sessionId: string | null) {
   const navigate = useNavigate()
   const abortControllerRef = useRef<AbortController | null>(null)
 
-  // UI-only state from Zustand (streaming status, current streaming content)
+  // UI-only actions from Zustand (streaming is managed in store, components subscribe directly)
   const {
     isStreaming,
-    streamingContent,
-    currentStatus,
-    sources,
-    error,
     setStreaming,
     appendStreamingContent,
     setStatus,
     setSources,
     setError,
+    addThinkingStep,
+    getThinkingSteps,
     resetStreamingState,
   } = useChatStore()
 
@@ -86,13 +85,25 @@ export function useChat(sessionId: string | null) {
 
   // Finalize assistant message after streaming completes
   const finalizeAssistantMessage = useCallback(
-    (content: string, sources: SourceInfo[], metadata: MetadataEventData) => {
+    (
+      content: string,
+      sources: SourceInfo[],
+      metadata: MetadataEventData,
+      thinkingSteps: ThinkingStep[]
+    ) => {
+      // Mark all remaining running steps as complete
+      const finalizedSteps = thinkingSteps.map((step) => ({
+        ...step,
+        status: 'complete' as const,
+      }))
+
       const assistantMessage: Message = {
         id: generateId(),
         role: 'assistant',
         content,
         sources: sources.length > 0 ? sources : undefined,
         metadata,
+        thinkingSteps: finalizedSteps.length > 0 ? finalizedSteps : undefined,
         createdAt: new Date(),
       }
       setMessages((prev) => [...prev, assistantMessage])
@@ -177,6 +188,8 @@ export function useChat(sessionId: string | null) {
           {
             onStatus: (data) => {
               setStatus(data.message)
+              // Add/update thinking step
+              addThinkingStep(data)
             },
             onContent: (data) => {
               accumulatedContent += data.token
@@ -187,8 +200,15 @@ export function useChat(sessionId: string | null) {
               setSources(data.sources)
             },
             onMetadata: (data) => {
+              // Get final thinking steps before reset
+              const finalThinkingSteps = getThinkingSteps()
               // Finalize the message with all accumulated data
-              finalizeAssistantMessage(accumulatedContent, accumulatedSources, data)
+              finalizeAssistantMessage(
+                accumulatedContent,
+                accumulatedSources,
+                data,
+                finalThinkingSteps
+              )
               resetStreamingState()
               setStreaming(false)
             },
@@ -226,6 +246,8 @@ export function useChat(sessionId: string | null) {
       setStatus,
       appendStreamingContent,
       setSources,
+      addThinkingStep,
+      getThinkingSteps,
       finalizeAssistantMessage,
     ]
   )
@@ -240,19 +262,21 @@ export function useChat(sessionId: string | null) {
 
   // Load messages from conversation history (when navigating to existing chat)
   const loadFromHistory = useCallback(
-    (turns: Array<{
-      turn_number: number
-      user_query: string
-      agent_response: string
-      provider: string
-      model: string
-      guardrail_score?: number | null
-      retrieval_attempts: number
-      rewritten_query?: string | null
-      sources?: Record<string, unknown>[] | null
-      reasoning_steps?: string[] | null
-      created_at: string
-    }>) => {
+    (
+      turns: Array<{
+        turn_number: number
+        user_query: string
+        agent_response: string
+        provider: string
+        model: string
+        guardrail_score?: number | null
+        retrieval_attempts: number
+        rewritten_query?: string | null
+        sources?: Record<string, unknown>[] | null
+        reasoning_steps?: string[] | null
+        created_at: string
+      }>
+    ) => {
       const loadedMessages: Message[] = turns.flatMap((turn) => [
         {
           id: `user-${turn.turn_number}`,
@@ -276,6 +300,9 @@ export function useChat(sessionId: string | null) {
             turn_number: turn.turn_number,
             reasoning_steps: turn.reasoning_steps ?? [],
           },
+          // Note: thinkingSteps are not persisted in backend, so they won't be available
+          // for historical messages. We could reconstruct basic steps from reasoning_steps
+          // if needed in the future.
           createdAt: new Date(turn.created_at),
         },
       ])
@@ -291,13 +318,8 @@ export function useChat(sessionId: string | null) {
   }, [queryClient, sessionId, resetStreamingState])
 
   return {
-    // State
+    // State - messages from query cache
     messages,
-    isStreaming,
-    streamingContent,
-    currentStatus,
-    sources,
-    error,
 
     // Actions
     sendMessage,

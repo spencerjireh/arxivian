@@ -1,6 +1,7 @@
 // Chat input with expandable advanced options
 
 import { useState, type FormEvent, type KeyboardEvent } from 'react'
+import { Sliders, X, Send } from 'lucide-react'
 import type { LLMProvider } from '../../types/api'
 import type { ChatOptions } from '../../hooks/useChat'
 import { useSettingsStore } from '../../stores/settingsStore'
@@ -210,14 +211,7 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
               }`}
               title="Advanced options"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-                />
-              </svg>
+              <Sliders className="w-5 h-5" />
             </button>
           </div>
 
@@ -227,14 +221,7 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
               onClick={onCancel}
               className="px-4 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <X className="w-5 h-5" />
             </button>
           ) : (
             <button
@@ -242,14 +229,7 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
               disabled={!query.trim()}
               className="px-4 py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                />
-              </svg>
+              <Send className="w-5 h-5" />
             </button>
           )}
         </div>

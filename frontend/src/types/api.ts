@@ -112,6 +112,27 @@ export interface DeleteConversationResponse {
   turns_deleted: number
 }
 
+// Thinking/Reasoning types for UI
+
+export type ThinkingStepType =
+  | 'guardrail'
+  | 'routing'
+  | 'executing'
+  | 'grading'
+  | 'generation'
+  | 'out_of_scope'
+
+export type ThinkingStepStatus = 'running' | 'complete' | 'error'
+
+export interface ThinkingStep {
+  id: string
+  step: ThinkingStepType
+  message: string
+  details?: Record<string, unknown>
+  status: ThinkingStepStatus
+  timestamp: Date
+}
+
 // Chat UI types
 
 export interface Message {
@@ -120,6 +141,7 @@ export interface Message {
   content: string
   sources?: SourceInfo[]
   metadata?: MetadataEventData
+  thinkingSteps?: ThinkingStep[]
   isStreaming?: boolean
   createdAt: Date
 }

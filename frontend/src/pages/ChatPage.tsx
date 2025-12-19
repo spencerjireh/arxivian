@@ -2,8 +2,10 @@
 
 import { useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { ChevronLeft, Plus, Loader2 } from 'lucide-react'
 import { useConversation } from '../api/conversations'
 import { useChat } from '../hooks/useChat'
+import { useChatStore } from '../stores/chatStore'
 import ChatMessages from '../components/chat/ChatMessages'
 import ChatInput from '../components/chat/ChatInput'
 import StreamStatus from '../components/chat/StreamStatus'
@@ -15,13 +17,14 @@ export default function ChatPage() {
   // Use null for new chats, actual sessionId for existing ones
   const effectiveSessionId = isNewChat ? null : sessionId ?? null
 
+  // Subscribe to streaming state directly from store for real-time updates
+  const isStreaming = useChatStore((state) => state.isStreaming)
+  const currentStatus = useChatStore((state) => state.currentStatus)
+  const error = useChatStore((state) => state.error)
+  const thinkingSteps = useChatStore((state) => state.thinkingSteps)
+
   const {
     messages,
-    isStreaming,
-    streamingContent,
-    currentStatus,
-    sources,
-    error,
     sendMessage,
     cancelStream,
     loadFromHistory,
@@ -56,14 +59,7 @@ export default function ChatPage() {
             to="/"
             className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
+            <ChevronLeft className="w-5 h-5" />
           </Link>
           <div>
             <h1 className="text-lg font-medium text-gray-900">
@@ -82,35 +78,14 @@ export default function ChatPage() {
           className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
           title="New chat"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
+          <Plus className="w-5 h-5" />
         </Link>
       </div>
 
       {/* Loading state */}
       {isLoading && (
         <div className="flex-1 flex items-center justify-center">
-          <svg className="w-8 h-8 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
-          </svg>
+          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
         </div>
       )}
 
@@ -122,17 +97,10 @@ export default function ChatPage() {
       )}
 
       {/* Messages */}
-      {!isLoading && (
-        <ChatMessages
-          messages={messages}
-          isStreaming={isStreaming}
-          streamingContent={streamingContent}
-          sources={sources}
-        />
-      )}
+      {!isLoading && <ChatMessages messages={messages} />}
 
-      {/* Status indicator */}
-      <StreamStatus status={currentStatus} />
+      {/* Status indicator - now redundant since we show in ThinkingPanel, but keep for fallback */}
+      {!thinkingSteps.length && <StreamStatus status={currentStatus} />}
 
       {/* Input */}
       <ChatInput

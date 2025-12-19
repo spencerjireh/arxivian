@@ -131,8 +131,8 @@ def get_agent_service(
     # Get search service
     search_service = get_search_service(db_session)
 
-    # Get conversation repository if session_id is provided
-    conversation_repo = ConversationRepository(db_session) if session_id else None
+    # Get conversation repository for persistence
+    conversation_repo = ConversationRepository(db_session)
 
     return AgentService(
         llm_client=llm_client,

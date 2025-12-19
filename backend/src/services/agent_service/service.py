@@ -1,6 +1,7 @@
 """Agent service with LangGraph workflow."""
 
 import time
+import uuid
 from typing import AsyncIterator
 
 from langchain_core.messages import HumanMessage, AIMessage
@@ -98,6 +99,10 @@ class AgentService:
             StreamEvent objects for status updates, content tokens, sources, and metadata
         """
         start_time = time.time()
+
+        # Generate session_id if not provided (new conversation)
+        if not session_id:
+            session_id = str(uuid.uuid4())
 
         log.info(
             "streaming query started",
@@ -314,7 +319,7 @@ class AgentService:
             for chunk in relevant_chunks
         ]
 
-        # Save turn if session provided
+        # Save turn to database
         turn_number = 0
         guardrail_result = final_state.get("guardrail_result")
         guardrail_score = guardrail_result.score if guardrail_result else None

@@ -1,23 +1,31 @@
 // User/assistant message bubble component
 
-import type { Message } from '../../types/api'
+import type { Message, ThinkingStep } from '../../types/api'
 import SourceCard from './SourceCard'
 import MetadataPanel from './MetadataPanel'
 import MarkdownRenderer from './MarkdownRenderer'
+import ThinkingPanel from './ThinkingPanel'
 
 interface ChatMessageProps {
   message: Message
   isStreaming?: boolean
   streamingContent?: string
+  streamingThinkingSteps?: ThinkingStep[]
 }
 
 export default function ChatMessage({
   message,
   isStreaming,
   streamingContent,
+  streamingThinkingSteps,
 }: ChatMessageProps) {
   const isUser = message.role === 'user'
   const content = isStreaming ? streamingContent : message.content
+
+  // Use streaming thinking steps if streaming, otherwise use persisted ones from message
+  const thinkingSteps = isStreaming
+    ? streamingThinkingSteps
+    : message.thinkingSteps
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
@@ -28,6 +36,11 @@ export default function ChatMessage({
             : 'bg-white border border-gray-200 rounded-2xl rounded-bl-md'
         } px-4 py-3`}
       >
+        {/* Thinking panel - only for assistant messages */}
+        {!isUser && thinkingSteps && thinkingSteps.length > 0 && (
+          <ThinkingPanel steps={thinkingSteps} isStreaming={isStreaming} />
+        )}
+
         {/* Message content */}
         <div className="text-gray-800 break-words">
           {isUser ? (
