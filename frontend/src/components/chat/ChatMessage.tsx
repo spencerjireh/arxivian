@@ -23,8 +23,9 @@ export default function ChatMessage({
   const content = isStreaming ? streamingContent : message.content
 
   // Use streaming thinking steps if streaming, otherwise use persisted ones from message
+  // Ensure we always have an array (not undefined) for proper rendering
   const thinkingSteps = isStreaming
-    ? streamingThinkingSteps
+    ? (streamingThinkingSteps ?? [])
     : message.thinkingSteps
 
   return (

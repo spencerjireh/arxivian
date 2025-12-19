@@ -93,12 +93,7 @@ export const useChatStore = create<ChatUIState>((set, get) => ({
 
   setSources: (sources) => set({ sources }),
 
-  setError: (error) =>
-    set({
-      error,
-      isStreaming: false,
-      currentStatus: null,
-    }),
+  setError: (error) => set({ error }),
 
   addThinkingStep: (data: StatusEventData) => {
     const stepType = mapStepType(data.step)

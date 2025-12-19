@@ -41,18 +41,16 @@ export function useChat(sessionId: string | null) {
   const navigate = useNavigate()
   const abortControllerRef = useRef<AbortController | null>(null)
 
-  // UI-only actions from Zustand (streaming is managed in store, components subscribe directly)
-  const {
-    isStreaming,
-    setStreaming,
-    appendStreamingContent,
-    setStatus,
-    setSources,
-    setError,
-    addThinkingStep,
-    getThinkingSteps,
-    resetStreamingState,
-  } = useChatStore()
+  // Get store actions (these are stable references)
+  // Note: Don't destructure state values here - they become stale in callbacks
+  const setStreaming = useChatStore((s) => s.setStreaming)
+  const appendStreamingContent = useChatStore((s) => s.appendStreamingContent)
+  const setStatus = useChatStore((s) => s.setStatus)
+  const setSources = useChatStore((s) => s.setSources)
+  const setError = useChatStore((s) => s.setError)
+  const addThinkingStep = useChatStore((s) => s.addThinkingStep)
+  const getThinkingSteps = useChatStore((s) => s.getThinkingSteps)
+  const resetStreamingState = useChatStore((s) => s.resetStreamingState)
 
   // Get current messages from query cache
   const messages: Message[] =
@@ -106,11 +104,10 @@ export function useChat(sessionId: string | null) {
         thinkingSteps: finalizedSteps.length > 0 ? finalizedSteps : undefined,
         createdAt: new Date(),
       }
-      setMessages((prev) => [...prev, assistantMessage])
 
       // If this was a new chat and we got a session_id back, handle navigation
       if (metadata.session_id && sessionId === null) {
-        // Move messages to the new session's cache
+        // Move messages to the new session's cache (including the assistant message)
         const currentMessages = queryClient.getQueryData<Message[]>(chatKeys.messages(null)) ?? []
         const updatedMessages = [...currentMessages, assistantMessage]
 
@@ -126,7 +123,10 @@ export function useChat(sessionId: string | null) {
         // Navigate to the new session URL
         navigate(`/${metadata.session_id}`, { replace: true })
       } else {
-        // Existing session - just invalidate the list to update "last_query"
+        // Existing session - add the message to current session
+        setMessages((prev) => [...prev, assistantMessage])
+        
+        // Invalidate the list to update "last_query"
         queryClient.invalidateQueries({ queryKey: conversationKeys.lists() })
       }
     },
@@ -136,7 +136,8 @@ export function useChat(sessionId: string | null) {
   // Send a message
   const sendMessage = useCallback(
     async (query: string, options: ChatOptions) => {
-      if (isStreaming) {
+      // Check current streaming state from store (not stale closure value)
+      if (useChatStore.getState().isStreaming) {
         return
       }
 
@@ -237,7 +238,6 @@ export function useChat(sessionId: string | null) {
       }
     },
     [
-      isStreaming,
       sessionId,
       addUserMessage,
       resetStreamingState,
