@@ -8,7 +8,6 @@ import { useChat } from '../hooks/useChat'
 import { useChatStore } from '../stores/chatStore'
 import ChatMessages from '../components/chat/ChatMessages'
 import ChatInput from '../components/chat/ChatInput'
-import StreamStatus from '../components/chat/StreamStatus'
 
 export default function ChatPage() {
   const { sessionId } = useParams<{ sessionId: string }>()
@@ -19,9 +18,7 @@ export default function ChatPage() {
 
   // Subscribe to streaming state directly from store for real-time updates
   const isStreaming = useChatStore((state) => state.isStreaming)
-  const currentStatus = useChatStore((state) => state.currentStatus)
   const error = useChatStore((state) => state.error)
-  const thinkingSteps = useChatStore((state) => state.thinkingSteps)
 
   const {
     messages,
@@ -98,9 +95,6 @@ export default function ChatPage() {
 
       {/* Messages */}
       {!isLoading && <ChatMessages messages={messages} />}
-
-      {/* Status indicator - now redundant since we show in ThinkingPanel, but keep for fallback */}
-      {!thinkingSteps.length && <StreamStatus status={currentStatus} />}
 
       {/* Input */}
       <ChatInput

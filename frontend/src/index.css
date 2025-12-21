@@ -1,1 +1,33 @@
 @import "tailwindcss";
+
+/* Thinking steps animations */
+
+/* Subtle pulse for active step indicator */
+.step-pulse {
+  animation: step-pulse 2s ease-in-out infinite;
+}
+
+@keyframes step-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Slide down animation for expanding content */
+.animate-slide-down {
+  animation: slide-down 0.15s ease-out;
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -3,6 +3,7 @@
 
 import { create } from 'zustand'
 import type { SourceInfo, ThinkingStep, ThinkingStepType, StatusEventData } from '../types/api'
+import { STEP_ORDER } from '../types/api'
 
 interface ChatUIState {
   // Streaming state
@@ -26,6 +27,7 @@ interface ChatUIState {
   // Thinking step actions
   addThinkingStep: (data: StatusEventData) => void
   getThinkingSteps: () => ThinkingStep[]
+  getTotalDuration: () => number
 
   resetStreamingState: () => void
 }
@@ -57,11 +59,12 @@ function mapStepType(step: string): ThinkingStepType {
 // Check if a step message indicates completion
 function isCompletionMessage(step: string, message: string): boolean {
   const completionPatterns: Record<string, RegExp[]> = {
-    guardrail: [/is in scope/i, /is out of scope/i],
-    routing: [/decided to/i],
-    executing: [/executed/i, /tool completed/i, /tool failed/i],
-    grading: [/found \d+ relevant/i],
-    generation: [], // Generation doesn't really "complete" before content starts
+    guardrail: [/is in scope/i, /is out of scope/i, /passed/i, /failed/i],
+    routing: [/decided to/i, /routing to/i],
+    executing: [/executed/i, /tool completed/i, /tool failed/i, /retrieved/i, /found/i],
+    grading: [/found \d+ relevant/i, /graded/i, /relevant/i],
+    generation: [/complete/i, /finished/i],
+    out_of_scope: [/out of scope/i],
   }
 
   const patterns = completionPatterns[step] || []
@@ -98,6 +101,7 @@ export const useChatStore = create<ChatUIState>((set, get) => ({
   addThinkingStep: (data: StatusEventData) => {
     const stepType = mapStepType(data.step)
     const isComplete = isCompletionMessage(data.step, data.message)
+    const now = new Date()
 
     set((state) => {
       // Check if we already have a running step of the same type
@@ -113,17 +117,21 @@ export const useChatStore = create<ChatUIState>((set, get) => ({
           message: data.message,
           details: data.details,
           status: isComplete ? 'complete' : 'running',
+          endTime: isComplete ? now : undefined,
         }
         return { thinkingSteps: updatedSteps }
       } else {
-        // Add new step
+        // Add new step with timing info
         const newStep: ThinkingStep = {
           id: generateStepId(),
           step: stepType,
           message: data.message,
           details: data.details,
           status: isComplete ? 'complete' : 'running',
-          timestamp: new Date(),
+          timestamp: now,
+          startTime: now,
+          endTime: isComplete ? now : undefined,
+          order: STEP_ORDER[stepType],
         }
         return { thinkingSteps: [...state.thinkingSteps, newStep] }
       }
@@ -132,5 +140,32 @@ export const useChatStore = create<ChatUIState>((set, get) => ({
 
   getThinkingSteps: () => get().thinkingSteps,
 
+  getTotalDuration: () => {
+    const steps = get().thinkingSteps
+    if (steps.length === 0) return 0
+
+    const firstStart = Math.min(...steps.map((s) => s.startTime.getTime()))
+    const lastEnd = Math.max(
+      ...steps.map((s) => (s.endTime?.getTime() ?? s.startTime.getTime()))
+    )
+    return lastEnd - firstStart
+  },
+
   resetStreamingState: () => set(initialStreamingState),
 }))
+
+// Helper function to calculate step duration in milliseconds
+export function getStepDuration(step: ThinkingStep): number {
+  if (!step.endTime) {
+    return Date.now() - step.startTime.getTime()
+  }
+  return step.endTime.getTime() - step.startTime.getTime()
+}
+
+// Helper function to format duration for display
+export function formatDuration(ms: number): string {
+  if (ms < 1000) {
+    return `${Math.round(ms)}ms`
+  }
+  return `${(ms / 1000).toFixed(1)}s`
+}

@@ -4,7 +4,7 @@ import type { Message, ThinkingStep } from '../../types/api'
 import SourceCard from './SourceCard'
 import MetadataPanel from './MetadataPanel'
 import MarkdownRenderer from './MarkdownRenderer'
-import ThinkingPanel from './ThinkingPanel'
+import ThinkingTimeline from './ThinkingTimeline'
 
 interface ChatMessageProps {
   message: Message
@@ -37,9 +37,9 @@ export default function ChatMessage({
             : 'bg-white border border-gray-200 rounded-2xl rounded-bl-md'
         } px-4 py-3`}
       >
-        {/* Thinking panel - only for assistant messages */}
+        {/* Thinking timeline - only for assistant messages */}
         {!isUser && thinkingSteps && thinkingSteps.length > 0 && (
-          <ThinkingPanel steps={thinkingSteps} isStreaming={isStreaming} />
+          <ThinkingTimeline steps={thinkingSteps} isStreaming={isStreaming} />
         )}
 
         {/* Message content */}

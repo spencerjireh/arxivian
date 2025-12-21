@@ -131,6 +131,29 @@ export interface ThinkingStep {
   details?: Record<string, unknown>
   status: ThinkingStepStatus
   timestamp: Date
+  startTime: Date
+  endTime?: Date
+  order: number
+}
+
+// Step order mapping for workflow visualization
+export const STEP_ORDER: Record<ThinkingStepType, number> = {
+  guardrail: 1,
+  routing: 2,
+  executing: 3,
+  grading: 4,
+  generation: 5,
+  out_of_scope: 5, // Same as generation (alternative path)
+}
+
+// Step display labels
+export const STEP_LABELS: Record<ThinkingStepType, string> = {
+  guardrail: 'Guardrail',
+  routing: 'Routing',
+  executing: 'Retrieval',
+  grading: 'Grading',
+  generation: 'Generating',
+  out_of_scope: 'Out of Scope',
 }
 
 // Chat UI types

@@ -2,7 +2,7 @@
 // This hook manages all chat state through the query cache for consistency
 
 import { useCallback, useRef } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { streamChat, createStreamAbortController, StreamAbortError } from '../api/stream'
 import { conversationKeys } from '../api/conversations'
@@ -52,9 +52,13 @@ export function useChat(sessionId: string | null) {
   const getThinkingSteps = useChatStore((s) => s.getThinkingSteps)
   const resetStreamingState = useChatStore((s) => s.resetStreamingState)
 
-  // Get current messages from query cache
-  const messages: Message[] =
-    queryClient.getQueryData<Message[]>(chatKeys.messages(sessionId)) ?? []
+  // Subscribe to messages in query cache (reactive)
+  const { data: messages = [] } = useQuery<Message[]>({
+    queryKey: chatKeys.messages(sessionId),
+    queryFn: () => [],
+    staleTime: Infinity,
+    gcTime: Infinity,
+  })
 
   // Set messages in query cache
   const setMessages = useCallback(
