@@ -1,11 +1,16 @@
 import { Outlet } from 'react-router-dom'
-import Header from './Header'
+import Sidebar from '../sidebar/Sidebar'
+import SidebarToggle from '../sidebar/SidebarToggle'
+import { useSidebarStore } from '../../stores/sidebarStore'
 
 const Layout = () => {
+  const isOpen = useSidebarStore((state) => state.isOpen)
+
   return (
-    <div className="min-h-screen bg-[#FAFAF9] flex flex-col">
-      <Header />
-      <main className="flex-1 flex flex-col">
+    <div className="h-screen bg-[#FAFAF9] flex overflow-hidden">
+      {isOpen && <Sidebar />}
+      {!isOpen && <SidebarToggle />}
+      <main className="flex-1 flex flex-col min-w-0">
         <Outlet />
       </main>
     </div>

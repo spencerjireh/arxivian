@@ -1,7 +1,7 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import Layout from './components/layout/Layout'
-import AskPage from './pages/AskPage'
 import ChatPage from './pages/ChatPage'
+import WelcomeState from './components/chat/WelcomeState'
 
 const router = createBrowserRouter([
   {
@@ -10,7 +10,7 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <AskPage />,
+        element: <WelcomeState />,
       },
       {
         path: ':sessionId',

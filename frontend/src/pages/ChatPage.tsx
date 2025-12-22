@@ -1,8 +1,8 @@
 // Chat page - active chat with message history
 
 import { useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { ChevronLeft, Plus, Loader2, AlertCircle } from 'lucide-react'
+import { useParams } from 'react-router-dom'
+import { Loader2, AlertCircle } from 'lucide-react'
 import { useConversation } from '../api/conversations'
 import { useChat } from '../hooks/useChat'
 import { useChatStore } from '../stores/chatStore'
@@ -48,37 +48,7 @@ export default function ChatPage() {
   }, [isNewChat, clearMessages])
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-white/80 backdrop-blur-sm">
-        <div className="flex items-center gap-4">
-          <Link
-            to="/"
-            className="p-2 -ml-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors duration-150"
-          >
-            <ChevronLeft className="w-5 h-5" strokeWidth={1.5} />
-          </Link>
-          <div>
-            <h1 className="font-display text-lg text-stone-900">
-              {isNewChat ? 'New Conversation' : 'Conversation'}
-            </h1>
-            {!isNewChat && sessionId && (
-              <p className="text-xs text-stone-400 font-mono mt-0.5">
-                {sessionId.slice(0, 8)}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <Link
-          to="/new"
-          className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors duration-150"
-          title="New conversation"
-        >
-          <Plus className="w-5 h-5" strokeWidth={1.5} />
-        </Link>
-      </div>
-
+    <div className="flex flex-col h-screen">
       {/* Loading state */}
       {isLoading && (
         <div className="flex-1 flex items-center justify-center">
