@@ -1,8 +1,7 @@
 // Main container for thinking steps visualization
-// Combines stepper, current step, and expanded list views
 
 import { useState, useMemo } from 'react'
-import { Brain, ChevronDown, ChevronRight } from 'lucide-react'
+import { Lightbulb, ChevronDown, ChevronRight } from 'lucide-react'
 import type { ThinkingStep } from '../../types/api'
 import { formatDuration } from '../../stores/chatStore'
 import ThinkingStepper from './ThinkingStepper'
@@ -23,12 +22,9 @@ export default function ThinkingTimeline({ steps, isStreaming = false }: Thinkin
   }, [steps])
 
   // Calculate total duration
-  // For completed steps, use endTime. For streaming, we don't show duration in header anyway.
   const totalDuration = useMemo(() => {
     if (steps.length === 0) return 0
     const firstStart = Math.min(...steps.map((s) => s.startTime.getTime()))
-    // Use the last step's endTime if available, otherwise use the last step's startTime
-    // This avoids calling Date.now() during render which is impure
     const endTimes = steps
       .map((s) => s.endTime?.getTime())
       .filter((t): t is number => t !== undefined)
@@ -38,7 +34,6 @@ export default function ThinkingTimeline({ steps, isStreaming = false }: Thinkin
     return lastEnd - firstStart
   }, [steps])
 
-  // Don't render if no steps
   if (steps.length === 0) {
     return null
   }
@@ -46,17 +41,17 @@ export default function ThinkingTimeline({ steps, isStreaming = false }: Thinkin
   // During streaming: show stepper + current step details
   if (isStreaming) {
     return (
-      <div className="mb-3 space-y-3">
+      <div className="p-4 bg-amber-50/50 border border-amber-100 rounded-xl space-y-4">
         {/* Header */}
         <div className="flex items-center gap-2">
-          <Brain className="w-4 h-4 text-gray-500 step-pulse" />
-          <span className="text-sm text-gray-600 font-medium">Thinking...</span>
+          <Lightbulb className="w-4 h-4 text-amber-600 step-pulse" strokeWidth={1.5} />
+          <span className="text-sm font-medium text-amber-800">Processing...</span>
         </div>
 
         {/* Stepper showing all steps that have occurred */}
         <ThinkingStepper steps={steps} />
 
-        {/* Current step details (if there's a running step) */}
+        {/* Current step details */}
         {currentStep && <ThinkingCurrentStep step={currentStep} />}
       </div>
     )
@@ -64,34 +59,31 @@ export default function ThinkingTimeline({ steps, isStreaming = false }: Thinkin
 
   // After streaming: collapsible summary
   return (
-    <div className="mb-3">
-      {/* Collapsed header - clickable to expand */}
+    <div className="rounded-xl border border-stone-100 overflow-hidden">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors w-full group"
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-stone-50 transition-colors duration-150"
       >
-        {/* Expand/collapse indicator */}
-        {isExpanded ? (
-          <ChevronDown className="w-4 h-4 transition-transform" />
-        ) : (
-          <ChevronRight className="w-4 h-4 transition-transform" />
-        )}
-
-        {/* Brain icon */}
-        <Brain className="w-4 h-4" />
-
-        {/* Summary text */}
-        <span>
-          {isExpanded ? 'Hide' : 'View'} thinking process
-          <span className="text-gray-400 ml-1">
-            ({steps.length} step{steps.length !== 1 ? 's' : ''}, {formatDuration(totalDuration)})
+        <div className="flex items-center gap-2.5">
+          <Lightbulb className="w-4 h-4 text-stone-400" strokeWidth={1.5} />
+          <span className="text-sm text-stone-600">
+            {isExpanded ? 'Hide' : 'View'} reasoning
           </span>
-        </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-stone-400 font-mono">
+            {steps.length} step{steps.length !== 1 ? 's' : ''} / {formatDuration(totalDuration)}
+          </span>
+          {isExpanded ? (
+            <ChevronDown className="w-4 h-4 text-stone-400" strokeWidth={1.5} />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-stone-400" strokeWidth={1.5} />
+          )}
+        </div>
       </button>
 
-      {/* Expanded content */}
       {isExpanded && (
-        <div className="mt-2 pl-6 animate-slide-down">
+        <div className="px-4 pb-4 pt-1 animate-slide-down">
           <ThinkingExpandedList steps={steps} totalDuration={totalDuration} />
         </div>
       )}

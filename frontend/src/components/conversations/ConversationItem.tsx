@@ -1,6 +1,6 @@
 // Single conversation list item component
 
-import { Loader2, Trash2 } from 'lucide-react'
+import { Loader2, Trash2, ArrowUpRight } from 'lucide-react'
 import type { ConversationListItem } from '../../types/api'
 
 interface ConversationItemProps {
@@ -23,12 +23,12 @@ function formatRelativeTime(dateString: string): string {
   if (diffMins < 60) return `${diffMins}m ago`
   if (diffHours < 24) return `${diffHours}h ago`
   if (diffDays < 7) return `${diffDays}d ago`
-  return date.toLocaleDateString()
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 function truncate(str: string, maxLen: number): string {
   if (str.length <= maxLen) return str
-  return str.slice(0, maxLen - 3) + '...'
+  return str.slice(0, maxLen - 1) + '\u2026'
 }
 
 export default function ConversationItem({
@@ -45,42 +45,49 @@ export default function ConversationItem({
   return (
     <div
       onClick={onClick}
-      className="group px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 transition-colors duration-200"
+      className="group relative px-6 py-4 hover:bg-stone-50 cursor-pointer transition-colors duration-150"
     >
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
-          {/* Session ID (truncated) */}
-          <p className="text-xs font-mono text-gray-400">
-            {truncate(conversation.session_id, 12)}
-          </p>
-
           {/* Last query preview */}
-          <p className="text-sm text-gray-700 mt-1 truncate">
-            {conversation.last_query || 'No messages yet'}
+          <p className="text-stone-800 leading-relaxed mb-2 pr-8">
+            {conversation.last_query
+              ? truncate(conversation.last_query, 100)
+              : 'No messages yet'}
           </p>
 
           {/* Metadata row */}
-          <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-            <span>{conversation.turn_count} turns</span>
-            <span>-</span>
+          <div className="flex items-center gap-3 text-xs text-stone-400">
+            <span className="font-mono">{truncate(conversation.session_id, 8)}</span>
+            <span className="w-1 h-1 rounded-full bg-stone-300" />
+            <span>{conversation.turn_count} {conversation.turn_count === 1 ? 'turn' : 'turns'}</span>
+            <span className="w-1 h-1 rounded-full bg-stone-300" />
             <span>{formatRelativeTime(conversation.updated_at)}</span>
           </div>
         </div>
 
-        {/* Delete button */}
-        <button
-          onClick={handleDelete}
-          disabled={isDeleting}
-          className="ml-2 p-1.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all duration-200 disabled:opacity-50"
-          title="Delete conversation"
-        >
-          {isDeleting ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Trash2 className="w-4 h-4" />
-          )}
-        </button>
+        {/* Actions */}
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-150 disabled:opacity-50"
+            title="Delete conversation"
+          >
+            {isDeleting ? (
+              <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5} />
+            ) : (
+              <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Arrow indicator on hover */}
+      <ArrowUpRight
+        className="absolute right-6 top-4 w-4 h-4 text-stone-300 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+        strokeWidth={1.5}
+      />
     </div>
   )
 }

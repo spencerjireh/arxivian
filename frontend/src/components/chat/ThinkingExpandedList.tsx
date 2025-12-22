@@ -1,7 +1,7 @@
 // Post-streaming expandable list showing all completed steps with durations
 
 import { useState } from 'react'
-import { Check, X, ChevronDown, ChevronRight, Clock } from 'lucide-react'
+import { Check, AlertCircle, ChevronDown, ChevronRight, Clock } from 'lucide-react'
 import type { ThinkingStep } from '../../types/api'
 import { STEP_LABELS } from '../../types/api'
 import { getStepDuration, formatDuration } from '../../stores/chatStore'
@@ -28,7 +28,7 @@ export default function ThinkingExpandedList({ steps, totalDuration }: ThinkingE
       return value.toString()
     }
     if (typeof value === 'string') {
-      return value.length > 100 ? `${value.slice(0, 100)}...` : value
+      return value.length > 80 ? `${value.slice(0, 80)}...` : value
     }
     if (Array.isArray(value)) {
       return value.length > 0 ? value.join(', ') : '-'
@@ -52,42 +52,50 @@ export default function ThinkingExpandedList({ steps, totalDuration }: ThinkingE
         const duration = getStepDuration(step)
 
         return (
-          <div key={step.id} className="border-l-2 border-gray-200 pl-3">
+          <div key={step.id}>
             {/* Step row */}
             <div
               className={`
-                flex items-center gap-2 py-1.5 text-sm
-                ${hasDetails ? 'cursor-pointer hover:bg-gray-50 -ml-3 pl-3 rounded-r' : ''}
+                flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm
+                ${hasDetails ? 'cursor-pointer hover:bg-stone-50' : ''}
+                transition-colors duration-150
               `}
               onClick={() => hasDetails && setExpandedStepId(isExpanded ? null : step.id)}
             >
               {/* Status icon */}
-              {step.status === 'complete' ? (
-                <Check className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
-              ) : (
-                <X className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
-              )}
+              <div
+                className={`
+                  w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0
+                  ${step.status === 'complete' ? 'bg-stone-100' : 'bg-red-100'}
+                `}
+              >
+                {step.status === 'complete' ? (
+                  <Check className="w-3 h-3 text-stone-600" strokeWidth={2} />
+                ) : (
+                  <AlertCircle className="w-3 h-3 text-red-500" strokeWidth={1.5} />
+                )}
+              </div>
 
               {/* Step label */}
-              <span className="text-gray-600 font-medium min-w-[80px]">
+              <span className="text-stone-700 font-medium min-w-[80px]">
                 {STEP_LABELS[step.step]}
               </span>
 
-              {/* Step message (truncated) */}
-              <span className="text-gray-500 flex-1 truncate">{step.message}</span>
+              {/* Step message */}
+              <span className="text-stone-500 flex-1 truncate">{step.message}</span>
 
               {/* Duration */}
-              <span className="text-xs text-gray-400 font-mono flex-shrink-0">
+              <span className="text-xs text-stone-400 font-mono tabular-nums flex-shrink-0">
                 {formatDuration(duration)}
               </span>
 
               {/* Expand indicator */}
               {hasDetails && (
-                <div className="flex-shrink-0 text-gray-400">
+                <div className="flex-shrink-0 text-stone-300">
                   {isExpanded ? (
-                    <ChevronDown className="w-3.5 h-3.5" />
+                    <ChevronDown className="w-4 h-4" strokeWidth={1.5} />
                   ) : (
-                    <ChevronRight className="w-3.5 h-3.5" />
+                    <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
                   )}
                 </div>
               )}
@@ -95,12 +103,16 @@ export default function ThinkingExpandedList({ steps, totalDuration }: ThinkingE
 
             {/* Expanded details */}
             {hasDetails && isExpanded && step.details && (
-              <div className="ml-5 pb-2 pt-1 text-xs animate-slide-down">
-                <div className="bg-gray-50 rounded p-2 space-y-1">
+              <div className="ml-11 mr-3 mb-2 animate-slide-down">
+                <div className="bg-stone-50 rounded-lg p-3 space-y-1.5">
                   {Object.entries(step.details).map(([key, value]) => (
-                    <div key={key} className="flex">
-                      <span className="text-gray-400 min-w-[100px]">{formatDetailKey(key)}</span>
-                      <span className="text-gray-600 break-words">{formatDetailValue(key, value)}</span>
+                    <div key={key} className="flex text-xs">
+                      <span className="text-stone-400 min-w-[100px] flex-shrink-0">
+                        {formatDetailKey(key)}
+                      </span>
+                      <span className="text-stone-600 break-words font-mono">
+                        {formatDetailValue(key, value)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -111,9 +123,9 @@ export default function ThinkingExpandedList({ steps, totalDuration }: ThinkingE
       })}
 
       {/* Total duration footer */}
-      <div className="flex items-center gap-2 pt-2 mt-2 border-t border-gray-100 text-xs text-gray-400">
-        <Clock className="w-3 h-3" />
-        <span>Total: {formatDuration(totalDuration)}</span>
+      <div className="flex items-center gap-2 pt-3 mt-2 border-t border-stone-100 text-xs text-stone-400 px-3">
+        <Clock className="w-3.5 h-3.5" strokeWidth={1.5} />
+        <span>Total processing time: {formatDuration(totalDuration)}</span>
       </div>
     </div>
   )

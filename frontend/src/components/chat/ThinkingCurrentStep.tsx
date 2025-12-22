@@ -37,10 +37,10 @@ export default function ThinkingCurrentStep({ step }: ThinkingCurrentStepProps) 
       return value.toString()
     }
     if (typeof value === 'string') {
-      return value.length > 80 ? `${value.slice(0, 80)}...` : value
+      return value.length > 60 ? `${value.slice(0, 60)}...` : value
     }
     if (Array.isArray(value)) {
-      return value.length > 0 ? value.slice(0, 3).join(', ') + (value.length > 3 ? '...' : '') : '-'
+      return value.length > 0 ? value.slice(0, 2).join(', ') + (value.length > 2 ? '...' : '') : '-'
     }
     return JSON.stringify(value)
   }
@@ -56,32 +56,32 @@ export default function ThinkingCurrentStep({ step }: ThinkingCurrentStepProps) 
   const hasDetails = step.details && Object.keys(step.details).length > 0
 
   return (
-    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-      {/* Header with step name and elapsed time */}
+    <div className="bg-white rounded-lg p-4 border border-amber-100">
+      {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
-          <span className="text-sm font-medium text-gray-700">
+          <Loader2 className="w-3.5 h-3.5 text-amber-600 animate-spin" strokeWidth={1.5} />
+          <span className="text-sm font-medium text-stone-700">
             {STEP_LABELS[step.step]}
           </span>
         </div>
-        <span className="text-xs text-gray-400 font-mono">
+        <span className="text-xs text-stone-400 font-mono tabular-nums">
           {formatDuration(elapsed)}
         </span>
       </div>
 
       {/* Status message */}
-      <p className="text-sm text-gray-600 mb-2">{step.message}</p>
+      <p className="text-sm text-stone-600 leading-relaxed">{step.message}</p>
 
-      {/* Key details (if any) */}
+      {/* Key details */}
       {hasDetails && step.details && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        <div className="mt-3 pt-3 border-t border-stone-100 flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
           {Object.entries(step.details)
-            .slice(0, 4) // Show max 4 details
+            .slice(0, 3)
             .map(([key, value]) => (
-              <div key={key} className="flex items-center gap-1">
-                <span className="text-gray-400">{formatDetailKey(key)}:</span>
-                <span className="text-gray-600">{formatDetailValue(key, value)}</span>
+              <div key={key} className="flex items-center gap-1.5">
+                <span className="text-stone-400">{formatDetailKey(key)}:</span>
+                <span className="text-stone-600 font-mono">{formatDetailValue(key, value)}</span>
               </div>
             ))}
         </div>

@@ -1,7 +1,7 @@
 // Chat input with expandable advanced options
 
 import { useState, type FormEvent, type KeyboardEvent } from 'react'
-import { Sliders, X, Send } from 'lucide-react'
+import { Settings2, X, ArrowUp, RotateCcw } from 'lucide-react'
 import type { LLMProvider } from '../../types/api'
 import type { ChatOptions } from '../../hooks/useChat'
 import { useSettingsStore } from '../../stores/settingsStore'
@@ -15,7 +15,7 @@ interface ChatInputProps {
 export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputProps) {
   const [query, setQuery] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
-  
+
   // Use settings from store
   const {
     provider,
@@ -38,8 +38,7 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     if (!query.trim() || isStreaming) return
-    
-    // Build options from current settings
+
     const options: ChatOptions = {
       provider,
       model,
@@ -49,7 +48,7 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
       max_retrieval_attempts,
       conversation_window,
     }
-    
+
     onSend(query.trim(), options)
     setQuery('')
   }
@@ -62,178 +61,201 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
   }
 
   return (
-    <div className="border-t border-gray-200 bg-white p-4">
-      <form onSubmit={handleSubmit}>
-        {/* Advanced options panel */}
-        {showAdvanced && (
-          <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 transition-all duration-200">
-            {/* Reset button */}
-            <div className="flex justify-end mb-3">
+    <div className="border-t border-stone-100 bg-white">
+      <div className="max-w-5xl mx-auto px-6 py-4">
+        <form onSubmit={handleSubmit}>
+          {/* Advanced options panel */}
+          {showAdvanced && (
+            <div className="mb-4 animate-slide-down">
+              <div className="p-5 bg-stone-50 rounded-xl border border-stone-100">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-sm font-medium text-stone-700">Advanced Settings</h3>
+                  <button
+                    type="button"
+                    onClick={resetToDefaults}
+                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-stone-500 hover:text-stone-700 hover:bg-stone-100 rounded-md transition-colors duration-150"
+                  >
+                    <RotateCcw className="w-3 h-3" strokeWidth={1.5} />
+                    Reset
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
+                  {/* Provider */}
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1.5">Provider</label>
+                    <select
+                      value={provider ?? ''}
+                      onChange={(e) =>
+                        setProvider((e.target.value || undefined) as LLMProvider | undefined)
+                      }
+                      className="w-full px-3 py-2 text-sm text-stone-800 bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-stone-200 focus:border-stone-300 transition-colors duration-150"
+                    >
+                      <option value="">Default</option>
+                      <option value="openai">OpenAI</option>
+                      <option value="zai">Z.AI</option>
+                    </select>
+                  </div>
+
+                  {/* Model */}
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1.5">Model</label>
+                    <input
+                      type="text"
+                      value={model ?? ''}
+                      onChange={(e) => setModel(e.target.value || undefined)}
+                      placeholder="Default"
+                      className="w-full px-3 py-2 text-sm text-stone-800 bg-white border border-stone-200 rounded-lg placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-200 focus:border-stone-300 transition-colors duration-150"
+                    />
+                  </div>
+
+                  {/* Temperature */}
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1.5">
+                      Temperature
+                      <span className="float-right font-mono text-stone-400">
+                        {temperature.toFixed(1)}
+                      </span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={temperature}
+                      onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+
+                  {/* Top K */}
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1.5">
+                      Top K
+                      <span className="float-right font-mono text-stone-400">{top_k}</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      step="1"
+                      value={top_k}
+                      onChange={(e) => setTopK(parseInt(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+
+                  {/* Guardrail Threshold */}
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1.5">
+                      Guardrail
+                      <span className="float-right font-mono text-stone-400">
+                        {guardrail_threshold}%
+                      </span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="5"
+                      value={guardrail_threshold}
+                      onChange={(e) => setGuardrailThreshold(parseInt(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+
+                  {/* Max Retrieval Attempts */}
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1.5">
+                      Max Retrieval
+                      <span className="float-right font-mono text-stone-400">
+                        {max_retrieval_attempts}
+                      </span>
+                    </label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="5"
+                      step="1"
+                      value={max_retrieval_attempts}
+                      onChange={(e) => setMaxRetrievalAttempts(parseInt(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+
+                  {/* Conversation Window */}
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1.5">
+                      Context Window
+                      <span className="float-right font-mono text-stone-400">
+                        {conversation_window}
+                      </span>
+                    </label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      step="1"
+                      value={conversation_window}
+                      onChange={(e) => setConversationWindow(parseInt(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Input area */}
+          <div className="flex items-end gap-3">
+            <div className="flex-1 relative">
+              <textarea
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask about research papers..."
+                rows={1}
+                disabled={isStreaming}
+                className="w-full px-4 py-3 pr-12 text-stone-800 bg-stone-50 border border-stone-200 rounded-xl resize-none placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-200 focus:border-stone-300 focus:bg-white disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-150"
+                style={{ minHeight: '48px', maxHeight: '160px' }}
+              />
               <button
                 type="button"
-                onClick={resetToDefaults}
-                className="px-3 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-200 bg-gray-100 rounded-md transition-colors"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className={`absolute right-3 bottom-3 p-1.5 rounded-md transition-colors duration-150 ${
+                  showAdvanced
+                    ? 'text-stone-700 bg-stone-200'
+                    : 'text-stone-400 hover:text-stone-600 hover:bg-stone-100'
+                }`}
+                title="Advanced settings"
               >
-                Reset to Defaults
+                <Settings2 className="w-4 h-4" strokeWidth={1.5} />
               </button>
             </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {/* Provider */}
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Provider</label>
-                <select
-                  value={provider ?? ''}
-                  onChange={(e) =>
-                    setProvider((e.target.value || undefined) as LLMProvider | undefined)
-                  }
-                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-200"
-                >
-                  <option value="">Default</option>
-                  <option value="openai">OpenAI</option>
-                  <option value="zai">Z.AI</option>
-                </select>
-              </div>
 
-              {/* Model */}
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Model</label>
-                <input
-                  type="text"
-                  value={model ?? ''}
-                  onChange={(e) => setModel(e.target.value || undefined)}
-                  placeholder="Default model"
-                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-200"
-                />
-              </div>
-
-              {/* Temperature */}
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  Temperature: {temperature.toFixed(1)}
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={temperature}
-                  onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Top K */}
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  Top K: {top_k}
-                </label>
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  step="1"
-                  value={top_k}
-                  onChange={(e) => setTopK(parseInt(e.target.value))}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Guardrail Threshold */}
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  Guardrail: {guardrail_threshold}%
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="5"
-                  value={guardrail_threshold}
-                  onChange={(e) => setGuardrailThreshold(parseInt(e.target.value))}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Max Retrieval Attempts */}
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  Max Retrieval: {max_retrieval_attempts}
-                </label>
-                <input
-                  type="range"
-                  min="1"
-                  max="5"
-                  step="1"
-                  value={max_retrieval_attempts}
-                  onChange={(e) => setMaxRetrievalAttempts(parseInt(e.target.value))}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Conversation Window */}
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  Conversation Window: {conversation_window}
-                </label>
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  step="1"
-                  value={conversation_window}
-                  onChange={(e) => setConversationWindow(parseInt(e.target.value))}
-                  className="w-full"
-                />
-              </div>
-            </div>
+            {isStreaming ? (
+              <button
+                type="button"
+                onClick={onCancel}
+                className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors duration-150"
+                title="Cancel"
+              >
+                <X className="w-5 h-5" strokeWidth={1.5} />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={!query.trim()}
+                className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-stone-900 text-white rounded-xl hover:bg-stone-800 disabled:bg-stone-200 disabled:text-stone-400 disabled:cursor-not-allowed transition-colors duration-150"
+                title="Send"
+              >
+                <ArrowUp className="w-5 h-5" strokeWidth={1.5} />
+              </button>
+            )}
           </div>
-        )}
-
-        {/* Input area */}
-        <div className="flex items-end gap-2">
-          <div className="flex-1 relative">
-            <textarea
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask a question..."
-              rows={1}
-              disabled={isStreaming}
-              className="w-full px-4 py-3 pr-10 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-gray-200 disabled:bg-gray-50 disabled:text-gray-500"
-              style={{ minHeight: '48px', maxHeight: '120px' }}
-            />
-            <button
-              type="button"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className={`absolute right-3 bottom-3 p-1 rounded-md transition-colors ${
-                showAdvanced ? 'text-gray-700 bg-gray-100' : 'text-gray-400 hover:text-gray-600'
-              }`}
-              title="Advanced options"
-            >
-              <Sliders className="w-5 h-5" />
-            </button>
-          </div>
-
-          {isStreaming ? (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-4 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          ) : (
-            <button
-              type="submit"
-              disabled={!query.trim()}
-              className="px-4 py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-            >
-              <Send className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   )
 }

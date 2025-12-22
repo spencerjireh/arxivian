@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react'
 import { useConversations, useDeleteConversation } from '../../api/conversations'
 import ConversationItem from './ConversationItem'
 
@@ -24,26 +24,29 @@ export default function ConversationList() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="w-5 h-5 animate-spin text-stone-300" strokeWidth={1.5} />
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="px-4 py-8 text-center text-red-500">
-        <p>Failed to load conversations</p>
-        <p className="text-sm text-gray-500 mt-1">{(error as Error).message}</p>
+      <div className="px-6 py-12 text-center">
+        <p className="text-stone-900 font-medium mb-1">Unable to load conversations</p>
+        <p className="text-sm text-stone-400">{(error as Error).message}</p>
       </div>
     )
   }
 
   if (!data || data.conversations.length === 0) {
     return (
-      <div className="px-4 py-8 text-center text-gray-500">
-        <p>No conversations yet</p>
-        <p className="text-sm mt-1">Start a new chat to begin</p>
+      <div className="px-6 py-16 text-center">
+        <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center mx-auto mb-4">
+          <MessageSquare className="w-5 h-5 text-stone-400" strokeWidth={1.5} />
+        </div>
+        <p className="text-stone-900 font-medium mb-1">No conversations yet</p>
+        <p className="text-sm text-stone-400">Start a new chat to begin exploring</p>
       </div>
     )
   }
@@ -53,7 +56,7 @@ export default function ConversationList() {
 
   return (
     <div>
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y divide-stone-100 stagger-children">
         {data.conversations.map((conversation) => (
           <ConversationItem
             key={conversation.session_id}
@@ -70,23 +73,25 @@ export default function ConversationList() {
 
       {/* Pagination */}
       {(hasMore || hasPrev) && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-stone-100">
           <button
             onClick={() => setOffset(Math.max(0, offset - limit))}
             disabled={!hasPrev}
-            className="text-sm text-gray-600 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900 disabled:text-stone-300 disabled:cursor-not-allowed transition-colors duration-150"
           >
+            <ChevronLeft className="w-4 h-4" strokeWidth={1.5} />
             Previous
           </button>
-          <span className="text-xs text-gray-500">
-            {offset + 1}-{Math.min(offset + limit, data.total)} of {data.total}
+          <span className="text-xs text-stone-400 font-mono">
+            {offset + 1} - {Math.min(offset + limit, data.total)} of {data.total}
           </span>
           <button
             onClick={() => setOffset(offset + limit)}
             disabled={!hasMore}
-            className="text-sm text-gray-600 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900 disabled:text-stone-300 disabled:cursor-not-allowed transition-colors duration-150"
           >
             Next
+            <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
           </button>
         </div>
       )}

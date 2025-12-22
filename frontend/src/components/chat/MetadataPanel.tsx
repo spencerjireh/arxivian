@@ -1,6 +1,7 @@
 // Expandable execution metadata component
 
 import { useState } from 'react'
+import { ChevronDown, ChevronRight, Info } from 'lucide-react'
 import type { MetadataEventData } from '../../types/api'
 
 interface MetadataPanelProps {
@@ -10,82 +11,111 @@ interface MetadataPanelProps {
 export default function MetadataPanel({ metadata }: MetadataPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
+  const executionTime = (metadata.execution_time_ms / 1000).toFixed(2)
+
   return (
     <div>
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="text-xs text-gray-500 hover:text-gray-700 flex items-center transition-colors duration-200"
+        className="flex items-center gap-1.5 text-xs text-stone-400 hover:text-stone-600 transition-colors duration-150"
       >
-        {isExpanded ? 'Hide details' : 'View details'}
-        <svg
-          className={`w-3 h-3 ml-1 transition-transform duration-200 ${
-            isExpanded ? 'rotate-180' : ''
-          }`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
+        <Info className="w-3.5 h-3.5" strokeWidth={1.5} />
+        <span>{isExpanded ? 'Hide' : 'View'} execution details</span>
+        {isExpanded ? (
+          <ChevronDown className="w-3 h-3" strokeWidth={1.5} />
+        ) : (
+          <ChevronRight className="w-3 h-3" strokeWidth={1.5} />
+        )}
       </button>
 
       {isExpanded && (
-        <div className="mt-2 p-3 bg-gray-50 rounded-lg text-xs space-y-2 transition-all duration-200">
-          <div className="grid grid-cols-2 gap-2">
+        <div className="mt-3 p-4 bg-stone-50 rounded-xl animate-slide-down">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {/* Provider */}
             <div>
-              <span className="text-gray-500">Provider</span>
-              <p className="text-gray-700 font-medium">{metadata.provider}</p>
-            </div>
-            <div>
-              <span className="text-gray-500">Model</span>
-              <p className="text-gray-700 font-medium">{metadata.model}</p>
-            </div>
-            <div>
-              <span className="text-gray-500">Execution Time</span>
-              <p className="text-gray-700 font-medium">
-                {(metadata.execution_time_ms / 1000).toFixed(2)}s
+              <span className="text-xs text-stone-400 uppercase tracking-wide">Provider</span>
+              <p className="text-sm text-stone-700 font-medium mt-0.5 capitalize">
+                {metadata.provider}
               </p>
             </div>
+
+            {/* Model */}
             <div>
-              <span className="text-gray-500">Retrieval Attempts</span>
-              <p className="text-gray-700 font-medium">{metadata.retrieval_attempts}</p>
+              <span className="text-xs text-stone-400 uppercase tracking-wide">Model</span>
+              <p className="text-sm text-stone-700 font-medium mt-0.5 font-mono text-xs">
+                {metadata.model}
+              </p>
+            </div>
+
+            {/* Execution Time */}
+            <div>
+              <span className="text-xs text-stone-400 uppercase tracking-wide">Duration</span>
+              <p className="text-sm text-stone-700 font-medium mt-0.5 font-mono">
+                {executionTime}s
+              </p>
+            </div>
+
+            {/* Retrieval Attempts */}
+            <div>
+              <span className="text-xs text-stone-400 uppercase tracking-wide">Retrievals</span>
+              <p className="text-sm text-stone-700 font-medium mt-0.5">
+                {metadata.retrieval_attempts} attempt{metadata.retrieval_attempts !== 1 ? 's' : ''}
+              </p>
+            </div>
+
+            {/* Guardrail Score */}
+            {metadata.guardrail_score !== undefined && (
+              <div>
+                <span className="text-xs text-stone-400 uppercase tracking-wide">Guardrail</span>
+                <p className="text-sm text-stone-700 font-medium mt-0.5 font-mono">
+                  {metadata.guardrail_score}%
+                </p>
+              </div>
+            )}
+
+            {/* Turn Number */}
+            <div>
+              <span className="text-xs text-stone-400 uppercase tracking-wide">Turn</span>
+              <p className="text-sm text-stone-700 font-medium mt-0.5">
+                #{metadata.turn_number}
+              </p>
             </div>
           </div>
 
-          {metadata.guardrail_score !== undefined && (
-            <div>
-              <span className="text-gray-500">Guardrail Score</span>
-              <p className="text-gray-700 font-medium">{metadata.guardrail_score}%</p>
-            </div>
-          )}
-
+          {/* Rewritten Query */}
           {metadata.rewritten_query && (
-            <div>
-              <span className="text-gray-500">Rewritten Query</span>
-              <p className="text-gray-700">{metadata.rewritten_query}</p>
+            <div className="mt-4 pt-4 border-t border-stone-100">
+              <span className="text-xs text-stone-400 uppercase tracking-wide">Rewritten Query</span>
+              <p className="text-sm text-stone-600 mt-1 leading-relaxed">
+                {metadata.rewritten_query}
+              </p>
             </div>
           )}
 
+          {/* Reasoning Steps */}
           {metadata.reasoning_steps.length > 0 && (
-            <div>
-              <span className="text-gray-500">Reasoning Steps</span>
-              <ol className="mt-1 list-decimal list-inside text-gray-700 space-y-0.5">
+            <div className="mt-4 pt-4 border-t border-stone-100">
+              <span className="text-xs text-stone-400 uppercase tracking-wide">Reasoning</span>
+              <ol className="mt-2 space-y-1.5">
                 {metadata.reasoning_steps.map((step, index) => (
-                  <li key={index}>{step}</li>
+                  <li key={index} className="flex gap-2 text-sm text-stone-600">
+                    <span className="text-stone-400 font-mono text-xs mt-0.5">
+                      {index + 1}.
+                    </span>
+                    <span className="leading-relaxed">{step}</span>
+                  </li>
                 ))}
               </ol>
             </div>
           )}
 
+          {/* Session ID */}
           {metadata.session_id && (
-            <div>
-              <span className="text-gray-500">Session</span>
-              <p className="text-gray-700 font-mono text-[10px]">{metadata.session_id}</p>
+            <div className="mt-4 pt-4 border-t border-stone-100">
+              <span className="text-xs text-stone-400 uppercase tracking-wide">Session</span>
+              <p className="text-xs text-stone-500 mt-1 font-mono break-all">
+                {metadata.session_id}
+              </p>
             </div>
           )}
         </div>
