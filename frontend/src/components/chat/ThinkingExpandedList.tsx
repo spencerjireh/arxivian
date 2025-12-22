@@ -1,10 +1,11 @@
-// Post-streaming expandable list showing all completed steps with durations
-
 import { useState } from 'react'
-import { Check, AlertCircle, ChevronDown, ChevronRight, Clock } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
+import { Check, AlertCircle, ChevronRight, Clock } from 'lucide-react'
 import type { ThinkingStep } from '../../types/api'
 import { STEP_LABELS } from '../../types/api'
 import { getStepDuration, formatDuration } from '../../stores/chatStore'
+import { AnimatedCollapse } from '../ui/AnimatedCollapse'
+import { transitions } from '../../lib/animations'
 
 interface ThinkingExpandedListProps {
   steps: ThinkingStep[]
@@ -13,11 +14,10 @@ interface ThinkingExpandedListProps {
 
 export default function ThinkingExpandedList({ steps, totalDuration }: ThinkingExpandedListProps) {
   const [expandedStepId, setExpandedStepId] = useState<string | null>(null)
+  const shouldReduceMotion = useReducedMotion()
 
-  // Sort steps by order
   const sortedSteps = [...steps].sort((a, b) => a.order - b.order)
 
-  // Format detail value for display
   const formatDetailValue = (key: string, value: unknown): string => {
     if (value === null || value === undefined) return '-'
     if (typeof value === 'boolean') return value ? 'Yes' : 'No'
@@ -53,7 +53,6 @@ export default function ThinkingExpandedList({ steps, totalDuration }: ThinkingE
 
         return (
           <div key={step.id}>
-            {/* Step row */}
             <div
               className={`
                 flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm
@@ -62,7 +61,6 @@ export default function ThinkingExpandedList({ steps, totalDuration }: ThinkingE
               `}
               onClick={() => hasDetails && setExpandedStepId(isExpanded ? null : step.id)}
             >
-              {/* Status icon */}
               <div
                 className={`
                   w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0
@@ -76,53 +74,49 @@ export default function ThinkingExpandedList({ steps, totalDuration }: ThinkingE
                 )}
               </div>
 
-              {/* Step label */}
               <span className="text-stone-700 font-medium min-w-[80px]">
                 {STEP_LABELS[step.step]}
               </span>
 
-              {/* Step message */}
               <span className="text-stone-500 flex-1 truncate">{step.message}</span>
 
-              {/* Duration */}
               <span className="text-xs text-stone-400 font-mono tabular-nums flex-shrink-0">
                 {formatDuration(duration)}
               </span>
 
-              {/* Expand indicator */}
               {hasDetails && (
-                <div className="flex-shrink-0 text-stone-300">
-                  {isExpanded ? (
-                    <ChevronDown className="w-4 h-4" strokeWidth={1.5} />
-                  ) : (
-                    <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
-                  )}
-                </div>
+                <motion.div
+                  className="flex-shrink-0 text-stone-300"
+                  animate={{ rotate: isExpanded ? 90 : 0 }}
+                  transition={shouldReduceMotion ? { duration: 0 } : transitions.fast}
+                >
+                  <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
+                </motion.div>
               )}
             </div>
 
-            {/* Expanded details */}
-            {hasDetails && isExpanded && step.details && (
-              <div className="ml-11 mr-3 mb-2 animate-slide-down">
-                <div className="bg-stone-50 rounded-lg p-3 space-y-1.5">
-                  {Object.entries(step.details).map(([key, value]) => (
-                    <div key={key} className="flex text-xs">
-                      <span className="text-stone-400 min-w-[100px] flex-shrink-0">
-                        {formatDetailKey(key)}
-                      </span>
-                      <span className="text-stone-600 break-words font-mono">
-                        {formatDetailValue(key, value)}
-                      </span>
-                    </div>
-                  ))}
+            {hasDetails && (
+              <AnimatedCollapse isOpen={isExpanded}>
+                <div className="ml-11 mr-3 mb-2">
+                  <div className="bg-stone-50 rounded-lg p-3 space-y-1.5">
+                    {step.details && Object.entries(step.details).map(([key, value]) => (
+                      <div key={key} className="flex text-xs">
+                        <span className="text-stone-400 min-w-[100px] flex-shrink-0">
+                          {formatDetailKey(key)}
+                        </span>
+                        <span className="text-stone-600 break-words font-mono">
+                          {formatDetailValue(key, value)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </AnimatedCollapse>
             )}
           </div>
         )
       })}
 
-      {/* Total duration footer */}
       <div className="flex items-center gap-2 pt-3 mt-2 border-t border-stone-100 text-xs text-stone-400 px-3">
         <Clock className="w-3.5 h-3.5" strokeWidth={1.5} />
         <span>Total processing time: {formatDuration(totalDuration)}</span>

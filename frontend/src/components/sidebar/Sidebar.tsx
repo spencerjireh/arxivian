@@ -1,11 +1,12 @@
-// Main sidebar component with conversation list
-
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { Plus, PanelLeftClose, Loader2, MessageSquare, ChevronUp, ChevronDown } from 'lucide-react'
 import { useConversations, useDeleteConversation } from '../../api/conversations'
 import { useSidebarStore } from '../../stores/sidebarStore'
 import SidebarConversationItem from './SidebarConversationItem'
+import Button from '../ui/Button'
+import { staggerContainer, staggerItem, transitions } from '../../lib/animations'
 
 export default function Sidebar() {
   const navigate = useNavigate()
@@ -29,7 +30,6 @@ export default function Sidebar() {
   const handleDelete = (id: string) => {
     deleteConversation.mutate(id, {
       onSuccess: () => {
-        // If deleting the current conversation, navigate to home
         if (id === sessionId) {
           navigate('/')
         }
@@ -41,40 +41,34 @@ export default function Sidebar() {
   const hasPrev = offset > 0
 
   return (
-    <aside className="w-72 h-screen bg-stone-50 border-r border-stone-200 flex flex-col animate-slide-in-left">
-      {/* Header with logo */}
+    <div className="w-72 h-screen bg-stone-50 border-r border-stone-200 flex flex-col">
       <div className="px-4 py-5 border-b border-stone-200">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-xl font-semibold text-stone-900 tracking-tight">
             Jireh's Agent
           </h1>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={close}
-            className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors duration-150"
-            title="Close sidebar"
+            aria-label="Close sidebar"
           >
             <PanelLeftClose className="w-5 h-5" strokeWidth={1.5} />
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* New conversation button */}
       <div className="px-3 py-3">
-        <button
+        <Button
+          variant="primary"
+          className="w-full"
           onClick={handleNewConversation}
-          className="
-            w-full flex items-center gap-2.5 px-3 py-2.5
-            bg-stone-900 hover:bg-stone-800 text-white
-            rounded-lg transition-colors duration-150
-            text-sm font-medium
-          "
+          leftIcon={<Plus className="w-4 h-4" strokeWidth={2} />}
         >
-          <Plus className="w-4 h-4" strokeWidth={2} />
           New conversation
-        </button>
+        </Button>
       </div>
 
-      {/* Conversation list */}
       <div className="flex-1 overflow-y-auto px-3">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
@@ -92,48 +86,57 @@ export default function Sidebar() {
             <p className="text-sm text-stone-500">No conversations yet</p>
           </div>
         ) : (
-          <div className="space-y-1 pb-4">
+          <motion.div
+            className="space-y-1 pb-4"
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+          >
             {data.conversations.map((conversation) => (
-              <SidebarConversationItem
-                key={conversation.session_id}
-                conversation={conversation}
-                isActive={conversation.session_id === sessionId}
-                onClick={() => handleNavigate(conversation.session_id)}
-                onDelete={() => handleDelete(conversation.session_id)}
-                isDeleting={
-                  deleteConversation.isPending &&
-                  deleteConversation.variables === conversation.session_id
-                }
-              />
+              <motion.div key={conversation.session_id} variants={staggerItem} transition={transitions.fast}>
+                <SidebarConversationItem
+                  conversation={conversation}
+                  isActive={conversation.session_id === sessionId}
+                  onClick={() => handleNavigate(conversation.session_id)}
+                  onDelete={() => handleDelete(conversation.session_id)}
+                  isDeleting={
+                    deleteConversation.isPending &&
+                    deleteConversation.variables === conversation.session_id
+                  }
+                />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
       </div>
 
-      {/* Pagination controls */}
       {data && (hasMore || hasPrev) && (
         <div className="px-3 py-2 border-t border-stone-200">
           <div className="flex items-center justify-between">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setOffset(Math.max(0, offset - limit))}
               disabled={!hasPrev}
-              className="p-1.5 text-stone-400 hover:text-stone-600 disabled:text-stone-300 disabled:cursor-not-allowed transition-colors"
+              aria-label="Previous page"
             >
               <ChevronUp className="w-4 h-4" strokeWidth={1.5} />
-            </button>
+            </Button>
             <span className="text-xs text-stone-400">
               {Math.min(offset + 1, data.total)}-{Math.min(offset + limit, data.total)} of {data.total}
             </span>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setOffset(offset + limit)}
               disabled={!hasMore}
-              className="p-1.5 text-stone-400 hover:text-stone-600 disabled:text-stone-300 disabled:cursor-not-allowed transition-colors"
+              aria-label="Next page"
             >
               <ChevronDown className="w-4 h-4" strokeWidth={1.5} />
-            </button>
+            </Button>
           </div>
         </div>
       )}
-    </aside>
+    </div>
   )
 }

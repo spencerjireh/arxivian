@@ -1,34 +1,45 @@
-// Horizontal step indicator showing workflow progress
-
+import { motion, useReducedMotion } from 'framer-motion'
 import { Check, Loader2, AlertCircle } from 'lucide-react'
 import type { ThinkingStep } from '../../types/api'
 import { STEP_LABELS } from '../../types/api'
+import { pulseVariants, scaleIn, transitions } from '../../lib/animations'
 
 interface ThinkingStepperProps {
   steps: ThinkingStep[]
 }
 
 export default function ThinkingStepper({ steps }: ThinkingStepperProps) {
+  const shouldReduceMotion = useReducedMotion()
+
   if (steps.length === 0) return null
 
-  // Sort steps by order for consistent display
   const sortedSteps = [...steps].sort((a, b) => a.order - b.order)
+
+  const stepAnimation = shouldReduceMotion
+    ? {}
+    : {
+        variants: scaleIn,
+        initial: 'initial',
+        animate: 'animate',
+        transition: transitions.fast,
+      }
 
   return (
     <div className="flex flex-col gap-2">
       {/* Desktop: horizontal stepper */}
       <div className="hidden sm:flex items-center gap-0.5">
         {sortedSteps.map((step, index) => (
-          <div key={step.id} className="flex items-center">
-            {/* Step indicator */}
+          <motion.div key={step.id} className="flex items-center" {...stepAnimation}>
             <div className="flex flex-col items-center">
-              <div
+              <motion.div
+                variants={step.status === 'running' && !shouldReduceMotion ? pulseVariants : {}}
+                animate={step.status === 'running' ? 'animate' : undefined}
                 className={`
                   w-7 h-7 rounded-full flex items-center justify-center
-                  transition-all duration-200
+                  transition-colors duration-200
                   ${
                     step.status === 'running'
-                      ? 'bg-amber-100 text-amber-600 step-pulse'
+                      ? 'bg-amber-100 text-amber-600'
                       : step.status === 'complete'
                         ? 'bg-stone-800 text-white'
                         : 'bg-red-100 text-red-600'
@@ -42,7 +53,7 @@ export default function ThinkingStepper({ steps }: ThinkingStepperProps) {
                 ) : (
                   <AlertCircle className="w-3.5 h-3.5" strokeWidth={1.5} />
                 )}
-              </div>
+              </motion.div>
               <span
                 className={`
                   text-xs mt-1.5 whitespace-nowrap
@@ -53,7 +64,6 @@ export default function ThinkingStepper({ steps }: ThinkingStepperProps) {
               </span>
             </div>
 
-            {/* Connector line */}
             {index < sortedSteps.length - 1 && (
               <div
                 className={`
@@ -62,23 +72,24 @@ export default function ThinkingStepper({ steps }: ThinkingStepperProps) {
                 `}
               />
             )}
-          </div>
+          </motion.div>
         ))}
       </div>
 
       {/* Mobile: vertical stepper */}
       <div className="flex sm:hidden flex-col gap-0">
         {sortedSteps.map((step, index) => (
-          <div key={step.id} className="flex items-start gap-3">
-            {/* Vertical line and indicator */}
+          <motion.div key={step.id} className="flex items-start gap-3" {...stepAnimation}>
             <div className="flex flex-col items-center">
-              <div
+              <motion.div
+                variants={step.status === 'running' && !shouldReduceMotion ? pulseVariants : {}}
+                animate={step.status === 'running' ? 'animate' : undefined}
                 className={`
                   w-6 h-6 rounded-full flex items-center justify-center
-                  transition-all duration-200
+                  transition-colors duration-200
                   ${
                     step.status === 'running'
-                      ? 'bg-amber-100 text-amber-600 step-pulse'
+                      ? 'bg-amber-100 text-amber-600'
                       : step.status === 'complete'
                         ? 'bg-stone-800 text-white'
                         : 'bg-red-100 text-red-600'
@@ -92,8 +103,7 @@ export default function ThinkingStepper({ steps }: ThinkingStepperProps) {
                 ) : (
                   <AlertCircle className="w-3 h-3" strokeWidth={1.5} />
                 )}
-              </div>
-              {/* Vertical connector */}
+              </motion.div>
               {index < sortedSteps.length - 1 && (
                 <div
                   className={`
@@ -104,7 +114,6 @@ export default function ThinkingStepper({ steps }: ThinkingStepperProps) {
               )}
             </div>
 
-            {/* Step label */}
             <span
               className={`
                 text-sm leading-6
@@ -113,7 +122,7 @@ export default function ThinkingStepper({ steps }: ThinkingStepperProps) {
             >
               {STEP_LABELS[step.step]}
             </span>
-          </div>
+          </motion.div>
         ))}
       </div>
     </div>

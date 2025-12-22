@@ -1,7 +1,7 @@
-// Compact conversation item for sidebar
-
+import { motion, useReducedMotion } from 'framer-motion'
 import { Loader2, Trash2 } from 'lucide-react'
 import type { ConversationListItem } from '../../types/api'
+import { transitions } from '../../lib/animations'
 
 interface SidebarConversationItemProps {
   conversation: ConversationListItem
@@ -39,17 +39,21 @@ export default function SidebarConversationItem({
   onDelete,
   isDeleting,
 }: SidebarConversationItemProps) {
+  const shouldReduceMotion = useReducedMotion()
+
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
     onDelete()
   }
 
   return (
-    <div
+    <motion.div
       onClick={onClick}
+      whileHover={shouldReduceMotion ? {} : { x: 2 }}
+      transition={transitions.fast}
       className={`
         group relative px-3 py-2.5 rounded-lg cursor-pointer
-        transition-all duration-150
+        transition-colors duration-150
         ${isActive
           ? 'bg-stone-100 border-l-2 border-amber-600'
           : 'hover:bg-stone-50 border-l-2 border-transparent'
@@ -68,25 +72,27 @@ export default function SidebarConversationItem({
           </p>
         </div>
 
-        {/* Delete button - visible on hover */}
-        <button
+        <motion.button
           onClick={handleDelete}
           disabled={isDeleting}
+          whileHover={shouldReduceMotion ? {} : { scale: 1.1 }}
+          whileTap={shouldReduceMotion ? {} : { scale: 0.9 }}
+          transition={transitions.fast}
           className="
             p-1.5 rounded-md opacity-0 group-hover:opacity-100
             text-stone-400 hover:text-red-600 hover:bg-red-50
             transition-all duration-150 disabled:opacity-50
             flex-shrink-0
           "
-          title="Delete conversation"
+          aria-label="Delete conversation"
         >
           {isDeleting ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} />
           ) : (
             <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
           )}
-        </button>
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   )
 }

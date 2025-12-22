@@ -7,6 +7,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     postgresql-client \
     build-essential \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install UV package manager

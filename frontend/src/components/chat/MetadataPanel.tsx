@@ -1,8 +1,9 @@
-// Expandable execution metadata component
-
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, Info } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
+import { ChevronRight, Info } from 'lucide-react'
 import type { MetadataEventData } from '../../types/api'
+import { AnimatedCollapse } from '../ui/AnimatedCollapse'
+import { transitions } from '../../lib/animations'
 
 interface MetadataPanelProps {
   metadata: MetadataEventData
@@ -10,6 +11,7 @@ interface MetadataPanelProps {
 
 export default function MetadataPanel({ metadata }: MetadataPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const shouldReduceMotion = useReducedMotion()
 
   const executionTime = (metadata.execution_time_ms / 1000).toFixed(2)
 
@@ -21,17 +23,17 @@ export default function MetadataPanel({ metadata }: MetadataPanelProps) {
       >
         <Info className="w-3.5 h-3.5" strokeWidth={1.5} />
         <span>{isExpanded ? 'Hide' : 'View'} execution details</span>
-        {isExpanded ? (
-          <ChevronDown className="w-3 h-3" strokeWidth={1.5} />
-        ) : (
+        <motion.div
+          animate={{ rotate: isExpanded ? 90 : 0 }}
+          transition={shouldReduceMotion ? { duration: 0 } : transitions.fast}
+        >
           <ChevronRight className="w-3 h-3" strokeWidth={1.5} />
-        )}
+        </motion.div>
       </button>
 
-      {isExpanded && (
-        <div className="mt-3 p-4 bg-stone-50 rounded-xl animate-slide-down">
+      <AnimatedCollapse isOpen={isExpanded}>
+        <div className="mt-3 p-4 bg-stone-50 rounded-xl">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {/* Provider */}
             <div>
               <span className="text-xs text-stone-400 uppercase tracking-wide">Provider</span>
               <p className="text-sm text-stone-700 font-medium mt-0.5 capitalize">
@@ -39,7 +41,6 @@ export default function MetadataPanel({ metadata }: MetadataPanelProps) {
               </p>
             </div>
 
-            {/* Model */}
             <div>
               <span className="text-xs text-stone-400 uppercase tracking-wide">Model</span>
               <p className="text-sm text-stone-700 font-medium mt-0.5 font-mono text-xs">
@@ -47,7 +48,6 @@ export default function MetadataPanel({ metadata }: MetadataPanelProps) {
               </p>
             </div>
 
-            {/* Execution Time */}
             <div>
               <span className="text-xs text-stone-400 uppercase tracking-wide">Duration</span>
               <p className="text-sm text-stone-700 font-medium mt-0.5 font-mono">
@@ -55,7 +55,6 @@ export default function MetadataPanel({ metadata }: MetadataPanelProps) {
               </p>
             </div>
 
-            {/* Retrieval Attempts */}
             <div>
               <span className="text-xs text-stone-400 uppercase tracking-wide">Retrievals</span>
               <p className="text-sm text-stone-700 font-medium mt-0.5">
@@ -63,7 +62,6 @@ export default function MetadataPanel({ metadata }: MetadataPanelProps) {
               </p>
             </div>
 
-            {/* Guardrail Score */}
             {metadata.guardrail_score !== undefined && (
               <div>
                 <span className="text-xs text-stone-400 uppercase tracking-wide">Guardrail</span>
@@ -73,7 +71,6 @@ export default function MetadataPanel({ metadata }: MetadataPanelProps) {
               </div>
             )}
 
-            {/* Turn Number */}
             <div>
               <span className="text-xs text-stone-400 uppercase tracking-wide">Turn</span>
               <p className="text-sm text-stone-700 font-medium mt-0.5">
@@ -82,7 +79,6 @@ export default function MetadataPanel({ metadata }: MetadataPanelProps) {
             </div>
           </div>
 
-          {/* Rewritten Query */}
           {metadata.rewritten_query && (
             <div className="mt-4 pt-4 border-t border-stone-100">
               <span className="text-xs text-stone-400 uppercase tracking-wide">Rewritten Query</span>
@@ -92,7 +88,6 @@ export default function MetadataPanel({ metadata }: MetadataPanelProps) {
             </div>
           )}
 
-          {/* Reasoning Steps */}
           {metadata.reasoning_steps.length > 0 && (
             <div className="mt-4 pt-4 border-t border-stone-100">
               <span className="text-xs text-stone-400 uppercase tracking-wide">Reasoning</span>
@@ -109,7 +104,6 @@ export default function MetadataPanel({ metadata }: MetadataPanelProps) {
             </div>
           )}
 
-          {/* Session ID */}
           {metadata.session_id && (
             <div className="mt-4 pt-4 border-t border-stone-100">
               <span className="text-xs text-stone-400 uppercase tracking-wide">Session</span>
@@ -119,7 +113,7 @@ export default function MetadataPanel({ metadata }: MetadataPanelProps) {
             </div>
           )}
         </div>
-      )}
+      </AnimatedCollapse>
     </div>
   )
 }

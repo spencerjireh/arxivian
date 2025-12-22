@@ -1,10 +1,10 @@
-// Shows details of the currently running step with live elapsed time
-
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import type { ThinkingStep } from '../../types/api'
 import { STEP_LABELS } from '../../types/api'
 import { formatDuration } from '../../stores/chatStore'
+import { fadeInUp, transitions } from '../../lib/animations'
 
 interface ThinkingCurrentStepProps {
   step: ThinkingStep
@@ -13,7 +13,6 @@ interface ThinkingCurrentStepProps {
 export default function ThinkingCurrentStep({ step }: ThinkingCurrentStepProps) {
   const [elapsed, setElapsed] = useState(0)
 
-  // Update elapsed time every 100ms for running steps
   useEffect(() => {
     if (step.status !== 'running') {
       return
@@ -26,7 +25,6 @@ export default function ThinkingCurrentStep({ step }: ThinkingCurrentStepProps) 
     return () => clearInterval(interval)
   }, [step.status, step.startTime])
 
-  // Format details for display
   const formatDetailValue = (key: string, value: unknown): string => {
     if (value === null || value === undefined) return '-'
     if (typeof value === 'boolean') return value ? 'Yes' : 'No'
@@ -56,8 +54,13 @@ export default function ThinkingCurrentStep({ step }: ThinkingCurrentStepProps) 
   const hasDetails = step.details && Object.keys(step.details).length > 0
 
   return (
-    <div className="bg-white rounded-lg p-4 border border-amber-100">
-      {/* Header */}
+    <motion.div
+      className="bg-white rounded-lg p-4 border border-amber-100"
+      variants={fadeInUp}
+      initial="initial"
+      animate="animate"
+      transition={transitions.fast}
+    >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <Loader2 className="w-3.5 h-3.5 text-amber-600 animate-spin" strokeWidth={1.5} />
@@ -70,10 +73,8 @@ export default function ThinkingCurrentStep({ step }: ThinkingCurrentStepProps) 
         </span>
       </div>
 
-      {/* Status message */}
       <p className="text-sm text-stone-600 leading-relaxed">{step.message}</p>
 
-      {/* Key details */}
       {hasDetails && step.details && (
         <div className="mt-3 pt-3 border-t border-stone-100 flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
           {Object.entries(step.details)
@@ -86,6 +87,6 @@ export default function ThinkingCurrentStep({ step }: ThinkingCurrentStepProps) 
             ))}
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }

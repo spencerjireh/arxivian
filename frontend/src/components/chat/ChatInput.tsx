@@ -1,10 +1,10 @@
-// Chat input with expandable advanced options
-
 import { useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Settings2, X, ArrowUp, RotateCcw } from 'lucide-react'
 import type { LLMProvider } from '../../types/api'
 import type { ChatOptions } from '../../hooks/useChat'
 import { useSettingsStore } from '../../stores/settingsStore'
+import { AnimatedCollapse } from '../ui/AnimatedCollapse'
+import Button from '../ui/Button'
 
 interface ChatInputProps {
   onSend: (query: string, options: ChatOptions) => void
@@ -16,7 +16,6 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
   const [query, setQuery] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  // Use settings from store
   const {
     provider,
     model,
@@ -64,25 +63,23 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
     <div className="border-t border-stone-100 bg-white">
       <div className="max-w-5xl mx-auto px-6 py-4">
         <form onSubmit={handleSubmit}>
-          {/* Advanced options panel */}
-          {showAdvanced && (
-            <div className="mb-4 animate-slide-down">
+          <AnimatedCollapse isOpen={showAdvanced}>
+            <div className="mb-4">
               <div className="p-5 bg-stone-50 rounded-xl border border-stone-100">
-                {/* Header */}
                 <div className="flex items-center justify-between mb-5">
                   <h3 className="text-sm font-medium text-stone-700">Advanced Settings</h3>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={resetToDefaults}
-                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-stone-500 hover:text-stone-700 hover:bg-stone-100 rounded-md transition-colors duration-150"
+                    leftIcon={<RotateCcw className="w-3 h-3" strokeWidth={1.5} />}
                   >
-                    <RotateCcw className="w-3 h-3" strokeWidth={1.5} />
                     Reset
-                  </button>
+                  </Button>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
-                  {/* Provider */}
                   <div>
                     <label className="block text-xs text-stone-500 mb-1.5">Provider</label>
                     <select
@@ -98,7 +95,6 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
                     </select>
                   </div>
 
-                  {/* Model */}
                   <div>
                     <label className="block text-xs text-stone-500 mb-1.5">Model</label>
                     <input
@@ -110,7 +106,6 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
                     />
                   </div>
 
-                  {/* Temperature */}
                   <div>
                     <label className="block text-xs text-stone-500 mb-1.5">
                       Temperature
@@ -129,7 +124,6 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
                     />
                   </div>
 
-                  {/* Top K */}
                   <div>
                     <label className="block text-xs text-stone-500 mb-1.5">
                       Top K
@@ -146,7 +140,6 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
                     />
                   </div>
 
-                  {/* Guardrail Threshold */}
                   <div>
                     <label className="block text-xs text-stone-500 mb-1.5">
                       Guardrail
@@ -165,7 +158,6 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
                     />
                   </div>
 
-                  {/* Max Retrieval Attempts */}
                   <div>
                     <label className="block text-xs text-stone-500 mb-1.5">
                       Max Retrieval
@@ -184,7 +176,6 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
                     />
                   </div>
 
-                  {/* Conversation Window */}
                   <div>
                     <label className="block text-xs text-stone-500 mb-1.5">
                       Context Window
@@ -205,9 +196,8 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
                 </div>
               </div>
             </div>
-          )}
+          </AnimatedCollapse>
 
-          {/* Input area */}
           <div className="flex items-end gap-3">
             <div className="flex-1 relative">
               <textarea
@@ -220,38 +210,40 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
                 className="w-full px-4 py-3 pr-12 text-stone-800 bg-stone-50 border border-stone-200 rounded-xl resize-none placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-200 focus:border-stone-300 focus:bg-white disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-150"
                 style={{ minHeight: '48px', maxHeight: '160px' }}
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className={`absolute right-3 bottom-3 p-1.5 rounded-md transition-colors duration-150 ${
-                  showAdvanced
-                    ? 'text-stone-700 bg-stone-200'
-                    : 'text-stone-400 hover:text-stone-600 hover:bg-stone-100'
-                }`}
-                title="Advanced settings"
+                className={`absolute right-3 bottom-3 ${showAdvanced ? 'bg-stone-200 text-stone-700' : ''}`}
+                aria-label="Advanced settings"
               >
                 <Settings2 className="w-4 h-4" strokeWidth={1.5} />
-              </button>
+              </Button>
             </div>
 
             {isStreaming ? (
-              <button
+              <Button
                 type="button"
+                variant="danger"
+                size="lg"
                 onClick={onCancel}
-                className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors duration-150"
-                title="Cancel"
+                className="flex-shrink-0 w-12 h-12 p-0"
+                aria-label="Cancel"
               >
                 <X className="w-5 h-5" strokeWidth={1.5} />
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 type="submit"
+                variant="primary"
+                size="lg"
                 disabled={!query.trim()}
-                className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-stone-900 text-white rounded-xl hover:bg-stone-800 disabled:bg-stone-200 disabled:text-stone-400 disabled:cursor-not-allowed transition-colors duration-150"
-                title="Send"
+                className="flex-shrink-0 w-12 h-12 p-0"
+                aria-label="Send"
               >
                 <ArrowUp className="w-5 h-5" strokeWidth={1.5} />
-              </button>
+              </Button>
             )}
           </div>
         </form>

@@ -129,7 +129,7 @@ export function useChat(sessionId: string | null) {
       } else {
         // Existing session - add the message to current session
         setMessages((prev) => [...prev, assistantMessage])
-        
+
         // Invalidate the list to update "last_query"
         queryClient.invalidateQueries({ queryKey: conversationKeys.lists() })
       }

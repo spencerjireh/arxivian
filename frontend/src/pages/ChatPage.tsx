@@ -33,12 +33,13 @@ export default function ChatPage() {
     isNewChat ? undefined : sessionId
   )
 
-  // Load history when conversation data arrives
+  // Load history when conversation data arrives, but only if messages cache is empty
+  // This prevents overwriting messages that were just set during navigation from a new chat
   useEffect(() => {
-    if (conversation?.turns && conversation.turns.length > 0) {
+    if (conversation?.turns && conversation.turns.length > 0 && messages.length === 0) {
       loadFromHistory(conversation.turns)
     }
-  }, [conversation, loadFromHistory])
+  }, [conversation, loadFromHistory, messages.length])
 
   // Clear messages when navigating to new chat
   useEffect(() => {
@@ -72,8 +73,8 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Messages */}
-      {!isLoading && <ChatMessages messages={messages} />}
+      {/* Messages - show immediately if we have messages (from cache), otherwise wait for loading */}
+      {(!isLoading || messages.length > 0) && <ChatMessages messages={messages} />}
 
       {/* Input */}
       <ChatInput

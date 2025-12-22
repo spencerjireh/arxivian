@@ -37,6 +37,12 @@ services:
       - ./backend/alembic:/app/alembic
       - ./backend/pyproject.toml:/app/pyproject.toml
       - ./backend/uv.lock:/app/uv.lock
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - jirehs-agent-network
     profiles:
@@ -55,7 +61,8 @@ services:
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
