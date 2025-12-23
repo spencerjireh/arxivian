@@ -207,15 +207,15 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
                 placeholder="Ask about research papers..."
                 rows={1}
                 disabled={isStreaming}
-                className="w-full px-4 py-3 pr-12 text-stone-800 bg-stone-50 border border-stone-200 rounded-xl resize-none placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-200 focus:border-stone-300 focus:bg-white disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-150"
-                style={{ minHeight: '48px', maxHeight: '160px' }}
+                className="w-full px-4 py-2.5 pr-12 text-stone-800 bg-stone-50 border border-stone-200 rounded-xl resize-none placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-200 focus:border-stone-300 focus:bg-white disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-150 overflow-hidden"
+                style={{ minHeight: '44px', maxHeight: '160px' }}
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className={`absolute right-3 bottom-3 ${showAdvanced ? 'bg-stone-200 text-stone-700' : ''}`}
+                className={`absolute right-3 top-1/2 -translate-y-1/2 ${showAdvanced ? 'bg-stone-200 text-stone-700' : ''}`}
                 aria-label="Advanced settings"
               >
                 <Settings2 className="w-4 h-4" strokeWidth={1.5} />
@@ -223,27 +223,23 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
             </div>
 
             {isStreaming ? (
-              <Button
+              <button
                 type="button"
-                variant="danger"
-                size="lg"
                 onClick={onCancel}
-                className="flex-shrink-0 w-12 h-12 p-0"
+                className="flex-shrink-0 w-[50px] h-[50px] flex items-center justify-center bg-red-500 text-white hover:bg-red-600 rounded-xl transition-colors"
                 aria-label="Cancel"
               >
-                <X className="w-5 h-5" strokeWidth={1.5} />
-              </Button>
+                <X className="w-5 h-5" strokeWidth={2} />
+              </button>
             ) : (
-              <Button
+              <button
                 type="submit"
-                variant="primary"
-                size="lg"
                 disabled={!query.trim()}
-                className="flex-shrink-0 w-12 h-12 p-0"
+                className="flex-shrink-0 w-[50px] h-[50px] flex items-center justify-center bg-stone-900 text-white hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors"
                 aria-label="Send"
               >
-                <ArrowUp className="w-5 h-5" strokeWidth={1.5} />
-              </Button>
+                <ArrowUp className="w-5 h-5" strokeWidth={2} />
+              </button>
             )}
           </div>
         </form>

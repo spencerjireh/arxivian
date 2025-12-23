@@ -208,5 +208,43 @@ input[type="range"]::-moz-range-thumb {
 
 /* KaTeX overrides for elegant math rendering */
 .katex {
-  font-size: 1em !important;
+  font-size: 1.05em !important;
+  color: var(--color-stone-800);
+}
+
+/* Display math (block equations) */
+.katex-display {
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+}
+
+/* Ensure math equations don't break layout on mobile */
+.math-display {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-stone-200) transparent;
+}
+
+/* Inline math alignment */
+.math-inline .katex {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Mobile responsive math */
+@media (max-width: 640px) {
+  .katex-display {
+    font-size: 0.95em;
+  }
+
+  .katex {
+    font-size: 1em !important;
+  }
+}
+
+/* Math error styling */
+.katex-error {
+  color: var(--color-error) !important;
+  font-style: italic;
 }
