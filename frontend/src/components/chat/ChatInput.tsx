@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useState, useRef, useEffect, type FormEvent, type KeyboardEvent } from 'react'
 import { Settings2, X, ArrowUp, RotateCcw } from 'lucide-react'
 import type { LLMProvider } from '../../types/api'
 import type { ChatOptions } from '../../hooks/useChat'
@@ -15,6 +15,24 @@ interface ChatInputProps {
 export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputProps) {
   const [query, setQuery] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
+  const [isOverflowing, setIsOverflowing] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const lineCount = query.split('\n').length
+  const MAX_HEIGHT = 160
+
+  // Auto-resize textarea based on content
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    textarea.style.height = 'auto'
+    const scrollHeight = textarea.scrollHeight
+    const newHeight = Math.min(scrollHeight, MAX_HEIGHT)
+    textarea.style.height = `${newHeight}px`
+    setIsOverflowing(scrollHeight > MAX_HEIGHT)
+  }, [query])
 
   const {
     provider,
@@ -50,6 +68,9 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
 
     onSend(query.trim(), options)
     setQuery('')
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+    }
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -201,25 +222,33 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
           <div className="flex items-end gap-3">
             <div className="flex-1 relative">
               <textarea
+                ref={textareaRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
                 placeholder="Ask about research papers..."
                 rows={1}
                 disabled={isStreaming}
-                className="w-full px-4 py-2.5 pr-12 text-stone-800 bg-stone-50 border border-stone-200 rounded-xl resize-none placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-200 focus:border-stone-300 focus:bg-white disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-150 overflow-hidden"
-                style={{ minHeight: '44px', maxHeight: '160px' }}
+                className={`w-full px-4 py-2.5 pr-12 text-stone-800 bg-stone-50 border border-stone-200 rounded-xl resize-none placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-200 focus:border-stone-300 focus:bg-white disabled:opacity-60 disabled:cursor-not-allowed transition-[height,background-color,border-color,box-shadow] duration-150 ${isOverflowing ? 'overflow-y-auto scrollbar-thin scrollbar-thumb-stone-300 scrollbar-track-transparent' : 'overflow-hidden'} ${lineCount > 1 ? 'pb-6' : ''}`}
+                style={{ minHeight: '44px', maxHeight: `${MAX_HEIGHT}px` }}
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 ${showAdvanced ? 'bg-stone-200 text-stone-700' : ''}`}
+                className={`absolute right-3 top-2.5 ${showAdvanced ? 'bg-stone-200 text-stone-700' : ''}`}
                 aria-label="Advanced settings"
               >
                 <Settings2 className="w-4 h-4" strokeWidth={1.5} />
               </Button>
+              {lineCount > 1 && (isFocused || query) && (
+                <span className="absolute right-3 bottom-2 text-xs text-stone-400 pointer-events-none transition-opacity duration-150">
+                  {lineCount} lines
+                </span>
+              )}
             </div>
 
             {isStreaming ? (
