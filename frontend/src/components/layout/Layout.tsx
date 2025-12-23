@@ -35,9 +35,9 @@ const Layout = () => {
         {!isOpen && (
           <motion.div
             key="toggle"
-            initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.9 }}
+            initial={shouldReduceMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={shouldReduceMotion ? undefined : { opacity: 0 }}
             transition={shouldReduceMotion ? { duration: 0 } : fastTransition}
           >
             <SidebarToggle />

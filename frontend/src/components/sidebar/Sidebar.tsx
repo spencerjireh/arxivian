@@ -1,12 +1,10 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { Plus, PanelLeftClose, Loader2, MessageSquare, ChevronUp, ChevronDown } from 'lucide-react'
 import { useConversations, useDeleteConversation } from '../../api/conversations'
 import { useSidebarStore } from '../../stores/sidebarStore'
 import SidebarConversationItem from './SidebarConversationItem'
 import Button from '../ui/Button'
-import { staggerContainer, staggerItem, transitions } from '../../lib/animations'
 
 export default function Sidebar() {
   const navigate = useNavigate()
@@ -61,7 +59,7 @@ export default function Sidebar() {
       <div className="px-3 py-3">
         <Button
           variant="primary"
-          className="w-full"
+          className="w-full !px-3 !py-1.5"
           onClick={handleNewConversation}
           leftIcon={<Plus className="w-4 h-4" strokeWidth={2} />}
         >
@@ -86,14 +84,13 @@ export default function Sidebar() {
             <p className="text-sm text-stone-500">No conversations yet</p>
           </div>
         ) : (
-          <motion.div
-            className="space-y-1 pb-4"
-            variants={staggerContainer}
-            initial="initial"
-            animate="animate"
-          >
-            {data.conversations.map((conversation) => (
-              <motion.div key={conversation.session_id} variants={staggerItem} transition={transitions.fast}>
+          <>
+            <h2 className="text-xs text-stone-600 px-3 pt-8 pb-2">
+              Recent conversations
+            </h2>
+            <div className="space-y-0.5 pb-4">
+              {data.conversations.map((conversation) => (
+                <div key={conversation.session_id}>
                 <SidebarConversationItem
                   conversation={conversation}
                   isActive={conversation.session_id === sessionId}
@@ -104,9 +101,10 @@ export default function Sidebar() {
                     deleteConversation.variables === conversation.session_id
                   }
                 />
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+            </div>
+          </>
         )}
       </div>
 
