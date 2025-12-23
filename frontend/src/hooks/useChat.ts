@@ -1,13 +1,11 @@
-// Unified chat hook combining TanStack Query with SSE streaming
-// This hook manages all chat state through the query cache for consistency
-
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { streamChat, createStreamAbortController, StreamAbortError } from '../api/stream'
 import { conversationKeys } from '../api/conversations'
 import { useChatStore } from '../stores/chatStore'
 import { DEFAULT_SETTINGS } from '../stores/settingsStore'
+import { generateMessageId } from '../utils/id'
 import type {
   StreamRequest,
   LLMProvider,
@@ -27,19 +25,15 @@ export interface ChatOptions {
   conversation_window: number
 }
 
-// Query key for current chat messages (separate from persisted conversations)
 export const chatKeys = {
   messages: (sessionId: string | null) => ['chat', 'messages', sessionId] as const,
-}
-
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
 export function useChat(sessionId: string | null) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const abortControllerRef = useRef<AbortController | null>(null)
+  const streamingMessageIdRef = useRef<string | null>(null)
 
   // Get store actions (these are stable references)
   // Note: Don't destructure state values here - they become stale in callbacks
@@ -55,10 +49,37 @@ export function useChat(sessionId: string | null) {
   // Subscribe to messages in query cache (reactive)
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: chatKeys.messages(sessionId),
-    queryFn: () => [],
+    queryFn: () => {
+      // When creating a new query for a session, check if there's data in the null cache
+      // This handles the race condition when navigating from new chat to session
+      if (sessionId !== null) {
+        const nullCacheMessages = queryClient.getQueryData<Message[]>(chatKeys.messages(null))
+        if (nullCacheMessages && nullCacheMessages.length > 0) {
+          // Copy messages from null cache to session cache
+          queryClient.setQueryData(chatKeys.messages(sessionId), nullCacheMessages)
+          return nullCacheMessages
+        }
+      }
+      return []
+    },
     staleTime: Infinity,
     gcTime: Infinity,
   })
+
+  // Ensure cache continuity when sessionId changes from null to actual ID
+  // This runs AFTER navigation completes and component re-renders
+  useEffect(() => {
+    if (sessionId !== null) {
+      // Check if current session cache is empty
+      const sessionCache = queryClient.getQueryData<Message[]>(chatKeys.messages(sessionId))
+      const nullCache = queryClient.getQueryData<Message[]>(chatKeys.messages(null))
+
+      // If session cache is empty but null cache has messages, copy them over
+      if ((!sessionCache || sessionCache.length === 0) && nullCache && nullCache.length > 0) {
+        queryClient.setQueryData(chatKeys.messages(sessionId), nullCache)
+      }
+    }
+  }, [sessionId, queryClient])
 
   // Set messages in query cache
   const setMessages = useCallback(
@@ -71,11 +92,10 @@ export function useChat(sessionId: string | null) {
     [queryClient, sessionId]
   )
 
-  // Add a user message
   const addUserMessage = useCallback(
     (content: string) => {
       const userMessage: Message = {
-        id: generateId(),
+        id: generateMessageId(),
         role: 'user',
         content,
         createdAt: new Date(),
@@ -85,78 +105,80 @@ export function useChat(sessionId: string | null) {
     [setMessages]
   )
 
-  // Finalize assistant message after streaming completes
+  const addStreamingPlaceholder = useCallback(() => {
+    const placeholderMessage: Message = {
+      id: generateMessageId(),
+      role: 'assistant',
+      content: '',
+      isStreaming: true,
+      createdAt: new Date(),
+    }
+    setMessages((prev) => [...prev, placeholderMessage])
+    return placeholderMessage.id
+  }, [setMessages])
+
+  const updateStreamingMessage = useCallback(
+    (id: string, updates: Partial<Message>) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === id && msg.isStreaming ? { ...msg, ...updates, isStreaming: true } : msg
+        )
+      )
+    },
+    [setMessages]
+  )
+
   const finalizeAssistantMessage = useCallback(
     (
+      placeholderId: string | null,
       content: string,
       sources: SourceInfo[],
       metadata: MetadataEventData,
       thinkingSteps: ThinkingStep[]
     ) => {
-      // Mark all remaining running steps as complete
       const finalizedSteps = thinkingSteps.map((step) => ({
         ...step,
         status: 'complete' as const,
       }))
 
       const assistantMessage: Message = {
-        id: generateId(),
+        id: placeholderId || generateMessageId(),
         role: 'assistant',
         content,
         sources: sources.length > 0 ? sources : undefined,
         metadata,
         thinkingSteps: finalizedSteps.length > 0 ? finalizedSteps : undefined,
+        isStreaming: false,
         createdAt: new Date(),
       }
 
-      // If this was a new chat and we got a session_id back, handle navigation
       if (metadata.session_id && sessionId === null) {
-        // Move messages to the new session's cache (including the assistant message)
         const currentMessages = queryClient.getQueryData<Message[]>(chatKeys.messages(null)) ?? []
-        const updatedMessages = [...currentMessages, assistantMessage]
 
-        // Set messages in the new session's cache
+        // Replace placeholder with finalized message
+        const updatedMessages = currentMessages.map((msg) =>
+          msg.id === placeholderId ? assistantMessage : msg
+        )
+
+        // Update null cache (source of truth until navigation completes)
+        queryClient.setQueryData(chatKeys.messages(null), updatedMessages)
+        // Pre-populate session cache (will be copied by useEffect if needed)
         queryClient.setQueryData(chatKeys.messages(metadata.session_id), updatedMessages)
-
-        // Clear the null session cache
-        queryClient.setQueryData(chatKeys.messages(null), [])
-
-        // Invalidate conversation list so it refetches and shows the new conversation
         queryClient.invalidateQueries({ queryKey: conversationKeys.lists() })
 
-        // Navigate to the new session URL
+        // Navigate - useEffect will ensure cache continuity
         navigate(`/${metadata.session_id}`, { replace: true })
       } else {
-        // Existing session - add the message to current session
-        setMessages((prev) => [...prev, assistantMessage])
-
-        // Invalidate the list to update "last_query"
+        // Replace placeholder with finalized message
+        setMessages((prev) => prev.map((msg) => (msg.id === placeholderId ? assistantMessage : msg)))
         queryClient.invalidateQueries({ queryKey: conversationKeys.lists() })
       }
     },
     [setMessages, sessionId, queryClient, navigate]
   )
 
-  // Send a message
-  const sendMessage = useCallback(
-    async (query: string, options: ChatOptions) => {
-      // Check current streaming state from store (not stale closure value)
-      if (useChatStore.getState().isStreaming) {
-        return
-      }
-
-      // Add user message immediately
-      addUserMessage(query)
-
-      // Reset streaming state and start
-      resetStreamingState()
-      setStreaming(true)
-      setError(null)
-
-      // Create abort controller
-      abortControllerRef.current = createStreamAbortController()
-
-      // Build request - only include non-default values
+  const buildStreamRequest = useCallback(
+    (query: string, options: ChatOptions): StreamRequest => {
       const request: StreamRequest = {
         query,
         session_id: sessionId ?? undefined,
@@ -184,6 +206,28 @@ export function useChat(sessionId: string | null) {
         request.conversation_window = options.conversation_window
       }
 
+      return request
+    },
+    [sessionId]
+  )
+
+  const sendMessage = useCallback(
+    async (query: string, options: ChatOptions) => {
+      if (useChatStore.getState().isStreaming) {
+        return
+      }
+
+      addUserMessage(query)
+      resetStreamingState()
+      setStreaming(true)
+      setError(null)
+
+      const streamingMessageId = addStreamingPlaceholder()
+      streamingMessageIdRef.current = streamingMessageId
+
+      abortControllerRef.current = createStreamAbortController()
+
+      const request = buildStreamRequest(query, options)
       let accumulatedContent = ''
       let accumulatedSources: SourceInfo[] = []
 
@@ -193,31 +237,52 @@ export function useChat(sessionId: string | null) {
           {
             onStatus: (data) => {
               setStatus(data.message)
-              // Add/update thinking step
               addThinkingStep(data)
+              const currentSteps = getThinkingSteps()
+              if (streamingMessageIdRef.current) {
+                updateStreamingMessage(streamingMessageIdRef.current, {
+                  thinkingSteps: currentSteps,
+                })
+              }
             },
             onContent: (data) => {
               accumulatedContent += data.token
               appendStreamingContent(data.token)
+              if (streamingMessageIdRef.current) {
+                updateStreamingMessage(streamingMessageIdRef.current, {
+                  content: accumulatedContent,
+                })
+              }
             },
             onSources: (data) => {
               accumulatedSources = data.sources
               setSources(data.sources)
+              if (streamingMessageIdRef.current) {
+                updateStreamingMessage(streamingMessageIdRef.current, {
+                  sources: data.sources,
+                })
+              }
             },
             onMetadata: (data) => {
-              // Get final thinking steps before reset
               const finalThinkingSteps = getThinkingSteps()
-              // Finalize the message with all accumulated data
               finalizeAssistantMessage(
+                streamingMessageIdRef.current,
                 accumulatedContent,
                 accumulatedSources,
                 data,
                 finalThinkingSteps
               )
-              resetStreamingState()
+              streamingMessageIdRef.current = null
+              // Don't reset state here - it will be reset at start of next message
+              // Resetting here causes rapid re-renders that interrupt animations
               setStreaming(false)
             },
             onError: (data) => {
+              if (streamingMessageIdRef.current) {
+                setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageIdRef.current))
+                streamingMessageIdRef.current = null
+              }
+              resetStreamingState()
               setError(data.error)
               setStreaming(false)
             },
@@ -229,11 +294,21 @@ export function useChat(sessionId: string | null) {
         )
       } catch (err) {
         if (err instanceof StreamAbortError) {
-          // User cancelled - not an error
+          // User cancelled - remove placeholder
+          if (streamingMessageIdRef.current) {
+            setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageIdRef.current))
+            streamingMessageIdRef.current = null
+          }
           resetStreamingState()
           setStreaming(false)
           return
         }
+        // Remove placeholder on error
+        if (streamingMessageIdRef.current) {
+          setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageIdRef.current))
+          streamingMessageIdRef.current = null
+        }
+        resetStreamingState()
         const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
         setError(errorMessage)
         setStreaming(false)
@@ -242,8 +317,10 @@ export function useChat(sessionId: string | null) {
       }
     },
     [
-      sessionId,
       addUserMessage,
+      addStreamingPlaceholder,
+      updateStreamingMessage,
+      buildStreamRequest,
       resetStreamingState,
       setStreaming,
       setError,
@@ -253,10 +330,10 @@ export function useChat(sessionId: string | null) {
       addThinkingStep,
       getThinkingSteps,
       finalizeAssistantMessage,
+      setMessages,
     ]
   )
 
-  // Cancel the current stream
   const cancelStream = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
@@ -264,7 +341,6 @@ export function useChat(sessionId: string | null) {
     }
   }, [])
 
-  // Load messages from conversation history (when navigating to existing chat)
   const loadFromHistory = useCallback(
     (
       turns: Array<{
@@ -304,9 +380,6 @@ export function useChat(sessionId: string | null) {
             turn_number: turn.turn_number,
             reasoning_steps: turn.reasoning_steps ?? [],
           },
-          // Note: thinkingSteps are not persisted in backend, so they won't be available
-          // for historical messages. We could reconstruct basic steps from reasoning_steps
-          // if needed in the future.
           createdAt: new Date(turn.created_at),
         },
       ])
@@ -315,17 +388,13 @@ export function useChat(sessionId: string | null) {
     [setMessages]
   )
 
-  // Clear messages for this session
   const clearMessages = useCallback(() => {
     queryClient.setQueryData(chatKeys.messages(sessionId), [])
     resetStreamingState()
   }, [queryClient, sessionId, resetStreamingState])
 
   return {
-    // State - messages from query cache
     messages,
-
-    // Actions
     sendMessage,
     cancelStream,
     loadFromHistory,

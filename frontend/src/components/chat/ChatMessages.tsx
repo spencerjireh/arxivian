@@ -1,40 +1,18 @@
-import { useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { MessageSquare } from 'lucide-react'
 import type { Message } from '../../types/api'
-import { useChatStore } from '../../stores/chatStore'
 import ChatMessage from './ChatMessage'
-import { staggerContainer, staggerItem, fadeIn, transitions } from '../../lib/animations'
+import { useAutoScroll } from '../../hooks/useAutoScroll'
+import { fadeIn, transitions } from '../../lib/animations'
 
 interface ChatMessagesProps {
   messages: Message[]
 }
 
 export default function ChatMessages({ messages }: ChatMessagesProps) {
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const prevMessagesLengthRef = useRef(messages.length)
-  const prevIsStreamingRef = useRef(false)
+  const scrollRef = useAutoScroll(messages)
 
-  const isStreaming = useChatStore((state) => state.isStreaming)
-  const streamingContent = useChatStore((state) => state.streamingContent)
-  const sources = useChatStore((state) => state.sources)
-  const thinkingSteps = useChatStore((state) => state.thinkingSteps)
-
-  // Only scroll when new messages are added or streaming starts
-  // Avoid scrolling on every thinkingSteps/streamingContent update
-  useEffect(() => {
-    const messagesAdded = messages.length > prevMessagesLengthRef.current
-    const streamingJustStarted = isStreaming && !prevIsStreamingRef.current
-
-    if (messagesAdded || streamingJustStarted) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
-
-    prevMessagesLengthRef.current = messages.length
-    prevIsStreamingRef.current = isStreaming
-  }, [messages.length, isStreaming])
-
-  if (messages.length === 0 && !isStreaming) {
+  if (messages.length === 0) {
     return (
       <motion.div
         className="flex-1 flex items-center justify-center px-6"
@@ -60,44 +38,19 @@ export default function ChatMessages({ messages }: ChatMessagesProps) {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <motion.div
-        className="max-w-5xl mx-auto px-6 py-8 space-y-6"
-        variants={staggerContainer}
-        initial="initial"
-        animate="animate"
-      >
+      <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
         {messages.map((message, index) => (
-          <motion.div key={message.id} variants={staggerItem} transition={transitions.fast}>
+          <div key={message.id}>
             <ChatMessage
               message={message}
+              isStreaming={message.isStreaming}
               isFirst={index === 0}
             />
-          </motion.div>
+          </div>
         ))}
 
-        {isStreaming && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={transitions.fast}
-          >
-            <ChatMessage
-              message={{
-                id: 'streaming',
-                role: 'assistant',
-                content: streamingContent,
-                sources: sources.length > 0 ? sources : undefined,
-                createdAt: new Date(),
-              }}
-              isStreaming
-              streamingContent={streamingContent}
-              streamingThinkingSteps={thinkingSteps}
-            />
-          </motion.div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </motion.div>
+        <div ref={scrollRef} />
+      </div>
     </div>
   )
 }

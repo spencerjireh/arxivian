@@ -1,22 +1,18 @@
-// Zustand chat UI state store
-// Only manages streaming/UI state - message data is in TanStack Query cache
-
 import { create } from 'zustand'
-import type { SourceInfo, ThinkingStep, ThinkingStepType, StatusEventData } from '../types/api'
+import type { SourceInfo, ThinkingStep, StatusEventData } from '../types/api'
 import { STEP_ORDER } from '../types/api'
+import { generateStepId } from '../utils/id'
+import { calculateTotalDuration } from '../utils/duration'
+import { mapStepType, isCompletionMessage } from '../lib/thinking'
 
 interface ChatUIState {
-  // Streaming state
   isStreaming: boolean
   streamingContent: string
   currentStatus: string | null
   sources: SourceInfo[]
   error: string | null
-
-  // Thinking steps (accumulated during streaming)
   thinkingSteps: ThinkingStep[]
 
-  // Actions
   setStreaming: (isStreaming: boolean) => void
   setStreamingContent: (content: string) => void
   appendStreamingContent: (token: string) => void
@@ -24,51 +20,11 @@ interface ChatUIState {
   setSources: (sources: SourceInfo[]) => void
   setError: (error: string | null) => void
 
-  // Thinking step actions
   addThinkingStep: (data: StatusEventData) => void
   getThinkingSteps: () => ThinkingStep[]
   getTotalDuration: () => number
 
   resetStreamingState: () => void
-}
-
-function generateStepId(): string {
-  return `step-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-}
-
-// Map backend step names to our types
-function mapStepType(step: string): ThinkingStepType {
-  switch (step) {
-    case 'guardrail':
-      return 'guardrail'
-    case 'routing':
-      return 'routing'
-    case 'executing':
-      return 'executing'
-    case 'grading':
-      return 'grading'
-    case 'generation':
-      return 'generation'
-    case 'out_of_scope':
-      return 'out_of_scope'
-    default:
-      return 'executing' // fallback
-  }
-}
-
-// Check if a step message indicates completion
-function isCompletionMessage(step: string, message: string): boolean {
-  const completionPatterns: Record<string, RegExp[]> = {
-    guardrail: [/is in scope/i, /is out of scope/i, /passed/i, /failed/i],
-    routing: [/decided to/i, /routing to/i],
-    executing: [/executed/i, /tool completed/i, /tool failed/i, /retrieved/i, /found/i],
-    grading: [/found \d+ relevant/i, /graded/i, /relevant/i],
-    generation: [/complete/i, /finished/i],
-    out_of_scope: [/out of scope/i],
-  }
-
-  const patterns = completionPatterns[step] || []
-  return patterns.some((pattern) => pattern.test(message))
 }
 
 const initialStreamingState = {
@@ -140,32 +96,7 @@ export const useChatStore = create<ChatUIState>((set, get) => ({
 
   getThinkingSteps: () => get().thinkingSteps,
 
-  getTotalDuration: () => {
-    const steps = get().thinkingSteps
-    if (steps.length === 0) return 0
-
-    const firstStart = Math.min(...steps.map((s) => s.startTime.getTime()))
-    const lastEnd = Math.max(
-      ...steps.map((s) => (s.endTime?.getTime() ?? s.startTime.getTime()))
-    )
-    return lastEnd - firstStart
-  },
+  getTotalDuration: () => calculateTotalDuration(get().thinkingSteps),
 
   resetStreamingState: () => set(initialStreamingState),
 }))
-
-// Helper function to calculate step duration in milliseconds
-export function getStepDuration(step: ThinkingStep): number {
-  if (!step.endTime) {
-    return Date.now() - step.startTime.getTime()
-  }
-  return step.endTime.getTime() - step.startTime.getTime()
-}
-
-// Helper function to format duration for display
-export function formatDuration(ms: number): string {
-  if (ms < 1000) {
-    return `${Math.round(ms)}ms`
-  }
-  return `${(ms / 1000).toFixed(1)}s`
-}

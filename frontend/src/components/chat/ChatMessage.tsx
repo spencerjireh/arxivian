@@ -1,6 +1,6 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import { User, Sparkles } from 'lucide-react'
-import type { Message, ThinkingStep } from '../../types/api'
+import type { Message } from '../../types/api'
 import SourceCard from './SourceCard'
 import MetadataPanel from './MetadataPanel'
 import MarkdownRenderer from './MarkdownRenderer'
@@ -10,24 +10,17 @@ import { cursorBlinkVariants } from '../../lib/animations'
 interface ChatMessageProps {
   message: Message
   isStreaming?: boolean
-  streamingContent?: string
-  streamingThinkingSteps?: ThinkingStep[]
   isFirst?: boolean
 }
 
 export default function ChatMessage({
   message,
   isStreaming,
-  streamingContent,
-  streamingThinkingSteps,
 }: ChatMessageProps) {
   const isUser = message.role === 'user'
-  const content = isStreaming ? streamingContent : message.content
+  const content = message.content
   const shouldReduceMotion = useReducedMotion()
-
-  const thinkingSteps = isStreaming
-    ? (streamingThinkingSteps ?? [])
-    : message.thinkingSteps
+  const thinkingSteps = message.thinkingSteps
 
   return (
     <div className={isUser ? 'flex justify-end' : ''}>
@@ -62,14 +55,18 @@ export default function ChatMessage({
               <div className="whitespace-pre-wrap leading-relaxed">{content}</div>
             ) : (
               <div className="prose-stone">
-                <MarkdownRenderer content={content || ''} />
-                {isStreaming && (
-                  <motion.span
-                    variants={shouldReduceMotion ? {} : cursorBlinkVariants}
-                    animate="animate"
-                    className="inline-block w-0.5 h-5 ml-0.5 bg-stone-400 align-text-bottom"
-                  />
-                )}
+                <MarkdownRenderer
+                  content={content || ''}
+                  streamingCursor={
+                    isStreaming ? (
+                      <motion.span
+                        variants={shouldReduceMotion ? {} : cursorBlinkVariants}
+                        animate="animate"
+                        className="inline-block w-0.5 h-5 ml-0.5 bg-stone-400 align-text-bottom"
+                      />
+                    ) : undefined
+                  }
+                />
               </div>
             )}
           </div>

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Lightbulb, ChevronRight } from 'lucide-react'
 import type { ThinkingStep } from '../../types/api'
-import { formatDuration } from '../../stores/chatStore'
+import { calculateTotalDuration, formatDuration } from '../../utils/duration'
 import ThinkingStepper from './ThinkingStepper'
 import ThinkingCurrentStep from './ThinkingCurrentStep'
 import ThinkingExpandedList from './ThinkingExpandedList'
@@ -22,17 +22,7 @@ export default function ThinkingTimeline({ steps, isStreaming = false }: Thinkin
     return steps.find((s) => s.status === 'running')
   }, [steps])
 
-  const totalDuration = useMemo(() => {
-    if (steps.length === 0) return 0
-    const firstStart = Math.min(...steps.map((s) => s.startTime.getTime()))
-    const endTimes = steps
-      .map((s) => s.endTime?.getTime())
-      .filter((t): t is number => t !== undefined)
-    const lastEnd = endTimes.length > 0
-      ? Math.max(...endTimes)
-      : Math.max(...steps.map((s) => s.startTime.getTime()))
-    return lastEnd - firstStart
-  }, [steps])
+  const totalDuration = useMemo(() => calculateTotalDuration(steps), [steps])
 
   if (steps.length === 0) {
     return null

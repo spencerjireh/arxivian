@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Check, AlertCircle, ChevronRight, Clock } from 'lucide-react'
+import clsx from 'clsx'
 import type { ThinkingStep } from '../../types/api'
 import { STEP_LABELS } from '../../types/api'
-import { getStepDuration, formatDuration } from '../../stores/chatStore'
+import { getStepDuration, formatDuration } from '../../utils/duration'
+import { formatDetailKey, formatDetailValue } from '../../utils/formatting'
 import { AnimatedCollapse } from '../ui/AnimatedCollapse'
 import { transitions } from '../../lib/animations'
 
@@ -18,32 +20,6 @@ export default function ThinkingExpandedList({ steps, totalDuration }: ThinkingE
 
   const sortedSteps = [...steps].sort((a, b) => a.order - b.order)
 
-  const formatDetailValue = (key: string, value: unknown): string => {
-    if (value === null || value === undefined) return '-'
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No'
-    if (typeof value === 'number') {
-      if (key.includes('score') || key.includes('threshold')) {
-        return `${value}%`
-      }
-      return value.toString()
-    }
-    if (typeof value === 'string') {
-      return value.length > 80 ? `${value.slice(0, 80)}...` : value
-    }
-    if (Array.isArray(value)) {
-      return value.length > 0 ? value.join(', ') : '-'
-    }
-    return JSON.stringify(value)
-  }
-
-  const formatDetailKey = (key: string): string => {
-    return key
-      .replace(/_/g, ' ')
-      .replace(/([A-Z])/g, ' $1')
-      .replace(/^./, (str) => str.toUpperCase())
-      .trim()
-  }
-
   return (
     <div className="space-y-1">
       {sortedSteps.map((step) => {
@@ -54,18 +30,18 @@ export default function ThinkingExpandedList({ steps, totalDuration }: ThinkingE
         return (
           <div key={step.id}>
             <div
-              className={`
-                flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm
-                ${hasDetails ? 'cursor-pointer hover:bg-stone-50' : ''}
-                transition-colors duration-150
-              `}
+              className={clsx(
+                'flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm',
+                'transition-colors duration-150',
+                hasDetails && 'cursor-pointer hover:bg-stone-50'
+              )}
               onClick={() => hasDetails && setExpandedStepId(isExpanded ? null : step.id)}
             >
               <div
-                className={`
-                  w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0
-                  ${step.status === 'complete' ? 'bg-stone-100' : 'bg-red-100'}
-                `}
+                className={clsx(
+                  'w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0',
+                  step.status === 'complete' ? 'bg-stone-100' : 'bg-red-100'
+                )}
               >
                 {step.status === 'complete' ? (
                   <Check className="w-3 h-3 text-stone-600" strokeWidth={2} />

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { useConversation } from '../api/conversations'
 import { useChat } from '../hooks/useChat'
 import { useChatStore } from '../stores/chatStore'
@@ -29,17 +29,29 @@ export default function ChatPage() {
   } = useChat(effectiveSessionId)
 
   // Fetch conversation history for existing sessions
-  const { data: conversation, isLoading } = useConversation(
+  const { data: conversation } = useConversation(
     isNewChat ? undefined : sessionId
   )
 
-  // Load history when conversation data arrives, but only if messages cache is empty
-  // This prevents overwriting messages that were just set during navigation from a new chat
+  // Load history when conversation data arrives, but ONLY if:
+  // 1. Messages cache is empty (we haven't loaded or received messages yet)
+  // 2. This is the first time we're seeing this conversation data
+  // NOTE: We must NOT include messages.length in dependencies to avoid
+  // overwriting local messages when user sends new messages
   useEffect(() => {
-    if (conversation?.turns && conversation.turns.length > 0 && messages.length === 0) {
+    if (!conversation?.turns || conversation.turns.length === 0) {
+      return
+    }
+
+    // Only load if cache is truly empty (page refresh, direct link)
+    // Don't load if we already have messages (from streaming/navigation)
+    if (messages.length === 0) {
       loadFromHistory(conversation.turns)
     }
-  }, [conversation, loadFromHistory, messages.length])
+    // Note: We don't merge/reload if we already have messages to avoid
+    // overwriting local messages that haven't been persisted yet
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversation?.turns, loadFromHistory])
 
   // Clear messages when navigating to new chat
   useEffect(() => {
@@ -50,16 +62,6 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-screen">
-      {/* Loading state */}
-      {isLoading && (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="w-6 h-6 animate-spin text-stone-300 mx-auto mb-3" strokeWidth={1.5} />
-            <p className="text-sm text-stone-400">Loading conversation...</p>
-          </div>
-        </div>
-      )}
-
       {/* Error state */}
       {error && (
         <div className="mx-6 mt-6 p-4 bg-red-50 border border-red-100 rounded-xl animate-fade-in">
@@ -73,8 +75,8 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Messages - show immediately if we have messages (from cache), otherwise wait for loading */}
-      {(!isLoading || messages.length > 0) && <ChatMessages messages={messages} />}
+      {/* Messages - always render, component handles empty/loading states internally */}
+      <ChatMessages messages={messages} />
 
       {/* Input */}
       <ChatInput

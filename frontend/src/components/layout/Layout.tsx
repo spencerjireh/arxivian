@@ -12,6 +12,10 @@ const Layout = () => {
   const springTransition = { type: 'spring' as const, stiffness: 400, damping: 30 }
   const fastTransition = { duration: 0.15, ease: 'easeOut' as const }
 
+  // Use stable key for chat pages to prevent unmount/remount during session transitions
+  // Only animate between truly different page types (welcome vs chat)
+  const pageKey = location.pathname === '/' ? 'welcome' : 'chat'
+
   return (
     <div className="h-screen bg-[#FAFAF9] flex overflow-hidden">
       <AnimatePresence mode="wait">
@@ -43,7 +47,7 @@ const Layout = () => {
       <main className="flex-1 flex flex-col min-w-0">
         <AnimatePresence mode="wait">
           <motion.div
-            key={location.pathname}
+            key={pageKey}
             className="flex-1 flex flex-col"
             initial={shouldReduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}

@@ -1,5 +1,5 @@
-// Custom hooks
-
 export { useDebounce } from './useDebounce'
-export { useChat, chatKeys } from './useChat'
+export { useChat } from './useChat'
 export type { ChatOptions } from './useChat'
+export { useAutoScroll } from './useAutoScroll'
+export type { AutoScrollOptions } from './useAutoScroll'
