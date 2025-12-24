@@ -10,14 +10,32 @@ interface ChatInputProps {
   onSend: (query: string, options: ChatOptions) => void
   isStreaming: boolean
   onCancel?: () => void
+  variant?: 'bottom' | 'centered'
+  defaultValue?: string
 }
 
-export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputProps) {
+export default function ChatInput({ onSend, isStreaming, onCancel, variant = 'bottom', defaultValue }: ChatInputProps) {
   const [query, setQuery] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
   const [isOverflowing, setIsOverflowing] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Derive query from defaultValue when it changes (React 18+ pattern)
+  const [prevDefaultValue, setPrevDefaultValue] = useState(defaultValue)
+  if (defaultValue !== prevDefaultValue) {
+    setPrevDefaultValue(defaultValue)
+    if (defaultValue !== undefined) {
+      setQuery(defaultValue)
+    }
+  }
+
+  // Focus textarea when defaultValue changes
+  useEffect(() => {
+    if (defaultValue) {
+      textareaRef.current?.focus()
+    }
+  }, [defaultValue])
 
   const lineCount = query.split('\n').length
   const MAX_HEIGHT = 160
@@ -80,9 +98,11 @@ export default function ChatInput({ onSend, isStreaming, onCancel }: ChatInputPr
     }
   }
 
+  const isCentered = variant === 'centered'
+
   return (
-    <div className="border-t border-stone-100 bg-white">
-      <div className="max-w-5xl mx-auto px-6 py-4">
+    <div className={isCentered ? '' : 'border-t border-stone-100 bg-white'}>
+      <div className={`${isCentered ? 'max-w-2xl' : 'max-w-5xl'} mx-auto px-6 py-4`}>
         <form onSubmit={handleSubmit}>
           <AnimatedCollapse isOpen={showAdvanced}>
             <div className="mb-4">

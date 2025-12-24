@@ -123,17 +123,6 @@
 - [ ] Export conversations (Markdown, PDF)
 - [ ] Annotation and highlights on papers
 
-### Monetization
-- [ ] Stripe integration
-- [ ] Plan model (free, pro, enterprise)
-- [ ] Usage quotas per plan (messages, papers, scheduled jobs)
-- [ ] Billing portal integration
-- [ ] Track usage against quotas
-- [ ] Soft limits with warnings
-- [ ] Hard limits with graceful blocking
-- [ ] Usage dashboard for users
-- [ ] Admin dashboard for revenue metrics
-
 ### Advanced Agent
 - [ ] Pause agent for user confirmation (human-in-the-loop)
 - [ ] Tool execution approval workflow
@@ -146,15 +135,13 @@
 
 ### CI/CD
 - [ ] GitHub Actions workflow (lint, type check, test, build, push)
-- [ ] Staging environment
+- [ ] Staging environment?
 - [ ] Production deployment automation
 
 ### Infrastructure
-- [ ] Kubernetes manifests or Helm charts
-- [ ] Managed PostgreSQL
+- [ ] Coolify docker-compose
+- [ ] Managed PostgreSQL?
 - [ ] Redis cluster
-- [ ] CDN for frontend assets
-- [ ] Load balancer with SSL termination
 
 ### Monitoring
 - [ ] Grafana dashboards
@@ -166,9 +153,7 @@
 - [ ] Browser extension for saving papers
 - [ ] Mobile app
 - [ ] Paper recommendation engine
-- [ ] Integration with reference managers (Zotero, Mendeley)
-- [ ] LaTeX export for citations
-- [ ] Paper comparison tool
 - [ ] Research trend analysis
-- [ ] Voice interface
-- [ ] Slack/Discord bot integration
+- [ ] Slack/Discord/Telegram bot integration
+- [ ] Paper Report generation
+- [ ] Monetization 

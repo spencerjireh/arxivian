@@ -18,7 +18,7 @@ export default function Sidebar() {
   const deleteConversation = useDeleteConversation()
 
   const handleNewConversation = () => {
-    navigate('/new')
+    navigate('/')
   }
 
   const handleNavigate = (id: string) => {

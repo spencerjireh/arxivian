@@ -3,15 +3,19 @@
 import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { AlertCircle } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useConversation } from '../api/conversations'
 import { useChat } from '../hooks/useChat'
 import { useChatStore } from '../stores/chatStore'
 import ChatMessages from '../components/chat/ChatMessages'
 import ChatInput from '../components/chat/ChatInput'
+import EmptyConversationState from '../components/chat/EmptyConversationState'
+import { fadeIn, transitions } from '../lib/animations'
 
 export default function ChatPage() {
   const { sessionId } = useParams<{ sessionId: string }>()
-  const isNewChat = sessionId === 'new'
+  const shouldReduceMotion = useReducedMotion()
+  const isNewChat = !sessionId
 
   // Use null for new chats, actual sessionId for existing ones
   const effectiveSessionId = isNewChat ? null : sessionId ?? null
@@ -60,6 +64,11 @@ export default function ChatPage() {
     }
   }, [isNewChat, clearMessages])
 
+  const isEmpty = messages.length === 0
+  const motionProps = shouldReduceMotion
+    ? {}
+    : { variants: fadeIn, initial: 'initial', animate: 'animate', exit: 'exit', transition: transitions.base }
+
   return (
     <div className="flex flex-col h-screen">
       {/* Error state */}
@@ -75,15 +84,27 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Messages - always render, component handles empty/loading states internally */}
-      <ChatMessages messages={messages} />
-
-      {/* Input */}
-      <ChatInput
-        onSend={sendMessage}
-        isStreaming={isStreaming}
-        onCancel={cancelStream}
-      />
+      <AnimatePresence mode="wait">
+        {isEmpty ? (
+          <motion.div key="empty" className="flex-1 flex flex-col" {...motionProps}>
+            <EmptyConversationState
+              onSend={sendMessage}
+              isStreaming={isStreaming}
+              onCancel={cancelStream}
+            />
+          </motion.div>
+        ) : (
+          <motion.div key="active" className="flex-1 flex flex-col min-h-0" {...motionProps}>
+            <ChatMessages messages={messages} />
+            <ChatInput
+              onSend={sendMessage}
+              isStreaming={isStreaming}
+              onCancel={cancelStream}
+              variant="bottom"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -1,9 +1,6 @@
-import { motion } from 'framer-motion'
-import { MessageSquare } from 'lucide-react'
 import type { Message } from '../../types/api'
 import ChatMessage from './ChatMessage'
 import { useAutoScroll } from '../../hooks/useAutoScroll'
-import { fadeIn, transitions } from '../../lib/animations'
 
 interface ChatMessagesProps {
   messages: Message[]
@@ -12,28 +9,9 @@ interface ChatMessagesProps {
 export default function ChatMessages({ messages }: ChatMessagesProps) {
   const scrollRef = useAutoScroll(messages)
 
+  // Empty state is now handled by EmptyConversationState in ChatPage
   if (messages.length === 0) {
-    return (
-      <motion.div
-        className="flex-1 flex items-center justify-center px-6"
-        variants={fadeIn}
-        initial="initial"
-        animate="animate"
-        transition={transitions.base}
-      >
-        <div className="text-center max-w-sm">
-          <div className="w-16 h-16 rounded-2xl bg-stone-100 flex items-center justify-center mx-auto mb-6">
-            <MessageSquare className="w-7 h-7 text-stone-400" strokeWidth={1.5} />
-          </div>
-          <h2 className="font-display text-xl text-stone-900 mb-2">
-            Start a conversation
-          </h2>
-          <p className="text-stone-500 leading-relaxed">
-            Ask questions about research papers. The agent will search the literature and provide grounded answers.
-          </p>
-        </div>
-      </motion.div>
-    )
+    return null
   }
 
   return (
