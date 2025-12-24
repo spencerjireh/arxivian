@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { User, Sparkles } from 'lucide-react'
 import type { Message } from '../../types/api'
@@ -5,7 +6,7 @@ import SourceCard from './SourceCard'
 import MetadataPanel from './MetadataPanel'
 import MarkdownRenderer from './MarkdownRenderer'
 import ThinkingTimeline from './ThinkingTimeline'
-import { cursorBlinkVariants } from '../../lib/animations'
+import { cursorTransitionVariants } from '../../lib/animations'
 
 interface ChatMessageProps {
   message: Message
@@ -21,6 +22,26 @@ export default function ChatMessage({
   const content = message.content
   const shouldReduceMotion = useReducedMotion()
   const thinkingSteps = message.thinkingSteps
+
+  const [cursorPhase, setCursorPhase] = useState<'streaming' | 'complete'>('streaming')
+  const prevIsStreaming = useRef(isStreaming)
+
+  useEffect(() => {
+    if (!isStreaming && prevIsStreaming.current) {
+      // Use queueMicrotask to avoid synchronous setState in effect
+      queueMicrotask(() => setCursorPhase('complete'))
+      const timer = setTimeout(() => {
+        setCursorPhase('streaming')
+      }, shouldReduceMotion ? 0 : 400)
+      return () => clearTimeout(timer)
+    }
+    if (isStreaming) {
+      queueMicrotask(() => setCursorPhase('streaming'))
+    }
+    prevIsStreaming.current = isStreaming
+  }, [isStreaming, shouldReduceMotion])
+
+  const showCursor = isStreaming || cursorPhase === 'complete'
 
   return (
     <div className={isUser ? 'flex justify-end' : ''}>
@@ -58,10 +79,10 @@ export default function ChatMessage({
                 <MarkdownRenderer
                   content={content || ''}
                   streamingCursor={
-                    isStreaming ? (
+                    showCursor ? (
                       <motion.span
-                        variants={shouldReduceMotion ? {} : cursorBlinkVariants}
-                        animate="animate"
+                        variants={shouldReduceMotion ? {} : cursorTransitionVariants}
+                        animate={cursorPhase}
                         className="inline-block w-0.5 h-5 ml-0.5 bg-stone-400 align-text-bottom"
                       />
                     ) : undefined

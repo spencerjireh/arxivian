@@ -18,10 +18,14 @@ export function AnimatedCollapse({ isOpen, children, className }: AnimatedCollap
           animate={{ height: 'auto', opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
           transition={shouldReduceMotion ? { duration: 0 } : transitions.base}
-          style={{ overflow: 'hidden' }}
+          style={{
+            overflow: 'hidden',
+            willChange: 'height, opacity',
+            contain: 'layout style',
+          }}
           className={className}
         >
-          {children}
+          <div style={{ contain: 'layout' }}>{children}</div>
         </motion.div>
       )}
     </AnimatePresence>

@@ -8,6 +8,7 @@ import { getStepDuration, formatDuration } from '../../utils/duration'
 import { formatDetailKey, formatDetailValue } from '../../utils/formatting'
 import { AnimatedCollapse } from '../ui/AnimatedCollapse'
 import { transitions } from '../../lib/animations'
+import ThinkingStepper from './ThinkingStepper'
 
 interface ThinkingExpandedListProps {
   steps: ThinkingStep[]
@@ -21,8 +22,15 @@ export default function ThinkingExpandedList({ steps, totalDuration }: ThinkingE
   const sortedSteps = [...steps].sort((a, b) => a.order - b.order)
 
   return (
-    <div className="space-y-1">
-      {sortedSteps.map((step) => {
+    <div className="space-y-4">
+      {/* Static stepper visualization */}
+      <div className="pb-3 border-b border-stone-100">
+        <ThinkingStepper steps={steps} isStatic />
+      </div>
+
+      {/* Step details list */}
+      <div className="space-y-1">
+        {sortedSteps.map((step) => {
         const hasDetails = step.details && Object.keys(step.details).length > 0
         const isExpanded = expandedStepId === step.id
         const duration = getStepDuration(step)
@@ -93,9 +101,10 @@ export default function ThinkingExpandedList({ steps, totalDuration }: ThinkingE
         )
       })}
 
-      <div className="flex items-center gap-2 pt-3 mt-2 border-t border-stone-100 text-xs text-stone-400 px-3">
-        <Clock className="w-3.5 h-3.5" strokeWidth={1.5} />
-        <span>Total processing time: {formatDuration(totalDuration)}</span>
+        <div className="flex items-center gap-2 pt-3 mt-2 border-t border-stone-100 text-xs text-stone-400 px-3">
+          <Clock className="w-3.5 h-3.5" strokeWidth={1.5} />
+          <span>Total processing time: {formatDuration(totalDuration)}</span>
+        </div>
       </div>
     </div>
   )

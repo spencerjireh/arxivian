@@ -3,38 +3,45 @@ import { Check, Loader2, AlertCircle } from 'lucide-react'
 import clsx from 'clsx'
 import type { ThinkingStep } from '../../types/api'
 import { STEP_LABELS } from '../../types/api'
-import { pulseVariants, scaleIn, transitions } from '../../lib/animations'
+import { pulseVariants, scaleInStable, transitions } from '../../lib/animations'
 
 interface ThinkingStepperProps {
   steps: ThinkingStep[]
+  isStatic?: boolean
 }
 
-export default function ThinkingStepper({ steps }: ThinkingStepperProps) {
+export default function ThinkingStepper({ steps, isStatic = false }: ThinkingStepperProps) {
   const shouldReduceMotion = useReducedMotion()
 
   if (steps.length === 0) return null
 
   const sortedSteps = [...steps].sort((a, b) => a.order - b.order)
 
-  const stepAnimation = shouldReduceMotion
-    ? {}
-    : {
-        variants: scaleIn,
-        initial: 'initial',
-        animate: 'animate',
-        transition: transitions.fast,
-      }
+  const stepAnimation =
+    shouldReduceMotion || isStatic
+      ? {}
+      : {
+          variants: scaleInStable,
+          initial: 'initial',
+          animate: 'animate',
+          transition: transitions.fast,
+          layout: 'position' as const,
+        }
 
   return (
     <div className="flex flex-col gap-2">
       {/* Desktop: horizontal stepper */}
       <div className="hidden sm:flex items-center gap-0.5">
         {sortedSteps.map((step, index) => (
-          <motion.div key={step.id} className="flex items-center" {...stepAnimation}>
+          <motion.div key={step.id} className="flex items-start" {...stepAnimation}>
             <div className="flex flex-col items-center">
               <motion.div
-                variants={step.status === 'running' && !shouldReduceMotion ? pulseVariants : {}}
-                animate={step.status === 'running' ? 'animate' : undefined}
+                variants={
+                  step.status === 'running' && !shouldReduceMotion && !isStatic
+                    ? pulseVariants
+                    : {}
+                }
+                animate={step.status === 'running' && !isStatic ? 'animate' : undefined}
                 className={clsx(
                   'w-7 h-7 rounded-full flex items-center justify-center',
                   'transition-colors duration-200',
@@ -64,7 +71,7 @@ export default function ThinkingStepper({ steps }: ThinkingStepperProps) {
             {index < sortedSteps.length - 1 && (
               <div
                 className={clsx(
-                  'w-10 h-px mx-1.5 transition-colors duration-200',
+                  'w-10 h-px mx-1.5 mt-3.5 transition-colors duration-200',
                   step.status === 'complete' ? 'bg-stone-300' : 'bg-stone-200'
                 )}
               />
@@ -79,8 +86,12 @@ export default function ThinkingStepper({ steps }: ThinkingStepperProps) {
           <motion.div key={step.id} className="flex items-start gap-3" {...stepAnimation}>
             <div className="flex flex-col items-center">
               <motion.div
-                variants={step.status === 'running' && !shouldReduceMotion ? pulseVariants : {}}
-                animate={step.status === 'running' ? 'animate' : undefined}
+                variants={
+                  step.status === 'running' && !shouldReduceMotion && !isStatic
+                    ? pulseVariants
+                    : {}
+                }
+                animate={step.status === 'running' && !isStatic ? 'animate' : undefined}
                 className={clsx(
                   'w-6 h-6 rounded-full flex items-center justify-center',
                   'transition-colors duration-200',
