@@ -68,7 +68,7 @@
 - [ ] Add session and user context to traces
 - [ ] Custom metrics for guardrail scores and retrieval attempts
 
-### Metrics & Cost
+### Metrics & Cost?
 - [ ] Prometheus metrics endpoint
 - [ ] Request latency histograms
 - [ ] Active conversations gauge
@@ -119,9 +119,6 @@
 - [ ] Personal paper library
 - [ ] Saved searches and alerts
 - [ ] User preferences persistence
-- [ ] Share conversations via link
-- [ ] Export conversations (Markdown, PDF)
-- [ ] Annotation and highlights on papers
 
 ### Advanced Agent
 - [ ] Pause agent for user confirmation (human-in-the-loop)
