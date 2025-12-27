@@ -21,21 +21,31 @@ class GuardrailScoring(BaseModel):
     is_in_scope: bool = Field(..., description="Whether query is in scope for AI/ML research")
 
 
+class ToolCall(BaseModel):
+    """Single tool call specification."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    tool_name: str = Field(..., description="Name of the tool to execute")
+    tool_args_json: str = Field(
+        default="{}",
+        description="JSON-encoded arguments for the tool",
+    )
+
+
 class RouterDecision(BaseModel):
     """Structured output for router node's tool selection."""
 
     model_config = ConfigDict(extra="forbid")
 
-    action: Literal["execute_tool", "generate"] = Field(
-        ..., description="Whether to execute a tool or generate a response"
+    action: Literal["execute_tools", "generate"] = Field(
+        ..., description="Whether to execute tool(s) or generate a response"
     )
-    tool_name: Optional[str] = Field(
-        default=None, description="Name of the tool to execute (if action=execute_tool)"
+    tool_calls: list[ToolCall] = Field(
+        default_factory=list,
+        description="Tools to execute (1 or more, run in parallel)",
     )
-    tool_args_json: Optional[str] = Field(
-        default=None, description="JSON-encoded arguments to pass to the tool (e.g., '{\"query\": \"neural networks\"}')"
-    )
-    reasoning: str = Field(..., description="Brief explanation of the decision (1-2 sentences)")
+    reasoning: str = Field(..., description="Brief explanation of the decision")
 
 
 class ToolExecution(BaseModel):
@@ -78,6 +88,7 @@ class AgentState(TypedDict):
 
     # Tool execution history
     tool_history: List[ToolExecution]
+    last_executed_tools: List[str]  # Tool names from current batch (for routing)
 
     # Pause/resume support (for future HITL)
     pause_reason: Optional[str]

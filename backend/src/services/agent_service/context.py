@@ -4,7 +4,7 @@ from src.clients.base_llm_client import BaseLLMClient
 from src.services.search_service import SearchService
 from src.services.ingest_service import IngestService
 from src.schemas.conversation import ConversationMessage
-from .tools import ToolRegistry, RetrieveChunksTool, WebSearchTool, IngestPapersTool
+from .tools import ToolRegistry, RetrieveChunksTool, WebSearchTool, IngestPapersTool, ListPapersTool
 
 
 class ConversationFormatter:
@@ -111,3 +111,4 @@ class AgentContext:
             self.tool_registry.register(WebSearchTool())
             if ingest_service:
                 self.tool_registry.register(IngestPapersTool(ingest_service=ingest_service))
+                self.tool_registry.register(ListPapersTool(ingest_service=ingest_service))

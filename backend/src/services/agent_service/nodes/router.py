@@ -94,15 +94,16 @@ async def router_node(state: AgentState, context: AgentContext) -> dict:
     log.info(
         "router decision",
         action=decision.action,
-        tool_name=decision.tool_name,
+        tool_count=len(decision.tool_calls),
+        tools=[tc.tool_name for tc in decision.tool_calls],
         iteration=iteration,
         reasoning=decision.reasoning[:100],
     )
 
     # Add reasoning step to metadata
     reasoning_steps = state.get("metadata", {}).get("reasoning_steps", [])
-    tool_info = f" using {decision.tool_name}" if decision.tool_name else ""
-    reasoning_steps.append(f"Router decision (iteration {iteration}): {decision.action}{tool_info}")
+    tools_str = ", ".join(tc.tool_name for tc in decision.tool_calls) if decision.tool_calls else ""
+    reasoning_steps.append(f"Router decision (iteration {iteration}): {decision.action} {tools_str}".strip())
 
     return {
         "router_decision": decision,

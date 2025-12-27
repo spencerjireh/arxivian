@@ -2,7 +2,7 @@
 
 from typing import Optional, List, Literal
 from datetime import datetime
-from sqlalchemy import select, update, delete, func, desc, asc
+from sqlalchemy import select, update, delete, func, desc, asc, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.paper import Paper
 from src.utils.logger import get_logger
@@ -92,6 +92,7 @@ class PaperRepository:
         author_filter: Optional[str] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
+        query: Optional[str] = None,
         sort_by: Literal["created_at", "published_date", "updated_at"] = "created_at",
         sort_order: Literal["asc", "desc"] = "desc",
     ) -> tuple[List[Paper], int]:
@@ -106,6 +107,7 @@ class PaperRepository:
             author_filter: Filter by author (case-insensitive substring match)
             start_date: Filter papers published on or after this date
             end_date: Filter papers published on or before this date
+            query: Search term for title/abstract (case-insensitive)
             sort_by: Field to sort by
             sort_order: Sort order (asc or desc)
 
@@ -121,13 +123,13 @@ class PaperRepository:
             sort_by=sort_by,
         )
 
-        query = select(Paper)
-        count_query = select(func.count()).select_from(Paper)
+        stmt = select(Paper)
+        count_stmt = select(func.count()).select_from(Paper)
 
         def apply_filter(condition):
-            nonlocal query, count_query
-            query = query.where(condition)
-            count_query = count_query.where(condition)
+            nonlocal stmt, count_stmt
+            stmt = stmt.where(condition)
+            count_stmt = count_stmt.where(condition)
 
         if processed_only is not None:
             apply_filter(Paper.pdf_processed == processed_only)
@@ -158,13 +160,17 @@ class PaperRepository:
         if end_date:
             apply_filter(Paper.published_date <= end_date)
 
-        total = await self.session.scalar(count_query) or 0
+        if query:
+            pattern = f"%{query}%"
+            apply_filter(or_(Paper.title.ilike(pattern), Paper.abstract.ilike(pattern)))
+
+        total = await self.session.scalar(count_stmt) or 0
 
         sort_column = getattr(Paper, sort_by)
         order_func = desc if sort_order == "desc" else asc
-        query = query.order_by(order_func(sort_column)).offset(offset).limit(limit)
+        stmt = stmt.order_by(order_func(sort_column)).offset(offset).limit(limit)
 
-        result = await self.session.execute(query)
+        result = await self.session.execute(stmt)
         papers = list(result.scalars().all())
 
         log.debug("papers query result", count=len(papers), total=total)

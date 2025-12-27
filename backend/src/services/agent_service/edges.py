@@ -29,24 +29,22 @@ def route_after_router(state: AgentState) -> str:
     Route based on router decision.
 
     Returns:
-        - "execute": Router decided to call a tool
+        - "execute": Router decided to call tool(s)
         - "grade": Router decided to generate, but we have retrieved chunks to grade
         - "generate": Router decided to generate response
     """
     decision = state.get("router_decision")
 
     if not decision:
-        # No decision, default to generate
         return "generate"
 
-    if decision.action == "execute_tool":
+    if decision.action == "execute_tools" and decision.tool_calls:
         return "execute"
 
     # Action is "generate" - check if we need to grade first
     retrieved_chunks = state.get("retrieved_chunks", [])
     relevant_chunks = state.get("relevant_chunks", [])
 
-    # If we have retrieved chunks but no relevant chunks yet, grade first
     if retrieved_chunks and not relevant_chunks:
         return "grade"
 
@@ -58,22 +56,21 @@ def route_after_executor(state: AgentState) -> str:
     Route after tool execution.
 
     Returns:
-        - "grade": If retrieve_chunks was called, grade the results
+        - "grade": If retrieve_chunks was called in current batch, grade the results
         - "router": Otherwise, go back to router for next decision
     """
-    tool_history = state.get("tool_history", [])
+    last_executed = state.get("last_executed_tools", [])
 
-    if not tool_history:
+    if not last_executed:
         return "router"
 
-    # Get the last executed tool
-    last_execution = tool_history[-1]
+    # Check if retrieve_chunks was in current batch and succeeded
+    if "retrieve_chunks" in last_executed:
+        # Verify it succeeded by checking the most recent execution
+        for t in reversed(state.get("tool_history", [])):
+            if t.tool_name == "retrieve_chunks":
+                return "grade" if t.success else "router"
 
-    # If we just retrieved chunks, grade them
-    if last_execution.tool_name == "retrieve_chunks" and last_execution.success:
-        return "grade"
-
-    # For other tools, go back to router
     return "router"
 
 

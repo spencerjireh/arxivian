@@ -44,15 +44,20 @@ Available tools:
 Guidelines:
 1. Use retrieve_chunks when you need information from research papers
 2. Use web_search for recent information (2024+) or current events
-3. Choose "generate" when you have enough context to answer the user's question
-4. Consider the conversation history - avoid redundant tool calls
-5. If previous retrieval found relevant documents, you likely have enough context
+3. Use list_papers to browse available papers by topic/author/date
+4. Choose "generate" when you have enough context to answer
+
+PARALLEL EXECUTION:
+- You may select MULTIPLE tools if they are independent
+- Example: list_papers + web_search can run in parallel
+- Only parallelize when queries benefit from multiple data sources
+- Avoid redundant calls (don't call same tool twice)
 
 Decision criteria:
-- New query about AI/ML concepts -> retrieve_chunks
+- New query about papers -> retrieve_chunks or list_papers
 - Question about recent developments -> web_search
-- Follow-up on retrieved context -> likely generate
-- Query already has sufficient context from tool_history -> generate"""
+- Multi-faceted query -> consider parallel tools
+- Follow-up with sufficient context -> generate"""
 
 
 class PromptBuilder:
@@ -271,7 +276,7 @@ def get_router_prompt(
 
     user_parts.append(f"Current query: {query}")
     user_parts.append(
-        "Decide: Should you call a tool (and which one with what arguments), or generate a response?"
+        "Decide: call one or more tools (in parallel if independent), or generate a response?"
     )
 
     user_prompt = "\n\n".join(user_parts)

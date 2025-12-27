@@ -2,6 +2,7 @@
 
 import tempfile
 import os
+from datetime import datetime
 from time import time
 from typing import List
 
@@ -312,3 +313,39 @@ class IngestService:
             errors=errors,
             papers=paper_results,
         )
+
+    async def list_papers(
+        self,
+        query: str | None = None,
+        author: str | None = None,
+        categories: list[str] | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> tuple[list[dict], int]:
+        """List papers with optional filters. Returns (papers, total_count)."""
+        category = categories[0] if categories else None
+
+        papers, total = await self.paper_repository.get_all(
+            offset=offset,
+            limit=limit,
+            query=query,
+            author_filter=author,
+            category_filter=category,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        return [
+            {
+                "arxiv_id": p.arxiv_id,
+                "title": p.title,
+                "authors": p.authors,
+                "abstract": p.abstract[:500] + "..." if len(p.abstract) > 500 else p.abstract,
+                "categories": p.categories,
+                "published_date": p.published_date.isoformat() if p.published_date else None,
+                "pdf_url": p.pdf_url,
+            }
+            for p in papers
+        ], total
