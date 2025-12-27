@@ -42,7 +42,8 @@
 ## To Do
 
 ### Agent Tools
-- [ ] `ingest_papers` tool - agent can trigger paper ingestion from arXiv
+- [x] `ingest_papers` tool - agent can trigger paper ingestion from arXiv
+- [ ] `list_papers` tool - query papers in database with filters
 - [ ] `arxiv_search` tool - search arXiv directly without ingesting
 - [ ] `summarize_paper` tool - generate paper summaries
 - [ ] `explore_citations` tool - find citing/cited papers

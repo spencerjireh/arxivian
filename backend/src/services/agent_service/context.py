@@ -2,8 +2,9 @@
 
 from src.clients.base_llm_client import BaseLLMClient
 from src.services.search_service import SearchService
+from src.services.ingest_service import IngestService
 from src.schemas.conversation import ConversationMessage
-from .tools import ToolRegistry, RetrieveChunksTool, WebSearchTool
+from .tools import ToolRegistry, RetrieveChunksTool, WebSearchTool, IngestPapersTool
 
 
 class ConversationFormatter:
@@ -79,6 +80,7 @@ class AgentContext:
         self,
         llm_client: BaseLLMClient,
         search_service: SearchService,
+        ingest_service: IngestService | None = None,
         tool_registry: ToolRegistry | None = None,
         conversation_formatter: ConversationFormatter | None = None,
         guardrail_threshold: int = 75,
@@ -89,6 +91,7 @@ class AgentContext:
     ):
         self.llm_client = llm_client
         self.search_service = search_service
+        self.ingest_service = ingest_service
         self.conversation_formatter = conversation_formatter or ConversationFormatter()
         self.guardrail_threshold = guardrail_threshold
         self.top_k = top_k
@@ -106,3 +109,5 @@ class AgentContext:
                 RetrieveChunksTool(search_service=search_service, default_top_k=top_k * 2)
             )
             self.tool_registry.register(WebSearchTool())
+            if ingest_service:
+                self.tool_registry.register(IngestPapersTool(ingest_service=ingest_service))

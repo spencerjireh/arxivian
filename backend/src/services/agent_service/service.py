@@ -8,6 +8,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 from src.clients.base_llm_client import BaseLLMClient
 from src.services.search_service import SearchService
+from src.services.ingest_service import IngestService
 from src.repositories.conversation_repository import ConversationRepository
 from src.schemas.conversation import ConversationMessage, TurnData
 from src.schemas.stream import (
@@ -56,6 +57,7 @@ class AgentService:
         self,
         llm_client: BaseLLMClient,
         search_service: SearchService,
+        ingest_service: IngestService | None = None,
         conversation_repo: ConversationRepository | None = None,
         conversation_window: int = 5,
         guardrail_threshold: int = 75,
@@ -67,6 +69,7 @@ class AgentService:
         self.graph = build_agent_graph(
             llm_client=llm_client,
             search_service=search_service,
+            ingest_service=ingest_service,
             guardrail_threshold=guardrail_threshold,
             top_k=top_k,
             max_retrieval_attempts=max_retrieval_attempts,

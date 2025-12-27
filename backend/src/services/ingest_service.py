@@ -240,3 +240,75 @@ class IngestService:
             chunks_created=len(chunks_data),
             status="success",
         )
+
+    async def ingest_by_ids(
+        self, arxiv_ids: List[str], force_reprocess: bool = False
+    ) -> IngestResponse:
+        """
+        Ingest specific papers by arXiv ID.
+
+        Args:
+            arxiv_ids: List of arXiv paper IDs
+            force_reprocess: Re-process existing papers
+
+        Returns:
+            IngestResponse with processing summary
+        """
+        start_time = time()
+        log.info("ingest by ids started", count=len(arxiv_ids), force_reprocess=force_reprocess)
+
+        papers_fetched = 0
+        papers_processed = 0
+        chunks_created = 0
+        errors: List[PaperError] = []
+        paper_results: List[PaperResult] = []
+
+        try:
+            papers = await self.arxiv_client.get_papers_by_ids(arxiv_ids)
+            papers_fetched = len(papers)
+
+            for paper_meta in papers:
+                try:
+                    result = await self._process_single_paper(paper_meta, force_reprocess)
+                    if result:
+                        papers_processed += 1
+                        chunks_created += result.chunks_created
+                        paper_results.append(result)
+                except Exception as e:
+                    log.warning(
+                        "paper processing failed",
+                        arxiv_id=paper_meta.arxiv_id,
+                        error=str(e),
+                    )
+                    errors.append(PaperError(arxiv_id=paper_meta.arxiv_id, error=str(e)))
+
+        except Exception as e:
+            log.error("ingest by ids failed", error=str(e))
+            return IngestResponse(
+                status="failed",
+                papers_fetched=0,
+                papers_processed=0,
+                chunks_created=0,
+                duration_seconds=0,
+                errors=[PaperError(arxiv_id="N/A", error=str(e))],
+            )
+
+        duration = time() - start_time
+        log.info(
+            "ingest by ids complete",
+            papers_fetched=papers_fetched,
+            papers_processed=papers_processed,
+            chunks_created=chunks_created,
+            errors=len(errors),
+            duration_s=round(duration, 2),
+        )
+
+        return IngestResponse(
+            status="completed",
+            papers_fetched=papers_fetched,
+            papers_processed=papers_processed,
+            chunks_created=chunks_created,
+            duration_seconds=duration,
+            errors=errors,
+            papers=paper_results,
+        )

@@ -117,3 +117,28 @@ class ArxivClient:
 
         log.debug("pdf downloaded", path=save_path, size_kb=len(response.content) // 1024)
         return save_path
+
+    async def get_papers_by_ids(self, arxiv_ids: List[str]) -> List[ArxivPaper]:
+        """
+        Fetch papers by arXiv IDs.
+
+        Args:
+            arxiv_ids: List of arXiv paper IDs (e.g., ["2301.00001", "2312.12345"])
+
+        Returns:
+            List of ArxivPaper objects
+        """
+        log.debug("arxiv fetch by ids", count=len(arxiv_ids))
+
+        search = arxiv.Search(id_list=arxiv_ids)
+        results = []
+        loop = asyncio.get_event_loop()
+
+        for result in await loop.run_in_executor(None, lambda: list(self.client.results(search))):
+            paper = ArxivPaper(result)
+            results.append(paper)
+            log.debug("arxiv paper fetched", arxiv_id=paper.arxiv_id)
+            await asyncio.sleep(self.rate_limit_delay)
+
+        log.info("arxiv id fetch complete", requested=len(arxiv_ids), found=len(results))
+        return results

@@ -131,12 +131,16 @@ def get_agent_service(
     # Get search service
     search_service = get_search_service(db_session)
 
+    # Get ingest service for paper ingestion tool
+    ingest_service = get_ingest_service(db_session)
+
     # Get conversation repository for persistence
     conversation_repo = ConversationRepository(db_session)
 
     return AgentService(
         llm_client=llm_client,
         search_service=search_service,
+        ingest_service=ingest_service,
         conversation_repo=conversation_repo,
         conversation_window=conversation_window,
         guardrail_threshold=guardrail_threshold,
