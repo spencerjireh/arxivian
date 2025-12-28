@@ -1,23 +1,12 @@
 """List papers tool for querying paper database."""
 
-from datetime import datetime
-
 from src.services.ingest_service import IngestService
 from src.utils.logger import get_logger
 
 from .base import BaseTool, ToolResult
+from .utils import parse_date
 
 log = get_logger(__name__)
-
-
-def _parse_date(value: str | None, field: str) -> datetime | None:
-    """Parse ISO date string, raising ValueError with descriptive message."""
-    if not value:
-        return None
-    try:
-        return datetime.fromisoformat(value)
-    except ValueError:
-        raise ValueError(f"Invalid {field}: '{value}'. Expected format: YYYY-MM-DD")
 
 
 class ListPapersTool(BaseTool):
@@ -81,8 +70,8 @@ class ListPapersTool(BaseTool):
         log.debug("list_papers", query=query, author=author, category=category, limit=limit)
 
         try:
-            start_dt = _parse_date(start_date, "start_date")
-            end_dt = _parse_date(end_date, "end_date")
+            start_dt = parse_date(start_date, "start_date")
+            end_dt = parse_date(end_date, "end_date")
         except ValueError as e:
             return ToolResult(success=False, error=str(e), tool_name=self.name)
 

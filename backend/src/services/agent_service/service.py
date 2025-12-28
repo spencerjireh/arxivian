@@ -7,9 +7,11 @@ from typing import AsyncIterator
 from langchain_core.messages import HumanMessage, AIMessage
 
 from src.clients.base_llm_client import BaseLLMClient
+from src.clients.arxiv_client import ArxivClient
 from src.services.search_service import SearchService
 from src.services.ingest_service import IngestService
 from src.repositories.conversation_repository import ConversationRepository
+from src.repositories.paper_repository import PaperRepository
 from src.schemas.conversation import ConversationMessage, TurnData
 from src.schemas.stream import (
     StreamEvent,
@@ -58,6 +60,8 @@ class AgentService:
         llm_client: BaseLLMClient,
         search_service: SearchService,
         ingest_service: IngestService | None = None,
+        arxiv_client: ArxivClient | None = None,
+        paper_repository: PaperRepository | None = None,
         conversation_repo: ConversationRepository | None = None,
         conversation_window: int = 5,
         guardrail_threshold: int = 75,
@@ -70,6 +74,8 @@ class AgentService:
             llm_client=llm_client,
             search_service=search_service,
             ingest_service=ingest_service,
+            arxiv_client=arxiv_client,
+            paper_repository=paper_repository,
             guardrail_threshold=guardrail_threshold,
             top_k=top_k,
             max_retrieval_attempts=max_retrieval_attempts,

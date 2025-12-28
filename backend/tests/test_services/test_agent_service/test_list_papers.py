@@ -3,35 +3,36 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from src.services.agent_service.tools.list_papers import ListPapersTool, _parse_date
+from src.services.agent_service.tools.list_papers import ListPapersTool
+from src.services.agent_service.tools.utils import parse_date
 
 
 class TestParseDate:
     """Tests for date parsing helper."""
 
     def test_valid_date(self):
-        result = _parse_date("2024-01-15", "start_date")
+        result = parse_date("2024-01-15", "start_date")
         assert result is not None
         assert result.year == 2024
         assert result.month == 1
         assert result.day == 15
 
     def test_none_returns_none(self):
-        assert _parse_date(None, "start_date") is None
+        assert parse_date(None, "start_date") is None
 
     def test_empty_string_returns_none(self):
-        assert _parse_date("", "end_date") is None
+        assert parse_date("", "end_date") is None
 
     def test_invalid_format_raises_with_field_name(self):
         with pytest.raises(ValueError) as exc_info:
-            _parse_date("2024-1-5", "start_date")
+            parse_date("2024-1-5", "start_date")
         assert "start_date" in str(exc_info.value)
         assert "2024-1-5" in str(exc_info.value)
         assert "YYYY-MM-DD" in str(exc_info.value)
 
     def test_invalid_format_different_field(self):
         with pytest.raises(ValueError) as exc_info:
-            _parse_date("Jan 15, 2024", "end_date")
+            parse_date("Jan 15, 2024", "end_date")
         assert "end_date" in str(exc_info.value)
 
 

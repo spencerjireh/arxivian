@@ -2,7 +2,7 @@
 
 import asyncio
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import arxiv
 import httpx
 from pathlib import Path
@@ -80,10 +80,14 @@ class ArxivClient:
         for result in await loop.run_in_executor(None, lambda: list(self.client.results(search))):
             paper = ArxivPaper(result)
 
-            if start_date and paper.published_date < datetime.fromisoformat(start_date):
-                continue
-            if end_date and paper.published_date > datetime.fromisoformat(end_date):
-                continue
+            if start_date:
+                start_dt = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+                if paper.published_date < start_dt:
+                    continue
+            if end_date:
+                end_dt = datetime.fromisoformat(end_date).replace(tzinfo=timezone.utc)
+                if paper.published_date > end_dt:
+                    continue
 
             results.append(paper)
             log.debug("arxiv paper found", arxiv_id=paper.arxiv_id, title=paper.title[:60])

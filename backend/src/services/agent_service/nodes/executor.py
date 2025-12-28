@@ -132,6 +132,12 @@ async def executor_node(state: AgentState, context: AgentContext) -> dict:
             metadata["list_papers_results"] = result.data
         if tool_name == "ingest_papers" and result.success and result.data:
             metadata["ingest_papers_results"] = result.data
+        if tool_name == "arxiv_search" and result.success and result.data:
+            metadata["arxiv_search_results"] = result.data
+        if tool_name == "summarize_paper" and result.success and result.data:
+            metadata["summarize_paper_results"] = result.data
+        if tool_name == "explore_citations" and result.success and result.data:
+            metadata["explore_citations_results"] = result.data
 
     updates: dict = {
         "tool_history": tool_history,

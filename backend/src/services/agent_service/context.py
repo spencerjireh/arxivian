@@ -1,10 +1,21 @@
 """Context object passed to all LangGraph nodes."""
 
 from src.clients.base_llm_client import BaseLLMClient
+from src.clients.arxiv_client import ArxivClient
 from src.services.search_service import SearchService
 from src.services.ingest_service import IngestService
+from src.repositories.paper_repository import PaperRepository
 from src.schemas.conversation import ConversationMessage
-from .tools import ToolRegistry, RetrieveChunksTool, WebSearchTool, IngestPapersTool, ListPapersTool
+from .tools import (
+    ToolRegistry,
+    RetrieveChunksTool,
+    WebSearchTool,
+    IngestPapersTool,
+    ListPapersTool,
+    ArxivSearchTool,
+    ExploreCitationsTool,
+    SummarizePaperTool,
+)
 
 
 class ConversationFormatter:
@@ -81,6 +92,8 @@ class AgentContext:
         llm_client: BaseLLMClient,
         search_service: SearchService,
         ingest_service: IngestService | None = None,
+        arxiv_client: ArxivClient | None = None,
+        paper_repository: PaperRepository | None = None,
         tool_registry: ToolRegistry | None = None,
         conversation_formatter: ConversationFormatter | None = None,
         guardrail_threshold: int = 75,
@@ -112,3 +125,10 @@ class AgentContext:
             if ingest_service:
                 self.tool_registry.register(IngestPapersTool(ingest_service=ingest_service))
                 self.tool_registry.register(ListPapersTool(ingest_service=ingest_service))
+            if arxiv_client:
+                self.tool_registry.register(ArxivSearchTool(arxiv_client=arxiv_client))
+            if paper_repository:
+                self.tool_registry.register(ExploreCitationsTool(paper_repository=paper_repository))
+                self.tool_registry.register(
+                    SummarizePaperTool(paper_repository=paper_repository, llm_client=llm_client)
+                )

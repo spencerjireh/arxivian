@@ -15,8 +15,10 @@ from langgraph.graph import StateGraph, END, START
 
 from src.schemas.langgraph_state import AgentState
 from src.clients.base_llm_client import BaseLLMClient
+from src.clients.arxiv_client import ArxivClient
 from src.services.search_service import SearchService
 from src.services.ingest_service import IngestService
+from src.repositories.paper_repository import PaperRepository
 from .context import AgentContext
 from .nodes import (
     guardrail_node,
@@ -47,6 +49,8 @@ def build_agent_graph(
     llm_client: BaseLLMClient,
     search_service: SearchService,
     ingest_service: IngestService | None = None,
+    arxiv_client: ArxivClient | None = None,
+    paper_repository: PaperRepository | None = None,
     guardrail_threshold: int = 75,
     top_k: int = 3,
     max_retrieval_attempts: int = 3,
@@ -77,6 +81,8 @@ def build_agent_graph(
         llm_client=llm_client,
         search_service=search_service,
         ingest_service=ingest_service,
+        arxiv_client=arxiv_client,
+        paper_repository=paper_repository,
         guardrail_threshold=guardrail_threshold,
         top_k=top_k,
         max_retrieval_attempts=max_retrieval_attempts,

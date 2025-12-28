@@ -134,6 +134,12 @@ def get_agent_service(
     # Get ingest service for paper ingestion tool
     ingest_service = get_ingest_service(db_session)
 
+    # Get arxiv client for arxiv search tool
+    arxiv_client = get_arxiv_client()
+
+    # Reuse paper repository from ingest service for summarize/citations tools
+    paper_repository = ingest_service.paper_repository
+
     # Get conversation repository for persistence
     conversation_repo = ConversationRepository(db_session)
 
@@ -141,6 +147,8 @@ def get_agent_service(
         llm_client=llm_client,
         search_service=search_service,
         ingest_service=ingest_service,
+        arxiv_client=arxiv_client,
+        paper_repository=paper_repository,
         conversation_repo=conversation_repo,
         conversation_window=conversation_window,
         guardrail_threshold=guardrail_threshold,
