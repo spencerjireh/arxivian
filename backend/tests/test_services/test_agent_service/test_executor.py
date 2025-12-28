@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import AsyncMock, Mock, patch
 
 from src.schemas.langgraph_state import RouterDecision, ToolCall
-from src.services.agent_service.tools import ToolResult
+from src.services.agent_service.tools import ToolResult, LIST_PAPERS, ARXIV_SEARCH
 
 
 class TestExecutorNode:
@@ -19,6 +19,12 @@ class TestExecutorNode:
     def mock_context(self, mock_tool_registry):
         ctx = Mock()
         ctx.tool_registry = mock_tool_registry
+        # Mock tool with result_key - use Mock() directly for get() return
+        mock_tool = Mock()
+        mock_tool.result_key = "list_papers_results"
+        mock_tool.extends_chunks = False
+        # Override get to return a regular Mock, not an async one
+        ctx.tool_registry.get = Mock(return_value=mock_tool)
         return ctx
 
     @pytest.fixture
@@ -26,7 +32,7 @@ class TestExecutorNode:
         return {
             "router_decision": RouterDecision(
                 action="execute_tools",
-                tool_calls=[ToolCall(tool_name="web_search", tool_args_json='{"query": "test"}')],
+                tool_calls=[ToolCall(tool_name=LIST_PAPERS, tool_args_json='{"query": "test"}')],
                 reasoning="Testing",
             ),
             "tool_history": [],
@@ -43,15 +49,15 @@ class TestExecutorNode:
         from src.services.agent_service.nodes.executor import executor_node
 
         mock_context.tool_registry.execute.return_value = ToolResult(
-            success=True, data={"results": []}, tool_name="web_search"
+            success=True, data={"total_count": 5, "papers": []}, tool_name=LIST_PAPERS
         )
 
         result = await executor_node(base_state, mock_context)
 
         assert len(result["tool_history"]) == 1
-        assert result["tool_history"][0].tool_name == "web_search"
+        assert result["tool_history"][0].tool_name == LIST_PAPERS
         assert result["tool_history"][0].success is True
-        assert result["last_executed_tools"] == ["web_search"]
+        assert result["last_executed_tools"] == [LIST_PAPERS]
 
     @pytest.mark.asyncio
     @patch(
@@ -61,7 +67,7 @@ class TestExecutorNode:
         from src.services.agent_service.nodes.executor import executor_node
 
         mock_context.tool_registry.execute.return_value = ToolResult(
-            success=False, error="API error", tool_name="web_search"
+            success=False, error="API error", tool_name=LIST_PAPERS
         )
 
         result = await executor_node(base_state, mock_context)
@@ -69,7 +75,7 @@ class TestExecutorNode:
         assert len(result["tool_history"]) == 1
         assert result["tool_history"][0].success is False
         assert result["tool_history"][0].error == "API error"
-        assert result["last_executed_tools"] == ["web_search"]
+        assert result["last_executed_tools"] == [LIST_PAPERS]
 
     @pytest.mark.asyncio
     @patch(
@@ -87,7 +93,7 @@ class TestExecutorNode:
         assert len(result["tool_history"]) == 1
         assert result["tool_history"][0].success is False
         assert "Connection timeout" in result["tool_history"][0].error
-        assert result["last_executed_tools"] == ["web_search"]
+        assert result["last_executed_tools"] == [LIST_PAPERS]
 
     @pytest.mark.asyncio
     @patch(
@@ -100,8 +106,8 @@ class TestExecutorNode:
             "router_decision": RouterDecision(
                 action="execute_tools",
                 tool_calls=[
-                    ToolCall(tool_name="web_search", tool_args_json="{}"),
-                    ToolCall(tool_name="list_papers", tool_args_json="{}"),
+                    ToolCall(tool_name=ARXIV_SEARCH, tool_args_json="{}"),
+                    ToolCall(tool_name=LIST_PAPERS, tool_args_json="{}"),
                 ],
                 reasoning="Testing parallel",
             ),
@@ -111,7 +117,7 @@ class TestExecutorNode:
 
         # First call succeeds, second raises exception
         mock_context.tool_registry.execute.side_effect = [
-            ToolResult(success=True, data={}, tool_name="web_search"),
+            ToolResult(success=True, data={}, tool_name=ARXIV_SEARCH),
             RuntimeError("Database error"),
         ]
 
@@ -121,7 +127,7 @@ class TestExecutorNode:
         assert result["tool_history"][0].success is True
         assert result["tool_history"][1].success is False
         assert "Database error" in result["tool_history"][1].error
-        assert set(result["last_executed_tools"]) == {"web_search", "list_papers"}
+        assert set(result["last_executed_tools"]) == {ARXIV_SEARCH, LIST_PAPERS}
 
     @pytest.mark.asyncio
     async def test_returns_empty_without_valid_decision(self, mock_context):
@@ -132,3 +138,78 @@ class TestExecutorNode:
         result = await executor_node(state, mock_context)
 
         assert result == {}
+
+    @pytest.mark.asyncio
+    @patch(
+        "src.services.agent_service.nodes.executor.adispatch_custom_event", new_callable=AsyncMock
+    )
+    async def test_extends_chunks_with_non_list_raises_type_error(self, mock_event, mock_context):
+        """Tool declaring extends_chunks=True must return a list."""
+        from src.services.agent_service.nodes.executor import executor_node
+        from src.services.agent_service.tools import RETRIEVE_CHUNKS
+
+        # Configure mock tool to declare extends_chunks=True
+        mock_tool = Mock()
+        mock_tool.result_key = None
+        mock_tool.extends_chunks = True
+        mock_context.tool_registry.get = Mock(return_value=mock_tool)
+
+        # Return a dict instead of a list
+        mock_context.tool_registry.execute.return_value = ToolResult(
+            success=True, data={"not": "a list"}, tool_name=RETRIEVE_CHUNKS
+        )
+
+        state = {
+            "router_decision": RouterDecision(
+                action="execute_tools",
+                tool_calls=[
+                    ToolCall(tool_name=RETRIEVE_CHUNKS, tool_args_json='{"query": "test"}')
+                ],
+                reasoning="Testing",
+            ),
+            "tool_history": [],
+            "metadata": {},
+        }
+
+        with pytest.raises(TypeError) as exc_info:
+            await executor_node(state, mock_context)
+
+        assert "extends_chunks=True" in str(exc_info.value)
+        assert "dict" in str(exc_info.value)
+        assert "expected list" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    @patch(
+        "src.services.agent_service.nodes.executor.adispatch_custom_event", new_callable=AsyncMock
+    )
+    async def test_extends_chunks_with_list_succeeds(self, mock_event, mock_context):
+        """Tool declaring extends_chunks=True works correctly with list data."""
+        from src.services.agent_service.nodes.executor import executor_node
+        from src.services.agent_service.tools import RETRIEVE_CHUNKS
+
+        mock_tool = Mock()
+        mock_tool.result_key = None
+        mock_tool.extends_chunks = True
+        mock_context.tool_registry.get = Mock(return_value=mock_tool)
+
+        chunks = [{"chunk_id": "1", "text": "test"}]
+        mock_context.tool_registry.execute.return_value = ToolResult(
+            success=True, data=chunks, tool_name=RETRIEVE_CHUNKS
+        )
+
+        state = {
+            "router_decision": RouterDecision(
+                action="execute_tools",
+                tool_calls=[
+                    ToolCall(tool_name=RETRIEVE_CHUNKS, tool_args_json='{"query": "test"}')
+                ],
+                reasoning="Testing",
+            ),
+            "tool_history": [],
+            "metadata": {},
+        }
+
+        result = await executor_node(state, mock_context)
+
+        assert result["retrieved_chunks"] == chunks
+        assert result["retrieval_attempts"] == 1

@@ -1,5 +1,7 @@
 """arXiv search tool for querying papers without ingesting."""
 
+from typing import ClassVar
+
 from src.clients.arxiv_client import ArxivClient
 from src.utils.logger import get_logger
 
@@ -18,6 +20,10 @@ class ArxivSearchTool(BaseTool):
         "downloading or processing. Use when user wants to find papers on arXiv "
         "or explore what's available before deciding to ingest."
     )
+
+    result_key: ClassVar[str | None] = "arxiv_search_results"
+    extends_chunks: ClassVar[bool] = False
+    required_dependencies: ClassVar[list[str]] = ["arxiv_client"]
 
     def __init__(self, arxiv_client: ArxivClient):
         self.arxiv_client = arxiv_client
@@ -100,5 +106,5 @@ class ArxivSearchTool(BaseTool):
                 tool_name=self.name,
             )
         except Exception as e:
-            log.error("arxiv_search failed", error=str(e))
+            log.error("arxiv_search failed", error=str(e), exc_info=True)
             return ToolResult(success=False, error=str(e), tool_name=self.name)

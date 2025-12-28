@@ -1,5 +1,7 @@
 """Explore citations tool for retrieving paper references."""
 
+from typing import ClassVar
+
 from src.repositories.paper_repository import PaperRepository
 from src.utils.logger import get_logger
 
@@ -18,6 +20,10 @@ class ExploreCitationsTool(BaseTool):
         "Use when user wants to explore related work or find papers cited by a specific paper. "
         "Only works for papers that have been ingested and processed."
     )
+
+    result_key: ClassVar[str | None] = "explore_citations_results"
+    extends_chunks: ClassVar[bool] = False
+    required_dependencies: ClassVar[list[str]] = ["paper_repository"]
 
     def __init__(self, paper_repository: PaperRepository):
         self.paper_repository = paper_repository
@@ -69,5 +75,5 @@ class ExploreCitationsTool(BaseTool):
                 tool_name=self.name,
             )
         except Exception as e:
-            log.error("explore_citations failed", error=str(e))
+            log.error("explore_citations failed", error=str(e), exc_info=True)
             return ToolResult(success=False, error=str(e), tool_name=self.name)

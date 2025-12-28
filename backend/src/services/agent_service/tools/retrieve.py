@@ -1,19 +1,18 @@
 """Retrieve chunks tool for vector search."""
 
+from typing import ClassVar
+
 from src.services.search_service import SearchService
 from src.utils.logger import get_logger
 from .base import BaseTool, ToolResult
 
 log = get_logger(__name__)
 
+MAX_TOP_K = 50
+
 
 class RetrieveChunksTool(BaseTool):
-    """
-    Tool for retrieving relevant document chunks from the vector database.
-
-    Uses hybrid search (semantic + keyword) to find the most relevant chunks
-    for a given query.
-    """
+    """Tool for retrieving relevant document chunks from the vector database."""
 
     name = "retrieve_chunks"
     description = (
@@ -21,6 +20,10 @@ class RetrieveChunksTool(BaseTool):
         "Use this when you need information from academic papers about machine learning, "
         "deep learning, transformers, neural networks, or related AI topics."
     )
+
+    result_key: ClassVar[str | None] = None
+    extends_chunks: ClassVar[bool] = True
+    required_dependencies: ClassVar[list[str]] = ["search_service"]
 
     def __init__(self, search_service: SearchService, default_top_k: int = 6):
         """
@@ -35,7 +38,6 @@ class RetrieveChunksTool(BaseTool):
 
     @property
     def parameters_schema(self) -> dict:
-        """Return JSON schema for tool parameters."""
         return {
             "type": "object",
             "properties": {
@@ -45,7 +47,7 @@ class RetrieveChunksTool(BaseTool):
                 },
                 "top_k": {
                     "type": "integer",
-                    "description": "Number of chunks to retrieve",
+                    "description": f"Number of chunks to retrieve (1-{MAX_TOP_K})",
                     "default": self.default_top_k,
                 },
             },
@@ -53,18 +55,11 @@ class RetrieveChunksTool(BaseTool):
         }
 
     async def execute(self, query: str, top_k: int | None = None, **kwargs) -> ToolResult:
-        """
-        Execute chunk retrieval.
+        if not query or not query.strip():
+            return ToolResult(success=False, error="Query cannot be empty", tool_name=self.name)
 
-        Args:
-            query: Search query
-            top_k: Number of chunks to retrieve (uses default if not provided)
-
-        Returns:
-            ToolResult with list of chunk dictionaries
-        """
-        top_k = top_k or self.default_top_k
-
+        effective_top_k = top_k if top_k is not None else self.default_top_k
+        top_k = max(1, min(effective_top_k, MAX_TOP_K))
         log.debug("retrieve_chunks executing", query=query[:100], top_k=top_k)
 
         try:
@@ -80,31 +75,18 @@ class RetrieveChunksTool(BaseTool):
                     "chunk_text": r.chunk_text,
                     "arxiv_id": r.arxiv_id,
                     "title": r.title,
-                    "authors": r.authors if hasattr(r, "authors") else [],
+                    "authors": r.authors,
                     "section_name": r.section_name,
                     "score": r.score,
-                    "pdf_url": (
-                        r.pdf_url
-                        if hasattr(r, "pdf_url")
-                        else f"https://arxiv.org/pdf/{r.arxiv_id}.pdf"
-                    ),
-                    "published_date": r.published_date if hasattr(r, "published_date") else None,
+                    "pdf_url": getattr(r, "pdf_url", None) or f"https://arxiv.org/pdf/{r.arxiv_id}.pdf",
+                    "published_date": getattr(r, "published_date", None),
                 }
                 for r in results
             ]
 
             log.debug("retrieve_chunks completed", chunks_found=len(chunks))
-
-            return ToolResult(
-                success=True,
-                data=chunks,
-                tool_name=self.name,
-            )
+            return ToolResult(success=True, data=chunks, tool_name=self.name)
 
         except Exception as e:
-            log.error("retrieve_chunks failed", error=str(e))
-            return ToolResult(
-                success=False,
-                error=str(e),
-                tool_name=self.name,
-            )
+            log.error("retrieve_chunks failed", error=str(e), exc_info=True)
+            return ToolResult(success=False, error=str(e), tool_name=self.name)

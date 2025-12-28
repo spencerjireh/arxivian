@@ -1,5 +1,7 @@
 """Summarize paper tool for generating paper summaries."""
 
+from typing import ClassVar
+
 from src.clients.base_llm_client import BaseLLMClient
 from src.repositories.paper_repository import PaperRepository
 from src.utils.logger import get_logger
@@ -28,6 +30,10 @@ class SummarizePaperTool(BaseTool):
         "Use when user wants a quick overview of what a paper is about. "
         "Only works for papers in the knowledge base."
     )
+
+    result_key: ClassVar[str | None] = "summarize_paper_results"
+    extends_chunks: ClassVar[bool] = False
+    required_dependencies: ClassVar[list[str]] = ["paper_repository", "llm_client"]
 
     def __init__(self, paper_repository: PaperRepository, llm_client: BaseLLMClient):
         self.paper_repository = paper_repository
@@ -59,6 +65,13 @@ class SummarizePaperTool(BaseTool):
                     tool_name=self.name,
                 )
 
+            if paper.pdf_processed is not True:
+                return ToolResult(
+                    success=False,
+                    error=f"Paper {arxiv_id} has not been processed yet",
+                    tool_name=self.name,
+                )
+
             prompt = SUMMARY_PROMPT.format(title=paper.title, abstract=paper.abstract)
 
             summary = await self.llm_client.generate_completion(
@@ -78,5 +91,5 @@ class SummarizePaperTool(BaseTool):
                 tool_name=self.name,
             )
         except Exception as e:
-            log.error("summarize_paper failed", error=str(e))
+            log.error("summarize_paper failed", error=str(e), exc_info=True)
             return ToolResult(success=False, error=str(e), tool_name=self.name)

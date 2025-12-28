@@ -1,6 +1,6 @@
 """Ingest papers tool for arXiv paper ingestion."""
 
-from typing import List, Optional
+from typing import ClassVar
 
 from src.services.ingest_service import IngestService
 from src.schemas.ingest import IngestRequest
@@ -22,6 +22,10 @@ class IngestPapersTool(BaseTool):
         "Provide either a search query OR specific arXiv IDs (not both). "
         "Limited to 10 papers per call."
     )
+
+    result_key: ClassVar[str | None] = "ingest_papers_results"
+    extends_chunks: ClassVar[bool] = False
+    required_dependencies: ClassVar[list[str]] = ["ingest_service"]
 
     def __init__(self, ingest_service: IngestService):
         """
@@ -76,12 +80,12 @@ class IngestPapersTool(BaseTool):
 
     async def execute(
         self,
-        query: Optional[str] = None,
-        arxiv_ids: Optional[List[str]] = None,
+        query: str | None = None,
+        arxiv_ids: list[str] | None = None,
         max_results: int = 5,
-        categories: Optional[List[str]] = None,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
+        categories: list[str] | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
         force_reprocess: bool = False,
         **kwargs,
     ) -> ToolResult:
@@ -164,5 +168,5 @@ class IngestPapersTool(BaseTool):
             )
 
         except Exception as e:
-            log.error("ingest_papers failed", error=str(e))
+            log.error("ingest_papers failed", error=str(e), exc_info=True)
             return ToolResult(success=False, error=str(e), tool_name=self.name)

@@ -43,19 +43,22 @@ Available tools:
 
 Guidelines:
 1. Use retrieve_chunks when you need information from research papers
-2. Use web_search for recent information (2024+) or current events
+2. Use arxiv_search to find papers on arXiv before deciding to ingest
 3. Use list_papers to browse available papers by topic/author/date
-4. Choose "generate" when you have enough context to answer
+4. Use ingest_papers to add new papers to the knowledge base
+5. Use explore_citations to find related work cited by a paper
+6. Use summarize_paper for quick paper overviews
+7. Choose "generate" when you have enough context to answer
 
 PARALLEL EXECUTION:
 - You may select MULTIPLE tools if they are independent
-- Example: list_papers + web_search can run in parallel
+- Example: list_papers + arxiv_search can run in parallel
 - Only parallelize when queries benefit from multiple data sources
 - Avoid redundant calls (don't call same tool twice)
 
 Decision criteria:
 - New query about papers -> retrieve_chunks or list_papers
-- Question about recent developments -> web_search
+- Looking for papers to ingest -> arxiv_search
 - Multi-faceted query -> consider parallel tools
 - Follow-up with sufficient context -> generate"""
 

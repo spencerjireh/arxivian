@@ -2,7 +2,7 @@
 
 from .service import AgentService
 from .context import AgentContext, ConversationFormatter
-from .tools import ToolRegistry, BaseTool, ToolResult, RetrieveChunksTool, WebSearchTool
+from .tools import ToolRegistry, BaseTool, ToolResult, RetrieveChunksTool
 
 __all__ = [
     "AgentService",
@@ -12,5 +12,4 @@ __all__ = [
     "BaseTool",
     "ToolResult",
     "RetrieveChunksTool",
-    "WebSearchTool",
 ]

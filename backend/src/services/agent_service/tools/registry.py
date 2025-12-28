@@ -1,7 +1,11 @@
 """Tool registry for managing agent tools."""
 
 from typing import Iterator
+
+from src.utils.logger import get_logger
 from .base import BaseTool, ToolResult
+
+log = get_logger(__name__)
 
 
 class ToolRegistry:
@@ -18,15 +22,28 @@ class ToolRegistry:
         """
         Register a tool in the registry.
 
+        Validates that all required_dependencies declared by the tool
+        are present as instance attributes.
+
         Args:
             tool: Tool instance to register
 
         Raises:
             ValueError: If a tool with the same name is already registered
+            ValueError: If required dependencies are missing from the tool instance
         """
         if tool.name in self._tools:
             raise ValueError(f"Tool '{tool.name}' is already registered")
+
+        missing = [dep for dep in tool.required_dependencies if not hasattr(tool, dep)]
+        if missing:
+            raise ValueError(
+                f"Tool '{tool.name}' missing required dependencies: {missing}. "
+                f"Ensure these are set in __init__."
+            )
+
         self._tools[tool.name] = tool
+        log.debug("tool registered", tool_name=tool.name, dependencies=tool.required_dependencies)
 
     def get(self, name: str) -> BaseTool | None:
         """
@@ -80,6 +97,7 @@ class ToolRegistry:
         try:
             return await tool.execute(**kwargs)
         except Exception as e:
+            log.error("tool execution failed", tool_name=name, error=str(e), exc_info=True)
             return ToolResult(
                 success=False,
                 error=f"Tool execution failed: {str(e)}",

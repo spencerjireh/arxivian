@@ -1,6 +1,7 @@
 """Conditional edge functions for graph routing."""
 
 from src.schemas.langgraph_state import AgentState
+from src.services.agent_service.tools import RETRIEVE_CHUNKS
 
 
 def continue_after_guardrail(state: AgentState) -> str:
@@ -65,10 +66,10 @@ def route_after_executor(state: AgentState) -> str:
         return "router"
 
     # Check if retrieve_chunks was in current batch and succeeded
-    if "retrieve_chunks" in last_executed:
+    if RETRIEVE_CHUNKS in last_executed:
         # Verify it succeeded by checking the most recent execution
         for t in reversed(state.get("tool_history", [])):
-            if t.tool_name == "retrieve_chunks":
+            if t.tool_name == RETRIEVE_CHUNKS:
                 return "grade" if t.success else "router"
 
     return "router"

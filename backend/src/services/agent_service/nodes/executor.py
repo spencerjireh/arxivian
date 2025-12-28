@@ -98,7 +98,9 @@ async def executor_node(state: AgentState, context: AgentContext) -> dict:
         tc = decision.tool_calls[idx]
 
         if isinstance(item, Exception):
-            log.error("tool execution exception", tool_name=tc.tool_name, error=str(item))
+            log.error(
+                "tool execution exception", tool_name=tc.tool_name, error=str(item), exc_info=True
+            )
             tool_history.append(
                 ToolExecution(
                     tool_name=tc.tool_name,
@@ -123,21 +125,19 @@ async def executor_node(state: AgentState, context: AgentContext) -> dict:
         )
         tool_history.append(execution)
 
-        # Merge tool-specific results
-        if tool_name == "retrieve_chunks" and result.success and result.data:
-            retrieved_chunks.extend(result.data)
-        if tool_name == "web_search" and result.success and result.data:
-            metadata["web_search_results"] = result.data
-        if tool_name == "list_papers" and result.success and result.data:
-            metadata["list_papers_results"] = result.data
-        if tool_name == "ingest_papers" and result.success and result.data:
-            metadata["ingest_papers_results"] = result.data
-        if tool_name == "arxiv_search" and result.success and result.data:
-            metadata["arxiv_search_results"] = result.data
-        if tool_name == "summarize_paper" and result.success and result.data:
-            metadata["summarize_paper_results"] = result.data
-        if tool_name == "explore_citations" and result.success and result.data:
-            metadata["explore_citations_results"] = result.data
+        # Use tool's class variables to determine where to store results
+        if result.success and result.data:
+            tool = context.tool_registry.get(tool_name)
+            if tool:
+                if tool.extends_chunks:
+                    if not isinstance(result.data, list):
+                        raise TypeError(
+                            f"Tool '{tool_name}' declares extends_chunks=True but returned "
+                            f"{type(result.data).__name__}, expected list"
+                        )
+                    retrieved_chunks.extend(result.data)
+                elif tool.result_key:
+                    metadata[tool.result_key] = result.data
 
     updates: dict = {
         "tool_history": tool_history,

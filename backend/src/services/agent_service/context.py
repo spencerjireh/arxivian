@@ -9,7 +9,6 @@ from src.schemas.conversation import ConversationMessage
 from .tools import (
     ToolRegistry,
     RetrieveChunksTool,
-    WebSearchTool,
     IngestPapersTool,
     ListPapersTool,
     ArxivSearchTool,
@@ -121,7 +120,6 @@ class AgentContext:
             self.tool_registry.register(
                 RetrieveChunksTool(search_service=search_service, default_top_k=top_k * 2)
             )
-            self.tool_registry.register(WebSearchTool())
             if ingest_service:
                 self.tool_registry.register(IngestPapersTool(ingest_service=ingest_service))
                 self.tool_registry.register(ListPapersTool(ingest_service=ingest_service))

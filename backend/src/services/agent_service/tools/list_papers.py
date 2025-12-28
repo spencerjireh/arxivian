@@ -1,5 +1,7 @@
 """List papers tool for querying paper database."""
 
+from typing import ClassVar
+
 from src.services.ingest_service import IngestService
 from src.utils.logger import get_logger
 
@@ -18,6 +20,10 @@ class ListPapersTool(BaseTool):
         "Use when user asks what papers are available or wants to browse by topic/author/date. "
         "Returns metadata only - use retrieve_chunks for content search."
     )
+
+    result_key: ClassVar[str | None] = "list_papers_results"
+    extends_chunks: ClassVar[bool] = False
+    required_dependencies: ClassVar[list[str]] = ["ingest_service"]
 
     def __init__(self, ingest_service: IngestService):
         self.ingest_service = ingest_service
@@ -92,5 +98,5 @@ class ListPapersTool(BaseTool):
                 tool_name=self.name,
             )
         except Exception as e:
-            log.error("list_papers failed", error=str(e))
+            log.error("list_papers failed", error=str(e), exc_info=True)
             return ToolResult(success=False, error=str(e), tool_name=self.name)

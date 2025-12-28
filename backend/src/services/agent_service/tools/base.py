@@ -1,7 +1,7 @@
 """Base tool definition for agent workflow."""
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, ClassVar
 from pydantic import BaseModel, Field
 
 
@@ -19,6 +19,13 @@ class BaseTool(ABC):
 
     name: str
     description: str
+
+    # Result type registry - where to store results in state metadata
+    result_key: ClassVar[str | None] = None
+    extends_chunks: ClassVar[bool] = False
+
+    # Capability flags - declares required dependencies for registration
+    required_dependencies: ClassVar[list[str]] = []
 
     @property
     @abstractmethod
