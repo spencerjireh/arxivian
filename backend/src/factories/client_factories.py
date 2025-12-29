@@ -68,6 +68,9 @@ def get_llm_client(provider: Optional[str] = None, model: Optional[str] = None) 
         allowed = settings.get_allowed_models(provider)
         raise InvalidModelError(model=model, provider=provider, valid_models=allowed)
 
+    # Get LLM timeout from settings
+    timeout = float(settings.llm_call_timeout_seconds)
+
     # Create appropriate client
     if provider == "openai":
         if not settings.openai_api_key:
@@ -76,7 +79,7 @@ def get_llm_client(provider: Optional[str] = None, model: Optional[str] = None) 
                 details={"required_env_var": "OPENAI_API_KEY"},
             )
         openai_key: str = settings.openai_api_key
-        return OpenAIClient(api_key=openai_key, model=model)
+        return OpenAIClient(api_key=openai_key, model=model, timeout=timeout)
     elif provider == "zai":
         if not settings.zai_api_key:
             raise ConfigurationError(
@@ -84,7 +87,7 @@ def get_llm_client(provider: Optional[str] = None, model: Optional[str] = None) 
                 details={"required_env_var": "ZAI_API_KEY"},
             )
         zai_key: str = settings.zai_api_key
-        return ZAIClient(api_key=zai_key, model=model)
+        return ZAIClient(api_key=zai_key, model=model, timeout=timeout)
 
     raise InvalidProviderError(provider=provider, valid_providers=["openai", "zai"])
 
@@ -100,4 +103,8 @@ def get_openai_client() -> OpenAIClient:
         OpenAIClient instance
     """
     settings = get_settings()
-    return OpenAIClient(api_key=settings.openai_api_key, model=settings.get_default_model("openai"))
+    return OpenAIClient(
+        api_key=settings.openai_api_key,
+        model=settings.get_default_model("openai"),
+        timeout=float(settings.llm_call_timeout_seconds),
+    )

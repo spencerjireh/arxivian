@@ -107,6 +107,7 @@ def get_agent_service(
     temperature: float = 0.3,
     session_id: Optional[str] = None,
     conversation_window: int = 5,
+    max_iterations: int = 5,
 ) -> AgentService:
     """
     Create agent service with specified LLM provider.
@@ -121,6 +122,7 @@ def get_agent_service(
         temperature: Generation temperature
         session_id: Optional session ID for conversation continuity
         conversation_window: Number of previous turns to include in context
+        max_iterations: Maximum router iterations for tool execution
 
     Returns:
         AgentService instance
@@ -154,5 +156,6 @@ def get_agent_service(
         guardrail_threshold=guardrail_threshold,
         top_k=top_k,
         max_retrieval_attempts=max_retrieval_attempts,
+        max_iterations=max_iterations,
         temperature=temperature,
     )

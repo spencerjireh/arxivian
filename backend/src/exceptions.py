@@ -259,3 +259,33 @@ class ConfigurationError(BaseAPIException):
         super().__init__(
             message, status_code=500, error_code="CONFIGURATION_ERROR", details=details
         )
+
+
+# ============================================================================
+# Request Lifecycle Errors (499/504)
+# ============================================================================
+
+
+class LLMTimeoutError(ExternalServiceError):
+    """Raised when LLM call times out."""
+
+    def __init__(self, provider: str, timeout_seconds: float):
+        super().__init__(
+            service_name=f"LLM-{provider}",
+            message=f"LLM call to {provider} timed out after {timeout_seconds}s",
+            status_code=504,
+            details={"provider": provider, "timeout_seconds": timeout_seconds},
+        )
+        self.error_code = "LLM_TIMEOUT"
+
+
+class StreamCancelledError(BaseAPIException):
+    """Raised when stream is cancelled by user."""
+
+    def __init__(self, session_id: str):
+        super().__init__(
+            message=f"Stream cancelled for session {session_id}",
+            status_code=499,  # Client Closed Request (nginx convention)
+            error_code="STREAM_CANCELLED",
+            details={"session_id": session_id},
+        )

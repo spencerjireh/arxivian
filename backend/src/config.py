@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     # Agent Configuration
     guardrail_threshold: int = 75
     max_retrieval_attempts: int = 3
+    default_max_iterations: int = 5
+
+    # Request Lifecycle Configuration
+    agent_timeout_seconds: int = 180  # 3 minutes max per request
+    llm_call_timeout_seconds: int = 60  # 1 minute per LLM call
 
     # App
     debug: bool = False

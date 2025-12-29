@@ -32,12 +32,12 @@ _Ensure requests can be bounded and cancelled._
 
 | Status | Item | Notes |
 |--------|------|-------|
-| [ ] | Agent execution timeout | Max 2-3 minutes per request, configurable |
-| [ ] | LLM call timeouts | Explicit timeout on generate calls (60s default) |
-| [ ] | Client disconnect detection | Stop work when SSE client closes connection |
-| [ ] | Task cleanup on disconnect | Cancel running async tasks, release resources |
-| [ ] | User cancellation endpoint | POST /conversations/{id}/cancel |
-| [ ] | Make max_iterations configurable | Expose in StreamRequest schema |
+| [x] | Agent execution timeout | Max 3 minutes per request, configurable via `timeout_seconds` |
+| [x] | LLM call timeouts | Explicit timeout on generate calls (60s default) |
+| [x] | Client disconnect detection | Stop work when SSE client closes connection |
+| [x] | Task cleanup on disconnect | Cancel running async tasks, release resources |
+| [x] | User cancellation endpoint | POST /conversations/{id}/cancel |
+| [x] | Make max_iterations configurable | Expose in StreamRequest schema |
 
 ### Observability
 

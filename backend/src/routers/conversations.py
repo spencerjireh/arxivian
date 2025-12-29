@@ -8,8 +8,10 @@ from src.schemas.conversation import (
     ConversationDetailResponse,
     ConversationTurnResponse,
     DeleteConversationResponse,
+    CancelStreamResponse,
 )
 from src.dependencies import ConversationRepoDep, DbSession
+from src.services.task_registry import task_registry
 
 router = APIRouter()
 
@@ -152,3 +154,34 @@ async def delete_conversation(
         session_id=session_id,
         turns_deleted=turn_count,
     )
+
+
+@router.post("/conversations/{session_id}/cancel", response_model=CancelStreamResponse)
+async def cancel_stream(session_id: str) -> CancelStreamResponse:
+    """
+    Cancel an active streaming request for a conversation.
+
+    This endpoint allows clients to cancel an in-progress stream for
+    a specific session. Useful for implementing a "stop generation"
+    button in the frontend.
+
+    Args:
+        session_id: Session identifier for the streaming conversation
+
+    Returns:
+        CancelStreamResponse indicating whether a stream was cancelled
+    """
+    cancelled = task_registry.cancel(session_id)
+
+    if cancelled:
+        return CancelStreamResponse(
+            session_id=session_id,
+            cancelled=True,
+            message="Stream cancelled successfully",
+        )
+    else:
+        return CancelStreamResponse(
+            session_id=session_id,
+            cancelled=False,
+            message="No active stream found for this session",
+        )

@@ -31,6 +31,7 @@ class BaseLLMClient(ABC):
         temperature: float = 0.3,
         max_tokens: int = 1000,
         stream: bool = False,
+        timeout: Optional[float] = None,
     ) -> str | AsyncIterator[str]:
         """
         Generate completion from LLM.
@@ -41,6 +42,7 @@ class BaseLLMClient(ABC):
             temperature: Sampling temperature (0-1)
             max_tokens: Maximum tokens to generate
             stream: Whether to stream the response
+            timeout: Optional timeout in seconds (uses client default if None)
 
         Returns:
             str if stream=False, AsyncIterator[str] if stream=True
@@ -53,6 +55,7 @@ class BaseLLMClient(ABC):
         messages: List[ChatCompletionMessageParam],
         response_format: Type[T],
         model: Optional[str] = None,
+        timeout: Optional[float] = None,
     ) -> T:
         """
         Generate structured output using provider's structured outputs API.
@@ -61,6 +64,7 @@ class BaseLLMClient(ABC):
             messages: List of chat completion messages
             response_format: Pydantic model class for response schema
             model: Model to use (overrides default)
+            timeout: Optional timeout in seconds (uses client default if None)
 
         Returns:
             Instance of response_format Pydantic model

@@ -83,3 +83,11 @@ class DeleteConversationResponse(BaseModel):
 
     session_id: str
     turns_deleted: int
+
+
+class CancelStreamResponse(BaseModel):
+    """Response after attempting to cancel an active stream."""
+
+    session_id: str
+    cancelled: bool
+    message: str

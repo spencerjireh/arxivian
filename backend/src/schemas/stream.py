@@ -29,9 +29,17 @@ class StreamRequest(BaseModel):
     max_retrieval_attempts: int = Field(
         3, ge=1, le=5, description="Maximum query rewriting attempts"
     )
+    max_iterations: int = Field(
+        5, ge=1, le=20, description="Maximum router iterations for tool execution"
+    )
 
     # Generation Parameters
     temperature: float = Field(0.3, ge=0.0, le=1.0, description="Generation temperature")
+
+    # Request Lifecycle Parameters
+    timeout_seconds: Optional[int] = Field(
+        None, ge=10, le=600, description="Request timeout in seconds. Uses server default if not specified."
+    )
 
     # Conversation Parameters
     session_id: Optional[str] = Field(None, description="Session UUID for conversation continuity")

@@ -1,20 +1,38 @@
 """Streaming router with Server-Sent Events (SSE)."""
 
+import asyncio
 import json
-from fastapi import APIRouter
+import uuid
+
+from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
+from src.config import get_settings
 from src.schemas.stream import StreamRequest, StreamEventType, ErrorEventData, StreamEvent
 from src.dependencies import DbSession
 from src.factories.service_factories import get_agent_service
+from src.services.task_registry import task_registry
 from src.utils.logger import get_logger
 
 router = APIRouter()
 log = get_logger(__name__)
 
 
+def _format_sse_error(error: str, code: str) -> str:
+    """Format an error as an SSE event."""
+    error_event = StreamEvent(
+        event=StreamEventType.ERROR,
+        data=ErrorEventData(error=error, code=code),
+    )
+    return f"event: error\ndata: {json.dumps(error_event.data.model_dump())}\n\n"
+
+
 @router.post("/stream")
-async def stream(request: StreamRequest, db: DbSession) -> StreamingResponse:
+async def stream(
+    request: StreamRequest,
+    db: DbSession,
+    http_request: Request,
+) -> StreamingResponse:
     """
     Stream agent response via Server-Sent Events (SSE).
 
@@ -28,6 +46,9 @@ async def stream(request: StreamRequest, db: DbSession) -> StreamingResponse:
     - Query rewriting (improves retrieval iteratively)
     - Streaming answer generation
     - Multi-turn conversation memory (optional)
+    - Configurable request timeout
+    - Client disconnect detection
+    - Task cancellation support
 
     SSE Event Types:
     - status: Workflow step updates (guardrail, retrieval, grading, generation)
@@ -40,53 +61,97 @@ async def stream(request: StreamRequest, db: DbSession) -> StreamingResponse:
     Args:
         request: Question and parameters (including optional provider/model and session_id)
         db: Database session
+        http_request: FastAPI request for disconnect detection
 
     Returns:
         StreamingResponse with SSE events
     """
+    settings = get_settings()
+
+    # Determine timeout: request override > server default
+    timeout_seconds = (
+        request.timeout_seconds
+        if request.timeout_seconds is not None
+        else settings.agent_timeout_seconds
+    )
+
+    # Use session_id if provided, otherwise generate a temporary task ID
+    task_id = request.session_id or str(uuid.uuid4())
+
     log.info(
         "stream request",
         query=request.query[:100],
         provider=request.provider,
         session_id=request.session_id,
+        task_id=task_id,
+        timeout_seconds=timeout_seconds,
+        max_iterations=request.max_iterations,
     )
 
     async def event_generator():
+        # Register the current task for cancellation support
+        current_task = asyncio.current_task()
+        if current_task is not None:
+            task_registry.register(task_id, current_task)
+
         try:
-            # Create service with request parameters
-            agent_service = get_agent_service(
-                db_session=db,
-                provider=request.provider,
-                model=request.model,
-                guardrail_threshold=request.guardrail_threshold,
-                top_k=request.top_k,
-                max_retrieval_attempts=request.max_retrieval_attempts,
-                temperature=request.temperature,
-                session_id=request.session_id,
-                conversation_window=request.conversation_window,
+            async with asyncio.timeout(timeout_seconds):
+                # Create service with request parameters
+                agent_service = get_agent_service(
+                    db_session=db,
+                    provider=request.provider,
+                    model=request.model,
+                    guardrail_threshold=request.guardrail_threshold,
+                    top_k=request.top_k,
+                    max_retrieval_attempts=request.max_retrieval_attempts,
+                    temperature=request.temperature,
+                    session_id=request.session_id,
+                    conversation_window=request.conversation_window,
+                    max_iterations=request.max_iterations,
+                )
+
+                # Stream events from the agent service
+                async for event in agent_service.ask_stream(
+                    request.query, session_id=request.session_id
+                ):
+                    # Check if client disconnected
+                    if await http_request.is_disconnected():
+                        log.info("client disconnected", task_id=task_id)
+                        break
+
+                    # Format as SSE
+                    event_type = event.event.value
+                    if hasattr(event.data, "model_dump"):
+                        data_json = json.dumps(event.data.model_dump())  # ty: ignore[call-non-callable]  # guarded by hasattr
+                    else:
+                        data_json = json.dumps(event.data)
+
+                    yield f"event: {event_type}\ndata: {data_json}\n\n"
+
+        except asyncio.TimeoutError:
+            log.warning("stream timeout", task_id=task_id, timeout_seconds=timeout_seconds)
+            yield _format_sse_error(
+                f"Request timed out after {timeout_seconds} seconds", "TIMEOUT"
             )
+            yield "event: done\ndata: {}\n\n"
 
-            # Stream events from the agent service
-            async for event in agent_service.ask_stream(
-                request.query, session_id=request.session_id
-            ):
-                # Format as SSE
-                event_type = event.event.value
-                if hasattr(event.data, "model_dump"):
-                    data_json = json.dumps(event.data.model_dump())  # ty: ignore[call-non-callable]  # guarded by hasattr
-                else:
-                    data_json = json.dumps(event.data)
-
-                yield f"event: {event_type}\ndata: {data_json}\n\n"
+        except asyncio.CancelledError:
+            log.info("stream cancelled", task_id=task_id)
+            yield _format_sse_error("Stream cancelled", "CANCELLED")
+            yield "event: done\ndata: {}\n\n"
 
         except Exception as e:
-            log.error("stream error", error=str(e), exc_info=True)
+            log.error("stream error", error=str(e), task_id=task_id, exc_info=True)
             error_event = StreamEvent(
                 event=StreamEventType.ERROR,
                 data=ErrorEventData(error=str(e)),
             )
             yield f"event: error\ndata: {json.dumps(error_event.data.model_dump())}\n\n"
             yield "event: done\ndata: {}\n\n"
+
+        finally:
+            # Always unregister the task when done
+            task_registry.unregister(task_id)
 
     return StreamingResponse(
         event_generator(),
