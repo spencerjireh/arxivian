@@ -84,7 +84,7 @@ async def router_node(state: AgentState, context: AgentContext) -> dict:
         log.debug("router calling LLM", query=query[:100], iteration=iteration)
 
         decision = await context.llm_client.generate_structured(
-            messages=[
+            messages=[  # ty: ignore[invalid-argument-type]
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],

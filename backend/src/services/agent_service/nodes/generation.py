@@ -43,7 +43,7 @@ async def generate_answer_node(state: AgentState, context: AgentContext) -> Agen
 
     # Use stream=True and emit tokens via custom events
     response = await context.llm_client.generate_completion(
-        messages=[
+        messages=[  # ty: ignore[invalid-argument-type]  # dict works at runtime
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],

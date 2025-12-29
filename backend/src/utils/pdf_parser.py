@@ -4,6 +4,8 @@ from typing import Dict, List
 from dataclasses import dataclass
 import asyncio
 
+from src.exceptions import PDFProcessingError
+
 
 @dataclass
 class ParsedDocument:
@@ -22,26 +24,37 @@ class PDFParser:
         """Initialize PDF parser."""
         pass
 
-    async def parse_pdf(self, pdf_path: str) -> ParsedDocument:
+    async def parse_pdf(self, pdf_path: str, arxiv_id: str = "unknown") -> ParsedDocument:
         """
         Parse PDF and extract structured content.
 
         Args:
             pdf_path: Path to PDF file
+            arxiv_id: arXiv ID for error reporting
 
         Returns:
             ParsedDocument with text, sections, and metadata
+
+        Raises:
+            PDFProcessingError: If PDF parsing fails
         """
         # Run blocking operation in thread pool
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self._parse_pdf_sync, pdf_path)
+        return await loop.run_in_executor(None, self._parse_pdf_sync, pdf_path, arxiv_id)
 
-    def _parse_pdf_sync(self, pdf_path: str) -> ParsedDocument:
+    def _parse_pdf_sync(self, pdf_path: str, arxiv_id: str = "unknown") -> ParsedDocument:
         """
         Synchronous PDF parsing (runs in thread pool).
 
         This is a simplified implementation. In production, you would use
         Docling library for advanced parsing of academic papers.
+
+        Args:
+            pdf_path: Path to PDF file
+            arxiv_id: arXiv ID for error reporting
+
+        Raises:
+            PDFProcessingError: If PDF parsing fails
         """
         try:
             # For now, use simple pypdf fallback
@@ -80,12 +93,10 @@ class PDFParser:
             )
 
         except Exception as e:
-            # Fallback: return basic structure
-            return ParsedDocument(
-                raw_text=f"Error parsing PDF: {str(e)}",
-                sections=[],
-                references=[],
-                metadata={"error": str(e), "parser": "fallback"},
+            raise PDFProcessingError(
+                arxiv_id=arxiv_id,
+                stage="parsing",
+                message=str(e),
             )
 
     def _extract_references(self, text: str) -> List[str]:

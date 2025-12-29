@@ -97,7 +97,7 @@ async def executor_node(state: AgentState, context: AgentContext) -> dict:
     for idx, item in enumerate(results):
         tc = decision.tool_calls[idx]
 
-        if isinstance(item, Exception):
+        if isinstance(item, BaseException):
             log.error(
                 "tool execution exception", tool_name=tc.tool_name, error=str(item), exc_info=True
             )

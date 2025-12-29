@@ -1,12 +1,14 @@
 """OpenAI API client for LLM generation and reasoning."""
 
-from typing import List, AsyncIterator, Type, Optional, Any, cast
+from typing import List, AsyncIterator, Type, Optional, Any, cast, TypeVar
 from pydantic import BaseModel
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
 from src.clients.base_llm_client import BaseLLMClient
 from src.utils.logger import get_logger, truncate
+
+T = TypeVar("T", bound=BaseModel)
 
 log = get_logger(__name__)
 
@@ -127,9 +129,9 @@ class OpenAIClient(BaseLLMClient):
     async def generate_structured(
         self,
         messages: List[ChatCompletionMessageParam],
-        response_format: Type[BaseModel],
+        response_format: Type[T],
         model: Optional[str] = None,
-    ) -> BaseModel:
+    ) -> T:
         """
         Generate structured output using OpenAI's structured outputs.
 

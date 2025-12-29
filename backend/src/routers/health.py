@@ -1,7 +1,7 @@
 """Health check router."""
 
 from fastapi import APIRouter
-from datetime import datetime
+from datetime import datetime, timezone
 from src.schemas.health import HealthResponse, ServiceStatus
 from src.dependencies import DbSession, EmbeddingsClientDep, PaperRepoDep, ChunkRepoDep
 from src.config import get_settings
@@ -82,5 +82,5 @@ async def health_check(
         status=overall_status,
         version="0.2.0",
         services=services,
-        timestamp=datetime.utcnow().isoformat() + "Z",
+        timestamp=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     )

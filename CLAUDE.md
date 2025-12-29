@@ -10,7 +10,7 @@
 ### Backend (Python)
 - **Lint**: `uv run ruff check src/`
 - **Format**: `uv run ruff format src/` 
-- **Type check**: `uv run pyright src/`
+- **Type check**: `uv run ty check src/`
 - **Test**: `uv run pytest tests/`
 - **Single test**: `uv run pytest tests/test_specific.py::test_function`
 - **Migrations**: `uv run alembic upgrade head`
@@ -24,7 +24,7 @@
 
 ### Python (Backend)
 - **Line length**: 100 characters (ruff config)
-- **Python version**: 3.11+ (pyright targets 3.13)
+- **Python version**: 3.11+ (ty targets 3.13)
 - **Imports**: Use `isort`-style grouping (stdlib, third-party, local)
 - **Type hints**: Required for all function signatures
 - **Error handling**: Use custom exceptions in `src/exceptions.py`

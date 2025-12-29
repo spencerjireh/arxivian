@@ -47,10 +47,10 @@ async def list_conversations(
 
         items.append(
             ConversationListItem(
-                session_id=conv.session_id,
+                session_id=conv.session_id,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
                 turn_count=len(conv.turns),
-                created_at=conv.created_at,
-                updated_at=conv.updated_at,
+                created_at=conv.created_at,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
+                updated_at=conv.updated_at,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
                 last_query=last_query,
             )
         )
@@ -105,9 +105,9 @@ async def get_conversation(
     ]
 
     return ConversationDetailResponse(
-        session_id=conv.session_id,
-        created_at=conv.created_at,
-        updated_at=conv.updated_at,
+        session_id=conv.session_id,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
+        created_at=conv.created_at,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
+        updated_at=conv.updated_at,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
         turns=turns,
     )
 

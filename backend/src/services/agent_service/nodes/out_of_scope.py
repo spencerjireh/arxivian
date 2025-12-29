@@ -50,7 +50,7 @@ async def out_of_scope_node(state: AgentState, context: AgentContext) -> AgentSt
 
         # Use stream=True and emit tokens via custom events
         response = await context.llm_client.generate_completion(
-            messages=[
+            messages=[  # ty: ignore[invalid-argument-type]
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],

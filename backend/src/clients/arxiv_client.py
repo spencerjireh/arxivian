@@ -6,10 +6,20 @@ from datetime import datetime, timezone
 import arxiv
 import httpx
 from pathlib import Path
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+)
+import logging
 
 from src.utils.logger import get_logger
+from src.exceptions import ArxivAPIError
 
 log = get_logger(__name__)
+_tenacity_logger = logging.getLogger(__name__)
 
 
 class ArxivPaper:
@@ -38,6 +48,61 @@ class ArxivClient:
         """
         self.rate_limit_delay = rate_limit_delay
         self.client = arxiv.Client()
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type(
+            (
+                arxiv.HTTPError,
+                arxiv.UnexpectedEmptyPageError,
+                ConnectionError,
+                TimeoutError,
+            )
+        ),
+        before_sleep=before_sleep_log(_tenacity_logger, logging.WARNING),
+        reraise=True,
+    )
+    def _execute_search_sync(self, search: arxiv.Search) -> List[arxiv.Result]:
+        """
+        Execute arXiv search synchronously with retry logic.
+
+        Args:
+            search: arXiv Search object
+
+        Returns:
+            List of arxiv.Result objects
+
+        Raises:
+            ArxivAPIError: If search fails after retries
+        """
+        try:
+            return list(self.client.results(search))
+        except Exception as e:
+            log.warning("arxiv search attempt failed", error=str(e), error_type=type(e).__name__)
+            raise
+
+    async def _execute_search(self, search: arxiv.Search) -> List[arxiv.Result]:
+        """
+        Execute arXiv search asynchronously with retry logic.
+
+        Args:
+            search: arXiv Search object
+
+        Returns:
+            List of arxiv.Result objects
+
+        Raises:
+            ArxivAPIError: If search fails after all retries
+        """
+        loop = asyncio.get_event_loop()
+        try:
+            return await loop.run_in_executor(None, self._execute_search_sync, search)
+        except Exception as e:
+            raise ArxivAPIError(
+                message=f"arXiv search failed after retries: {str(e)}",
+                details={"query": str(search.query), "error_type": type(e).__name__},
+            )
 
     async def search_papers(
         self,
@@ -74,10 +139,11 @@ class ArxivClient:
             sort_by=arxiv.SortCriterion.Relevance,
         )
 
-        results = []
-        loop = asyncio.get_event_loop()
+        # Use retry-enabled helper
+        raw_results = await self._execute_search(search)
 
-        for result in await loop.run_in_executor(None, lambda: list(self.client.results(search))):
+        results = []
+        for result in raw_results:
             paper = ArxivPaper(result)
 
             if start_date:
@@ -99,7 +165,7 @@ class ArxivClient:
 
     async def download_pdf(self, pdf_url: str, save_path: str) -> str:
         """
-        Download PDF from arXiv.
+        Download PDF from arXiv with retry logic.
 
         Args:
             pdf_url: URL to PDF
@@ -107,20 +173,41 @@ class ArxivClient:
 
         Returns:
             Path to downloaded PDF
+
+        Raises:
+            ArxivAPIError: If download fails after retries
         """
         Path(save_path).parent.mkdir(parents=True, exist_ok=True)
 
         log.debug("downloading pdf", url=pdf_url)
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.get(pdf_url, follow_redirects=True)
-            response.raise_for_status()
+        # Use tenacity for async retry
+        @retry(
+            stop=stop_after_attempt(3),
+            wait=wait_exponential(multiplier=1, min=2, max=10),
+            retry=retry_if_exception_type(
+                (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError)
+            ),
+            before_sleep=before_sleep_log(_tenacity_logger, logging.WARNING),
+            reraise=True,
+        )
+        async def _download_with_retry() -> bytes:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.get(pdf_url, follow_redirects=True)
+                response.raise_for_status()
+                return response.content
 
+        try:
+            content = await _download_with_retry()
             with open(save_path, "wb") as f:
-                f.write(response.content)
-
-        log.debug("pdf downloaded", path=save_path, size_kb=len(response.content) // 1024)
-        return save_path
+                f.write(content)
+            log.debug("pdf downloaded", path=save_path, size_kb=len(content) // 1024)
+            return save_path
+        except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError) as e:
+            raise ArxivAPIError(
+                message=f"PDF download failed after retries: {str(e)}",
+                details={"url": pdf_url, "error_type": type(e).__name__},
+            )
 
     async def get_papers_by_ids(self, arxiv_ids: List[str]) -> List[ArxivPaper]:
         """
@@ -135,10 +222,12 @@ class ArxivClient:
         log.debug("arxiv fetch by ids", count=len(arxiv_ids))
 
         search = arxiv.Search(id_list=arxiv_ids)
-        results = []
-        loop = asyncio.get_event_loop()
 
-        for result in await loop.run_in_executor(None, lambda: list(self.client.results(search))):
+        # Use retry-enabled helper
+        raw_results = await self._execute_search(search)
+
+        results = []
+        for result in raw_results:
             paper = ArxivPaper(result)
             results.append(paper)
             log.debug("arxiv paper fetched", arxiv_id=paper.arxiv_id)

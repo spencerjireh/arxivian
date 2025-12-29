@@ -91,7 +91,7 @@ def build_agent_graph(
     )
 
     # Create workflow
-    workflow = StateGraph(AgentState)
+    workflow = StateGraph(AgentState)  # ty: ignore[invalid-argument-type]  # LangGraph stub issue
 
     # Add nodes (with context binding)
     workflow.add_node("guardrail", create_node_wrapper(guardrail_node, context))

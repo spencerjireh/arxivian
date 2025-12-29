@@ -1,7 +1,7 @@
 """Repository for Paper model operations."""
 
 from typing import Optional, List, Literal
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import select, update, delete, func, desc, asc, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.paper import Paper
@@ -32,26 +32,50 @@ class PaperRepository:
         log.debug("query result", found=paper is not None)
         return paper
 
+    async def get_by_arxiv_id_for_update(self, arxiv_id: str) -> Optional[Paper]:
+        """
+        Get paper by arXiv ID with row-level lock.
+
+        Use this when you need to check-then-update to prevent race conditions.
+        The lock is released when the transaction commits or rolls back.
+
+        Args:
+            arxiv_id: arXiv paper ID
+
+        Returns:
+            Paper if found, None otherwise
+
+        Raises:
+            OperationalError: If the row is already locked by another transaction
+        """
+        log.debug("query paper by arxiv_id with lock", arxiv_id=arxiv_id)
+        result = await self.session.execute(
+            select(Paper).where(Paper.arxiv_id == arxiv_id).with_for_update(nowait=True)
+        )
+        paper = result.scalar_one_or_none()
+        log.debug("query result with lock", found=paper is not None)
+        return paper
+
     async def create(self, paper_data: dict) -> Paper:
-        """Create a new paper."""
+        """Create a new paper. Caller is responsible for committing the transaction."""
         paper = Paper(**paper_data)
         self.session.add(paper)
-        await self.session.commit()
+        await self.session.flush()
         await self.session.refresh(paper)
         log.debug("paper created", arxiv_id=paper.arxiv_id)
         return paper
 
     async def update(self, paper_id: str, update_data: dict) -> Optional[Paper]:
-        """Update paper."""
-        update_data["updated_at"] = datetime.utcnow()
+        """Update paper. Caller is responsible for committing the transaction."""
+        update_data["updated_at"] = datetime.now(timezone.utc)
         await self.session.execute(update(Paper).where(Paper.id == paper_id).values(**update_data))
-        await self.session.commit()
+        await self.session.flush()
         log.debug("paper updated", paper_id=paper_id)
         return await self.get_by_id(paper_id)
 
     async def mark_as_processed(
         self, paper_id: str, raw_text: str, sections: List[dict], parser_used: str
-    ) -> Paper:
+    ) -> Optional[Paper]:
         """Mark paper as processed with content."""
         return await self.update(
             paper_id,
@@ -59,7 +83,7 @@ class PaperRepository:
                 "raw_text": raw_text,
                 "sections": sections,
                 "pdf_processed": True,
-                "pdf_processing_date": datetime.utcnow(),
+                "pdf_processing_date": datetime.now(timezone.utc),
                 "parser_used": parser_used,
             },
         )
@@ -178,7 +202,7 @@ class PaperRepository:
 
     async def delete(self, paper_id: str) -> bool:
         """
-        Delete a paper by ID.
+        Delete a paper by ID. Caller is responsible for committing the transaction.
 
         Chunks are automatically deleted via CASCADE foreign key.
 
@@ -189,6 +213,7 @@ class PaperRepository:
             True if paper was deleted, False if not found
         """
         result = await self.session.execute(delete(Paper).where(Paper.id == paper_id))
+        await self.session.flush()
         deleted = (result.rowcount or 0) > 0
         if deleted:
             log.info("paper deleted", paper_id=paper_id)
@@ -196,7 +221,7 @@ class PaperRepository:
 
     async def delete_by_arxiv_id(self, arxiv_id: str) -> bool:
         """
-        Delete a paper by arXiv ID.
+        Delete a paper by arXiv ID. Caller is responsible for committing the transaction.
 
         Chunks are automatically deleted via CASCADE foreign key.
 
@@ -207,7 +232,35 @@ class PaperRepository:
             True if paper was deleted, False if not found
         """
         result = await self.session.execute(delete(Paper).where(Paper.arxiv_id == arxiv_id))
+        await self.session.flush()
         deleted = (result.rowcount or 0) > 0
         if deleted:
             log.info("paper deleted", arxiv_id=arxiv_id)
         return deleted
+
+    async def get_orphaned_papers(self) -> List[Paper]:
+        """
+        Find papers that are marked as processed but have no chunks.
+
+        These represent failed ingestions where the paper was created
+        but chunk creation failed.
+
+        Returns:
+            List of orphaned Paper objects
+        """
+        from src.models.chunk import Chunk
+
+        # Use NOT EXISTS for better performance on large datasets
+        has_chunk = select(1).where(Chunk.paper_id == Paper.id).exists()
+
+        # Find processed papers that have no chunks
+        stmt = (
+            select(Paper)
+            .where(Paper.pdf_processed == True)  # noqa: E712
+            .where(~has_chunk)
+        )
+
+        result = await self.session.execute(stmt)
+        papers = list(result.scalars().all())
+        log.debug("orphaned papers query", count=len(papers))
+        return papers

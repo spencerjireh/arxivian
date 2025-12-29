@@ -6,7 +6,6 @@ from typing import Callable, Awaitable
 
 from fastapi import Request, Response
 from starlette.responses import StreamingResponse
-from starlette.types import ASGIApp
 
 from src.config import get_settings
 from src.utils.logger import get_logger, set_request_id, clear_request_id, truncate
@@ -96,8 +95,11 @@ async def logging_middleware(
             # Only capture body for non-streaming responses
             try:
                 response_body = b""
-                async for chunk in response.body_iterator:
-                    response_body += chunk
+                async for chunk in response.body_iterator:  # ty: ignore[unresolved-attribute]  # Starlette Response has body_iterator
+                    if isinstance(chunk, bytes):
+                        response_body += chunk
+                    else:
+                        response_body += chunk.encode("utf-8")
 
                 if response_body:
                     resp_data["body"] = truncate(response_body.decode("utf-8", errors="replace"))

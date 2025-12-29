@@ -16,10 +16,10 @@ class ChunkRepository:
         self.session = session
 
     async def create_bulk(self, chunks_data: List[dict]) -> List[Chunk]:
-        """Create multiple chunks at once."""
+        """Create multiple chunks at once. Caller is responsible for committing the transaction."""
         chunks = [Chunk(**data) for data in chunks_data]
         self.session.add_all(chunks)
-        await self.session.commit()
+        await self.session.flush()
         for chunk in chunks:
             await self.session.refresh(chunk)
         log.debug("chunks created", count=len(chunks))
@@ -44,9 +44,9 @@ class ChunkRepository:
         return chunks
 
     async def delete_by_paper_id(self, paper_id: str) -> int:
-        """Delete all chunks for a paper. Returns count deleted."""
+        """Delete all chunks for a paper. Caller is responsible for committing the transaction."""
         result = await self.session.execute(delete(Chunk).where(Chunk.paper_id == paper_id))
-        await self.session.commit()
+        await self.session.flush()
         count = result.rowcount or 0
         log.debug("chunks deleted", paper_id=paper_id, count=count)
         return count

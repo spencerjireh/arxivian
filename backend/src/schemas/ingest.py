@@ -13,6 +13,11 @@ class IngestRequest(BaseModel):
     start_date: Optional[str] = Field(None, description="Start date (YYYY-MM-DD)")
     end_date: Optional[str] = Field(None, description="End date (YYYY-MM-DD)")
     force_reprocess: bool = Field(False, description="Re-process existing papers")
+    idempotency_key: Optional[str] = Field(
+        default=None,
+        description="Unique key to prevent duplicate processing. If provided, duplicate requests return cached response.",
+        max_length=64,
+    )
 
 
 class PaperError(BaseModel):

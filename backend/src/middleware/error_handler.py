@@ -1,7 +1,7 @@
 """Global exception handler for consistent error responses."""
 
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Union
 
 from fastapi import FastAPI, Request, status
@@ -34,7 +34,7 @@ async def base_exception_handler(request: Request, exc: BaseAPIException) -> JSO
             details=exc.details,
         ),
         request_id=get_request_id(),
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
     )
 
     return JSONResponse(
@@ -56,7 +56,7 @@ async def validation_exception_handler(
             details={"errors": exc.errors()},
         ),
         request_id=get_request_id(),
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
     )
 
     return JSONResponse(
@@ -81,7 +81,7 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError) -
             details=db_error.details,
         ),
         request_id=get_request_id(),
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
     )
 
     return JSONResponse(
@@ -109,7 +109,7 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
             },
         ),
         request_id=get_request_id(),
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
     )
 
     return JSONResponse(
@@ -120,10 +120,11 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
 
 def register_exception_handlers(app: FastAPI) -> None:
     """Register all exception handlers with FastAPI application."""
-    app.add_exception_handler(BaseAPIException, base_exception_handler)
-    app.add_exception_handler(RequestValidationError, validation_exception_handler)
-    app.add_exception_handler(PydanticValidationError, validation_exception_handler)
-    app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
-    app.add_exception_handler(Exception, generic_exception_handler)
+    # ty: ignore[invalid-argument-type] - Starlette stub doesn't match runtime behavior
+    app.add_exception_handler(BaseAPIException, base_exception_handler)  # ty: ignore[invalid-argument-type]
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)  # ty: ignore[invalid-argument-type]
+    app.add_exception_handler(PydanticValidationError, validation_exception_handler)  # ty: ignore[invalid-argument-type]
+    app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)  # ty: ignore[invalid-argument-type]
+    app.add_exception_handler(Exception, generic_exception_handler)  # ty: ignore[invalid-argument-type]
 
     log.info("exception handlers registered")

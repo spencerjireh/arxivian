@@ -132,6 +132,6 @@ async def delete_paper(
 
     return DeletePaperResponse(
         arxiv_id=arxiv_id,
-        title=title,
+        title=title,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
         chunks_deleted=chunk_count,
     )

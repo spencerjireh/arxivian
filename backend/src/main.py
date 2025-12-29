@@ -7,7 +7,7 @@ from src.config import get_settings
 from src.database import engine, init_db
 
 # Import routers
-from src.routers import health, ingest, search, stream, papers, conversations
+from src.routers import health, ingest, search, stream, papers, conversations, admin
 
 # Import middleware
 from src.middleware import logging_middleware, transaction_middleware, register_exception_handlers
@@ -44,7 +44,7 @@ register_exception_handlers(app)
 
 # CORS middleware (must be first in middleware stack)
 app.add_middleware(
-    CORSMiddleware,
+    CORSMiddleware,  # ty: ignore[invalid-argument-type]  # Starlette stub issue
     allow_origins=["*"],  # Configure appropriately for production
     allow_credentials=True,
     allow_methods=["*"],
@@ -64,6 +64,7 @@ app.include_router(ingest.router, prefix="/api/v1", tags=["Ingest"])
 app.include_router(stream.router, prefix="/api/v1", tags=["Stream"])
 app.include_router(conversations.router, prefix="/api/v1", tags=["Conversations"])
 app.include_router(papers.router, prefix="/api/v1", tags=["Papers"])
+app.include_router(admin.router, prefix="/api/v1", tags=["Admin"])
 
 
 @app.get("/")

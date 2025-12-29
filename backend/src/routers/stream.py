@@ -73,7 +73,7 @@ async def stream(request: StreamRequest, db: DbSession) -> StreamingResponse:
                 # Format as SSE
                 event_type = event.event.value
                 if hasattr(event.data, "model_dump"):
-                    data_json = json.dumps(event.data.model_dump())
+                    data_json = json.dumps(event.data.model_dump())  # ty: ignore[call-non-callable]  # guarded by hasattr
                 else:
                     data_json = json.dumps(event.data)
 

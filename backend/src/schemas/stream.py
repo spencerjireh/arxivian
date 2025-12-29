@@ -60,7 +60,7 @@ class StatusEventData(BaseModel):
     step: str = Field(..., description="Current workflow step name")
     message: str = Field(..., description="Human-readable status message")
     details: Optional[dict] = Field(
-        None, description="Optional extra info (score, attempt number, etc.)"
+        default=None, description="Optional extra info (score, attempt number, etc.)"
     )
 
 
@@ -95,7 +95,7 @@ class ErrorEventData(BaseModel):
     """Data for error events."""
 
     error: str = Field(..., description="Error message")
-    code: Optional[str] = Field(None, description="Error code if available")
+    code: Optional[str] = Field(default=None, description="Error code if available")
 
 
 class StreamEvent(BaseModel):

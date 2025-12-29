@@ -4,7 +4,9 @@ import tempfile
 import os
 from datetime import datetime
 from time import time
-from typing import List
+from typing import List, Optional
+
+from sqlalchemy.exc import OperationalError
 
 from src.schemas.ingest import IngestRequest, IngestResponse, PaperError, PaperResult
 from src.clients.arxiv_client import ArxivClient
@@ -125,11 +127,21 @@ class IngestService:
             papers=paper_results,
         )
 
-    async def _process_single_paper(self, paper_meta, force_reprocess: bool):
-        """Process a single paper: download, parse, chunk, and embed."""
-        arxiv_id = paper_meta.arxiv_id
+    async def _process_single_paper(
+        self, paper_meta, force_reprocess: bool
+    ) -> Optional[PaperResult]:
+        """
+        Process a single paper: download, parse, chunk, and embed.
 
-        # Check if exists
+        All database operations are wrapped in a savepoint transaction that
+        rolls back on any failure, preventing orphaned records. Uses row-level
+        locking to prevent race conditions with concurrent ingestion requests.
+        """
+        arxiv_id = paper_meta.arxiv_id
+        session = self.paper_repository.session
+
+        # Quick check if exists (read-only, outside transaction)
+        # This is an optimization to skip expensive operations early
         existing = await self.paper_repository.get_by_arxiv_id(arxiv_id)
         if existing and not force_reprocess:
             log.debug("paper skipped (exists)", arxiv_id=arxiv_id)
@@ -137,7 +149,7 @@ class IngestService:
 
         log.info("processing paper", arxiv_id=arxiv_id, title=paper_meta.title[:80])
 
-        # Download PDF to temp directory
+        # Download and parse PDF (outside transaction - no DB operations)
         with tempfile.TemporaryDirectory() as temp_dir:
             pdf_path = os.path.join(temp_dir, f"{arxiv_id}.pdf")
 
@@ -147,50 +159,16 @@ class IngestService:
             except Exception as e:
                 raise PDFProcessingError(arxiv_id=arxiv_id, stage="download", message=str(e))
 
-            # Parse PDF
-            try:
-                parsed = await self.pdf_parser.parse_pdf(pdf_path)
-                log.debug(
-                    "pdf parsed",
-                    arxiv_id=arxiv_id,
-                    text_len=len(parsed.raw_text),
-                    sections=len(parsed.sections),
-                )
-            except Exception as e:
-                raise PDFProcessingError(arxiv_id=arxiv_id, stage="parsing", message=str(e))
-
-        # Create or update paper record
-        paper_data = {
-            "arxiv_id": arxiv_id,
-            "title": paper_meta.title,
-            "authors": paper_meta.authors,
-            "abstract": paper_meta.abstract,
-            "categories": paper_meta.categories,
-            "published_date": paper_meta.published_date,
-            "pdf_url": paper_meta.pdf_url,
-            "raw_text": parsed.raw_text,
-            "sections": parsed.sections,
-            "pdf_processed": True,
-            "parser_used": "pypdf",
-        }
-
-        if existing:
-            existing_id = str(existing.id)
-            paper = await self.paper_repository.update(existing_id, paper_data)
-            await self.chunk_repository.delete_by_paper_id(existing_id)
-            log.debug("paper updated", arxiv_id=arxiv_id)
-        else:
-            paper = await self.paper_repository.create(paper_data)
-            log.debug("paper created", arxiv_id=arxiv_id)
-
-        if not paper:
-            raise PDFProcessingError(
+            # Parse PDF (now raises PDFProcessingError on failure)
+            parsed = await self.pdf_parser.parse_pdf(pdf_path, arxiv_id=arxiv_id)
+            log.debug(
+                "pdf parsed",
                 arxiv_id=arxiv_id,
-                stage="database_save",
-                message="Failed to create or update paper record",
+                text_len=len(parsed.raw_text),
+                sections=len(parsed.sections),
             )
 
-        # Chunk text
+        # Chunk text (outside transaction - no DB operations)
         chunks = self.chunking_service.chunk_document(
             text=parsed.raw_text, sections=parsed.sections
         )
@@ -200,7 +178,7 @@ class IngestService:
 
         log.debug("text chunked", arxiv_id=arxiv_id, chunks=len(chunks))
 
-        # Generate embeddings
+        # Generate embeddings (outside transaction - external service call)
         chunk_texts = [c.text for c in chunks]
         try:
             embeddings = await self.embeddings_client.embed_documents(chunk_texts)
@@ -211,27 +189,76 @@ class IngestService:
                 details={"arxiv_id": arxiv_id, "error": str(e)},
             )
 
-        # Store chunks
-        paper_id = str(paper.id)
-        paper_arxiv_id = str(paper.arxiv_id)
-        paper_title = str(paper.title)
+        # Database operations wrapped in savepoint for atomic rollback
+        async with session.begin_nested():
+            # Re-check with locking to prevent race conditions
+            try:
+                existing_locked = await self.paper_repository.get_by_arxiv_id_for_update(
+                    arxiv_id
+                )
+            except OperationalError:
+                # Another transaction has this paper locked - skip
+                log.info("paper being processed by another request", arxiv_id=arxiv_id)
+                return None
 
-        chunks_data = []
-        for chunk, embedding in zip(chunks, embeddings):
-            chunks_data.append(
-                {
-                    "paper_id": paper_id,
-                    "arxiv_id": paper_arxiv_id,
-                    "chunk_text": chunk.text,
-                    "chunk_index": chunk.chunk_index,
-                    "section_name": chunk.section_name,
-                    "page_number": chunk.page_number,
-                    "word_count": chunk.word_count,
-                    "embedding": embedding,
-                }
-            )
+            # Double-check after acquiring lock (another request may have just finished)
+            if existing_locked and not force_reprocess:
+                log.debug("paper skipped (exists after lock)", arxiv_id=arxiv_id)
+                return None
 
-        await self.chunk_repository.create_bulk(chunks_data)
+            # Create or update paper record
+            paper_data = {
+                "arxiv_id": arxiv_id,
+                "title": paper_meta.title,
+                "authors": paper_meta.authors,
+                "abstract": paper_meta.abstract,
+                "categories": paper_meta.categories,
+                "published_date": paper_meta.published_date,
+                "pdf_url": paper_meta.pdf_url,
+                "raw_text": parsed.raw_text,
+                "sections": parsed.sections,
+                "pdf_processed": True,
+                "parser_used": "pypdf",
+            }
+
+            if existing_locked:
+                existing_id = str(existing_locked.id)
+                paper = await self.paper_repository.update(existing_id, paper_data)
+                await self.chunk_repository.delete_by_paper_id(existing_id)
+                log.debug("paper updated", arxiv_id=arxiv_id)
+            else:
+                paper = await self.paper_repository.create(paper_data)
+                log.debug("paper created", arxiv_id=arxiv_id)
+
+            if not paper:
+                raise PDFProcessingError(
+                    arxiv_id=arxiv_id,
+                    stage="database_save",
+                    message="Failed to create or update paper record",
+                )
+
+            # Store chunks
+            paper_id = str(paper.id)
+            paper_arxiv_id = str(paper.arxiv_id)
+            paper_title = str(paper.title)
+
+            chunks_data = []
+            for chunk, embedding in zip(chunks, embeddings):
+                chunks_data.append(
+                    {
+                        "paper_id": paper_id,
+                        "arxiv_id": paper_arxiv_id,
+                        "chunk_text": chunk.text,
+                        "chunk_index": chunk.chunk_index,
+                        "section_name": chunk.section_name,
+                        "page_number": chunk.page_number,
+                        "word_count": chunk.word_count,
+                        "embedding": embedding,
+                    }
+                )
+
+            await self.chunk_repository.create_bulk(chunks_data)
+            # Savepoint commits automatically on successful exit
 
         log.info("paper processed", arxiv_id=arxiv_id, chunks=len(chunks_data))
 
@@ -342,7 +369,7 @@ class IngestService:
                 "arxiv_id": p.arxiv_id,
                 "title": p.title,
                 "authors": p.authors,
-                "abstract": p.abstract[:500] + "..." if len(p.abstract) > 500 else p.abstract,
+                "abstract": p.abstract[:500] + "..." if len(p.abstract) > 500 else p.abstract,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
                 "categories": p.categories,
                 "published_date": p.published_date.isoformat() if p.published_date else None,
                 "pdf_url": p.pdf_url,

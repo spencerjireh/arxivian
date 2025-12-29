@@ -1,8 +1,11 @@
 """Abstract base class for LLM providers."""
 
 from abc import ABC, abstractmethod
-from typing import List, AsyncIterator, Type, Optional
+from typing import List, AsyncIterator, Type, Optional, TypeVar
 from pydantic import BaseModel
+from openai.types.chat import ChatCompletionMessageParam
+
+T = TypeVar("T", bound=BaseModel)
 
 
 class BaseLLMClient(ABC):
@@ -23,7 +26,7 @@ class BaseLLMClient(ABC):
     @abstractmethod
     async def generate_completion(
         self,
-        messages: List[dict],
+        messages: List[ChatCompletionMessageParam],
         model: Optional[str] = None,
         temperature: float = 0.3,
         max_tokens: int = 1000,
@@ -33,7 +36,7 @@ class BaseLLMClient(ABC):
         Generate completion from LLM.
 
         Args:
-            messages: List of message dicts with 'role' and 'content'
+            messages: List of chat completion messages
             model: Model to use (overrides default)
             temperature: Sampling temperature (0-1)
             max_tokens: Maximum tokens to generate
@@ -47,15 +50,15 @@ class BaseLLMClient(ABC):
     @abstractmethod
     async def generate_structured(
         self,
-        messages: List[dict],
-        response_format: Type[BaseModel],
+        messages: List[ChatCompletionMessageParam],
+        response_format: Type[T],
         model: Optional[str] = None,
-    ) -> BaseModel:
+    ) -> T:
         """
         Generate structured output using provider's structured outputs API.
 
         Args:
-            messages: List of message dicts
+            messages: List of chat completion messages
             response_format: Pydantic model class for response schema
             model: Model to use (overrides default)
 

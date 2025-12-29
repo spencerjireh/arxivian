@@ -52,7 +52,7 @@ dev = [
     
     # Development
     "ruff>=0.7.4",
-    "pyright>=1.1.390",
+    "ty",
 ]
 
 [build-system]
@@ -66,18 +66,13 @@ packages = ["src"]
 line-length = 100
 target-version = "py311"
 
-[tool.pyright]
-pythonVersion = "3.13"
-pythonPlatform = "All"
-typeCheckingMode = "basic"
-venvPath = "."
-venv = ".venv"
-# Downgrade false positives from FastAPI/LangChain/SQLAlchemy type stubs to warnings
-reportArgumentType = "warning"
-reportAttributeAccessIssue = "warning"
-reportCallIssue = "warning"
-reportGeneralTypeIssues = "warning"
-reportReturnType = "warning"
+[tool.ty.environment]
+python-version = "3.13"
+python-platform = "all"
+
+[tool.ty.rules]
+# Tool execute methods intentionally use explicit parameters for better DX
+invalid-method-override = "warn"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

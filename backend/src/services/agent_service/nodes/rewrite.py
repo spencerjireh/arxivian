@@ -28,7 +28,7 @@ async def rewrite_query_node(state: AgentState, context: AgentContext) -> AgentS
     prompt = get_rewrite_prompt(original_query, feedback)
 
     rewritten = await context.llm_client.generate_completion(
-        messages=[{"role": "user", "content": prompt}], temperature=0.5
+        messages=[{"role": "user", "content": prompt}], temperature=0.5  # ty: ignore[invalid-argument-type]
     )
 
     # Handle both str and AsyncIterator responses
