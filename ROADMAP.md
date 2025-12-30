@@ -43,9 +43,12 @@ _Ensure requests can be bounded and cancelled._
 
 | Status | Item | Notes |
 |--------|------|-------|
-| [ ] | Langfuse SDK integration | Trace LLM calls, tool executions, token usage |
-| [ ] | Session and user context in traces | |
-| [ ] | Custom metrics (guardrail scores, retrieval attempts) | |
+| [x] | Langfuse SDK integration | Basic setup with CallbackHandler and TracedLLMClient |
+| [x] | Session and user context in traces | session_id/user_id passed to CallbackHandler |
+| [x] | Trace ID in response metadata | Enables frontend feedback submission |
+| [x] | Feedback endpoint | POST /api/v1/feedback with trace_id linking |
+| [x] | Unified trace hierarchy | LLM generations nested under graph trace via contextvars |
+| [x] | Custom Langfuse scores | guardrail_score, retrieval_attempts as langfuse.score() calls |
 
 ### Testing
 
@@ -298,5 +301,16 @@ Items requiring further evaluation before commitment.
 - [x] Conversation sidebar with history
 - [x] Markdown rendering with syntax highlighting
 - [x] Responsive design with Framer Motion animations
+
+### Observability
+- [x] Langfuse SDK integration (v3.0.0+)
+- [x] TracedLLMClient wrapper for LLM call tracing
+- [x] LangGraph CallbackHandler passed to astream_events
+- [x] Session and user context in CallbackHandler trace
+- [x] Trace ID returned in response metadata
+- [x] Feedback endpoint (POST /api/v1/feedback) for user feedback scores
+- [x] Lifespan integration with graceful shutdown
+- [x] Unified trace hierarchy (LLM generations nested under graph trace via contextvars)
+- [x] Custom Langfuse scores (guardrail_score, retrieval_attempts)
 
 </details>

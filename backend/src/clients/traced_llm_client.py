@@ -1,5 +1,11 @@
-"""Provider-agnostic LLM tracing wrapper for Langfuse."""
+"""Provider-agnostic LLM tracing wrapper for Langfuse.
 
+This module provides tracing for LLM calls that integrates with the
+LangGraph CallbackHandler trace hierarchy. Use set_trace_context() to
+establish a parent trace before executing LLM calls.
+"""
+
+from contextvars import ContextVar
 from typing import AsyncIterator, List, Optional, Type, TypeVar
 
 from openai.types.chat import ChatCompletionMessageParam
@@ -11,6 +17,31 @@ from src.utils.logger import get_logger
 log = get_logger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
+
+# Context variable for trace hierarchy - allows LLM calls to nest under the graph trace
+_current_trace_id: ContextVar[str | None] = ContextVar("langfuse_trace_id", default=None)
+
+
+def set_trace_context(trace_id: str | None) -> None:
+    """Set the current Langfuse trace ID for nested LLM call tracing.
+
+    Call this before executing LLM operations to ensure generations
+    are nested under the parent trace (e.g., from LangGraph CallbackHandler).
+
+    Args:
+        trace_id: The parent trace ID, or None to clear context.
+    """
+    _current_trace_id.set(trace_id)
+
+
+def get_trace_context() -> str | None:
+    """Get the current Langfuse trace ID.
+
+    Returns:
+        The current trace ID if set, None otherwise.
+    """
+    return _current_trace_id.get()
+
 
 # Lazy Langfuse initialization
 _langfuse_client = None
@@ -125,15 +156,12 @@ class TracedLLMClient(BaseLLMClient):
         timeout: Optional[float],
         langfuse: "Langfuse",  # type: ignore[name-defined]
     ) -> str:
-        """Trace non-streaming completion."""
-        generation = langfuse.generation(
-            name=f"{self.provider_name}_completion",
-            model=model,
-            input=messages,
-            metadata={"temperature": temperature, "max_tokens": max_tokens},
-        )
+        """Trace non-streaming completion, nested under parent trace if context set."""
+        trace_id = get_trace_context()
+        gen_name = f"{self.provider_name}_completion"
+        metadata = {"temperature": temperature, "max_tokens": max_tokens}
 
-        try:
+        async def _call() -> str:
             result = await self._client.generate_completion(
                 messages=messages,
                 model=model,
@@ -142,13 +170,35 @@ class TracedLLMClient(BaseLLMClient):
                 stream=False,
                 timeout=timeout,
             )
-            # Result is str when stream=False
-            generation.end(output=result)
             return result  # type: ignore[return-value]
 
-        except Exception as e:
-            generation.end(level="ERROR", status_message=str(e))
-            raise
+        if trace_id:
+            # Nest under parent trace from CallbackHandler
+            with langfuse.start_as_current_observation(
+                as_type="generation",
+                name=gen_name,
+                trace_context={"trace_id": trace_id},
+            ) as generation:
+                generation.update(model=model, input=messages, metadata=metadata)
+                try:
+                    result = await _call()
+                    generation.update(output=result)
+                    return result
+                except Exception as e:
+                    generation.update(level="ERROR", status_message=str(e))
+                    raise
+        else:
+            # Fallback: top-level trace (backwards compatible)
+            generation = langfuse.generation(
+                name=gen_name, model=model, input=messages, metadata=metadata
+            )
+            try:
+                result = await _call()
+                generation.end(output=result)
+                return result
+            except Exception as e:
+                generation.end(level="ERROR", status_message=str(e))
+                raise
 
     async def _traced_stream(
         self,
@@ -159,16 +209,14 @@ class TracedLLMClient(BaseLLMClient):
         timeout: Optional[float],
         langfuse: "Langfuse",  # type: ignore[name-defined]
     ) -> AsyncIterator[str]:
-        """Trace streaming completion - collects tokens and logs at end."""
-        generation = langfuse.generation(
-            name=f"{self.provider_name}_streaming",
-            model=model,
-            input=messages,
-            metadata={"temperature": temperature, "stream": True},
-        )
+        """Trace streaming completion, nested under parent trace if context set."""
+        trace_id = get_trace_context()
+        gen_name = f"{self.provider_name}_streaming"
+        metadata = {"temperature": temperature, "stream": True}
 
         collected: list[str] = []
-        try:
+
+        async def _stream() -> AsyncIterator[str]:
             stream = await self._client.generate_completion(
                 messages=messages,
                 model=model,
@@ -177,21 +225,43 @@ class TracedLLMClient(BaseLLMClient):
                 stream=True,
                 timeout=timeout,
             )
-
-            # Stream is AsyncIterator[str] when stream=True
             async for token in stream:  # type: ignore[union-attr]
                 collected.append(token)
                 yield token
 
-            generation.end(output="".join(collected))
-
-        except Exception as e:
-            generation.end(
-                output="".join(collected) if collected else None,
-                level="ERROR",
-                status_message=str(e),
+        if trace_id:
+            with langfuse.start_as_current_observation(
+                as_type="generation",
+                name=gen_name,
+                trace_context={"trace_id": trace_id},
+            ) as generation:
+                generation.update(model=model, input=messages, metadata=metadata)
+                try:
+                    async for token in _stream():
+                        yield token
+                    generation.update(output="".join(collected))
+                except Exception as e:
+                    generation.update(
+                        output="".join(collected) if collected else None,
+                        level="ERROR",
+                        status_message=str(e),
+                    )
+                    raise
+        else:
+            generation = langfuse.generation(
+                name=gen_name, model=model, input=messages, metadata=metadata
             )
-            raise
+            try:
+                async for token in _stream():
+                    yield token
+                generation.end(output="".join(collected))
+            except Exception as e:
+                generation.end(
+                    output="".join(collected) if collected else None,
+                    level="ERROR",
+                    status_message=str(e),
+                )
+                raise
 
     async def generate_structured(
         self,
@@ -200,27 +270,42 @@ class TracedLLMClient(BaseLLMClient):
         model: Optional[str] = None,
         timeout: Optional[float] = None,
     ) -> T:
-        """Generate structured output with automatic Langfuse tracing."""
+        """Generate structured output, nested under parent trace if context set."""
         langfuse = _get_langfuse()
         model_name = model or self.model
 
         if not langfuse:
             return await self._client.generate_structured(messages, response_format, model, timeout)
 
-        generation = langfuse.generation(
-            name=f"{self.provider_name}_structured",
-            model=model_name,
-            input=messages,
-            metadata={"response_format": response_format.__name__},
-        )
+        trace_id = get_trace_context()
+        gen_name = f"{self.provider_name}_structured"
+        metadata = {"response_format": response_format.__name__}
 
-        try:
-            result = await self._client.generate_structured(
-                messages, response_format, model, timeout
+        async def _call() -> T:
+            return await self._client.generate_structured(messages, response_format, model, timeout)
+
+        if trace_id:
+            with langfuse.start_as_current_observation(
+                as_type="generation",
+                name=gen_name,
+                trace_context={"trace_id": trace_id},
+            ) as generation:
+                generation.update(model=model_name, input=messages, metadata=metadata)
+                try:
+                    result = await _call()
+                    generation.update(output=result.model_dump())
+                    return result
+                except Exception as e:
+                    generation.update(level="ERROR", status_message=str(e))
+                    raise
+        else:
+            generation = langfuse.generation(
+                name=gen_name, model=model_name, input=messages, metadata=metadata
             )
-            generation.end(output=result.model_dump())
-            return result
-
-        except Exception as e:
-            generation.end(level="ERROR", status_message=str(e))
-            raise
+            try:
+                result = await _call()
+                generation.end(output=result.model_dump())
+                return result
+            except Exception as e:
+                generation.end(level="ERROR", status_message=str(e))
+                raise

@@ -7,6 +7,7 @@ from typing import AsyncIterator
 from langchain_core.messages import HumanMessage, AIMessage
 
 from src.clients.base_llm_client import BaseLLMClient
+from src.clients.traced_llm_client import set_trace_context
 from src.config import get_settings
 
 try:
@@ -159,6 +160,7 @@ class AgentService:
                 )
                 trace_id = callback.trace_id
                 config["callbacks"] = [callback]
+                set_trace_context(trace_id)  # Propagate trace to LLM client
 
         # Initial state with new router architecture fields
         initial_state = {
@@ -192,148 +194,153 @@ class AgentService:
         final_state: dict = {}
         sources_emitted = False
 
-        async for event in self.graph.astream_events(initial_state, version="v2", config=config):
-            kind = event["event"]
+        try:
+            async for event in self.graph.astream_events(
+                initial_state, version="v2", config=config
+            ):
+                kind = event["event"]
 
-            # Node start - emit status event
-            if kind == "on_chain_start" and event["name"] in NODE_TO_STEP:
-                node_name = event["name"]
-                step = NODE_TO_STEP[node_name]
-                message = NODE_MESSAGES.get(node_name, f"Processing {node_name}...")
+                # Node start - emit status event
+                if kind == "on_chain_start" and event["name"] in NODE_TO_STEP:
+                    node_name = event["name"]
+                    step = NODE_TO_STEP[node_name]
+                    message = NODE_MESSAGES.get(node_name, f"Processing {node_name}...")
 
-                yield StreamEvent(
-                    event=StreamEventType.STATUS,
-                    data=StatusEventData(step=step, message=message),
-                )
-
-            # Node end - extract state updates and emit detailed status
-            elif kind == "on_chain_end" and event["name"] in NODE_TO_STEP:
-                node_name = event["name"]
-                output = event.get("data", {}).get("output", {})
-
-                # Update final_state with latest output
-                if isinstance(output, dict):
-                    final_state.update(output)
-
-                # Emit detailed status after guardrail
-                if node_name == "guardrail" and output.get("guardrail_result"):
-                    result = output["guardrail_result"]
-                    is_in_scope = result.score >= self.guardrail_threshold
                     yield StreamEvent(
                         event=StreamEventType.STATUS,
-                        data=StatusEventData(
-                            step="guardrail",
-                            message=f"Query {'is in scope' if is_in_scope else 'is out of scope'}",
-                            details={
-                                "score": result.score,
-                                "threshold": self.guardrail_threshold,
-                                "reasoning": result.reasoning,
-                            },
-                        ),
+                        data=StatusEventData(step=step, message=message),
                     )
 
-                # Emit router decision details
-                elif node_name == "router" and output.get("router_decision"):
-                    decision = output["router_decision"]
-                    yield StreamEvent(
-                        event=StreamEventType.STATUS,
-                        data=StatusEventData(
-                            step="routing",
-                            message=f"Decided to {decision.action}",
-                            details={
-                                "action": decision.action,
-                                "tool": decision.tool_name,
-                                "iteration": output.get("iteration", 0),
-                                "reasoning": decision.reasoning,
-                            },
-                        ),
-                    )
+                # Node end - extract state updates and emit detailed status
+                elif kind == "on_chain_end" and event["name"] in NODE_TO_STEP:
+                    node_name = event["name"]
+                    output = event.get("data", {}).get("output", {})
 
-                # Emit executor tool details
-                elif node_name == "executor" and output.get("tool_history"):
-                    tool_history = output["tool_history"]
-                    if tool_history:
-                        last_exec = tool_history[-1]
+                    # Update final_state with latest output
+                    if isinstance(output, dict):
+                        final_state.update(output)
+
+                    # Emit detailed status after guardrail
+                    if node_name == "guardrail" and output.get("guardrail_result"):
+                        result = output["guardrail_result"]
+                        is_in_scope = result.score >= self.guardrail_threshold
                         yield StreamEvent(
                             event=StreamEventType.STATUS,
                             data=StatusEventData(
-                                step="executing",
-                                message=f"Executed {last_exec.tool_name}",
+                                step="guardrail",
+                                message=f"Query {'is in scope' if is_in_scope else 'is out of scope'}",
                                 details={
-                                    "tool": last_exec.tool_name,
-                                    "success": last_exec.success,
-                                    "result": last_exec.result_summary,
+                                    "score": result.score,
+                                    "threshold": self.guardrail_threshold,
+                                    "reasoning": result.reasoning,
                                 },
                             ),
                         )
 
-                # Emit grading results
-                elif node_name == "grade_documents":
-                    relevant = output.get("relevant_chunks", [])
-                    total = output.get("retrieved_chunks", [])
+                    # Emit router decision details
+                    elif node_name == "router" and output.get("router_decision"):
+                        decision = output["router_decision"]
+                        yield StreamEvent(
+                            event=StreamEventType.STATUS,
+                            data=StatusEventData(
+                                step="routing",
+                                message=f"Decided to {decision.action}",
+                                details={
+                                    "action": decision.action,
+                                    "tool": decision.tool_name,
+                                    "iteration": output.get("iteration", 0),
+                                    "reasoning": decision.reasoning,
+                                },
+                            ),
+                        )
+
+                    # Emit executor tool details
+                    elif node_name == "executor" and output.get("tool_history"):
+                        tool_history = output["tool_history"]
+                        if tool_history:
+                            last_exec = tool_history[-1]
+                            yield StreamEvent(
+                                event=StreamEventType.STATUS,
+                                data=StatusEventData(
+                                    step="executing",
+                                    message=f"Executed {last_exec.tool_name}",
+                                    details={
+                                        "tool": last_exec.tool_name,
+                                        "success": last_exec.success,
+                                        "result": last_exec.result_summary,
+                                    },
+                                ),
+                            )
+
+                    # Emit grading results
+                    elif node_name == "grade_documents":
+                        relevant = output.get("relevant_chunks", [])
+                        total = output.get("retrieved_chunks", [])
+                        yield StreamEvent(
+                            event=StreamEventType.STATUS,
+                            data=StatusEventData(
+                                step="grading",
+                                message=f"Found {len(relevant)} relevant documents",
+                                details={"relevant": len(relevant), "total": len(total)},
+                            ),
+                        )
+
+                        # Emit sources after grading (before generation)
+                        if not sources_emitted and relevant:
+                            sources = [
+                                SourceInfo(
+                                    arxiv_id=chunk["arxiv_id"],
+                                    title=chunk["title"],
+                                    authors=chunk.get("authors", []),
+                                    pdf_url=chunk.get(
+                                        "pdf_url", f"https://arxiv.org/pdf/{chunk['arxiv_id']}.pdf"
+                                    ),
+                                    relevance_score=chunk.get("score", 0.0),
+                                    published_date=chunk.get("published_date"),
+                                    was_graded_relevant=True,
+                                )
+                                for chunk in relevant[: self.top_k]
+                            ]
+                            yield StreamEvent(
+                                event=StreamEventType.SOURCES,
+                                data=SourcesEventData(sources=sources),
+                            )
+                            sources_emitted = True
+
+                # Stream custom events (tokens from our LLM client)
+                elif kind == "on_custom_event" and event.get("name") == "token":
+                    token = event.get("data")
+                    if token and isinstance(token, str):
+                        yield StreamEvent(
+                            event=StreamEventType.CONTENT,
+                            data=ContentEventData(token=token),
+                        )
+
+                # Handle tool events from executor
+                elif kind == "on_custom_event" and event.get("name") == "tool_start":
+                    data = event.get("data", {})
                     yield StreamEvent(
                         event=StreamEventType.STATUS,
                         data=StatusEventData(
-                            step="grading",
-                            message=f"Found {len(relevant)} relevant documents",
-                            details={"relevant": len(relevant), "total": len(total)},
+                            step="executing",
+                            message=f"Calling {data.get('tool_name', 'tool')}...",
+                            details=data,
                         ),
                     )
 
-                    # Emit sources after grading (before generation)
-                    if not sources_emitted and relevant:
-                        sources = [
-                            SourceInfo(
-                                arxiv_id=chunk["arxiv_id"],
-                                title=chunk["title"],
-                                authors=chunk.get("authors", []),
-                                pdf_url=chunk.get(
-                                    "pdf_url", f"https://arxiv.org/pdf/{chunk['arxiv_id']}.pdf"
-                                ),
-                                relevance_score=chunk.get("score", 0.0),
-                                published_date=chunk.get("published_date"),
-                                was_graded_relevant=True,
-                            )
-                            for chunk in relevant[: self.top_k]
-                        ]
-                        yield StreamEvent(
-                            event=StreamEventType.SOURCES,
-                            data=SourcesEventData(sources=sources),
-                        )
-                        sources_emitted = True
-
-            # Stream custom events (tokens from our LLM client)
-            elif kind == "on_custom_event" and event.get("name") == "token":
-                token = event.get("data")
-                if token and isinstance(token, str):
+                elif kind == "on_custom_event" and event.get("name") == "tool_end":
+                    data = event.get("data", {})
+                    status = "completed" if data.get("success") else "failed"
                     yield StreamEvent(
-                        event=StreamEventType.CONTENT,
-                        data=ContentEventData(token=token),
+                        event=StreamEventType.STATUS,
+                        data=StatusEventData(
+                            step="executing",
+                            message=f"Tool {status}",
+                            details=data,
+                        ),
                     )
-
-            # Handle tool events from executor
-            elif kind == "on_custom_event" and event.get("name") == "tool_start":
-                data = event.get("data", {})
-                yield StreamEvent(
-                    event=StreamEventType.STATUS,
-                    data=StatusEventData(
-                        step="executing",
-                        message=f"Calling {data.get('tool_name', 'tool')}...",
-                        details=data,
-                    ),
-                )
-
-            elif kind == "on_custom_event" and event.get("name") == "tool_end":
-                data = event.get("data", {})
-                status = "completed" if data.get("success") else "failed"
-                yield StreamEvent(
-                    event=StreamEventType.STATUS,
-                    data=StatusEventData(
-                        step="executing",
-                        message=f"Tool {status}",
-                        details=data,
-                    ),
-                )
+        finally:
+            set_trace_context(None)  # Clear trace context
 
         # Extract final answer from state
         answer = ""
@@ -397,6 +404,27 @@ class AgentService:
             answer_len=len(answer),
             execution_time_ms=execution_time,
         )
+
+        # Submit Langfuse scores for analytics
+        if trace_id:
+            try:
+                from src.clients.traced_llm_client import _get_langfuse
+
+                langfuse = _get_langfuse()
+                if langfuse:
+                    if guardrail_score is not None:
+                        langfuse.score(
+                            trace_id=trace_id,
+                            name="guardrail_score",
+                            value=guardrail_score / 100,  # Normalize to 0-1
+                        )
+                    langfuse.score(
+                        trace_id=trace_id,
+                        name="retrieval_attempts",
+                        value=final_state.get("retrieval_attempts", 0),
+                    )
+            except Exception as e:
+                log.warning("langfuse_score_submission_failed", error=str(e), trace_id=trace_id)
 
         # Final metadata event
         yield StreamEvent(
