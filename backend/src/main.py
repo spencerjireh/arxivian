@@ -7,7 +7,7 @@ from src.config import get_settings
 from src.database import engine, init_db
 
 # Import routers
-from src.routers import health, ingest, search, stream, papers, conversations, admin
+from src.routers import health, ingest, search, stream, papers, conversations, admin, feedback
 
 # Import middleware
 from src.middleware import logging_middleware, transaction_middleware, register_exception_handlers
@@ -26,7 +26,20 @@ async def lifespan(app: FastAPI):
     log.info("starting application", debug=settings.debug, log_level=settings.log_level)
     await init_db()
     log.info("database initialized")
+
+    if settings.langfuse_enabled:
+        log.info("langfuse_enabled", host=settings.langfuse_host)
+
     yield
+
+    # Flush any pending Langfuse events on shutdown
+    try:
+        from src.clients.traced_llm_client import shutdown_langfuse
+
+        shutdown_langfuse()
+    except Exception as e:
+        log.warning("langfuse_shutdown_failed", error=str(e))
+
     log.info("shutting down application")
     await engine.dispose()
     log.info("database connections closed")
@@ -65,6 +78,7 @@ app.include_router(stream.router, prefix="/api/v1", tags=["Stream"])
 app.include_router(conversations.router, prefix="/api/v1", tags=["Conversations"])
 app.include_router(papers.router, prefix="/api/v1", tags=["Papers"])
 app.include_router(admin.router, prefix="/api/v1", tags=["Admin"])
+app.include_router(feedback.router, prefix="/api/v1", tags=["Feedback"])
 
 
 @app.get("/")

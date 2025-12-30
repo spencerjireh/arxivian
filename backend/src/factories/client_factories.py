@@ -9,6 +9,7 @@ from src.clients.embeddings_client import JinaEmbeddingsClient
 from src.clients.base_llm_client import BaseLLMClient
 from src.clients.openai_client import OpenAIClient
 from src.clients.zai_client import ZAIClient
+from src.clients.traced_llm_client import TracedLLMClient, LANGFUSE_AVAILABLE
 from src.exceptions import ConfigurationError, InvalidModelError, InvalidProviderError
 
 
@@ -72,6 +73,7 @@ def get_llm_client(provider: Optional[str] = None, model: Optional[str] = None) 
     timeout = float(settings.llm_call_timeout_seconds)
 
     # Create appropriate client
+    client: BaseLLMClient
     if provider == "openai":
         if not settings.openai_api_key:
             raise ConfigurationError(
@@ -79,7 +81,7 @@ def get_llm_client(provider: Optional[str] = None, model: Optional[str] = None) 
                 details={"required_env_var": "OPENAI_API_KEY"},
             )
         openai_key: str = settings.openai_api_key
-        return OpenAIClient(api_key=openai_key, model=model, timeout=timeout)
+        client = OpenAIClient(api_key=openai_key, model=model, timeout=timeout)
     elif provider == "zai":
         if not settings.zai_api_key:
             raise ConfigurationError(
@@ -87,9 +89,15 @@ def get_llm_client(provider: Optional[str] = None, model: Optional[str] = None) 
                 details={"required_env_var": "ZAI_API_KEY"},
             )
         zai_key: str = settings.zai_api_key
-        return ZAIClient(api_key=zai_key, model=model, timeout=timeout)
+        client = ZAIClient(api_key=zai_key, model=model, timeout=timeout)
+    else:
+        raise InvalidProviderError(provider=provider, valid_providers=["openai", "zai"])
 
-    raise InvalidProviderError(provider=provider, valid_providers=["openai", "zai"])
+    # Wrap with tracing if Langfuse is enabled
+    if LANGFUSE_AVAILABLE and settings.langfuse_enabled:
+        return TracedLLMClient(client)
+
+    return client
 
 
 @lru_cache(maxsize=1)

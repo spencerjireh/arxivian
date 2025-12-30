@@ -51,6 +51,12 @@ class Settings(BaseSettings):
     log_request_body: bool = True
     log_response_body: bool = True
 
+    # Langfuse Observability
+    langfuse_enabled: bool = False
+    langfuse_public_key: Optional[str] = None
+    langfuse_secret_key: Optional[str] = None
+    langfuse_host: str = "http://langfuse:3000"  # Self-hosted default
+
     # Helper methods
     def get_allowed_models(self, provider: str) -> List[str]:
         """Get list of allowed models for a provider."""

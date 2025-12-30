@@ -7,6 +7,14 @@ from typing import AsyncIterator
 from langchain_core.messages import HumanMessage, AIMessage
 
 from src.clients.base_llm_client import BaseLLMClient
+from src.config import get_settings
+
+try:
+    from langfuse.callback import CallbackHandler
+
+    LANGFUSE_CALLBACK_AVAILABLE = True
+except ImportError:
+    LANGFUSE_CALLBACK_AVAILABLE = False
 from src.clients.arxiv_client import ArxivClient
 from src.services.search_service import SearchService
 from src.services.ingest_service import IngestService
@@ -130,6 +138,28 @@ class AgentService:
                 history.append({"role": "assistant", "content": t.agent_response})  # ty: ignore[invalid-argument-type]
             log.debug("loaded conversation history", session_id=session_id, turns=len(turns))
 
+        # Build LangGraph config with Langfuse callback
+        config: dict = {}
+        trace_id: str | None = None
+
+        if LANGFUSE_CALLBACK_AVAILABLE:
+            settings = get_settings()
+            if settings.langfuse_enabled:
+                callback = CallbackHandler(
+                    public_key=settings.langfuse_public_key,
+                    secret_key=settings.langfuse_secret_key,
+                    host=settings.langfuse_host,
+                    session_id=session_id,
+                    user_id=session_id,
+                    metadata={
+                        "query": query[:200],
+                        "provider": self.llm_client.provider_name,
+                        "model": self.llm_client.model,
+                    },
+                )
+                trace_id = callback.trace_id
+                config["callbacks"] = [callback]
+
         # Initial state with new router architecture fields
         initial_state = {
             "messages": [HumanMessage(content=query)],
@@ -162,7 +192,7 @@ class AgentService:
         final_state: dict = {}
         sources_emitted = False
 
-        async for event in self.graph.astream_events(initial_state, version="v2"):
+        async for event in self.graph.astream_events(initial_state, version="v2", config=config):
             kind = event["event"]
 
             # Node start - emit status event
@@ -382,6 +412,7 @@ class AgentService:
                 session_id=session_id,
                 turn_number=turn_number,  # ty: ignore[invalid-argument-type]
                 reasoning_steps=final_state.get("metadata", {}).get("reasoning_steps", []),
+                trace_id=trace_id,
             ),
         )
 

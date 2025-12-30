@@ -97,6 +97,7 @@ class MetadataEventData(BaseModel):
     session_id: Optional[str] = None
     turn_number: int = 0
     reasoning_steps: List[str] = Field(default_factory=list)
+    trace_id: Optional[str] = None  # Langfuse trace ID for feedback
 
 
 class ErrorEventData(BaseModel):
