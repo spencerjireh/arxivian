@@ -1,7 +1,10 @@
 """Shared pytest fixtures."""
 
 import pytest
-from unittest.mock import AsyncMock, Mock
+import uuid
+from unittest.mock import AsyncMock, Mock, MagicMock
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from src.services.agent_service.context import ConversationFormatter, AgentContext
 
@@ -40,3 +43,46 @@ def mock_context(mock_llm_client, mock_search_service, conversation_formatter):
     ctx.max_iterations = 5
     ctx.temperature = 0.3
     return ctx
+
+
+# Database mocking fixtures
+
+
+@pytest.fixture
+def mock_async_session():
+    """Create a mock AsyncSession for repository tests."""
+    session = AsyncMock()
+
+    # Mock result object for execute
+    mock_result = Mock()
+    mock_result.scalar_one_or_none = Mock(return_value=None)
+    mock_result.scalar_one = Mock(return_value=0)
+    mock_result.scalars = Mock(return_value=Mock(all=Mock(return_value=[])))
+    mock_result.fetchall = Mock(return_value=[])
+    mock_result.rowcount = 0
+
+    session.execute = AsyncMock(return_value=mock_result)
+    session.scalar = AsyncMock(return_value=0)
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    session.flush = AsyncMock()
+    session.refresh = AsyncMock()
+    session.add = Mock()
+    session.add_all = Mock()
+    session.delete = AsyncMock()
+    session.expire_all = Mock()
+
+    # Mock begin_nested for savepoint tests
+    @asynccontextmanager
+    async def begin_nested():
+        yield
+
+    session.begin_nested = begin_nested
+
+    return session
+
+
+@pytest.fixture
+def sample_uuid():
+    """Return a sample UUID string."""
+    return str(uuid.uuid4())

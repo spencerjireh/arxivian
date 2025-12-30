@@ -54,7 +54,7 @@ _Ensure requests can be bounded and cancelled._
 
 | Status | Item | Notes |
 |--------|------|-------|
-| [ ] | Unit tests for services and repositories | pytest |
+| [x] | Unit tests for services and repositories | pytest (159 tests for TaskRegistry, SearchService, IngestService, and all repositories) |
 | [ ] | Integration tests for API endpoints | |
 | [ ] | Agent flow tests with mocked LLM | |
 | [ ] | Frontend component tests | Vitest |
