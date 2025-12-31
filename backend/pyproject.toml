@@ -89,3 +89,51 @@ markers = [
     "integration: Integration tests with real database",
     "e2e: End-to-end tests",
 ]
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    # App entrypoint and DI wiring - tested via integration/E2E
+    "src/main.py",
+    "src/dependencies.py",
+    "src/factories/*",
+    # HTTP layer - tested via API/integration tests
+    "src/routers/*",
+    "src/middleware/*",
+    # Database models and repositories - tested via integration tests
+    "src/models/*",
+    "src/repositories/*",
+    # LLM clients - thin wrappers around external SDKs, tested via integration
+    "src/clients/*",
+    # Pure Pydantic schemas with no logic - just data structures
+    "src/schemas/errors.py",
+    "src/schemas/feedback.py",
+    "src/schemas/health.py",
+    "src/schemas/papers.py",
+    "src/schemas/search.py",
+    "src/schemas/admin.py",
+    # Utils that wrap external libraries - tested via integration
+    "src/utils/pdf_parser.py",
+    "src/utils/chunking_service.py",
+    "src/utils/idempotency.py",
+    "src/utils/logger.py",
+    # LangGraph orchestration and nodes - tested via integration/E2E
+    "src/services/agent_service/service.py",
+    "src/services/agent_service/graph_builder.py",
+    "src/services/agent_service/context.py",
+    "src/services/agent_service/nodes/generation.py",
+    "src/services/agent_service/nodes/grading.py",
+    "src/services/agent_service/nodes/out_of_scope.py",
+    "src/services/agent_service/nodes/retrieval.py",
+    "src/services/agent_service/nodes/rewrite.py",
+    "src/services/agent_service/nodes/router.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@abstractmethod",
+]
+fail_under = 80

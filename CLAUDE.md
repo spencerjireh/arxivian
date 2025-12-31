@@ -11,8 +11,11 @@
 - **Lint**: `uv run ruff check src/`
 - **Format**: `uv run ruff format src/` 
 - **Type check**: `uv run ty check src/`
-- **Test**: `uv run pytest tests/`
-- **Single test**: `uv run pytest tests/test_specific.py::test_function`
+- **Unit tests**: `uv run pytest tests/unit/`
+- **Integration/E2E tests**: `just test` (spins up required services via Docker)
+- **Single integration test**: `just test tests/integration/test_specific.py::test_function`
+- **Pattern match**: `just test -k "pattern"`
+- **Test cleanup**: `just test-clean`
 - **Migrations**: `uv run alembic upgrade head`
 
 ### Frontend (TypeScript/React)
