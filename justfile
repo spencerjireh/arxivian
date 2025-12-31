@@ -88,3 +88,16 @@ reset: clean setup build up-d
 
 # Development workflow: rebuild and start with hot reload
 dev: rebuild up
+
+# =============================================================================
+# Testing
+# =============================================================================
+
+# Run tests (usage: just test, just test tests/integration, just test -k "pattern")
+test *args:
+    docker-compose --profile test run --rm test-runner uv run pytest {{args}}
+    docker-compose --profile test down
+
+# Cleanup test containers
+test-clean:
+    docker-compose --profile test down -v

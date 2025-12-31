@@ -116,6 +116,44 @@ services:
     networks:
       - jirehs-agent-network
 
+  # Test Database
+  test-db:
+    image: pgvector/pgvector:pg16
+    container_name: jirehs-agent-test-db
+    env_file:
+      - ./backend/.env.test
+    ports:
+      - "${TEST_DB_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-test_user} -d ${POSTGRES_DB:-arxiv_rag_test}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - jirehs-agent-network
+    profiles:
+      - test
+
+  # Test Runner
+  test-runner:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: jirehs-agent-test-runner
+    env_file:
+      - ./backend/.env.test
+    depends_on:
+      test-db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    working_dir: /app
+    networks:
+      - jirehs-agent-network
+    profiles:
+      - test
+
 volumes:
   postgres_data:
     driver: local

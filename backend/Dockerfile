@@ -16,17 +16,17 @@ RUN pip install --no-cache-dir uv
 # Copy project files for dependency installation
 COPY pyproject.toml uv.lock README.md ./
 
-# Install dependencies using UV
-RUN uv sync --frozen --no-editable
-
 # Create directory for PDFs
 RUN mkdir -p /app/data/pdfs
 
 # Expose port
 EXPOSE 8000
 
-# Development stage
+# Development stage (includes dev dependencies for testing)
 FROM base AS development
+
+# Install all dependencies including dev (pytest, ruff, etc.)
+RUN uv sync --frozen --no-editable
 
 # Copy application code (will be overridden by volume mount in dev)
 COPY . .
@@ -36,6 +36,9 @@ CMD ["sh", "-c", "uv run alembic upgrade head && uv run uvicorn src.main:app --h
 
 # Production stage
 FROM base AS production
+
+# Install production dependencies only
+RUN uv sync --frozen --no-editable --no-dev
 
 # Copy application code
 COPY . .

@@ -54,10 +54,9 @@ _Ensure requests can be bounded and cancelled._
 
 | Status | Item | Notes |
 |--------|------|-------|
-| [x] | Unit tests for services and repositories | pytest (159 tests for TaskRegistry, SearchService, IngestService, and all repositories) |
-| [ ] | Integration tests for API endpoints | |
+| [x] | Unit tests for services and repositories |  |
+| [x] | Integration tests for API endpoints | 92 tests covering all 8 routers |
 | [ ] | Agent flow tests with mocked LLM | |
-| [ ] | Frontend component tests | Vitest |
 
 ### Security Hardening
 
@@ -68,13 +67,6 @@ _Ensure requests can be bounded and cancelled._
 | [ ] | Prompt injection mitigation | |
 | [ ] | Secrets management | |
 
-### CI/CD
-
-| Status | Item | Notes |
-|--------|------|-------|
-| [ ] | GitHub Actions workflow | lint, typecheck, test, build |
-| [ ] | Production deployment automation | Coolify docker-compose |
-
 ---
 
 ## Milestone 2: User-Ready Release (P1)
@@ -83,13 +75,14 @@ Multi-user support with authentication and improved retrieval quality.
 
 ### Authentication
 
+_Using Clerk with Google OAuth._
+
 | Status | Item | Notes |
 |--------|------|-------|
-| [ ] | User model and migrations | |
-| [ ] | JWT-based authentication | |
-| [ ] | OAuth providers (Google, GitHub) | |
-| [ ] | Session management | |
-| [ ] | Password reset flow | |
+| [ ] | Clerk integration | Frontend SDK + backend verification |
+| [ ] | Google OAuth setup | Configure in Clerk dashboard |
+| [ ] | User model and migrations | Sync Clerk user IDs to local DB |
+| [ ] | Protected API routes | Verify Clerk JWT in FastAPI middleware |
 
 ### User Features
 
@@ -153,6 +146,13 @@ _Deferred from P0. Use mocked LLM responses for determinism._
 | [ ] | E2E: Paper ingestion | Search arXiv, ingest paper, verify in library |
 | [ ] | E2E: Conversation history | Load past conversations, continue chat |
 | [ ] | E2E: Error states | Graceful handling of failures in UI |
+
+### CI/CD
+
+| Status | Item | Notes |
+|--------|------|-------|
+| [ ] | GitHub Actions workflow | lint, typecheck, test, build |
+| [ ] | Production deployment automation | Coolify docker-compose |
 
 ---
 

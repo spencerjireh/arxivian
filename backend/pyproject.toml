@@ -83,3 +83,9 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+markers = [
+    "unit: Unit tests with mocked dependencies",
+    "api: API router tests with mocked dependencies",
+    "integration: Integration tests with real database",
+    "e2e: End-to-end tests",
+]
