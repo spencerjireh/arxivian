@@ -1,4 +1,5 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { AuthenticateWithRedirectCallback } from '@clerk/clerk-react'
 import Layout from './components/layout/Layout'
 import ChatPage from './pages/ChatPage'
 import SignInPage from './pages/SignInPage'
@@ -8,12 +9,16 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 const router = createBrowserRouter([
   // Auth routes (public)
   {
-    path: '/sign-in/*',
+    path: '/sign-in',
     element: <SignInPage />,
   },
   {
-    path: '/sign-up/*',
+    path: '/sign-up',
     element: <SignUpPage />,
+  },
+  {
+    path: '/sso-callback',
+    element: <AuthenticateWithRedirectCallback />,
   },
   // Protected routes
   {

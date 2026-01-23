@@ -1,4 +1,5 @@
-import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react'
+import { SignedIn, SignedOut } from '@clerk/clerk-react'
+import { Navigate, useLocation } from 'react-router-dom'
 import AuthTokenProvider from './AuthTokenProvider'
 
 interface ProtectedRouteProps {
@@ -10,13 +11,15 @@ interface ProtectedRouteProps {
  * Redirects unauthenticated users to sign-in.
  */
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const location = useLocation()
+
   return (
     <>
       <SignedIn>
         <AuthTokenProvider>{children}</AuthTokenProvider>
       </SignedIn>
       <SignedOut>
-        <RedirectToSignIn />
+        <Navigate to="/sign-in" state={{ from: location }} replace />
       </SignedOut>
     </>
   )
