@@ -26,7 +26,7 @@ EXPOSE 8000
 FROM base AS development
 
 # Install all dependencies including dev (pytest, ruff, etc.)
-RUN uv sync --frozen --no-editable
+RUN uv sync --frozen --no-editable --extra dev
 
 # Copy application code (will be overridden by volume mount in dev)
 COPY . .

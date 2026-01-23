@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { UserButton } from '@clerk/clerk-react'
 import { Plus, PanelLeftClose, Loader2, MessageSquare, ChevronUp, ChevronDown } from 'lucide-react'
 import { useConversations, useDeleteConversation } from '../../api/conversations'
 import { useSidebarStore } from '../../stores/sidebarStore'
+import { clerkAppearance } from '../../lib/clerkAppearance'
 import SidebarConversationItem from './SidebarConversationItem'
 import Button from '../ui/Button'
 
@@ -135,6 +137,13 @@ export default function Sidebar() {
           </div>
         </div>
       )}
+
+      <div className="px-4 py-3 border-t border-stone-200">
+        <UserButton
+          afterSignOutUrl="/sign-in"
+          appearance={clerkAppearance}
+        />
+      </div>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 // SSE stream handler using fetchEventSource
 
 import { fetchEventSource } from '@microsoft/fetch-event-source'
-import { getApiBaseUrl } from './client'
+import { getApiBaseUrl, getAuthToken } from './client'
 import type {
   StreamRequest,
   StreamEventType,
@@ -35,11 +35,19 @@ export async function streamChat(
 ): Promise<void> {
   const ctrl = abortController ?? new AbortController()
 
+  // Build headers with auth token
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  const token = await getAuthToken()
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   await fetchEventSource(`${getApiBaseUrl()}/stream`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify(request),
     signal: ctrl.signal,
     openWhenHidden: true,

@@ -289,3 +289,33 @@ class StreamCancelledError(BaseAPIException):
             error_code="STREAM_CANCELLED",
             details={"session_id": session_id},
         )
+
+
+# ============================================================================
+# Authentication Errors (401)
+# ============================================================================
+
+
+class AuthenticationError(BaseAPIException):
+    """Base class for authentication errors."""
+
+    def __init__(self, message: str, details: Optional[dict[str, Any]] = None):
+        super().__init__(
+            message, status_code=401, error_code="AUTHENTICATION_ERROR", details=details
+        )
+
+
+class InvalidTokenError(AuthenticationError):
+    """Raised when JWT token is invalid or expired."""
+
+    def __init__(self, reason: str = "Token is invalid or expired"):
+        super().__init__(message=reason)
+        self.error_code = "INVALID_TOKEN"
+
+
+class MissingTokenError(AuthenticationError):
+    """Raised when no authentication token is provided."""
+
+    def __init__(self):
+        super().__init__(message="Authentication required")
+        self.error_code = "MISSING_TOKEN"

@@ -95,7 +95,7 @@ dev: rebuild up
 
 # Run tests (usage: just test, just test tests/integration, just test -k "pattern")
 test *args:
-    docker-compose --profile test run --rm test-runner uv run pytest {{args}}
+    docker-compose --profile test run --rm test-runner sh -c "uv sync --extra dev && uv run pytest {{args}}"
     docker-compose --profile test down
 
 # Cleanup test containers

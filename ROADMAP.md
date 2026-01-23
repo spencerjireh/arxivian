@@ -58,6 +58,17 @@ _Ensure requests can be bounded and cancelled._
 | [x] | Integration tests for API endpoints | 92 tests covering all 8 routers |
 | [ ] | Agent flow tests with mocked LLM | |
 
+### Authentication
+
+_Using Clerk with Google OAuth._
+
+| Status | Item | Notes |
+|--------|------|-------|
+| [ ] | Clerk integration | Frontend SDK + backend verification |
+| [ ] | Google OAuth setup | Configure in Clerk dashboard |
+| [ ] | User model and migrations | Sync Clerk user IDs to local DB |
+| [ ] | Protected API routes | Verify Clerk JWT in FastAPI middleware |
+
 ### Security Hardening
 
 | Status | Item | Notes |
@@ -71,22 +82,11 @@ _Ensure requests can be bounded and cancelled._
 
 ## Milestone 2: User-Ready Release (P1)
 
-Multi-user support with authentication and improved retrieval quality.
-
-### Authentication
-
-_Using Clerk with Google OAuth._
-
-| Status | Item | Notes |
-|--------|------|-------|
-| [ ] | Clerk integration | Frontend SDK + backend verification |
-| [ ] | Google OAuth setup | Configure in Clerk dashboard |
-| [ ] | User model and migrations | Sync Clerk user IDs to local DB |
-| [ ] | Protected API routes | Verify Clerk JWT in FastAPI middleware |
+Multi-user support and improved retrieval quality.
 
 ### User Features
 
-_Depends on: Authentication_
+_Depends on: Authentication (P0)_
 
 | Status | Item | Notes |
 |--------|------|-------|

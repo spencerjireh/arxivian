@@ -136,3 +136,67 @@ def sample_search_result():
         published_date="2023-01-01",
         pdf_url="https://arxiv.org/pdf/2301.00001.pdf",
     )
+
+
+# =============================================================================
+# Auth-related fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def mock_user_repository():
+    """Create a mock UserRepository for auth tests."""
+    repo = AsyncMock()
+    repo.get_by_clerk_id = AsyncMock(return_value=None)
+    repo.get_by_email = AsyncMock(return_value=None)
+    repo.create = AsyncMock()
+    repo.get_or_create = AsyncMock()
+    repo.update_on_login = AsyncMock()
+    return repo
+
+
+@pytest.fixture
+def sample_authenticated_user():
+    """Sample AuthenticatedUser dataclass for testing."""
+    from src.services.auth_service import AuthenticatedUser
+
+    return AuthenticatedUser(
+        clerk_id="user_2abc123def456",
+        email="test@example.com",
+        first_name="Test",
+        last_name="User",
+        profile_image_url="https://example.com/avatar.png",
+    )
+
+
+@pytest.fixture
+def sample_user():
+    """Sample User model instance (mock)."""
+    import uuid
+
+    user = Mock()
+    user.id = uuid.uuid4()
+    user.clerk_id = "user_2abc123def456"
+    user.email = "test@example.com"
+    user.first_name = "Test"
+    user.last_name = "User"
+    user.profile_image_url = "https://example.com/avatar.png"
+    user.created_at = datetime.now(timezone.utc)
+    user.updated_at = datetime.now(timezone.utc)
+    user.last_login_at = datetime.now(timezone.utc)
+    return user
+
+
+@pytest.fixture
+def valid_jwt_payload():
+    """Sample decoded JWT payload from Clerk."""
+    return {
+        "sub": "user_2abc123def456",
+        "iss": "https://test-clerk.clerk.accounts.dev",
+        "iat": int(datetime.now(timezone.utc).timestamp()),
+        "exp": int(datetime.now(timezone.utc).timestamp()) + 3600,
+        "email": "test@example.com",
+        "first_name": "Test",
+        "last_name": "User",
+        "image_url": "https://example.com/avatar.png",
+    }

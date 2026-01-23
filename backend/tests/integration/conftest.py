@@ -36,11 +36,9 @@ def pytest_collection_modifyitems(items):
 
 
 @pytest.fixture(scope="session")
-def event_loop():
-    """Create an event loop for the session scope."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+def event_loop_policy():
+    """Return the event loop policy for session scope."""
+    return asyncio.DefaultEventLoopPolicy()
 
 
 @pytest.fixture(scope="session")
@@ -176,3 +174,36 @@ def make_chunk_data(
         "word_count": 10,
         "embedding": embedding,
     }
+
+
+# =============================================================================
+# User Data Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def sample_user_data() -> dict:
+    """Sample user data dict for creation."""
+    return {
+        "clerk_id": f"user_{uuid.uuid4().hex[:16]}",
+        "email": f"test-{uuid.uuid4().hex[:8]}@example.com",
+        "first_name": "Test",
+        "last_name": "User",
+        "profile_image_url": "https://example.com/avatar.png",
+    }
+
+
+@pytest.fixture
+async def created_user(db_session, sample_user_data):
+    """Create and return a user in the test database."""
+    from src.repositories.user_repository import UserRepository
+
+    repo = UserRepository(session=db_session)
+    user = await repo.create(
+        clerk_id=sample_user_data["clerk_id"],
+        email=sample_user_data["email"],
+        first_name=sample_user_data["first_name"],
+        last_name=sample_user_data["last_name"],
+        profile_image_url=sample_user_data["profile_image_url"],
+    )
+    return user

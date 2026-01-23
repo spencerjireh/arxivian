@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     langfuse_secret_key: Optional[str] = None
     langfuse_host: str = "http://langfuse:3000"  # Self-hosted default
 
+    # Clerk Authentication
+    clerk_secret_key: str = ""
+
     # Helper methods
     def get_allowed_models(self, provider: str) -> List[str]:
         """Get list of allowed models for a provider."""

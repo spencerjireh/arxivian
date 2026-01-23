@@ -1,11 +1,28 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import ChatPage from './pages/ChatPage'
+import SignInPage from './pages/SignInPage'
+import SignUpPage from './pages/SignUpPage'
+import ProtectedRoute from './components/auth/ProtectedRoute'
 
 const router = createBrowserRouter([
+  // Auth routes (public)
+  {
+    path: '/sign-in/*',
+    element: <SignInPage />,
+  },
+  {
+    path: '/sign-up/*',
+    element: <SignUpPage />,
+  },
+  // Protected routes
   {
     path: '/',
-    element: <Layout />,
+    element: (
+      <ProtectedRoute>
+        <Layout />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, element: <ChatPage /> },
       { path: ':sessionId', element: <ChatPage /> },

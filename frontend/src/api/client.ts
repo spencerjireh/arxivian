@@ -2,6 +2,29 @@
 
 const API_BASE_URL = '/api'
 
+// Token getter function - set by AuthTokenProvider
+type TokenGetter = () => Promise<string | null>
+let authTokenGetter: TokenGetter | null = null
+
+/**
+ * Register the auth token getter function.
+ * Called by AuthTokenProvider on mount.
+ */
+export function setAuthTokenGetter(getter: TokenGetter): void {
+  authTokenGetter = getter
+}
+
+/**
+ * Get the current auth token.
+ * Returns null if no token getter is registered or no token is available.
+ */
+export async function getAuthToken(): Promise<string | null> {
+  if (!authTokenGetter) {
+    return null
+  }
+  return authTokenGetter()
+}
+
 export class ApiError extends Error {
   status: number
   statusText: string
@@ -12,6 +35,19 @@ export class ApiError extends Error {
     this.status = status
     this.statusText = statusText
   }
+}
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  const token = await getAuthToken()
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
+  return headers
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -30,32 +66,29 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
+  const headers = await getAuthHeaders()
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
   })
   return handleResponse<T>(response)
 }
 
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  const headers = await getAuthHeaders()
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify(body),
   })
   return handleResponse<T>(response)
 }
 
 export async function apiDelete<T = void>(path: string): Promise<T> {
+  const headers = await getAuthHeaders()
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
   })
   return handleResponse<T>(response)
 }
