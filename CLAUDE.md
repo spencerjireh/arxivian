@@ -1,47 +1,120 @@
-# Jireh's Agent System - Development Guidelines
+# CLAUDE.md
 
-## Docker Development via Justfile (Default way for running the program locally with Hot Reload)
-- **Development**: `just up`
-- **Build & run**: `just dev`
-- **Clean**: `just clean`
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Build/Lint/Test Commands
+## Project Overview
+
+Jireh's Agent is a full-stack agentic RAG (Retrieval-Augmented Generation) system for analyzing arXiv research papers with multi-turn conversation support and observability.
+
+## Development Commands
+
+### Docker Development (Default)
+```bash
+just setup    # Initialize .env from .env.example
+just dev      # Build and start with hot reload
+just up       # Start services (after building)
+just down     # Stop services
+just clean    # Clean up everything
+just logs     # View all logs
+```
 
 ### Backend (Python)
-- **Lint**: `uv run ruff check src/`
-- **Format**: `uv run ruff format src/` 
-- **Type check**: `uv run ty check src/`
-- **Unit tests**: `uv run pytest tests/unit/`
-- **Integration/E2E tests**: `just test` (spins up required services via Docker)
-- **Single integration test**: `just test tests/integration/test_specific.py::test_function`
-- **Pattern match**: `just test -k "pattern"`
-- **Test cleanup**: `just test-clean`
-- **Migrations**: `uv run alembic upgrade head`
+```bash
+uv run ruff check src/        # Lint
+uv run ruff format src/       # Format
+uv run ty check src/          # Type check
+uv run alembic upgrade head   # Run migrations
+```
+
+### Testing
+```bash
+just test                                              # All integration/E2E tests
+just test tests/integration/test_file.py::test_func   # Single test
+just test -k "pattern"                                 # Pattern match
+just test-clean                                        # Cleanup test containers
+uv run pytest tests/unit/                              # Unit tests only
+```
 
 ### Frontend (TypeScript/React)
-- **Lint**: `npm run lint` (in frontend container)
-- **Build**: `npm run build` (in frontend container)
-- **Dev server**: `npm run dev` (in frontend container)
+Run inside frontend container (`just shell-frontend`):
+```bash
+npm run lint    # ESLint
+npm run build   # Production build
+npm run dev     # Dev server
+```
 
-## Code Style Guidelines
+## Architecture
 
-### Python (Backend)
-- **Line length**: 100 characters (ruff config)
-- **Python version**: 3.11+ (ty targets 3.13)
-- **Imports**: Use `isort`-style grouping (stdlib, third-party, local)
-- **Type hints**: Required for all function signatures
-- **Error handling**: Use custom exceptions in `src/exceptions.py`
-- **Async**: Use async/await for I/O operations
-- **Logging**: Use `src/utils/logger.py` logger
+### Backend (`/backend/src/`)
 
-### TypeScript/React (Frontend)
-- **ESLint**: Follow React + TypeScript recommended rules
-- **Components**: Use functional components with hooks
-- **Routing**: React Router v7 with createBrowserRouter
-- **Styling**: Tailwind CSS v4
-- **Type safety**: Strict TypeScript configuration
+**Layered Architecture:**
+- `routers/` - FastAPI route handlers (search, ingest, stream, papers, conversations, admin, feedback, health)
+- `services/` - Business logic layer
+- `repositories/` - Data access layer with async SQLAlchemy
+- `models/` - SQLAlchemy ORM models (Paper, Chunk, Conversation, ConversationTurn, User)
+- `schemas/` - Pydantic request/response models
+- `clients/` - External service integrations (OpenAI, arXiv, Jina embeddings, Langfuse)
+- `middleware/` - Request logging, transaction management, error handling
+- `factories/` - Dependency injection factories
+
+**Agent Service (`services/agent_service/`):**
+- LangGraph-based agentic workflow with named nodes:
+  - `guardrail` - Input validation and safety checks
+  - `router` - Dynamic tool selection based on query analysis
+  - `executor` - Tool execution
+  - `grading` - Retrieval quality assessment
+  - `generation` - Final response generation
+- `tools/` - Agent tools (retrieve, arxiv_search, ingest, summarize_paper, etc.)
+- `context.py` - Thread-safe state management
+- `prompts.py` - System prompts
+
+**Key Patterns:**
+- Dependency injection via FastAPI `Depends()` with type aliases in `dependencies.py`
+- Custom exceptions in `exceptions.py` with HTTP status mapping
+- Structured logging via `utils/logger.py` with request ID correlation
+- Clerk JWT authentication with user sync to local database
+- Hybrid search using pgvector + full-text with Reciprocal Rank Fusion
+
+### Frontend (`/frontend/src/`)
+
+- `pages/` - Route pages (ChatPage, SignInPage, SignUpPage)
+- `components/` - React components organized by feature (auth, chat, layout, sidebar, ui)
+- `api/` - API client with auth token injection and SSE streaming
+- `stores/` - Zustand state management (chatStore, settingsStore, sidebarStore)
+- `hooks/` - Custom React hooks (useChat, useAutoScroll, useDebounce)
+- `lib/` - Utilities for markdown rendering and animations
+
+**Key Patterns:**
+- React Router v7 with `createBrowserRouter` and protected routes
+- SSE streaming via `@microsoft/fetch-event-source` for real-time responses
+- Clerk authentication with custom sign-in/sign-up forms
+
+### Database
+
+PostgreSQL 16 with pgvector extension:
+- `papers` - arXiv metadata and processing status
+- `chunks` - Document chunks with vector embeddings
+- `conversations` / `conversation_turns` - Multi-turn memory
+- `users` - Synced from Clerk
+- `agent_executions` - Execution history for observability
+
+Migrations via Alembic in `backend/alembic/`.
+
+## Code Style
+
+### Python
+- Line length: 100 characters
+- Type hints required on all functions
+- Async/await for I/O operations
+- Use `get_logger(__name__)` from `src/utils/logger.py`
+- Use exceptions from `src/exceptions.py`
+
+### TypeScript/React
+- Strict TypeScript mode
+- Functional components with hooks
+- Tailwind CSS v4 for styling
+- Zustand for state management
 
 ### General
-- **Database**: Alembic for migrations, PostgreSQL with pgvector
-- **API**: FastAPI with automatic OpenAPI docs at `/docs`
-- Avoid using emojis in code and comments
+- No emojis in code or comments
+- API docs available at `/docs`
