@@ -491,3 +491,5 @@ metrics/
 monitoring/
 .grafana/
 .prometheus/
+
+artifacts/
