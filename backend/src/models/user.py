@@ -2,7 +2,7 @@
 
 import uuid
 from sqlalchemy import Column, String, Text, TIMESTAMP, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from src.database import Base
 
@@ -23,6 +23,9 @@ class User(Base):
     first_name = Column(String(255), nullable=True)
     last_name = Column(String(255), nullable=True)
     profile_image_url = Column(Text, nullable=True)
+
+    # User preferences (arXiv searches, notification settings, etc.)
+    preferences = Column(JSONB, nullable=True, default=dict)
 
     # Timestamps
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())

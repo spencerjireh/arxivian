@@ -168,3 +168,47 @@ class UserRepository:
         await self.session.refresh(user)
         log.debug("user last_login updated", clerk_id=user.clerk_id)
         return user
+
+    async def get_users_with_searches(self) -> list[User]:
+        """
+        Get all users that have arXiv searches configured in preferences.
+
+        Returns:
+            List of users with non-empty arxiv_searches in preferences
+        """
+        log.debug("query users with arxiv searches")
+        result = await self.session.execute(
+            select(User).where(
+                User.preferences.isnot(None),
+                User.preferences["arxiv_searches"].astext != "[]",
+                User.preferences["arxiv_searches"].astext != "null",
+            )
+        )
+        users = list(result.scalars().all())
+        log.debug("query result", count=len(users))
+        return users
+
+    async def update_preferences(self, user: User, preferences: dict) -> User:
+        """
+        Update user's preferences.
+
+        Caller is responsible for committing the transaction.
+
+        Args:
+            user: The user to update
+            preferences: New preferences dict to set
+
+        Returns:
+            Updated user
+        """
+        now = datetime.now(timezone.utc)
+        await self.session.execute(
+            update(User).where(User.id == user.id).values(
+                preferences=preferences,
+                updated_at=now,
+            )
+        )
+        await self.session.flush()
+        await self.session.refresh(user)
+        log.debug("user preferences updated", clerk_id=user.clerk_id)
+        return user
