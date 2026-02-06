@@ -3,8 +3,42 @@
 import pytest
 import uuid
 
+from src.models.user import User
 from src.repositories.conversation_repository import ConversationRepository
 from src.schemas.conversation import TurnData
+
+
+# =============================================================================
+# User Fixtures for Ownership Tests
+# =============================================================================
+
+
+@pytest.fixture
+async def test_user_1(db_session) -> User:
+    """Create first test user for ownership tests."""
+    user = User(
+        clerk_id=f"test_user_1_{uuid.uuid4().hex[:8]}",
+        email=f"user1-{uuid.uuid4().hex[:8]}@test.com",
+        first_name="Test",
+        last_name="User1",
+    )
+    db_session.add(user)
+    await db_session.flush()
+    return user
+
+
+@pytest.fixture
+async def test_user_2(db_session) -> User:
+    """Create second test user for ownership tests."""
+    user = User(
+        clerk_id=f"test_user_2_{uuid.uuid4().hex[:8]}",
+        email=f"user2-{uuid.uuid4().hex[:8]}@test.com",
+        first_name="Test",
+        last_name="User2",
+    )
+    db_session.add(user)
+    await db_session.flush()
+    return user
 
 
 class TestConversationRepositoryCRUD:
@@ -259,3 +293,142 @@ class TestConversationRepositoryCascadeDelete:
         await repo.delete(session_id)
 
         assert await repo.get_turn_count(session_id) == 0
+
+
+class TestConversationRepositoryUserFiltering:
+    """Test user_id filtering for conversation ownership."""
+
+    @pytest.mark.asyncio
+    async def test_get_or_create_with_user_id(self, db_session, test_user_1):
+        """Verify user_id is set on new conversation."""
+        repo = ConversationRepository(session=db_session)
+
+        session_id = f"session-{uuid.uuid4().hex[:8]}"
+
+        conv = await repo.get_or_create(session_id, user_id=test_user_1.id)
+
+        assert conv.user_id == test_user_1.id
+
+    @pytest.mark.asyncio
+    async def test_save_turn_with_user_id(self, db_session, test_user_1):
+        """Verify user_id is set when saving turn creates new conversation."""
+        repo = ConversationRepository(session=db_session)
+
+        session_id = f"session-{uuid.uuid4().hex[:8]}"
+
+        turn = TurnData(
+            user_query="Question",
+            agent_response="Answer",
+            provider="openai",
+            model="gpt-4o-mini",
+        )
+        await repo.save_turn(session_id, turn, user_id=test_user_1.id)
+
+        conv = await repo.get_by_session_id(session_id)
+        assert conv is not None
+        assert conv.user_id == test_user_1.id
+
+    @pytest.mark.asyncio
+    async def test_get_all_filters_by_user_id(self, db_session, test_user_1, test_user_2):
+        """Verify get_all filters by user_id."""
+        repo = ConversationRepository(session=db_session)
+
+        # Create conversations for user 1
+        for i in range(2):
+            session_id = f"session-user1-{uuid.uuid4().hex[:8]}"
+            turn = TurnData(
+                user_query=f"Query {i}",
+                agent_response=f"Response {i}",
+                provider="openai",
+                model="gpt-4o-mini",
+            )
+            await repo.save_turn(session_id, turn, user_id=test_user_1.id)
+
+        # Create conversations for user 2
+        for i in range(3):
+            session_id = f"session-user2-{uuid.uuid4().hex[:8]}"
+            turn = TurnData(
+                user_query=f"Query {i}",
+                agent_response=f"Response {i}",
+                provider="openai",
+                model="gpt-4o-mini",
+            )
+            await repo.save_turn(session_id, turn, user_id=test_user_2.id)
+
+        # Get all for user 1
+        convs_1, total_1 = await repo.get_all(user_id=test_user_1.id)
+        assert total_1 == 2
+        assert len(convs_1) == 2
+
+        # Get all for user 2
+        convs_2, total_2 = await repo.get_all(user_id=test_user_2.id)
+        assert total_2 == 3
+        assert len(convs_2) == 3
+
+    @pytest.mark.asyncio
+    async def test_get_by_session_id_with_user_id_filter(
+        self, db_session, test_user_1, test_user_2
+    ):
+        """Verify get_by_session_id filters by user_id."""
+        repo = ConversationRepository(session=db_session)
+
+        session_id = f"session-{uuid.uuid4().hex[:8]}"
+
+        await repo.get_or_create(session_id, user_id=test_user_1.id)
+
+        # Owner can access
+        conv = await repo.get_by_session_id(session_id, user_id=test_user_1.id)
+        assert conv is not None
+
+        # Other user cannot access
+        conv = await repo.get_by_session_id(session_id, user_id=test_user_2.id)
+        assert conv is None
+
+    @pytest.mark.asyncio
+    async def test_get_with_turns_filters_by_user_id(self, db_session, test_user_1, test_user_2):
+        """Verify get_with_turns filters by user_id."""
+        repo = ConversationRepository(session=db_session)
+
+        session_id = f"session-{uuid.uuid4().hex[:8]}"
+
+        turn = TurnData(
+            user_query="Question",
+            agent_response="Answer",
+            provider="openai",
+            model="gpt-4o-mini",
+        )
+        await repo.save_turn(session_id, turn, user_id=test_user_1.id)
+
+        # Owner can access with turns
+        conv = await repo.get_with_turns(session_id, user_id=test_user_1.id)
+        assert conv is not None
+        assert len(conv.turns) == 1
+
+        # Other user cannot access
+        conv = await repo.get_with_turns(session_id, user_id=test_user_2.id)
+        assert conv is None
+
+    @pytest.mark.asyncio
+    async def test_delete_filters_by_user_id(self, db_session, test_user_1, test_user_2):
+        """Verify delete filters by user_id."""
+        repo = ConversationRepository(session=db_session)
+
+        session_id = f"session-{uuid.uuid4().hex[:8]}"
+
+        await repo.get_or_create(session_id, user_id=test_user_1.id)
+
+        # Other user cannot delete
+        deleted = await repo.delete(session_id, user_id=test_user_2.id)
+        assert deleted is False
+
+        # Conversation still exists
+        conv = await repo.get_by_session_id(session_id)
+        assert conv is not None
+
+        # Owner can delete
+        deleted = await repo.delete(session_id, user_id=test_user_1.id)
+        assert deleted is True
+
+        # Conversation is gone
+        conv = await repo.get_by_session_id(session_id)
+        assert conv is None

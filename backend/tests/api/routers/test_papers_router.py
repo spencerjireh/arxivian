@@ -4,6 +4,30 @@ import pytest
 from datetime import datetime, timezone
 
 
+class TestPapersAuthentication:
+    """Tests for papers endpoint authentication."""
+
+    def test_list_papers_unauthenticated_returns_401(self, unauthenticated_client):
+        """Test that unauthenticated requests return 401."""
+        response = unauthenticated_client.get("/api/v1/papers")
+
+        assert response.status_code == 401
+        data = response.json()
+        assert data["error"]["code"] == "MISSING_TOKEN"
+
+    def test_get_paper_unauthenticated_returns_401(self, unauthenticated_client):
+        """Test that unauthenticated requests return 401."""
+        response = unauthenticated_client.get("/api/v1/papers/2301.00001")
+
+        assert response.status_code == 401
+
+    def test_delete_paper_unauthenticated_returns_401(self, unauthenticated_client):
+        """Test that unauthenticated requests return 401."""
+        response = unauthenticated_client.delete("/api/v1/papers/2301.00001")
+
+        assert response.status_code == 401
+
+
 class TestListPapersEndpoint:
     """Tests for GET /api/v1/papers endpoint."""
 

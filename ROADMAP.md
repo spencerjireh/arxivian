@@ -64,10 +64,12 @@ _Using Clerk with Google OAuth._
 
 | Status | Item | Notes |
 |--------|------|-------|
-| [ ] | Clerk integration | Frontend SDK + backend verification |
-| [ ] | Google OAuth setup | Configure in Clerk dashboard |
-| [ ] | User model and migrations | Sync Clerk user IDs to local DB |
-| [ ] | Protected API routes | Verify Clerk JWT in FastAPI middleware |
+| [x] | Clerk integration | ClerkProvider in frontend, PyJWT verification in backend |
+| [x] | Google OAuth setup | OAuthButtons component with oauth_google strategy |
+| [x] | User model and migrations | User model with clerk_id, auto-sync via get_or_create |
+| [x] | JWT verification middleware | AuthService with JWKS validation, RS256 signature checks |
+| [x] | Auth dependencies | CurrentUserRequired/CurrentUserOptional type aliases |
+| [ ] | Protected API routes | Add auth dependencies to conversation/paper endpoints |
 
 ### Security Hardening
 

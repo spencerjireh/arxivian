@@ -4,6 +4,36 @@ import pytest
 from unittest.mock import Mock, patch
 
 
+class TestConversationsAuthentication:
+    """Tests for conversations endpoint authentication."""
+
+    def test_list_conversations_unauthenticated_returns_401(self, unauthenticated_client):
+        """Test that unauthenticated requests return 401."""
+        response = unauthenticated_client.get("/api/v1/conversations")
+
+        assert response.status_code == 401
+        data = response.json()
+        assert data["error"]["code"] == "MISSING_TOKEN"
+
+    def test_get_conversation_unauthenticated_returns_401(self, unauthenticated_client):
+        """Test that unauthenticated requests return 401."""
+        response = unauthenticated_client.get("/api/v1/conversations/test-session")
+
+        assert response.status_code == 401
+
+    def test_delete_conversation_unauthenticated_returns_401(self, unauthenticated_client):
+        """Test that unauthenticated requests return 401."""
+        response = unauthenticated_client.delete("/api/v1/conversations/test-session")
+
+        assert response.status_code == 401
+
+    def test_cancel_stream_unauthenticated_returns_401(self, unauthenticated_client):
+        """Test that unauthenticated requests return 401."""
+        response = unauthenticated_client.post("/api/v1/conversations/test-session/cancel")
+
+        assert response.status_code == 401
+
+
 class TestListConversationsEndpoint:
     """Tests for GET /api/v1/conversations endpoint."""
 
@@ -151,17 +181,20 @@ class TestDeleteConversationEndpoint:
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
 
-    def test_delete_conversation_calls_repository(
-        self, client, mock_conversation_repo, sample_conversation
+    def test_delete_conversation_calls_repository_with_user_id(
+        self, client, mock_conversation_repo, sample_conversation, mock_user
     ):
-        """Test that delete is called on repository."""
+        """Test that delete is called on repository with user_id for ownership."""
         mock_conversation_repo.get_by_session_id.return_value = sample_conversation
         mock_conversation_repo.get_turn_count.return_value = 3
 
         response = client.delete("/api/v1/conversations/test-session-123")
 
         assert response.status_code == 200
-        mock_conversation_repo.delete.assert_called_once_with("test-session-123")
+        # Verify delete is called with user_id for ownership verification
+        mock_conversation_repo.delete.assert_called_once_with(
+            "test-session-123", user_id=mock_user.id
+        )
 
 
 class TestCancelStreamEndpoint:

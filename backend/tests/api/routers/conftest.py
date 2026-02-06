@@ -142,6 +142,24 @@ def mock_settings():
 
 
 @pytest.fixture
+def mock_user():
+    """Create a mock User object for authentication."""
+    from src.models.user import User
+
+    user = Mock(spec=User)
+    user.id = uuid.uuid4()
+    user.clerk_id = "user_test123"
+    user.email = "test@example.com"
+    user.first_name = "Test"
+    user.last_name = "User"
+    user.profile_image_url = None
+    user.created_at = datetime.now(timezone.utc)
+    user.updated_at = datetime.now(timezone.utc)
+    user.last_login_at = datetime.now(timezone.utc)
+    return user
+
+
+@pytest.fixture
 def client(
     mock_db_session,
     mock_paper_repo,
@@ -151,8 +169,81 @@ def client(
     mock_ingest_service,
     mock_embeddings_client,
     mock_settings,
+    mock_user,
 ):
-    """Create TestClient with all dependencies overridden."""
+    """Create TestClient with all dependencies overridden including auth."""
+    from src.main import app
+    from src.database import get_db
+    from src.dependencies import (
+        get_paper_repository,
+        get_chunk_repository,
+        get_conversation_repository,
+        get_search_service_dep,
+        get_ingest_service_dep,
+        get_current_user_required,
+    )
+    from src.factories.client_factories import get_embeddings_client
+    from src.config import get_settings
+
+    # Create async generator override for get_db
+    async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
+        yield mock_db_session
+
+    # Override functions that return the mocks directly (no db parameter needed)
+    def override_paper_repo() -> Mock:
+        return mock_paper_repo
+
+    def override_chunk_repo() -> Mock:
+        return mock_chunk_repo
+
+    def override_conversation_repo() -> Mock:
+        return mock_conversation_repo
+
+    def override_search_service() -> Mock:
+        return mock_search_service
+
+    def override_ingest_service() -> Mock:
+        return mock_ingest_service
+
+    def override_embeddings_client() -> Mock:
+        return mock_embeddings_client
+
+    def override_settings() -> Mock:
+        return mock_settings
+
+    # Override auth dependency to return mock user (no authentication required in tests)
+    def override_current_user_required() -> Mock:
+        return mock_user
+
+    # Override dependencies
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_paper_repository] = override_paper_repo
+    app.dependency_overrides[get_chunk_repository] = override_chunk_repo
+    app.dependency_overrides[get_conversation_repository] = override_conversation_repo
+    app.dependency_overrides[get_search_service_dep] = override_search_service
+    app.dependency_overrides[get_ingest_service_dep] = override_ingest_service
+    app.dependency_overrides[get_embeddings_client] = override_embeddings_client
+    app.dependency_overrides[get_settings] = override_settings
+    app.dependency_overrides[get_current_user_required] = override_current_user_required
+
+    with TestClient(app, raise_server_exceptions=False) as test_client:
+        yield test_client
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def unauthenticated_client(
+    mock_db_session,
+    mock_paper_repo,
+    mock_chunk_repo,
+    mock_conversation_repo,
+    mock_search_service,
+    mock_ingest_service,
+    mock_embeddings_client,
+    mock_settings,
+):
+    """Create TestClient WITHOUT auth override to test 401 responses."""
     from src.main import app
     from src.database import get_db
     from src.dependencies import (
@@ -191,7 +282,7 @@ def client(
     def override_settings() -> Mock:
         return mock_settings
 
-    # Override dependencies
+    # Override dependencies (NO auth override - will require real auth)
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_paper_repository] = override_paper_repo
     app.dependency_overrides[get_chunk_repository] = override_chunk_repo
@@ -253,11 +344,12 @@ def sample_paper():
 
 
 @pytest.fixture
-def sample_conversation():
+def sample_conversation(mock_user):
     """Create a sample conversation mock object."""
     conv = Mock()
     conv.id = uuid.uuid4()
     conv.session_id = "test-session-123"
+    conv.user_id = mock_user.id
     conv.turns = []
     conv.created_at = datetime.now(timezone.utc)
     conv.updated_at = datetime.now(timezone.utc)

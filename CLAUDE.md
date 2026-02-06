@@ -26,14 +26,21 @@ uv run ty check src/          # Type check
 uv run alembic upgrade head   # Run migrations
 ```
 
+### Database
+```bash
+just db-shell    # PostgreSQL shell
+just migrate     # Run Alembic migrations
+```
+
 ### Testing
 ```bash
 just test                                              # All integration/E2E tests
 just test tests/integration/test_file.py::test_func   # Single test
 just test -k "pattern"                                 # Pattern match
 just test-clean                                        # Cleanup test containers
-uv run pytest tests/unit/                              # Unit tests only
 ```
+
+Test markers: `@pytest.mark.unit`, `@pytest.mark.api`, `@pytest.mark.integration`, `@pytest.mark.e2e`
 
 ### Frontend (TypeScript/React)
 Run inside frontend container (`just shell-frontend`):

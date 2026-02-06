@@ -65,8 +65,12 @@ async def setup_database(test_engine: AsyncEngine):
         # Ensure pgvector extension is installed
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
-        # Drop all tables for a clean slate
-        await conn.run_sync(Base.metadata.drop_all)
+        # Drop all tables including alembic_version for a completely clean slate
+        # This ensures migrations run from scratch every time
+        await conn.execute(text("DROP SCHEMA public CASCADE"))
+        await conn.execute(text("CREATE SCHEMA public"))
+        await conn.execute(text("GRANT ALL ON SCHEMA public TO PUBLIC"))
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
     # Run Alembic migrations synchronously
     def run_migrations():
@@ -99,18 +103,40 @@ def async_session_factory(
 
 @pytest.fixture
 async def db_session(
-    async_session_factory: async_sessionmaker[AsyncSession],
+    test_engine: AsyncEngine,
+    setup_database,  # Ensure migrations run before tests
 ) -> AsyncGenerator[AsyncSession, None]:
     """
     Create a database session with transaction rollback for test isolation.
 
-    Each test gets its own session wrapped in a transaction that is
-    rolled back after the test.
+    Uses a nested transaction (savepoint) approach so that commits within
+    tests don't close the outer transaction. The outer transaction is
+    rolled back at the end, providing test isolation.
     """
-    async with async_session_factory() as session:
-        async with session.begin():
-            yield session
-            # Rollback is implicit when exiting without commit
+    from sqlalchemy import event
+
+    # Create a connection and start an outer transaction
+    async with test_engine.connect() as conn:
+        trans = await conn.begin()
+
+        # Create a session bound to this connection
+        async_session = AsyncSession(bind=conn, expire_on_commit=False)
+
+        # Begin a nested transaction (savepoint)
+        nested = await conn.begin_nested()
+
+        # Listen for session commit events and restart the nested savepoint
+        @event.listens_for(async_session.sync_session, "after_transaction_end")
+        def restart_savepoint(session, transaction):
+            if transaction.nested and not transaction._parent.nested:
+                # The nested savepoint was committed, start a new one
+                session.begin_nested()
+
+        yield async_session
+
+        await async_session.close()
+        # Rollback the outer transaction - this discards all changes
+        await trans.rollback()
 
 
 # =============================================================================

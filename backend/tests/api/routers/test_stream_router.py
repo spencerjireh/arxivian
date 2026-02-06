@@ -89,17 +89,19 @@ class TestStreamEndpoint:
         return service
 
     @pytest.fixture
-    def stream_client(self, mock_db_session, mock_agent_service, mock_settings):
+    def stream_client(self, mock_db_session, mock_agent_service, mock_settings, mock_user):
         """Create TestClient with mocked agent service."""
         from src.main import app
         from src.database import get_db
         from src.config import get_settings
+        from src.dependencies import get_current_user_required
 
         def mock_get_agent_service(**kwargs):
             return mock_agent_service
 
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
+        app.dependency_overrides[get_current_user_required] = lambda: mock_user
 
         with patch(
             "src.routers.stream.get_agent_service", mock_get_agent_service
@@ -188,12 +190,13 @@ class TestStreamEndpoint:
         assert events[-1]["event"] == "done"
 
     def test_stream_with_custom_provider(
-        self, mock_db_session, mock_settings
+        self, mock_db_session, mock_settings, mock_user
     ):
         """Test stream with custom provider parameter."""
         from src.main import app
         from src.database import get_db
         from src.config import get_settings
+        from src.dependencies import get_current_user_required
 
         captured_kwargs = {}
 
@@ -209,6 +212,7 @@ class TestStreamEndpoint:
 
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
+        app.dependency_overrides[get_current_user_required] = lambda: mock_user
 
         with patch(
             "src.routers.stream.get_agent_service", capture_get_agent_service
@@ -231,11 +235,12 @@ class TestStreamEndpoint:
         assert captured_kwargs.get("provider") == "openai"
         assert captured_kwargs.get("model") == "gpt-4o"
 
-    def test_stream_with_session_id(self, mock_db_session, mock_settings):
+    def test_stream_with_session_id(self, mock_db_session, mock_settings, mock_user):
         """Test stream with session_id for conversation continuity."""
         from src.main import app
         from src.database import get_db
         from src.config import get_settings
+        from src.dependencies import get_current_user_required
 
         captured_kwargs = {}
 
@@ -251,6 +256,7 @@ class TestStreamEndpoint:
 
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
+        app.dependency_overrides[get_current_user_required] = lambda: mock_user
 
         with patch(
             "src.routers.stream.get_agent_service", capture_get_agent_service
@@ -276,14 +282,16 @@ class TestStreamValidation:
     """Tests for stream request validation."""
 
     @pytest.fixture
-    def validation_client(self, mock_db_session, mock_settings):
+    def validation_client(self, mock_db_session, mock_settings, mock_user):
         """Create client for validation tests."""
         from src.main import app
         from src.database import get_db
         from src.config import get_settings
+        from src.dependencies import get_current_user_required
 
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
+        app.dependency_overrides[get_current_user_required] = lambda: mock_user
 
         from fastapi.testclient import TestClient
 
@@ -347,12 +355,13 @@ class TestStreamValidation:
 class TestStreamErrorHandling:
     """Tests for stream error handling."""
 
-    def test_stream_timeout_returns_error_event(self, mock_db_session, mock_settings):
+    def test_stream_timeout_returns_error_event(self, mock_db_session, mock_settings, mock_user):
         """Test that timeout produces error SSE event."""
         import asyncio
         from src.main import app
         from src.database import get_db
         from src.config import get_settings
+        from src.dependencies import get_current_user_required
 
         mock_settings.agent_timeout_seconds = 1  # Very short timeout
 
@@ -368,6 +377,7 @@ class TestStreamErrorHandling:
 
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
+        app.dependency_overrides[get_current_user_required] = lambda: mock_user
 
         with patch(
             "src.routers.stream.get_agent_service", slow_agent_service
@@ -385,11 +395,12 @@ class TestStreamErrorHandling:
         # Should still return 200 (SSE stream)
         assert response.status_code == 200
 
-    def test_stream_exception_returns_error_event(self, mock_db_session, mock_settings):
+    def test_stream_exception_returns_error_event(self, mock_db_session, mock_settings, mock_user):
         """Test that exceptions produce error SSE event."""
         from src.main import app
         from src.database import get_db
         from src.config import get_settings
+        from src.dependencies import get_current_user_required
 
         def error_agent_service(**kwargs):
             mock_service = Mock()
@@ -403,6 +414,7 @@ class TestStreamErrorHandling:
 
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
+        app.dependency_overrides[get_current_user_required] = lambda: mock_user
 
         with patch(
             "src.routers.stream.get_agent_service", error_agent_service

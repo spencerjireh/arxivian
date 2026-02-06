@@ -3,6 +3,20 @@
 import pytest
 
 
+class TestSearchAuthentication:
+    """Tests for search endpoint authentication."""
+
+    def test_search_unauthenticated_returns_401(self, unauthenticated_client):
+        """Test that unauthenticated requests return 401."""
+        response = unauthenticated_client.post(
+            "/api/v1/search", json={"query": "test query"}
+        )
+
+        assert response.status_code == 401
+        data = response.json()
+        assert data["error"]["code"] == "MISSING_TOKEN"
+
+
 class TestSearchEndpoint:
     """Tests for POST /api/v1/search endpoint."""
 
