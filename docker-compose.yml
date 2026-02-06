@@ -80,6 +80,83 @@ services:
       - prod
       - dev
 
+  # Redis for Celery message broker
+  redis:
+    image: redis:7-alpine
+    container_name: jirehs-agent-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jirehs-agent-network
+
+  # Celery Worker for background tasks
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
+    container_name: jirehs-agent-celery-worker
+    command: celery -A src.celery_app worker --loglevel=info --concurrency=2
+    env_file:
+      - ./backend/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/data:/app/data
+    networks:
+      - jirehs-agent-network
+    profiles:
+      - prod
+      - dev
+
+  # Celery Beat for scheduled tasks
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
+    container_name: jirehs-agent-celery-beat
+    command: celery -A src.celery_app beat --loglevel=info
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - redis
+    volumes:
+      - ./backend/src:/app/src
+    networks:
+      - jirehs-agent-network
+    profiles:
+      - prod
+      - dev
+
+  # Flower monitoring dashboard for Celery
+  flower:
+    image: mher/flower:2.0
+    container_name: jirehs-agent-flower
+    command: celery --broker=${CELERY_BROKER_URL:-redis://redis:6379/0} flower --port=5555
+    ports:
+      - "${FLOWER_PORT:-5555}:5555"
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
+    depends_on:
+      - redis
+    networks:
+      - jirehs-agent-network
+    profiles:
+      - prod
+      - dev
+
   # Langfuse Observability Database
   langfuse-db:
     image: postgres:16-alpine
@@ -158,6 +235,8 @@ volumes:
   postgres_data:
     driver: local
   langfuse_postgres_data:
+    driver: local
+  redis_data:
     driver: local
 
 networks:
