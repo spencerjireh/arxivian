@@ -219,3 +219,155 @@ class TestUserRepositoryUpdate:
 
         assert updated_user.last_login_at > original_login
         assert updated_user.email == original_email
+
+
+class TestUserRepositoryPreferences:
+    """Test user preferences operations."""
+
+    @pytest.mark.asyncio
+    async def test_update_preferences_stores_jsonb(self, db_session, created_user):
+        """Verify preferences are stored as JSONB."""
+        repo = UserRepository(session=db_session)
+
+        preferences = {
+            "arxiv_searches": [
+                {
+                    "name": "ML Papers",
+                    "query": "machine learning",
+                    "categories": ["cs.LG"],
+                    "max_results": 10,
+                    "enabled": True,
+                }
+            ],
+            "notification_settings": {"email_digest": True},
+        }
+
+        updated_user = await repo.update_preferences(created_user, preferences)
+
+        assert updated_user.preferences is not None
+        assert updated_user.preferences["arxiv_searches"][0]["name"] == "ML Papers"
+        assert updated_user.preferences["arxiv_searches"][0]["query"] == "machine learning"
+        assert updated_user.preferences["notification_settings"]["email_digest"] is True
+
+    @pytest.mark.asyncio
+    async def test_update_preferences_updates_timestamp(self, db_session, created_user):
+        """Verify updated_at timestamp is changed."""
+        repo = UserRepository(session=db_session)
+
+        original_updated_at = created_user.updated_at
+
+        await repo.update_preferences(created_user, {"test": "value"})
+
+        assert created_user.updated_at > original_updated_at
+
+    @pytest.mark.asyncio
+    async def test_update_preferences_replaces_existing(self, db_session, created_user):
+        """Verify preferences replace existing values completely."""
+        repo = UserRepository(session=db_session)
+
+        # Set initial preferences
+        await repo.update_preferences(created_user, {"key1": "value1", "key2": "value2"})
+
+        # Replace with new preferences
+        updated_user = await repo.update_preferences(created_user, {"key3": "value3"})
+
+        assert "key1" not in updated_user.preferences
+        assert "key2" not in updated_user.preferences
+        assert updated_user.preferences["key3"] == "value3"
+
+    @pytest.mark.asyncio
+    async def test_get_users_with_searches_returns_matching_users(self, db_session):
+        """Verify users with arxiv_searches are returned."""
+        repo = UserRepository(session=db_session)
+
+        # Create user with searches
+        user_with_searches = await repo.create(
+            clerk_id=f"user_{uuid.uuid4().hex[:16]}",
+            email=f"with-searches-{uuid.uuid4().hex[:8]}@example.com",
+        )
+        await repo.update_preferences(
+            user_with_searches,
+            {
+                "arxiv_searches": [
+                    {"name": "Test", "query": "test", "enabled": True}
+                ]
+            },
+        )
+
+        # Create user without searches
+        user_without_searches = await repo.create(
+            clerk_id=f"user_{uuid.uuid4().hex[:16]}",
+            email=f"no-searches-{uuid.uuid4().hex[:8]}@example.com",
+        )
+        await repo.update_preferences(
+            user_without_searches,
+            {"notification_settings": {"email_digest": False}},
+        )
+
+        users = await repo.get_users_with_searches()
+
+        user_ids = [u.id for u in users]
+        assert user_with_searches.id in user_ids
+        assert user_without_searches.id not in user_ids
+
+    @pytest.mark.asyncio
+    async def test_get_users_with_searches_excludes_empty_searches(self, db_session):
+        """Verify users with empty arxiv_searches list are excluded."""
+        repo = UserRepository(session=db_session)
+
+        # Create user with empty searches list
+        user = await repo.create(
+            clerk_id=f"user_{uuid.uuid4().hex[:16]}",
+            email=f"empty-{uuid.uuid4().hex[:8]}@example.com",
+        )
+        await repo.update_preferences(user, {"arxiv_searches": []})
+
+        users = await repo.get_users_with_searches()
+
+        user_ids = [u.id for u in users]
+        assert user.id not in user_ids
+
+    @pytest.mark.asyncio
+    async def test_get_users_with_searches_excludes_null_preferences(self, db_session):
+        """Verify users with null preferences are excluded."""
+        repo = UserRepository(session=db_session)
+
+        # Create user with no preferences
+        user = await repo.create(
+            clerk_id=f"user_{uuid.uuid4().hex[:16]}",
+            email=f"null-{uuid.uuid4().hex[:8]}@example.com",
+        )
+        # Don't set any preferences
+
+        users = await repo.get_users_with_searches()
+
+        user_ids = [u.id for u in users]
+        assert user.id not in user_ids
+
+    @pytest.mark.asyncio
+    async def test_get_users_with_searches_handles_multiple_users(self, db_session):
+        """Verify multiple users with searches are all returned."""
+        repo = UserRepository(session=db_session)
+
+        # Create multiple users with searches
+        users_created = []
+        for i in range(3):
+            user = await repo.create(
+                clerk_id=f"user_{uuid.uuid4().hex[:16]}",
+                email=f"multi-{i}-{uuid.uuid4().hex[:8]}@example.com",
+            )
+            await repo.update_preferences(
+                user,
+                {
+                    "arxiv_searches": [
+                        {"name": f"Search {i}", "query": f"query {i}", "enabled": True}
+                    ]
+                },
+            )
+            users_created.append(user)
+
+        users = await repo.get_users_with_searches()
+
+        user_ids = [u.id for u in users]
+        for created in users_created:
+            assert created.id in user_ids
