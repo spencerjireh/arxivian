@@ -1,5 +1,10 @@
 """Shared pytest fixtures."""
 
+# Clear settings cache before any imports to prevent stale values with coverage
+from src.config import get_settings
+
+get_settings.cache_clear()
+
 import pytest
 import uuid
 from unittest.mock import AsyncMock, Mock, MagicMock
