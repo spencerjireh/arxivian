@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse
 
 from src.config import get_settings
 from src.schemas.stream import StreamRequest, StreamEventType, ErrorEventData, StreamEvent
-from src.dependencies import DbSession
+from src.dependencies import DbSession, CurrentUserRequired
 from src.factories.service_factories import get_agent_service
 from src.services.task_registry import task_registry
 from src.utils.logger import get_logger
@@ -32,6 +32,7 @@ async def stream(
     request: StreamRequest,
     db: DbSession,
     http_request: Request,
+    current_user: CurrentUserRequired,
 ) -> StreamingResponse:
     """
     Stream agent response via Server-Sent Events (SSE).
@@ -86,6 +87,7 @@ async def stream(
         task_id=task_id,
         timeout_seconds=timeout_seconds,
         max_iterations=request.max_iterations,
+        user_id=str(current_user.id),
     )
 
     async def event_generator():
@@ -108,6 +110,7 @@ async def stream(
                     session_id=request.session_id,
                     conversation_window=request.conversation_window,
                     max_iterations=request.max_iterations,
+                    user_id=current_user.id,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
                 )
 
                 # Stream events from the agent service

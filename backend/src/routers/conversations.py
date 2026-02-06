@@ -10,7 +10,7 @@ from src.schemas.conversation import (
     DeleteConversationResponse,
     CancelStreamResponse,
 )
-from src.dependencies import ConversationRepoDep, DbSession
+from src.dependencies import ConversationRepoDep, DbSession, CurrentUserRequired
 from src.services.task_registry import task_registry
 
 router = APIRouter()
@@ -19,6 +19,7 @@ router = APIRouter()
 @router.get("/conversations", response_model=ConversationListResponse)
 async def list_conversations(
     conversation_repo: ConversationRepoDep,
+    current_user: CurrentUserRequired,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
 ) -> ConversationListResponse:
@@ -36,7 +37,9 @@ async def list_conversations(
     Returns:
         ConversationListResponse with paginated conversations
     """
-    conversations, total = await conversation_repo.get_all(offset=offset, limit=limit)
+    conversations, total = await conversation_repo.get_all(
+        offset=offset, limit=limit, user_id=current_user.id  # ty: ignore[invalid-argument-type]  # SQLAlchemy
+    )
 
     items = []
     for conv in conversations:
@@ -69,6 +72,7 @@ async def list_conversations(
 async def get_conversation(
     session_id: str,
     conversation_repo: ConversationRepoDep,
+    current_user: CurrentUserRequired,
 ) -> ConversationDetailResponse:
     """
     Get a conversation with all its turns.
@@ -76,14 +80,15 @@ async def get_conversation(
     Args:
         session_id: Session identifier for the conversation
         conversation_repo: Injected conversation repository
+        current_user: Authenticated user
 
     Returns:
         ConversationDetailResponse with full conversation details
 
     Raises:
-        HTTPException: 404 if conversation not found
+        HTTPException: 404 if conversation not found or not owned by user
     """
-    conv = await conversation_repo.get_with_turns(session_id)
+    conv = await conversation_repo.get_with_turns(session_id, user_id=current_user.id)  # ty: ignore[invalid-argument-type]  # SQLAlchemy
     if not conv:
         raise HTTPException(
             status_code=404, detail=f"Conversation with session_id '{session_id}' not found"
@@ -119,6 +124,7 @@ async def delete_conversation(
     session_id: str,
     conversation_repo: ConversationRepoDep,
     db: DbSession,
+    current_user: CurrentUserRequired,
 ) -> DeleteConversationResponse:
     """
     Delete a conversation and all its turns.
@@ -130,25 +136,26 @@ async def delete_conversation(
         session_id: Session identifier for the conversation to delete
         conversation_repo: Injected conversation repository
         db: Database session
+        current_user: Authenticated user
 
     Returns:
         DeleteConversationResponse with deletion summary
 
     Raises:
-        HTTPException: 404 if conversation not found
+        HTTPException: 404 if conversation not found or not owned by user
     """
     # Get turn count before deletion
     turn_count = await conversation_repo.get_turn_count(session_id)
 
-    # Check if conversation exists
-    conv = await conversation_repo.get_by_session_id(session_id)
+    # Check if conversation exists and is owned by user
+    conv = await conversation_repo.get_by_session_id(session_id, user_id=current_user.id)  # ty: ignore[invalid-argument-type]  # SQLAlchemy
     if not conv:
         raise HTTPException(
             status_code=404, detail=f"Conversation with session_id '{session_id}' not found"
         )
 
     # Delete the conversation
-    await conversation_repo.delete(session_id)
+    await conversation_repo.delete(session_id, user_id=current_user.id)  # ty: ignore[invalid-argument-type]  # SQLAlchemy
 
     return DeleteConversationResponse(
         session_id=session_id,
@@ -157,7 +164,10 @@ async def delete_conversation(
 
 
 @router.post("/conversations/{session_id}/cancel", response_model=CancelStreamResponse)
-async def cancel_stream(session_id: str) -> CancelStreamResponse:
+async def cancel_stream(
+    session_id: str,
+    current_user: CurrentUserRequired,
+) -> CancelStreamResponse:
     """
     Cancel an active streaming request for a conversation.
 

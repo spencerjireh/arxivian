@@ -3,6 +3,7 @@
 import uuid
 from sqlalchemy import Column, String, Text, TIMESTAMP, func
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 from src.database import Base
 
 
@@ -27,6 +28,9 @@ class User(Base):
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
     last_login_at = Column(TIMESTAMP(timezone=True), nullable=True)
+
+    # Relationships
+    conversations = relationship("Conversation", back_populates="user")
 
     def __repr__(self):
         return f"<User(clerk_id='{self.clerk_id}', email='{self.email}')>"

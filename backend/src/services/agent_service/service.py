@@ -1,8 +1,9 @@
 """Agent service with LangGraph workflow."""
 
 import time
-import uuid
-from typing import AsyncIterator
+import uuid as uuid_lib
+from typing import AsyncIterator, Optional
+from uuid import UUID
 
 from langchain_core.messages import HumanMessage, AIMessage
 
@@ -78,6 +79,7 @@ class AgentService:
         max_retrieval_attempts: int = 3,
         max_iterations: int = 5,
         temperature: float = 0.3,
+        user_id: Optional[UUID] = None,
     ):
         self.graph = build_agent_graph(
             llm_client=llm_client,
@@ -100,6 +102,7 @@ class AgentService:
         self.max_retrieval_attempts = max_retrieval_attempts
         self.max_iterations = max_iterations
         self.temperature = temperature
+        self.user_id = user_id
 
     async def ask_stream(
         self, query: str, session_id: str | None = None
@@ -120,7 +123,7 @@ class AgentService:
 
         # Generate session_id if not provided (new conversation)
         if not session_id:
-            session_id = str(uuid.uuid4())
+            session_id = str(uuid_lib.uuid4())
 
         log.info(
             "streaming query started",
@@ -384,6 +387,7 @@ class AgentService:
                     sources=sources_dicts if sources_dicts else None,
                     reasoning_steps=final_state.get("metadata", {}).get("reasoning_steps"),
                 ),
+                user_id=self.user_id,
             )
             turn_number = turn.turn_number
 

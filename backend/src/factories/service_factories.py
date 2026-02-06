@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 from typing import Optional
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import get_settings
 from src.services.search_service import SearchService
@@ -108,6 +109,7 @@ def get_agent_service(
     session_id: Optional[str] = None,
     conversation_window: int = 5,
     max_iterations: int = 5,
+    user_id: Optional[UUID] = None,
 ) -> AgentService:
     """
     Create agent service with specified LLM provider.
@@ -123,6 +125,7 @@ def get_agent_service(
         session_id: Optional session ID for conversation continuity
         conversation_window: Number of previous turns to include in context
         max_iterations: Maximum router iterations for tool execution
+        user_id: Optional user ID for conversation ownership
 
     Returns:
         AgentService instance
@@ -158,4 +161,5 @@ def get_agent_service(
         max_retrieval_attempts=max_retrieval_attempts,
         max_iterations=max_iterations,
         temperature=temperature,
+        user_id=user_id,
     )

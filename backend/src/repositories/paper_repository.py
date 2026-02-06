@@ -71,6 +71,8 @@ class PaperRepository:
         await self.session.execute(update(Paper).where(Paper.id == paper_id).values(**update_data))
         await self.session.flush()
         log.debug("paper updated", paper_id=paper_id)
+        # Expire cached object so get_by_id returns fresh data from DB
+        self.session.expire_all()
         return await self.get_by_id(paper_id)
 
     async def mark_as_processed(
@@ -159,22 +161,20 @@ class PaperRepository:
             apply_filter(Paper.pdf_processed == processed_only)
 
         if category_filter:
-            condition = func.exists(
-                select(1).where(
-                    func.lower(func.jsonb_array_elements_text(Paper.categories)).like(
-                        f"%{category_filter.lower()}%"
-                    )
-                )
+            # Use raw SQL for LATERAL subquery - SRFs must be in FROM clause
+            from sqlalchemy import literal_column
+            condition = literal_column(
+                f"EXISTS (SELECT 1 FROM jsonb_array_elements_text(papers.categories) AS elem "
+                f"WHERE lower(elem) LIKE '%{category_filter.lower()}%')"
             )
             apply_filter(condition)
 
         if author_filter:
-            condition = func.exists(
-                select(1).where(
-                    func.lower(func.jsonb_array_elements_text(Paper.authors)).like(
-                        f"%{author_filter.lower()}%"
-                    )
-                )
+            # Use raw SQL for LATERAL subquery - SRFs must be in FROM clause
+            from sqlalchemy import literal_column
+            condition = literal_column(
+                f"EXISTS (SELECT 1 FROM jsonb_array_elements_text(papers.authors) AS elem "
+                f"WHERE lower(elem) LIKE '%{author_filter.lower()}%')"
             )
             apply_filter(condition)
 

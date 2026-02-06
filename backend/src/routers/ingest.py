@@ -3,7 +3,7 @@
 from fastapi import APIRouter, HTTPException
 
 from src.schemas.ingest import IngestRequest, IngestResponse
-from src.dependencies import DbSession, IngestServiceDep
+from src.dependencies import DbSession, IngestServiceDep, CurrentUserRequired
 from src.utils.idempotency import idempotency_store
 
 router = APIRouter()
@@ -14,6 +14,7 @@ async def ingest_papers(
     request: IngestRequest,
     db: DbSession,
     ingest_service: IngestServiceDep,
+    current_user: CurrentUserRequired,
 ) -> IngestResponse:
     """
     Ingest papers from arXiv.

@@ -10,7 +10,7 @@ from src.schemas.papers import (
     PaperListItem,
     DeletePaperResponse,
 )
-from src.dependencies import PaperRepoDep, ChunkRepoDep, DbSession
+from src.dependencies import PaperRepoDep, ChunkRepoDep, DbSession, CurrentUserRequired
 
 router = APIRouter()
 
@@ -18,6 +18,7 @@ router = APIRouter()
 @router.get("/papers", response_model=PaperListResponse)
 async def list_papers(
     paper_repo: PaperRepoDep,
+    current_user: CurrentUserRequired,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     processed_only: Optional[bool] = None,
@@ -73,7 +74,11 @@ async def list_papers(
 
 
 @router.get("/papers/{arxiv_id}", response_model=PaperResponse)
-async def get_paper_by_arxiv_id(arxiv_id: str, paper_repo: PaperRepoDep) -> PaperResponse:
+async def get_paper_by_arxiv_id(
+    arxiv_id: str,
+    paper_repo: PaperRepoDep,
+    current_user: CurrentUserRequired,
+) -> PaperResponse:
     """
     Get a single paper by arXiv ID.
 
@@ -101,6 +106,7 @@ async def delete_paper(
     paper_repo: PaperRepoDep,
     chunk_repo: ChunkRepoDep,
     db: DbSession,
+    current_user: CurrentUserRequired,
 ) -> DeletePaperResponse:
     """
     Delete a paper and all its associated chunks by arXiv ID.

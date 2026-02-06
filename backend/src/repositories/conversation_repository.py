@@ -1,6 +1,7 @@
 """Repository for Conversation model operations."""
 
 from typing import Optional, List, Tuple
+from uuid import UUID
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
@@ -18,12 +19,15 @@ class ConversationRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_or_create(self, session_id: str) -> Conversation:
+    async def get_or_create(
+        self, session_id: str, user_id: Optional[UUID] = None
+    ) -> Conversation:
         """
         Get existing conversation or create new one.
 
         Args:
             session_id: Unique session identifier
+            user_id: Optional user ID to associate with the conversation
 
         Returns:
             Conversation instance
@@ -34,11 +38,11 @@ class ConversationRepository:
         conv = result.scalar_one_or_none()
 
         if not conv:
-            conv = Conversation(session_id=session_id)
+            conv = Conversation(session_id=session_id, user_id=user_id)
             self.session.add(conv)
             await self.session.commit()
             await self.session.refresh(conv)
-            log.debug("conversation created", session_id=session_id)
+            log.debug("conversation created", session_id=session_id, user_id=str(user_id))
         else:
             log.debug("conversation found", session_id=session_id)
 
@@ -74,7 +78,9 @@ class ConversationRepository:
         log.debug("history loaded", session_id=session_id, turns=len(turns))
         return turns[::-1]
 
-    async def save_turn(self, session_id: str, turn: TurnData) -> ConversationTurn:
+    async def save_turn(
+        self, session_id: str, turn: TurnData, user_id: Optional[UUID] = None
+    ) -> ConversationTurn:
         """
         Save a conversation turn with optimistic retry.
 
@@ -83,6 +89,7 @@ class ConversationRepository:
         Args:
             session_id: Session identifier
             turn: TurnData with turn information
+            user_id: Optional user ID to associate with new conversation
 
         Returns:
             Created ConversationTurn
@@ -102,7 +109,7 @@ class ConversationRepository:
                 conv = result.scalar_one_or_none()
 
                 if not conv:
-                    conv = Conversation(session_id=session_id)
+                    conv = Conversation(session_id=session_id, user_id=user_id)
                     self.session.add(conv)
                     await self.session.flush()
 
@@ -148,19 +155,22 @@ class ConversationRepository:
         # Should never reach here, but satisfy type checker
         raise IntegrityError("Failed to save turn after max retries", None, None)  # ty: ignore[invalid-argument-type]
 
-    async def delete(self, session_id: str) -> bool:
+    async def delete(self, session_id: str, user_id: Optional[UUID] = None) -> bool:
         """
         Delete a conversation and all its turns.
 
         Args:
             session_id: Session identifier
+            user_id: Optional user ID for ownership verification
 
         Returns:
-            True if deleted, False if not found
+            True if deleted, False if not found or not owned by user
         """
-        result = await self.session.execute(
-            select(Conversation).where(Conversation.session_id == session_id)
-        )
+        query = select(Conversation).where(Conversation.session_id == session_id)
+        if user_id is not None:
+            query = query.where(Conversation.user_id == user_id)
+
+        result = await self.session.execute(query)
         conv = result.scalar_one_or_none()
 
         if conv:
@@ -171,19 +181,24 @@ class ConversationRepository:
 
         return False
 
-    async def get_by_session_id(self, session_id: str) -> Optional[Conversation]:
+    async def get_by_session_id(
+        self, session_id: str, user_id: Optional[UUID] = None
+    ) -> Optional[Conversation]:
         """
         Get conversation by session ID.
 
         Args:
             session_id: Session identifier
+            user_id: Optional user ID for ownership verification
 
         Returns:
-            Conversation if found, None otherwise
+            Conversation if found and owned by user, None otherwise
         """
-        result = await self.session.execute(
-            select(Conversation).where(Conversation.session_id == session_id)
-        )
+        query = select(Conversation).where(Conversation.session_id == session_id)
+        if user_id is not None:
+            query = query.where(Conversation.user_id == user_id)
+
+        result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
     async def get_turn_count(self, session_id: str) -> int:
@@ -209,47 +224,65 @@ class ConversationRepository:
         )
         return result.scalar_one() or 0
 
-    async def get_all(self, offset: int = 0, limit: int = 20) -> Tuple[List[Conversation], int]:
+    async def get_all(
+        self, offset: int = 0, limit: int = 20, user_id: Optional[UUID] = None
+    ) -> Tuple[List[Conversation], int]:
         """
-        Get paginated list of all conversations with turn counts.
+        Get paginated list of conversations with turn counts.
 
         Args:
             offset: Number of conversations to skip
             limit: Maximum conversations to return
+            user_id: Optional user ID to filter by ownership
 
         Returns:
             Tuple of (list of Conversations, total count)
         """
-        # Get total count
-        count_result = await self.session.execute(select(func.count(Conversation.id)))
-        total = count_result.scalar_one() or 0
-
-        # Get paginated conversations ordered by updated_at desc
-        result = await self.session.execute(
+        # Build queries with optional user_id filter
+        count_query = select(func.count(Conversation.id))
+        list_query = (
             select(Conversation)
             .options(selectinload(Conversation.turns))
             .order_by(desc(Conversation.updated_at))
             .offset(offset)
             .limit(limit)
         )
+
+        if user_id is not None:
+            count_query = count_query.where(Conversation.user_id == user_id)
+            list_query = list_query.where(Conversation.user_id == user_id)
+
+        # Get total count
+        count_result = await self.session.execute(count_query)
+        total = count_result.scalar_one() or 0
+
+        # Get paginated conversations
+        result = await self.session.execute(list_query)
         conversations = list(result.scalars().all())
 
         log.debug("conversations listed", total=total, returned=len(conversations))
         return conversations, total
 
-    async def get_with_turns(self, session_id: str) -> Optional[Conversation]:
+    async def get_with_turns(
+        self, session_id: str, user_id: Optional[UUID] = None
+    ) -> Optional[Conversation]:
         """
         Get conversation with eager-loaded turns.
 
         Args:
             session_id: Session identifier
+            user_id: Optional user ID for ownership verification
 
         Returns:
-            Conversation with turns if found, None otherwise
+            Conversation with turns if found and owned by user, None otherwise
         """
-        result = await self.session.execute(
+        query = (
             select(Conversation)
             .options(selectinload(Conversation.turns))
             .where(Conversation.session_id == session_id)
         )
+        if user_id is not None:
+            query = query.where(Conversation.user_id == user_id)
+
+        result = await self.session.execute(query)
         return result.scalar_one_or_none()

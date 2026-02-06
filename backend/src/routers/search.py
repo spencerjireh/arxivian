@@ -4,13 +4,17 @@ from fastapi import APIRouter
 from time import time
 from src.schemas.search import SearchRequest, SearchResponse
 from src.schemas.common import ChunkInfo
-from src.dependencies import SearchServiceDep
+from src.dependencies import SearchServiceDep, CurrentUserRequired
 
 router = APIRouter()
 
 
 @router.post("/search", response_model=SearchResponse)
-async def search(request: SearchRequest, search_service: SearchServiceDep) -> SearchResponse:
+async def search(
+    request: SearchRequest,
+    search_service: SearchServiceDep,
+    current_user: CurrentUserRequired,
+) -> SearchResponse:
     """
     Hybrid search endpoint with vector + full-text + RRF.
 
