@@ -7,7 +7,18 @@ from src.config import get_settings
 from src.database import engine, init_db
 
 # Import routers
-from src.routers import health, ingest, search, stream, papers, conversations, admin, feedback
+from src.routers import (
+    health,
+    ingest,
+    search,
+    stream,
+    papers,
+    conversations,
+    admin,
+    feedback,
+    tasks,
+    preferences,
+)
 
 # Import middleware
 from src.middleware import logging_middleware, transaction_middleware, register_exception_handlers
@@ -79,6 +90,8 @@ app.include_router(conversations.router, prefix="/api/v1", tags=["Conversations"
 app.include_router(papers.router, prefix="/api/v1", tags=["Papers"])
 app.include_router(admin.router, prefix="/api/v1", tags=["Admin"])
 app.include_router(feedback.router, prefix="/api/v1", tags=["Feedback"])
+app.include_router(tasks.router, prefix="/api/v1", tags=["Tasks"])
+app.include_router(preferences.router, prefix="/api/v1", tags=["Preferences"])
 
 
 @app.get("/")
@@ -102,6 +115,8 @@ async def root():
             "stream": "/api/v1/stream",
             "papers": "/api/v1/papers",
             "conversations": "/api/v1/conversations",
+            "tasks": "/api/v1/tasks",
+            "preferences": "/api/v1/preferences",
         },
         "docs": "/docs",
     }
