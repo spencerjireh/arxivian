@@ -9,8 +9,8 @@ T = TypeVar("T")
 def run_async(coro: Coroutine[Any, Any, T]) -> T:
     """Run async coroutine in sync Celery task.
 
-    Creates a new event loop for each task execution to avoid
-    issues with shared loops across worker processes.
+    Uses the persistent worker event loop if available (set up by signals.py),
+    otherwise falls back to creating a temporary loop (useful for tests).
 
     Args:
         coro: The coroutine to execute
@@ -18,9 +18,19 @@ def run_async(coro: Coroutine[Any, Any, T]) -> T:
     Returns:
         The result of the coroutine
     """
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    from src.tasks.signals import get_worker_loop
+
+    loop = get_worker_loop()
+    if loop is not None:
+        future = asyncio.run_coroutine_threadsafe(coro, loop)
+        from src.config import get_settings
+
+        return future.result(timeout=get_settings().celery_task_timeout)
+
+    # Fallback: create a temporary loop (tests, non-worker contexts)
+    tmp_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(tmp_loop)
     try:
-        return loop.run_until_complete(coro)
+        return tmp_loop.run_until_complete(coro)
     finally:
-        loop.close()
+        tmp_loop.close()

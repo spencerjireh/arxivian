@@ -45,10 +45,14 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,  # Fair task distribution
     task_acks_late=True,  # Re-queue on worker crash
     result_expires=86400,  # Results expire after 24 hours
+    beat_scheduler="redbeat.RedBeatScheduler",
+    redbeat_redis_url=settings.celery_broker_url,
 )
 
 # Auto-discover tasks from src.tasks module
 celery_app.autodiscover_tasks(["src.tasks"])
+
+import src.tasks.signals  # noqa: E402, F401
 
 # Configure beat schedule from settings
 celery_app.conf.beat_schedule = {

@@ -51,6 +51,7 @@ dependencies = [
 
     # Task Queue
     "celery[redis]>=5.4.0",
+    "celery-redbeat>=2.2.0",
     "redis>=5.0.0",
 ]
 
