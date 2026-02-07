@@ -103,7 +103,7 @@ test *args:
 
 # Cleanup test containers
 test-clean:
-    docker-compose --profile test rm -fsv test-db test-runner 2>/dev/null
+    docker-compose --profile test rm -fsv test-db test-runner frontend-test-runner 2>/dev/null
 
 # =============================================================================
 # Code Quality
@@ -127,3 +127,7 @@ check: lint typecheck
 # Run frontend linting
 lint-frontend:
     docker-compose --profile dev exec frontend npm run lint
+
+# Run frontend tests (usage: just test-frontend, just test-frontend -- --reporter=verbose)
+test-frontend *args:
+    docker-compose --profile test run --rm frontend-test-runner npm test -- {{args}}

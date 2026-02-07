@@ -243,6 +243,28 @@ services:
     profiles:
       - test
 
+  # Frontend Test Runner
+  frontend-test-runner:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/tests:/app/tests
+      - ./frontend/vitest.config.ts:/app/vitest.config.ts
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/tsconfig.json:/app/tsconfig.json
+      - ./frontend/tsconfig.test.json:/app/tsconfig.test.json
+      - ./frontend/package.json:/app/package.json
+      - ./frontend/package-lock.json:/app/package-lock.json
+      - /app/node_modules
+    working_dir: /app
+    networks:
+      - jirehs-agent-network
+    profiles:
+      - test
+
 volumes:
   postgres_data:
     driver: local
