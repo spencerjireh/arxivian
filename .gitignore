@@ -434,7 +434,6 @@ faiss_index/
 .bandit
 
 # pre-commit
-.pre-commit-config.yaml
 .cache/pre-commit/
 
 # Jupyter
