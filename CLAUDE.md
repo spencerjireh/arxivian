@@ -16,6 +16,14 @@ just up       # Start services (after building)
 just down     # Stop services
 just clean    # Clean up everything
 just logs     # View all logs
+just rebuild  # Build with no cache (clean build)
+just restart  # Restart all services
+just ps       # Check status of all services
+just reset    # Full reset: clean everything and rebuild
+just exec-backend "cmd"    # Execute command in backend container
+just exec-frontend "cmd"   # Execute command in frontend container
+just logs-service <name>   # View logs from specific service
+just health                # Check backend health endpoint
 ```
 
 ### Backend (Python)
@@ -41,6 +49,8 @@ just test-clean                                        # Cleanup test containers
 ```
 
 Test markers: `@pytest.mark.unit`, `@pytest.mark.api`, `@pytest.mark.integration`, `@pytest.mark.e2e`
+
+Test directory structure: `tests/unit/`, `tests/api/`, `tests/integration/`, `tests/e2e/`. Integration tests use a dedicated test database (port 5433) with automatic Alembic migrations. Test config in `.env.test`.
 
 ### Frontend (TypeScript/React)
 Run inside frontend container (`just shell-frontend`):
@@ -75,6 +85,15 @@ npm run dev     # Dev server
 - `context.py` - Thread-safe state management
 - `prompts.py` - System prompts
 
+**Celery Background Tasks (`tasks/`):**
+- Celery with Redis as message broker; worker and beat services run as separate containers
+- `ingest_tasks.py` - Paper ingestion from arXiv
+- `cleanup_tasks.py` - Data retention cleanup
+- `report_tasks.py` - Scheduled report generation
+- `scheduled_tasks.py` - Cron-scheduled job definitions
+- `signals.py` - Worker lifecycle and task tracking signals
+- Flower monitoring dashboard available at port 5555
+
 **Key Patterns:**
 - Dependency injection via FastAPI `Depends()` with type aliases in `dependencies.py`
 - Custom exceptions in `exceptions.py` with HTTP status mapping
@@ -106,6 +125,15 @@ PostgreSQL 16 with pgvector extension:
 - `agent_executions` - Execution history for observability
 
 Migrations via Alembic in `backend/alembic/`.
+
+### Infrastructure Services
+
+- **Redis** (port 6379) - Celery message broker
+- **Langfuse** (port 3001) - LLM observability platform (with its own PostgreSQL instance)
+- **Flower** (port 5555) - Celery task monitoring
+- **Test DB** (port 5433) - Separate PostgreSQL for integration tests
+
+Docker profiles: `dev`, `prod`, `test`. Backend uses multi-stage Dockerfile with `BUILD_TARGET=development` for hot reload.
 
 ## Code Style
 

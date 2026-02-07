@@ -69,43 +69,44 @@ _Using Clerk with Google OAuth._
 | [x] | User model and migrations | User model with clerk_id, auto-sync via get_or_create |
 | [x] | JWT verification middleware | AuthService with JWKS validation, RS256 signature checks |
 | [x] | Auth dependencies | CurrentUserRequired/CurrentUserOptional type aliases |
-| [ ] | Protected API routes | Add auth dependencies to conversation/paper endpoints |
+| [x] | Protected API routes | All 10 routers use CurrentUserRequired |
+
+### Usage Limits
+
+_Daily limits on expensive operations for free-tier users._
+
+| Status | Item | Notes |
+|--------|------|-------|
+| [x] | Usage counter model | Daily counters per user with atomic UPSERT increments |
+| [x] | Query limit enforcement | 429 before stream starts, configurable via DAILY_QUERY_LIMIT |
+| [x] | Ingest limit enforcement | 429 before ingestion, configurable via DAILY_INGEST_LIMIT |
 
 ### Security Hardening
 
 | Status | Item | Notes |
 |--------|------|-------|
 | [ ] | Input sanitization audit | |
-| [ ] | SQL injection prevention audit | |
 | [ ] | Prompt injection mitigation | |
-| [ ] | Secrets management | |
 
 ---
 
 ## Milestone 2: User-Ready Release (P1)
 
-Multi-user support and improved retrieval quality.
+Improved retrieval quality, reliability, and deployment readiness.
 
 ### User Features
 
-_Depends on: Authentication (P0)_
-
 | Status | Item | Notes |
 |--------|------|-------|
-| [ ] | Conversations belong to users | |
-| [ ] | Paper collections/folders per user | |
-| [ ] | Personal paper library | |
-| [ ] | Saved searches and alerts | |
-| [ ] | User preferences persistence | |
+| [x] | Conversations belong to users | user_id filtering on all conversation queries |
+| [x] | User preferences persistence | Model, repository, and API all exist |
 
 ### Onboarding UX
 
 | Status | Item | Notes |
 |--------|------|-------|
-| [ ] | Empty state for new users | Helpful prompts when no papers ingested |
-| [ ] | Example queries | Show sample questions users can ask |
-| [ ] | Sample paper collection | Pre-loaded papers to explore immediately |
-| [ ] | Guided first-run tour | Optional walkthrough of key features |
+| [x] | Empty state for new users | EmptyConversationState component |
+| [x] | Example queries | SuggestionChips component |
 
 ### Retrieval Improvements
 
@@ -114,28 +115,21 @@ _Depends on: Authentication (P0)_
 | [ ] | Query expansion | Generate multiple search queries from user input |
 | [ ] | Re-ranking with cross-encoder | |
 | [ ] | Multi-query retrieval | Combine results from expanded queries |
-| [ ] | Contextual compression | Extract only relevant parts of chunks |
 
 ### Reliability
 
 | Status | Item | Notes |
 |--------|------|-------|
-| [ ] | Rate limiting per IP/user | |
-| [ ] | Request validation and sanitization | |
+| [ ] | Rate limiting per IP | Basic per-IP rate limiting |
 | [ ] | Graceful degradation when LLM unavailable | |
-| [ ] | Circuit breaker for external APIs | |
-| [ ] | Health check dependencies | DB, Redis, LLM |
 
 ### User Feedback
 
-_Collect signals to improve response quality._
-
 | Status | Item | Notes |
 |--------|------|-------|
-| [ ] | Feedback model and API | thumbs_up, thumbs_down, flag, comment |
-| [ ] | Link feedback to conversation turns | Store with turn metadata |
+| [x] | Feedback model and API | POST /api/v1/feedback with trace_id linking |
+| [x] | Link feedback to conversation turns | trace_id linking exists |
 | [ ] | Feedback UI in frontend | Simple thumbs up/down on responses |
-| [ ] | Feedback analytics dashboard | Aggregate scores, identify problem areas |
 
 ### E2E Testing
 
@@ -160,27 +154,15 @@ _Deferred from P0. Use mocked LLM responses for determinism._
 
 ## Milestone 3: Automation and Advanced Features (P2)
 
-Scheduled tasks, notifications, and enhanced agent capabilities.
+Scheduled tasks and performance optimization.
 
 ### Scheduled Runs
 
 | Status | Item | Notes |
 |--------|------|-------|
-| [ ] | Schedule model | cron expression, query, enabled flag |
-| [ ] | APScheduler or Celery Beat integration | |
-| [ ] | Scheduled task: ingest papers matching saved queries | |
-| [ ] | Scheduled task: generate daily/weekly digests | |
-| [ ] | Email or webhook notifications | |
-
-### Advanced Agent
-
-| Status | Item | Notes |
-|--------|------|-------|
-| [ ] | Human-in-the-loop | Pause agent for user confirmation |
-| [ ] | Tool execution approval workflow | |
-| [ ] | Resume from paused state | |
-| [ ] | Long-term memory store | |
-| [ ] | Cross-conversation context | |
+| [x] | Celery Beat integration | Running as Docker service |
+| [x] | Scheduled task: ingest papers | Daily 2am UTC via cron config |
+| [x] | Scheduled task: generate weekly digests | Weekly Monday 6am UTC |
 
 ### Performance
 
@@ -189,25 +171,6 @@ Scheduled tasks, notifications, and enhanced agent capabilities.
 | [ ] | Redis caching layer | embeddings, search results, context |
 | [ ] | Connection pooling optimization | |
 | [ ] | Batch embedding requests | |
-| [ ] | Response streaming optimization | |
-
-### Monitoring
-
-| Status | Item | Notes |
-|--------|------|-------|
-| [ ] | Prometheus metrics endpoint | latency, active conversations, tool usage, errors |
-| [ ] | Grafana dashboards | |
-| [ ] | Alert rules | error rate, latency, availability |
-| [ ] | Log aggregation | |
-
-### Cost Tracking
-
-| Status | Item | Notes |
-|--------|------|-------|
-| [ ] | Token usage aggregation per user/session | |
-| [ ] | Cost calculation based on model pricing | |
-| [ ] | Daily/monthly cost reports | |
-| [ ] | Budget alerts | |
 
 ---
 
@@ -222,24 +185,17 @@ Items to consider for future releases. Not prioritized.
 - [ ] User preference learning
 - [ ] Slack/Discord/Telegram bot integration
 - [ ] Time-based report generation
-- [ ] Browser extension for saving papers
-- [ ] Mobile app
 - [ ] Expansion to IEEE, PubMed, etc.
-- [ ] Monetization strategy
 
 ---
 
-## Infrastructure Decisions (TBD)
+## Infrastructure Decisions
 
-Items requiring further evaluation before commitment.
-
-| Item | Options | Decision |
-|------|---------|----------|
-| Managed PostgreSQL | Self-hosted vs Neon/Supabase/RDS | |
-| Redis deployment | Single instance vs cluster | |
-| Staging environment | Needed for team/testing? | |
-| Alerting integration | PagerDuty vs Opsgenie vs email | |
-| API key rotation | Manual vs automated | |
+| Item | Decision |
+|------|----------|
+| Hosting | Coolify (self-hosted PaaS) |
+| PostgreSQL | Managed via Coolify (single instance) |
+| Redis | Single instance (Celery broker) |
 
 ---
 
