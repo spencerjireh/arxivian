@@ -1,4 +1,4 @@
-# Jireh's Agent
+# Arxivian
 
  A full-stack app utilizing agentic RAG workflows for working with arXiv papers.
 

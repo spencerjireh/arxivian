@@ -44,7 +44,7 @@ export default function Sidebar() {
       <div className="px-4 py-5 border-b border-stone-200">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-xl font-semibold text-stone-900 tracking-tight">
-            Jireh's Agent
+            Arxivian
           </h1>
           <Button
             variant="ghost"

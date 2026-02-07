@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "name": "Jireh's Agent System API",
+  "name": "Arxivian API",
   "type": "collection",
   "ignore": [
     "node_modules",

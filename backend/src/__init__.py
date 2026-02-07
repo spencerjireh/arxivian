@@ -1,3 +1,3 @@
-"""Jireh's Agent System with LangGraph."""
+"""Arxivian - agentic RAG system with LangGraph."""
 
 __version__ = "0.1.0"

@@ -5,7 +5,7 @@ export default function SignUpPage() {
   return (
     <AuthLayout
       title="Create an account"
-      subtitle="Start exploring AI research literature with Jireh's Agent"
+      subtitle="Start exploring AI research literature with Arxivian"
     >
       <SignUpForm />
     </AuthLayout>

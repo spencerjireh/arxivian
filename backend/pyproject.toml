@@ -1,7 +1,7 @@
 [project]
-name = "jirehs-agent-system"
+name = "arxivian"
 version = "0.1.0"
-description = "Jireh's Agent system for arXiv papers with LangGraph"
+description = "Arxivian - agentic RAG system for arXiv papers with LangGraph"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -123,7 +123,7 @@ omit = [
     "src/schemas/health.py",
     "src/schemas/papers.py",
     "src/schemas/search.py",
-    "src/schemas/admin.py",
+    "src/schemas/ops.py",
     # Utils that wrap external libraries - tested via integration
     "src/utils/pdf_parser.py",
     "src/utils/chunking_service.py",

@@ -1,10 +1,10 @@
-# Jireh's Agent
+# Arxivian
 
 A document processing and search service built with Python and FastAPI.
 
 ## Features
 
-- Jireh's Agent with LangGraph workflow
+- Agentic RAG with LangGraph workflow
 - Document ingestion and processing
 - PDF parsing and text extraction
 - Vector embeddings generation
@@ -33,7 +33,7 @@ uv run main.py
 
 - `POST /api/v1/ingest` - Ingest documents
 - `POST /api/v1/search` - Search documents
-- `POST /api/v1/ask-agent` - Ask questions using Jireh's Agent
+- `POST /api/v1/ask-agent` - Ask questions using Arxivian
 - `GET /api/v1/health` - Health check
 
 ## Database

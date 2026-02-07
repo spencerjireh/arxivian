@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Jireh's Agent is a full-stack agentic RAG (Retrieval-Augmented Generation) system for analyzing arXiv research papers with multi-turn conversation support and observability.
+Arxivian is a full-stack agentic RAG (Retrieval-Augmented Generation) system for analyzing arXiv research papers with multi-turn conversation support and observability.
 
 ## Development Commands
 
