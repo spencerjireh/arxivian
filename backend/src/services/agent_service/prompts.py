@@ -154,9 +154,7 @@ def get_context_aware_guardrail_prompt(
         user_parts.append("[WARNING: Message flagged for potential injection attempt]")
 
     user_parts.append(f"[CURRENT MESSAGE TO EVALUATE]\n{query}\n[END CURRENT MESSAGE]")
-    user_parts.append(
-        f"Score this message (0-100). is_in_scope = true if score >= {threshold}."
-    )
+    user_parts.append(f"Score this message (0-100). is_in_scope = true if score >= {threshold}.")
 
     return GUARDRAIL_SYSTEM_PROMPT, "\n\n".join(user_parts)
 

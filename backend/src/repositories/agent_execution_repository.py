@@ -143,9 +143,7 @@ class AgentExecutionRepository:
         )
         return execution
 
-    async def get_by_session(
-        self, session_id: str, limit: int = 10
-    ) -> List[AgentExecution]:
+    async def get_by_session(self, session_id: str, limit: int = 10) -> List[AgentExecution]:
         """
         Get executions for a session.
 
@@ -187,9 +185,7 @@ class AgentExecutionRepository:
 
         return False
 
-    async def cleanup_old_executions(
-        self, session_id: str, keep_count: int = 5
-    ) -> int:
+    async def cleanup_old_executions(self, session_id: str, keep_count: int = 5) -> int:
         """
         Clean up old executions for a session, keeping the most recent ones.
 

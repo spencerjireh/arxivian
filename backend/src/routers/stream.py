@@ -6,6 +6,7 @@ import uuid
 
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from src.config import get_settings
 from src.schemas.stream import StreamRequest, StreamEventType, ErrorEventData, StreamEvent
@@ -124,8 +125,8 @@ async def stream(
 
                     # Format as SSE
                     event_type = event.event.value
-                    if hasattr(event.data, "model_dump"):
-                        data_json = json.dumps(event.data.model_dump())  # ty: ignore[call-non-callable]  # guarded by hasattr
+                    if isinstance(event.data, BaseModel):
+                        data_json = json.dumps(event.data.model_dump())
                     else:
                         data_json = json.dumps(event.data)
 
@@ -133,9 +134,7 @@ async def stream(
 
         except asyncio.TimeoutError:
             log.warning("stream timeout", task_id=task_id, timeout_seconds=timeout_seconds)
-            yield _format_sse_error(
-                f"Request timed out after {timeout_seconds} seconds", "TIMEOUT"
-            )
+            yield _format_sse_error(f"Request timed out after {timeout_seconds} seconds", "TIMEOUT")
             yield "event: done\ndata: {}\n\n"
 
         except asyncio.CancelledError:
@@ -145,11 +144,7 @@ async def stream(
 
         except Exception as e:
             log.error("stream error", error=str(e), task_id=task_id, exc_info=True)
-            error_event = StreamEvent(
-                event=StreamEventType.ERROR,
-                data=ErrorEventData(error=str(e)),
-            )
-            yield f"event: error\ndata: {json.dumps(error_event.data.model_dump())}\n\n"
+            yield _format_sse_error(str(e), "INTERNAL_ERROR")
             yield "event: done\ndata: {}\n\n"
 
         finally:

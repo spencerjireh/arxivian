@@ -19,16 +19,17 @@ async def rewrite_query_node(state: AgentState, context: AgentContext) -> AgentS
 
     feedback = "\n".join(
         [
-            f"- Chunk from {state['retrieved_chunks'][i]['arxiv_id']}: "
+            f"- Chunk from {chunk['arxiv_id']}: "
             f"{'RELEVANT' if g.is_relevant else 'NOT RELEVANT'} - {g.reasoning}"
-            for i, g in enumerate(grading_results[:3])
+            for chunk, g in zip(state["retrieved_chunks"][:3], grading_results[:3])
         ]
     )
 
     prompt = get_rewrite_prompt(original_query, feedback)
 
     rewritten = await context.llm_client.generate_completion(
-        messages=[{"role": "user", "content": prompt}], temperature=0.5  # ty: ignore[invalid-argument-type]
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.5,  # ty: ignore[invalid-argument-type]
     )
 
     # Handle both str and AsyncIterator responses

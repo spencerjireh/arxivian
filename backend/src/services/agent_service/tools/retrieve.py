@@ -78,7 +78,8 @@ class RetrieveChunksTool(BaseTool):
                     "authors": r.authors,
                     "section_name": r.section_name,
                     "score": r.score,
-                    "pdf_url": getattr(r, "pdf_url", None) or f"https://arxiv.org/pdf/{r.arxiv_id}.pdf",
+                    "pdf_url": getattr(r, "pdf_url", None)
+                    or f"https://arxiv.org/pdf/{r.arxiv_id}.pdf",
                     "published_date": getattr(r, "published_date", None),
                 }
                 for r in results

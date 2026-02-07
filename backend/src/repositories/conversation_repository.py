@@ -19,9 +19,7 @@ class ConversationRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_or_create(
-        self, session_id: str, user_id: Optional[UUID] = None
-    ) -> Conversation:
+    async def get_or_create(self, session_id: str, user_id: Optional[UUID] = None) -> Conversation:
         """
         Get existing conversation or create new one.
 

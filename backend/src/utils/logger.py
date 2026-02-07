@@ -12,9 +12,7 @@ request_id_ctx: ContextVar[str | None] = ContextVar("request_id", default=None)
 _configured = False
 
 
-def add_request_id(
-    logger: WrappedLogger, method_name: str, event_dict: EventDict
-) -> EventDict:
+def add_request_id(logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
     """Inject request_id from context into log event."""
     if req_id := request_id_ctx.get():
         event_dict["request_id"] = req_id

@@ -38,7 +38,9 @@ async def list_conversations(
         ConversationListResponse with paginated conversations
     """
     conversations, total = await conversation_repo.get_all(
-        offset=offset, limit=limit, user_id=current_user.id  # ty: ignore[invalid-argument-type]  # SQLAlchemy
+        offset=offset,
+        limit=limit,
+        user_id=current_user.id,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
     )
 
     items = []

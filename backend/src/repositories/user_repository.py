@@ -141,9 +141,7 @@ class UserRepository:
         if profile_image_url is not None:
             update_data["profile_image_url"] = profile_image_url
 
-        await self.session.execute(
-            update(User).where(User.id == user.id).values(**update_data)
-        )
+        await self.session.execute(update(User).where(User.id == user.id).values(**update_data))
         await self.session.flush()
 
         # Refresh to get updated values
@@ -159,7 +157,9 @@ class UserRepository:
         """
         now = datetime.now(timezone.utc)
         await self.session.execute(
-            update(User).where(User.id == user.id).values(
+            update(User)
+            .where(User.id == user.id)
+            .values(
                 last_login_at=now,
                 updated_at=now,
             )
@@ -203,7 +203,9 @@ class UserRepository:
         """
         now = datetime.now(timezone.utc)
         await self.session.execute(
-            update(User).where(User.id == user.id).values(
+            update(User)
+            .where(User.id == user.id)
+            .values(
                 preferences=preferences,
                 updated_at=now,
             )

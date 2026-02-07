@@ -18,7 +18,9 @@ class ErrorResponse(BaseModel):
 
     error: ErrorDetail = Field(..., description="Error details")
     request_id: Optional[str] = Field(None, description="Request ID for tracing")
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Error timestamp")
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), description="Error timestamp"
+    )
 
     model_config = {
         "json_schema_extra": {

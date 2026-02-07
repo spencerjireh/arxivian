@@ -38,7 +38,10 @@ class StreamRequest(BaseModel):
 
     # Request Lifecycle Parameters
     timeout_seconds: Optional[int] = Field(
-        None, ge=10, le=600, description="Request timeout in seconds. Uses server default if not specified."
+        None,
+        ge=10,
+        le=600,
+        description="Request timeout in seconds. Uses server default if not specified.",
     )
 
     # Conversation Parameters

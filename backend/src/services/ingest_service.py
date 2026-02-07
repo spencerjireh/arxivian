@@ -9,7 +9,7 @@ from typing import List, Optional
 from sqlalchemy.exc import OperationalError
 
 from src.schemas.ingest import IngestRequest, IngestResponse, PaperError, PaperResult
-from src.clients.arxiv_client import ArxivClient
+from src.clients.arxiv_client import ArxivClient, ArxivPaper
 from src.clients.embeddings_client import JinaEmbeddingsClient
 from src.utils.pdf_parser import PDFParser
 from src.utils.chunking_service import ChunkingService
@@ -128,7 +128,7 @@ class IngestService:
         )
 
     async def _process_single_paper(
-        self, paper_meta, force_reprocess: bool
+        self, paper_meta: ArxivPaper, force_reprocess: bool
     ) -> Optional[PaperResult]:
         """
         Process a single paper: download, parse, chunk, and embed.
@@ -193,9 +193,7 @@ class IngestService:
         async with session.begin_nested():
             # Re-check with locking to prevent race conditions
             try:
-                existing_locked = await self.paper_repository.get_by_arxiv_id_for_update(
-                    arxiv_id
-                )
+                existing_locked = await self.paper_repository.get_by_arxiv_id_for_update(arxiv_id)
             except OperationalError:
                 # Another transaction has this paper locked - skip
                 log.info("paper being processed by another request", arxiv_id=arxiv_id)
@@ -369,7 +367,9 @@ class IngestService:
                 "arxiv_id": p.arxiv_id,
                 "title": p.title,
                 "authors": p.authors,
-                "abstract": p.abstract[:500] + "..." if len(p.abstract) > 500 else p.abstract,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
+                "abstract": (p.abstract[:500] + "..." if len(p.abstract) > 500 else p.abstract)
+                if p.abstract
+                else None,
                 "categories": p.categories,
                 "published_date": p.published_date.isoformat() if p.published_date else None,
                 "pdf_url": p.pdf_url,
