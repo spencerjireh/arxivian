@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from src.config import get_settings
 from src.schemas.stream import StreamRequest, StreamEventType, ErrorEventData, StreamEvent
-from src.dependencies import DbSession, CurrentUserRequired
+from src.dependencies import DbSession, CurrentUserRequired, QueryUsageCheck, UsageCounterRepoDep
 from src.factories.service_factories import get_agent_service
 from src.services.task_registry import task_registry
 from src.utils.logger import get_logger
@@ -34,6 +34,8 @@ async def stream(
     db: DbSession,
     http_request: Request,
     current_user: CurrentUserRequired,
+    usage_repo: UsageCounterRepoDep,
+    _usage_check: QueryUsageCheck,
 ) -> StreamingResponse:
     """
     Stream agent response via Server-Sent Events (SSE).
@@ -92,6 +94,10 @@ async def stream(
     )
 
     async def event_generator():
+        # Increment usage counter before LLM work
+        await usage_repo.increment_query_count(current_user.id)
+        await db.flush()
+
         # Register the current task for cancellation support
         current_task = asyncio.current_task()
         if current_task is not None:

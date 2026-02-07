@@ -3,7 +3,13 @@
 from fastapi import APIRouter, HTTPException
 
 from src.schemas.ingest import IngestRequest, IngestResponse
-from src.dependencies import DbSession, IngestServiceDep, CurrentUserRequired
+from src.dependencies import (
+    DbSession,
+    IngestServiceDep,
+    CurrentUserRequired,
+    IngestUsageCheck,
+    UsageCounterRepoDep,
+)
 from src.utils.idempotency import idempotency_store
 
 router = APIRouter()
@@ -15,6 +21,8 @@ async def ingest_papers(
     db: DbSession,
     ingest_service: IngestServiceDep,
     current_user: CurrentUserRequired,
+    usage_repo: UsageCounterRepoDep,
+    _usage_check: IngestUsageCheck,
 ) -> IngestResponse:
     """
     Ingest papers from arXiv.
@@ -50,6 +58,9 @@ async def ingest_papers(
     try:
         # Delegate to service layer
         response = await ingest_service.ingest_papers(request)
+
+        # Increment usage counter before commit
+        await usage_repo.increment_ingest_count(current_user.id)
 
         # Commit transaction explicitly for ingestion
         # (since it may have partial success with errors)

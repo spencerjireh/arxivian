@@ -19,8 +19,10 @@ from src.repositories.conversation_repository import ConversationRepository
 from src.repositories.user_repository import UserRepository
 from src.repositories.task_execution_repository import TaskExecutionRepository
 from src.repositories.report_repository import ReportRepository
+from src.repositories.usage_counter_repository import UsageCounterRepository
 from src.models.user import User
-from src.exceptions import MissingTokenError
+from src.config import get_settings
+from src.exceptions import MissingTokenError, UsageLimitExceededError
 
 from src.factories.client_factories import (
     get_arxiv_client,
@@ -126,6 +128,19 @@ ReportRepoDep = Annotated[ReportRepository, Depends(get_report_repository)]
 
 
 # ============================================================================
+# Usage Counter Repository
+# ============================================================================
+
+
+def get_usage_counter_repository(db: DbSession) -> UsageCounterRepository:
+    """Get UsageCounterRepository with database session."""
+    return UsageCounterRepository(db)
+
+
+UsageCounterRepoDep = Annotated[UsageCounterRepository, Depends(get_usage_counter_repository)]
+
+
+# ============================================================================
 # Authentication Dependencies
 # ============================================================================
 
@@ -174,3 +189,46 @@ async def get_current_user_required(
 # Type aliases for auth dependencies
 CurrentUserOptional = Annotated[Optional[User], Depends(get_current_user_optional)]
 CurrentUserRequired = Annotated[User, Depends(get_current_user_required)]
+
+
+# ============================================================================
+# Usage Limit Check Dependencies
+# ============================================================================
+
+
+async def check_query_usage_limit(
+    current_user: CurrentUserRequired,
+    usage_repo: UsageCounterRepoDep,
+) -> None:
+    """Raise 429 if user has exceeded daily query limit."""
+    settings = get_settings()
+    if settings.daily_query_limit <= 0:
+        return
+    query_count, _ = await usage_repo.get_today_counts(current_user.id)
+    if query_count >= settings.daily_query_limit:
+        raise UsageLimitExceededError(
+            action="query",
+            current=query_count,
+            limit=settings.daily_query_limit,
+        )
+
+
+async def check_ingest_usage_limit(
+    current_user: CurrentUserRequired,
+    usage_repo: UsageCounterRepoDep,
+) -> None:
+    """Raise 429 if user has exceeded daily ingest limit."""
+    settings = get_settings()
+    if settings.daily_ingest_limit <= 0:
+        return
+    _, ingest_count = await usage_repo.get_today_counts(current_user.id)
+    if ingest_count >= settings.daily_ingest_limit:
+        raise UsageLimitExceededError(
+            action="ingest",
+            current=ingest_count,
+            limit=settings.daily_ingest_limit,
+        )
+
+
+QueryUsageCheck = Annotated[None, Depends(check_query_usage_limit)]
+IngestUsageCheck = Annotated[None, Depends(check_ingest_usage_limit)]

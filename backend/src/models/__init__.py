@@ -7,6 +7,7 @@ from src.models.agent_execution import AgentExecution
 from src.models.user import User
 from src.models.task_execution import TaskExecution
 from src.models.report import Report
+from src.models.usage_counter import UsageCounter
 
 __all__ = [
     "Paper",
@@ -17,4 +18,5 @@ __all__ = [
     "User",
     "TaskExecution",
     "Report",
+    "UsageCounter",
 ]

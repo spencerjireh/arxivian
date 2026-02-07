@@ -157,6 +157,26 @@ class ProcessingLimitError(BusinessLogicError):
 
 
 # ============================================================================
+# Usage Limit Errors (429)
+# ============================================================================
+
+
+class UsageLimitExceededError(BaseAPIException):
+    """Raised when a user exceeds their daily usage limit."""
+
+    def __init__(self, action: str, current: int, limit: int):
+        super().__init__(
+            message=(
+                f"Daily {action} limit exceeded ({current}/{limit}). "
+                "Limits reset daily at midnight UTC."
+            ),
+            status_code=429,
+            error_code="USAGE_LIMIT_EXCEEDED",
+            details={"action": action, "current": current, "limit": limit},
+        )
+
+
+# ============================================================================
 # External Service Errors (502/503)
 # ============================================================================
 

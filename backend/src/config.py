@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     agent_timeout_seconds: int = 180  # 3 minutes max per request
     llm_call_timeout_seconds: int = 60  # 1 minute per LLM call
 
+    # Usage Limits (0 = unlimited, safe default for development)
+    daily_query_limit: int = 0
+    daily_ingest_limit: int = 0
+
     # App
     debug: bool = False
     log_level: str = "INFO"
