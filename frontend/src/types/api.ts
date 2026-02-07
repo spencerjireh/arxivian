@@ -2,7 +2,7 @@
 
 // Stream types
 
-export type LLMProvider = 'openai' | 'zai'
+export type LLMProvider = 'openai' | 'nvidia_nim'
 
 export interface StreamRequest {
   query: string

@@ -132,7 +132,7 @@ export default function ChatInput({ onSend, isStreaming, onCancel, variant = 'bo
                     >
                       <option value="">Default</option>
                       <option value="openai">OpenAI</option>
-                      <option value="zai">Z.AI</option>
+                      <option value="nvidia_nim">NVIDIA NIM</option>
                     </select>
                   </div>
 
