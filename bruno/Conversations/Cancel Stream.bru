@@ -1,0 +1,25 @@
+meta {
+  name: Cancel Stream
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/api/v1/conversations/:session_id/cancel
+  body: none
+  auth: none
+}
+
+params:path {
+  session_id:
+}
+
+docs {
+  Cancel an active streaming request for a conversation. Useful for implementing a "stop generation" button.
+
+  Replace :session_id with the session ID of the active stream.
+
+  Returns whether a stream was actually cancelled. If no active stream exists for the session, returns cancelled=false.
+
+  Requires authentication.
+}

@@ -1,0 +1,19 @@
+meta {
+  name: Cleanup Orphaned Records
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/v1/ops/cleanup
+  body: none
+  auth: none
+}
+
+docs {
+  Clean up orphaned database records. Finds papers that are marked as processed but have no associated chunks (indicating a failed ingestion) and deletes them.
+
+  Returns a summary of found and deleted orphaned papers.
+
+  Requires authentication.
+}

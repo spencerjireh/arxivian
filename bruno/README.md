@@ -50,15 +50,21 @@ bruno/
 ├── bruno.json                 # Collection metadata
 ├── environments/
 │   └── local.bru             # Local environment (localhost:8000)
-├── Health/                   # Health check endpoint
-├── Search/                   # Search endpoints (hybrid, vector, fulltext)
-├── Ingest/                   # Paper ingestion endpoints
 ├── Ask/                      # Streaming agent endpoints with SSE (with conversation support)
+├── Conversations/            # Conversation management (list, get, delete, cancel)
+├── Feedback/                 # User feedback submission
+├── Health/                   # Health check endpoint
+├── Ingest/                   # Paper ingestion endpoints
+├── Ops/                      # Ops operations (cleanup)
 ├── Papers/                   # Paper management endpoints (CRUD)
-└── Root/                     # Root API information endpoint
+├── Preferences/              # User preferences and saved arXiv searches
+├── Reports/                  # User ingestion reports (list, get)
+├── Root/                     # Root API information endpoint
+├── Search/                   # Search endpoints (hybrid, vector, fulltext)
+└── Tasks/                    # Background task management
 ```
 
-Total: **17 API requests** covering all endpoints
+Total: **33 API requests** covering all endpoints
 
 ## Environment Configuration
 
@@ -110,7 +116,7 @@ vars {
 
 - **Ask Agent (Basic)**: POST `/api/v1/stream` - Stream with default settings via SSE
 - **Ask Agent (OpenAI)**: POST `/api/v1/stream` - Use OpenAI provider (gpt-4o-mini)
-- **Ask Agent (Z.AI)**: POST `/api/v1/stream` - Use Z.AI provider (glm-4.6)
+- **Ask Agent (Z.AI)**: POST `/api/v1/stream` - Use Z.AI provider (glm-4.6) (legacy)
 - **Ask Agent (Advanced Parameters)**: POST `/api/v1/stream` - Custom parameters with streaming
 - **Ask Agent (Conversation Continuity)**: POST `/api/v1/stream` - Multi-turn conversation with streaming
 
@@ -122,6 +128,40 @@ All Ask Agent endpoints use Server-Sent Events (SSE) to stream responses in real
 - **Get Paper by arXiv ID**: GET `/api/v1/papers/:arxiv_id` - Single paper details
 - **Delete Paper**: DELETE `/api/v1/papers/:arxiv_id` - Delete paper and chunks
 - **List Papers with Filters**: GET `/api/v1/papers` - Example with filters applied
+
+### Conversations
+
+- **List Conversations**: GET `/api/v1/conversations` - Paginated list of conversations
+- **Get Conversation**: GET `/api/v1/conversations/:session_id` - Full conversation with all turns
+- **Delete Conversation**: DELETE `/api/v1/conversations/:session_id` - Delete conversation and turns
+- **Cancel Stream**: POST `/api/v1/conversations/:session_id/cancel` - Cancel active stream
+
+### Ops
+
+- **Cleanup Orphaned Records**: POST `/api/v1/ops/cleanup` - Remove orphaned papers
+
+### Reports
+
+- **List Reports**: GET `/api/v1/reports/` - Paginated list of user's ingestion reports
+- **Get Report**: GET `/api/v1/reports/:report_id` - Get a specific report by UUID
+
+### Feedback
+
+- **Submit Feedback**: POST `/api/v1/feedback` - Submit user feedback to Langfuse
+
+### Preferences
+
+- **Get Preferences**: GET `/api/v1/preferences` - Get user preferences
+- **Update arXiv Searches**: PUT `/api/v1/preferences/arxiv-searches` - Replace all saved searches
+- **Add arXiv Search**: POST `/api/v1/preferences/arxiv-searches` - Add a new saved search
+- **Delete arXiv Search**: DELETE `/api/v1/preferences/arxiv-searches/:search_name` - Remove a saved search
+
+### Tasks
+
+- **List Tasks**: GET `/api/v1/tasks/` - List background tasks for the user
+- **Queue Async Ingestion**: POST `/api/v1/tasks/ingest/async` - Queue ingestion as background task
+- **Get Task Status**: GET `/api/v1/tasks/:task_id` - Poll task completion status
+- **Revoke Task**: DELETE `/api/v1/tasks/:task_id` - Revoke a pending or running task
 
 ### Root
 

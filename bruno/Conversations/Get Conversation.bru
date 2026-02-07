@@ -1,0 +1,23 @@
+meta {
+  name: Get Conversation
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/api/v1/conversations/:session_id
+  body: none
+  auth: none
+}
+
+params:path {
+  session_id:
+}
+
+docs {
+  Get a conversation with all its turns. Returns full conversation details including each turn's query, response, sources, reasoning steps, and metadata.
+
+  Replace :session_id with the actual session ID from a previous streaming request.
+
+  Requires authentication. Returns 404 if conversation not found or not owned by user.
+}

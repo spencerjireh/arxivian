@@ -1,0 +1,23 @@
+meta {
+  name: Get Report
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/api/v1/reports/:report_id
+  body: none
+  auth: none
+}
+
+params:path {
+  report_id:
+}
+
+docs {
+  Get a specific report by its UUID.
+
+  Replace :report_id with the actual report UUID.
+
+  Requires authentication. Returns 404 if report not found or not owned by user.
+}

@@ -1,0 +1,34 @@
+meta {
+  name: Submit Feedback
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/v1/feedback
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "trace_id": "your-langfuse-trace-id",
+    "score": 1.0,
+    "comment": "Helpful response"
+  }
+}
+
+docs {
+  Submit user feedback for a trace to Langfuse.
+
+  Request body:
+  - trace_id (required): Langfuse trace ID from response metadata
+  - score (required): Feedback score, 0.0 (negative) to 1.0 (positive)
+  - comment (optional): Feedback comment, max 1000 characters
+
+  Requires authentication. Returns success=false if Langfuse is not configured.
+}

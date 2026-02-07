@@ -1,0 +1,26 @@
+meta {
+  name: Revoke Task
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{base_url}}/api/v1/tasks/:task_id
+  body: none
+  auth: none
+}
+
+params:path {
+  task_id:
+}
+
+docs {
+  Revoke a pending or running background task.
+
+  Replace :task_id with the task ID to revoke.
+
+  Optional query parameter:
+  - terminate: If true, terminate the task even if already running. Terminated tasks may leave partial results.
+
+  Requires authentication. Returns 404 if task not found or not owned by user.
+}

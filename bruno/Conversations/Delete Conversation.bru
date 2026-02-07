@@ -1,0 +1,23 @@
+meta {
+  name: Delete Conversation
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{base_url}}/api/v1/conversations/:session_id
+  body: none
+  auth: none
+}
+
+params:path {
+  session_id:
+}
+
+docs {
+  Delete a conversation and all its turns. This performs a hard delete. Turns are automatically deleted via CASCADE foreign key constraint.
+
+  Replace :session_id with the actual session ID.
+
+  Requires authentication. Returns 404 if conversation not found or not owned by user.
+}

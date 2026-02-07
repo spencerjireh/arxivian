@@ -1,0 +1,26 @@
+meta {
+  name: List Conversations
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/api/v1/conversations?offset=0&limit=20
+  body: none
+  auth: none
+}
+
+params:query {
+  offset: 0
+  limit: 20
+}
+
+docs {
+  Get paginated list of all conversations, ordered by most recently updated first. Each item includes a summary with turn count and last query preview.
+
+  Query parameters:
+  - offset: Number of conversations to skip (default: 0)
+  - limit: Maximum number to return, 1-100 (default: 20)
+
+  Requires authentication.
+}

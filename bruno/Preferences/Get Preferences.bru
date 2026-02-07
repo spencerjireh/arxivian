@@ -1,0 +1,17 @@
+meta {
+  name: Get Preferences
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/api/v1/preferences
+  body: none
+  auth: none
+}
+
+docs {
+  Get the current user's preferences, including saved arXiv search configurations and notification settings.
+
+  Requires authentication.
+}
