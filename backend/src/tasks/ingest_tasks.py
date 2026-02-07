@@ -21,6 +21,7 @@ log = get_logger(__name__)
     retry_backoff=True,  # Exponential backoff
     retry_backoff_max=600,  # Max 10 min between retries
     retry_jitter=True,  # Add randomness to prevent thundering herd
+    rate_limit="6/m",
 )
 def ingest_papers_task(
     self,
@@ -108,7 +109,7 @@ def ingest_papers_task(
                 "ingest_task_failed",
                 task_id=task_id,
                 attempt=attempt,
-                max_retries=3,
+                max_retries=self.max_retries,
                 error=str(exc),
             )
             raise  # autoretry_for handles retry logic

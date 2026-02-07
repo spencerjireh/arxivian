@@ -3,7 +3,8 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import delete, select, func
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.celery_app import celery_app
 from src.config import get_settings
@@ -15,13 +16,54 @@ from src.utils.logger import get_logger
 
 log = get_logger(__name__)
 
+BATCH_SIZE = 2000
+
+
+async def _batched_delete(
+    session: AsyncSession,
+    model: type,
+    cutoff_date: datetime,
+    batch_size: int = BATCH_SIZE,
+) -> int:
+    """Delete records older than cutoff_date in batches.
+
+    Commits after each batch to avoid holding long transactions.
+
+    Returns:
+        Total number of records deleted.
+    """
+    total_deleted = 0
+
+    while True:
+        # Select a batch of IDs to delete
+        id_result = await session.execute(
+            select(model.id).where(model.created_at < cutoff_date).limit(batch_size)
+        )
+        ids = [row[0] for row in id_result.fetchall()]
+
+        if not ids:
+            break
+
+        await session.execute(delete(model).where(model.id.in_(ids)))
+        await session.commit()
+        total_deleted += len(ids)
+
+        log.debug(
+            "batch_deleted",
+            model=model.__tablename__,
+            batch_count=len(ids),
+            total_deleted=total_deleted,
+        )
+
+    return total_deleted
+
 
 @celery_app.task(name="src.tasks.cleanup_tasks.cleanup_task")
 def cleanup_task() -> dict[str, Any]:
     """Clean up old data based on retention settings.
 
     Deletes conversations and agent executions older than the
-    configured retention period.
+    configured retention period in batches.
 
     Returns:
         Dictionary with cleanup results
@@ -40,35 +82,15 @@ def cleanup_task() -> dict[str, Any]:
         }
 
         async with AsyncSessionLocal() as session:
-            # Delete old conversations (cascade deletes turns)
-            conv_count_result = await session.execute(
-                select(func.count(Conversation.id)).where(
-                    Conversation.created_at < cutoff_date
-                )
+            # Delete old conversations in batches (cascade deletes turns)
+            results["conversations_deleted"] = await _batched_delete(
+                session, Conversation, cutoff_date
             )
-            conv_count = conv_count_result.scalar() or 0
 
-            if conv_count > 0:
-                await session.execute(
-                    delete(Conversation).where(Conversation.created_at < cutoff_date)
-                )
-                results["conversations_deleted"] = conv_count
-
-            # Delete old agent executions
-            exec_count_result = await session.execute(
-                select(func.count(AgentExecution.id)).where(
-                    AgentExecution.created_at < cutoff_date
-                )
+            # Delete old agent executions in batches
+            results["agent_executions_deleted"] = await _batched_delete(
+                session, AgentExecution, cutoff_date
             )
-            exec_count = exec_count_result.scalar() or 0
-
-            if exec_count > 0:
-                await session.execute(
-                    delete(AgentExecution).where(AgentExecution.created_at < cutoff_date)
-                )
-                results["agent_executions_deleted"] = exec_count
-
-            await session.commit()
 
         return results
 

@@ -11,6 +11,7 @@ from src.database import AsyncSessionLocal
 from src.models.paper import Paper
 from src.models.conversation import Conversation, ConversationTurn
 from src.models.agent_execution import AgentExecution
+from src.repositories.report_repository import ReportRepository
 from src.tasks.utils import run_async
 from src.utils.logger import get_logger
 
@@ -45,9 +46,7 @@ def generate_report_task() -> dict[str, Any]:
             if settings.report_include_usage:
                 # Conversation stats
                 conv_count = await session.execute(
-                    select(func.count(Conversation.id)).where(
-                        Conversation.created_at >= week_ago
-                    )
+                    select(func.count(Conversation.id)).where(Conversation.created_at >= week_ago)
                 )
                 turn_count = await session.execute(
                     select(func.count(ConversationTurn.id)).where(
@@ -102,6 +101,16 @@ def generate_report_task() -> dict[str, Any]:
                     "failed_executions": failed,
                     "total_executions": total,
                 }
+
+            # Persist report to database
+            report_repo = ReportRepository(session)
+            await report_repo.create(
+                report_type="weekly",
+                period_start=week_ago,
+                period_end=now,
+                data=report,
+            )
+            await session.commit()
 
         return report
 
