@@ -75,6 +75,9 @@ class TestGenerateReportTask:
                 total_exec_result,
             ]
         )
+        mock_session.commit = AsyncMock()
+
+        mock_report_repo = AsyncMock()
 
         @asynccontextmanager
         async def mock_session_ctx():
@@ -82,7 +85,10 @@ class TestGenerateReportTask:
 
         with patch("src.tasks.report_tasks.get_settings", return_value=mock_settings_all_enabled):
             with patch("src.tasks.report_tasks.AsyncSessionLocal", mock_session_ctx):
-                result = generate_report_task()
+                with patch(
+                    "src.tasks.report_tasks.ReportRepository", return_value=mock_report_repo
+                ):
+                    result = generate_report_task()
 
         assert "usage" in result
         assert result["usage"]["conversations_created"] == 100
@@ -94,6 +100,9 @@ class TestGenerateReportTask:
         from src.tasks.report_tasks import generate_report_task
 
         mock_session = AsyncMock()
+        mock_session.commit = AsyncMock()
+
+        mock_report_repo = AsyncMock()
 
         @asynccontextmanager
         async def mock_session_ctx():
@@ -101,7 +110,10 @@ class TestGenerateReportTask:
 
         with patch("src.tasks.report_tasks.get_settings", return_value=mock_settings_all_disabled):
             with patch("src.tasks.report_tasks.AsyncSessionLocal", mock_session_ctx):
-                result = generate_report_task()
+                with patch(
+                    "src.tasks.report_tasks.ReportRepository", return_value=mock_report_repo
+                ):
+                    result = generate_report_task()
 
         assert "usage" not in result
 
@@ -110,20 +122,26 @@ class TestGenerateReportTask:
         from src.tasks.report_tasks import generate_report_task
 
         mock_session = AsyncMock()
+        mock_session.commit = AsyncMock()
 
         # Mock all query results
         count_result = Mock()
         count_result.scalar.return_value = 50
 
+        mock_session.execute = AsyncMock(return_value=count_result)
+
+        mock_report_repo = AsyncMock()
+
         @asynccontextmanager
         async def mock_session_ctx():
             yield mock_session
 
-        mock_session.execute = AsyncMock(return_value=count_result)
-
         with patch("src.tasks.report_tasks.get_settings", return_value=mock_settings_all_enabled):
             with patch("src.tasks.report_tasks.AsyncSessionLocal", mock_session_ctx):
-                result = generate_report_task()
+                with patch(
+                    "src.tasks.report_tasks.ReportRepository", return_value=mock_report_repo
+                ):
+                    result = generate_report_task()
 
         assert "papers" in result
         assert "papers_ingested_this_week" in result["papers"]
@@ -134,18 +152,15 @@ class TestGenerateReportTask:
         from src.tasks.report_tasks import generate_report_task
 
         mock_session = AsyncMock()
+        mock_session.commit = AsyncMock()
 
         # Mock all query results
         count_result = Mock()
         count_result.scalar.return_value = 100
 
-        failed_result = Mock()
-        failed_result.scalar.return_value = 5
-
-        total_result = Mock()
-        total_result.scalar.return_value = 100
-
         mock_session.execute = AsyncMock(return_value=count_result)
+
+        mock_report_repo = AsyncMock()
 
         @asynccontextmanager
         async def mock_session_ctx():
@@ -153,7 +168,10 @@ class TestGenerateReportTask:
 
         with patch("src.tasks.report_tasks.get_settings", return_value=mock_settings_all_enabled):
             with patch("src.tasks.report_tasks.AsyncSessionLocal", mock_session_ctx):
-                result = generate_report_task()
+                with patch(
+                    "src.tasks.report_tasks.ReportRepository", return_value=mock_report_repo
+                ):
+                    result = generate_report_task()
 
         assert "health" in result
         assert "agent_success_rate" in result["health"]
@@ -165,6 +183,7 @@ class TestGenerateReportTask:
         from src.tasks.report_tasks import generate_report_task
 
         mock_session = AsyncMock()
+        mock_session.commit = AsyncMock()
 
         # Create result sequence for all queries
         results = []
@@ -192,13 +211,18 @@ class TestGenerateReportTask:
 
         mock_session.execute = AsyncMock(side_effect=results)
 
+        mock_report_repo = AsyncMock()
+
         @asynccontextmanager
         async def mock_session_ctx():
             yield mock_session
 
         with patch("src.tasks.report_tasks.get_settings", return_value=mock_settings_all_enabled):
             with patch("src.tasks.report_tasks.AsyncSessionLocal", mock_session_ctx):
-                result = generate_report_task()
+                with patch(
+                    "src.tasks.report_tasks.ReportRepository", return_value=mock_report_repo
+                ):
+                    result = generate_report_task()
 
         # 90 successful out of 100 = 90%
         assert result["health"]["agent_success_rate"] == 90.0
@@ -210,6 +234,7 @@ class TestGenerateReportTask:
         from src.tasks.report_tasks import generate_report_task
 
         mock_session = AsyncMock()
+        mock_session.commit = AsyncMock()
 
         # Create result sequence
         results = []
@@ -237,13 +262,18 @@ class TestGenerateReportTask:
 
         mock_session.execute = AsyncMock(side_effect=results)
 
+        mock_report_repo = AsyncMock()
+
         @asynccontextmanager
         async def mock_session_ctx():
             yield mock_session
 
         with patch("src.tasks.report_tasks.get_settings", return_value=mock_settings_all_enabled):
             with patch("src.tasks.report_tasks.AsyncSessionLocal", mock_session_ctx):
-                result = generate_report_task()
+                with patch(
+                    "src.tasks.report_tasks.ReportRepository", return_value=mock_report_repo
+                ):
+                    result = generate_report_task()
 
         assert result["health"]["agent_success_rate"] == 100.0
 
@@ -252,6 +282,7 @@ class TestGenerateReportTask:
         from src.tasks.report_tasks import generate_report_task
 
         mock_session = AsyncMock()
+        mock_session.commit = AsyncMock()
 
         # Create result sequence
         results = []
@@ -279,13 +310,18 @@ class TestGenerateReportTask:
 
         mock_session.execute = AsyncMock(side_effect=results)
 
+        mock_report_repo = AsyncMock()
+
         @asynccontextmanager
         async def mock_session_ctx():
             yield mock_session
 
         with patch("src.tasks.report_tasks.get_settings", return_value=mock_settings_all_enabled):
             with patch("src.tasks.report_tasks.AsyncSessionLocal", mock_session_ctx):
-                result = generate_report_task()
+                with patch(
+                    "src.tasks.report_tasks.ReportRepository", return_value=mock_report_repo
+                ):
+                    result = generate_report_task()
 
         # Should be 100% when total is 0 (avoid division by zero)
         assert result["health"]["agent_success_rate"] == 100.0
@@ -295,6 +331,9 @@ class TestGenerateReportTask:
         from src.tasks.report_tasks import generate_report_task
 
         mock_session = AsyncMock()
+        mock_session.commit = AsyncMock()
+
+        mock_report_repo = AsyncMock()
 
         @asynccontextmanager
         async def mock_session_ctx():
@@ -302,7 +341,10 @@ class TestGenerateReportTask:
 
         with patch("src.tasks.report_tasks.get_settings", return_value=mock_settings_all_disabled):
             with patch("src.tasks.report_tasks.AsyncSessionLocal", mock_session_ctx):
-                result = generate_report_task()
+                with patch(
+                    "src.tasks.report_tasks.ReportRepository", return_value=mock_report_repo
+                ):
+                    result = generate_report_task()
 
         assert "generated_at" in result
         assert "period_start" in result
@@ -322,6 +364,9 @@ class TestGenerateReportTask:
         from src.tasks.report_tasks import generate_report_task
 
         mock_session = AsyncMock()
+        mock_session.commit = AsyncMock()
+
+        mock_report_repo = AsyncMock()
 
         @asynccontextmanager
         async def mock_session_ctx():
@@ -329,7 +374,10 @@ class TestGenerateReportTask:
 
         with patch("src.tasks.report_tasks.get_settings", return_value=mock_settings_all_disabled):
             with patch("src.tasks.report_tasks.AsyncSessionLocal", mock_session_ctx):
-                result = generate_report_task()
+                with patch(
+                    "src.tasks.report_tasks.ReportRepository", return_value=mock_report_repo
+                ):
+                    result = generate_report_task()
 
         period_start = datetime.fromisoformat(result["period_start"])
         period_end = datetime.fromisoformat(result["period_end"])
@@ -340,3 +388,34 @@ class TestGenerateReportTask:
         # Allow 1 minute tolerance
         assert abs((period_end - now).total_seconds()) < 60
         assert abs((period_start - week_ago).total_seconds()) < 60
+
+    def test_persists_report_to_database(self, mock_settings_all_disabled):
+        """Verify report is persisted via ReportRepository."""
+        from src.tasks.report_tasks import generate_report_task
+
+        mock_session = AsyncMock()
+        mock_session.commit = AsyncMock()
+
+        mock_report_repo = AsyncMock()
+
+        @asynccontextmanager
+        async def mock_session_ctx():
+            yield mock_session
+
+        with patch("src.tasks.report_tasks.get_settings", return_value=mock_settings_all_disabled):
+            with patch("src.tasks.report_tasks.AsyncSessionLocal", mock_session_ctx):
+                with patch(
+                    "src.tasks.report_tasks.ReportRepository", return_value=mock_report_repo
+                ):
+                    result = generate_report_task()
+
+        # Verify repo.create was called once with correct args
+        mock_report_repo.create.assert_called_once()
+        call_kwargs = mock_report_repo.create.call_args.kwargs
+        assert call_kwargs["report_type"] == "weekly"
+        assert "period_start" in call_kwargs
+        assert "period_end" in call_kwargs
+        assert "data" in call_kwargs
+
+        # Verify session.commit was called
+        mock_session.commit.assert_called_once()

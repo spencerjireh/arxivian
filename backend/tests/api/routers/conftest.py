@@ -5,7 +5,7 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import AsyncGenerator
-from unittest.mock import AsyncMock, Mock, MagicMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -160,6 +160,38 @@ def mock_user():
 
 
 @pytest.fixture
+def mock_task_exec_repo():
+    """Create a mock TaskExecutionRepository."""
+    repo = AsyncMock()
+    repo.create = AsyncMock()
+    repo.get_by_user_and_celery_task_id = AsyncMock(return_value=None)
+    repo.get_by_celery_task_id = AsyncMock(return_value=None)
+    repo.list_by_user = AsyncMock(return_value=([], 0))
+    repo.update_status = AsyncMock()
+    return repo
+
+
+@pytest.fixture
+def mock_report_repo():
+    """Create a mock ReportRepository."""
+    repo = AsyncMock()
+    repo.create = AsyncMock()
+    repo.get_by_id = AsyncMock(return_value=None)
+    repo.list_reports = AsyncMock(return_value=([], 0))
+    return repo
+
+
+@pytest.fixture
+def mock_user_repo():
+    """Create a mock UserRepository."""
+    repo = AsyncMock()
+    repo.update_preferences = AsyncMock()
+    repo.get_or_create = AsyncMock(return_value=(Mock(), False))
+    repo.get_users_with_searches = AsyncMock(return_value=[])
+    return repo
+
+
+@pytest.fixture
 def client(
     mock_db_session,
     mock_paper_repo,
@@ -170,6 +202,9 @@ def client(
     mock_embeddings_client,
     mock_settings,
     mock_user,
+    mock_task_exec_repo,
+    mock_report_repo,
+    mock_user_repo,
 ):
     """Create TestClient with all dependencies overridden including auth."""
     from src.main import app
@@ -181,6 +216,9 @@ def client(
         get_search_service_dep,
         get_ingest_service_dep,
         get_current_user_required,
+        get_task_execution_repository,
+        get_report_repository,
+        get_user_repository,
     )
     from src.factories.client_factories import get_embeddings_client
     from src.config import get_settings
@@ -215,6 +253,15 @@ def client(
     def override_current_user_required() -> Mock:
         return mock_user
 
+    def override_task_exec_repo() -> Mock:
+        return mock_task_exec_repo
+
+    def override_report_repo() -> Mock:
+        return mock_report_repo
+
+    def override_user_repo() -> Mock:
+        return mock_user_repo
+
     # Override dependencies
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_paper_repository] = override_paper_repo
@@ -225,6 +272,9 @@ def client(
     app.dependency_overrides[get_embeddings_client] = override_embeddings_client
     app.dependency_overrides[get_settings] = override_settings
     app.dependency_overrides[get_current_user_required] = override_current_user_required
+    app.dependency_overrides[get_task_execution_repository] = override_task_exec_repo
+    app.dependency_overrides[get_report_repository] = override_report_repo
+    app.dependency_overrides[get_user_repository] = override_user_repo
 
     with TestClient(app, raise_server_exceptions=False) as test_client:
         yield test_client
@@ -242,6 +292,9 @@ def unauthenticated_client(
     mock_ingest_service,
     mock_embeddings_client,
     mock_settings,
+    mock_task_exec_repo,
+    mock_report_repo,
+    mock_user_repo,
 ):
     """Create TestClient WITHOUT auth override to test 401 responses."""
     from src.main import app
@@ -252,6 +305,9 @@ def unauthenticated_client(
         get_conversation_repository,
         get_search_service_dep,
         get_ingest_service_dep,
+        get_task_execution_repository,
+        get_report_repository,
+        get_user_repository,
     )
     from src.factories.client_factories import get_embeddings_client
     from src.config import get_settings
@@ -282,6 +338,15 @@ def unauthenticated_client(
     def override_settings() -> Mock:
         return mock_settings
 
+    def override_task_exec_repo() -> Mock:
+        return mock_task_exec_repo
+
+    def override_report_repo() -> Mock:
+        return mock_report_repo
+
+    def override_user_repo() -> Mock:
+        return mock_user_repo
+
     # Override dependencies (NO auth override - will require real auth)
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_paper_repository] = override_paper_repo
@@ -291,6 +356,9 @@ def unauthenticated_client(
     app.dependency_overrides[get_ingest_service_dep] = override_ingest_service
     app.dependency_overrides[get_embeddings_client] = override_embeddings_client
     app.dependency_overrides[get_settings] = override_settings
+    app.dependency_overrides[get_task_execution_repository] = override_task_exec_repo
+    app.dependency_overrides[get_report_repository] = override_report_repo
+    app.dependency_overrides[get_user_repository] = override_user_repo
 
     with TestClient(app, raise_server_exceptions=False) as test_client:
         yield test_client
@@ -319,6 +387,24 @@ def reset_idempotency_store():
 
 
 # Sample data fixtures
+
+
+@pytest.fixture
+def sample_task_execution():
+    """Factory fixture for creating mock TaskExecution objects."""
+
+    def _make(task_id="test-task-123", status="queued", error_message=None, completed_at=None):
+        task_exec = Mock()
+        task_exec.celery_task_id = task_id
+        task_exec.user_id = uuid.uuid4()
+        task_exec.task_type = "ingest"
+        task_exec.status = status
+        task_exec.error_message = error_message
+        task_exec.created_at = datetime.now(timezone.utc)
+        task_exec.completed_at = completed_at
+        return task_exec
+
+    return _make
 
 
 @pytest.fixture

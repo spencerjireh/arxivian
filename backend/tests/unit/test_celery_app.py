@@ -158,3 +158,15 @@ class TestCeleryAppConfiguration:
         assert "daily-cleanup" in celery_app.conf.beat_schedule
         daily_cleanup = celery_app.conf.beat_schedule["daily-cleanup"]
         assert daily_cleanup["task"] == "src.tasks.cleanup_tasks.cleanup_task"
+
+    def test_celery_app_uses_redbeat_scheduler(self):
+        """Verify the celery app uses RedBeat scheduler."""
+        from src.celery_app import celery_app
+
+        assert celery_app.conf.beat_scheduler == "redbeat.RedBeatScheduler"
+
+    def test_celery_app_has_redbeat_redis_url(self):
+        """Verify the celery app has RedBeat Redis URL configured."""
+        from src.celery_app import celery_app
+
+        assert celery_app.conf.redbeat_redis_url is not None

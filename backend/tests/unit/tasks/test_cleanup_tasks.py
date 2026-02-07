@@ -23,22 +23,32 @@ class TestCleanupTask:
         settings.cleanup_retention_days = 7
         return settings
 
-    def test_deletes_conversations_older_than_retention(self, mock_settings_30_days):
-        """Verify the task deletes conversations older than retention period."""
+    def test_deletes_conversations_in_batches(self, mock_settings_30_days):
+        """Verify the task deletes conversations using batched deletes."""
         from src.tasks.cleanup_tasks import cleanup_task
+        import uuid
 
         mock_session = AsyncMock()
         mock_session.commit = AsyncMock()
 
-        # Mock count queries
-        conv_count_result = Mock()
-        conv_count_result.scalar.return_value = 5
+        # First call returns IDs, second call returns empty (stop loop)
+        conv_ids = [(uuid.uuid4(),) for _ in range(3)]
+        conv_batch_result = Mock()
+        conv_batch_result.fetchall.return_value = conv_ids
 
-        exec_count_result = Mock()
-        exec_count_result.scalar.return_value = 0
+        conv_empty_result = Mock()
+        conv_empty_result.fetchall.return_value = []
+
+        exec_empty_result = Mock()
+        exec_empty_result.fetchall.return_value = []
 
         mock_session.execute = AsyncMock(
-            side_effect=[conv_count_result, None, exec_count_result, None]
+            side_effect=[
+                conv_batch_result,  # SELECT conv ids batch 1
+                None,               # DELETE conv batch 1
+                conv_empty_result,  # SELECT conv ids batch 2 (empty, stop)
+                exec_empty_result,  # SELECT exec ids batch 1 (empty, stop)
+            ]
         )
 
         @asynccontextmanager
@@ -49,25 +59,36 @@ class TestCleanupTask:
             with patch("src.tasks.cleanup_tasks.AsyncSessionLocal", mock_session_ctx):
                 result = cleanup_task()
 
-        assert result["conversations_deleted"] == 5
-        mock_session.commit.assert_called_once()
+        assert result["conversations_deleted"] == 3
+        assert result["agent_executions_deleted"] == 0
+        # Commit called once per batch
+        assert mock_session.commit.call_count >= 1
 
-    def test_deletes_agent_executions_older_than_retention(self, mock_settings_30_days):
-        """Verify the task deletes agent executions older than retention period."""
+    def test_deletes_agent_executions_in_batches(self, mock_settings_30_days):
+        """Verify the task deletes agent executions using batched deletes."""
         from src.tasks.cleanup_tasks import cleanup_task
+        import uuid
 
         mock_session = AsyncMock()
         mock_session.commit = AsyncMock()
 
-        # Mock count queries
-        conv_count_result = Mock()
-        conv_count_result.scalar.return_value = 0
+        conv_empty_result = Mock()
+        conv_empty_result.fetchall.return_value = []
 
-        exec_count_result = Mock()
-        exec_count_result.scalar.return_value = 10
+        exec_ids = [(uuid.uuid4(),) for _ in range(5)]
+        exec_batch_result = Mock()
+        exec_batch_result.fetchall.return_value = exec_ids
+
+        exec_empty_result = Mock()
+        exec_empty_result.fetchall.return_value = []
 
         mock_session.execute = AsyncMock(
-            side_effect=[conv_count_result, exec_count_result, None]
+            side_effect=[
+                conv_empty_result,   # SELECT conv ids (empty)
+                exec_batch_result,   # SELECT exec ids batch 1
+                None,                # DELETE exec batch 1
+                exec_empty_result,   # SELECT exec ids batch 2 (empty, stop)
+            ]
         )
 
         @asynccontextmanager
@@ -78,8 +99,8 @@ class TestCleanupTask:
             with patch("src.tasks.cleanup_tasks.AsyncSessionLocal", mock_session_ctx):
                 result = cleanup_task()
 
-        assert result["agent_executions_deleted"] == 10
-        mock_session.commit.assert_called_once()
+        assert result["conversations_deleted"] == 0
+        assert result["agent_executions_deleted"] == 5
 
     def test_respects_retention_days_setting(self, mock_settings_7_days):
         """Verify the task uses the configured retention days."""
@@ -88,16 +109,9 @@ class TestCleanupTask:
         mock_session = AsyncMock()
         mock_session.commit = AsyncMock()
 
-        # Track the queries to verify cutoff date
-        executed_queries = []
-
-        async def track_execute(query):
-            executed_queries.append(query)
-            result = Mock()
-            result.scalar.return_value = 0
-            return result
-
-        mock_session.execute = track_execute
+        empty_result = Mock()
+        empty_result.fetchall.return_value = []
+        mock_session.execute = AsyncMock(return_value=empty_result)
 
         @asynccontextmanager
         async def mock_session_ctx():
@@ -114,61 +128,6 @@ class TestCleanupTask:
         # Allow 1 minute tolerance for test execution time
         assert abs((cutoff_date - expected_cutoff).total_seconds()) < 60
 
-    def test_returns_deletion_counts(self, mock_settings_30_days):
-        """Verify the task returns accurate deletion counts."""
-        from src.tasks.cleanup_tasks import cleanup_task
-
-        mock_session = AsyncMock()
-        mock_session.commit = AsyncMock()
-
-        # Mock count queries
-        conv_count_result = Mock()
-        conv_count_result.scalar.return_value = 15
-
-        exec_count_result = Mock()
-        exec_count_result.scalar.return_value = 25
-
-        mock_session.execute = AsyncMock(
-            side_effect=[conv_count_result, None, exec_count_result, None]
-        )
-
-        @asynccontextmanager
-        async def mock_session_ctx():
-            yield mock_session
-
-        with patch("src.tasks.cleanup_tasks.get_settings", return_value=mock_settings_30_days):
-            with patch("src.tasks.cleanup_tasks.AsyncSessionLocal", mock_session_ctx):
-                result = cleanup_task()
-
-        assert "conversations_deleted" in result
-        assert "agent_executions_deleted" in result
-        assert "cutoff_date" in result
-        assert result["conversations_deleted"] == 15
-        assert result["agent_executions_deleted"] == 25
-
-    def test_commits_changes(self, mock_settings_30_days):
-        """Verify the task commits all changes to the database."""
-        from src.tasks.cleanup_tasks import cleanup_task
-
-        mock_session = AsyncMock()
-        mock_session.commit = AsyncMock()
-
-        # Mock count queries returning 0 (nothing to delete)
-        count_result = Mock()
-        count_result.scalar.return_value = 0
-
-        mock_session.execute = AsyncMock(return_value=count_result)
-
-        @asynccontextmanager
-        async def mock_session_ctx():
-            yield mock_session
-
-        with patch("src.tasks.cleanup_tasks.get_settings", return_value=mock_settings_30_days):
-            with patch("src.tasks.cleanup_tasks.AsyncSessionLocal", mock_session_ctx):
-                cleanup_task()
-
-        mock_session.commit.assert_called_once()
-
     def test_handles_zero_records_to_delete(self, mock_settings_30_days):
         """Verify the task handles case with no records to delete."""
         from src.tasks.cleanup_tasks import cleanup_task
@@ -176,11 +135,9 @@ class TestCleanupTask:
         mock_session = AsyncMock()
         mock_session.commit = AsyncMock()
 
-        # Mock count queries returning 0
-        count_result = Mock()
-        count_result.scalar.return_value = 0
-
-        mock_session.execute = AsyncMock(return_value=count_result)
+        empty_result = Mock()
+        empty_result.fetchall.return_value = []
+        mock_session.execute = AsyncMock(return_value=empty_result)
 
         @asynccontextmanager
         async def mock_session_ctx():
@@ -192,26 +149,23 @@ class TestCleanupTask:
 
         assert result["conversations_deleted"] == 0
         assert result["agent_executions_deleted"] == 0
-        # Should still commit even with no deletions
-        mock_session.commit.assert_called_once()
 
-    def test_skips_delete_when_count_is_zero(self, mock_settings_30_days):
-        """Verify delete is skipped when count is 0 to avoid unnecessary queries."""
+    def test_empty_batch_means_no_delete(self, mock_settings_30_days):
+        """Verify no DELETE is executed when the SELECT returns empty."""
         from src.tasks.cleanup_tasks import cleanup_task
 
         mock_session = AsyncMock()
         mock_session.commit = AsyncMock()
 
-        execute_call_count = 0
+        execute_calls = []
 
-        async def count_execute_calls(query):
-            nonlocal execute_call_count
-            execute_call_count += 1
+        async def track_execute(query):
+            execute_calls.append(query)
             result = Mock()
-            result.scalar.return_value = 0
+            result.fetchall.return_value = []
             return result
 
-        mock_session.execute = count_execute_calls
+        mock_session.execute = track_execute
 
         @asynccontextmanager
         async def mock_session_ctx():
@@ -221,5 +175,46 @@ class TestCleanupTask:
             with patch("src.tasks.cleanup_tasks.AsyncSessionLocal", mock_session_ctx):
                 cleanup_task()
 
-        # Only 2 count queries should execute (not 4 with deletes)
-        assert execute_call_count == 2
+        # Only 2 SELECT queries (one per model), no DELETE queries
+        assert len(execute_calls) == 2
+
+    def test_commits_per_batch(self, mock_settings_30_days):
+        """Verify commit is called after each batch deletion."""
+        from src.tasks.cleanup_tasks import cleanup_task
+        import uuid
+
+        mock_session = AsyncMock()
+        mock_session.commit = AsyncMock()
+
+        # Two batches of conversations
+        batch1 = Mock()
+        batch1.fetchall.return_value = [(uuid.uuid4(),) for _ in range(3)]
+
+        batch2 = Mock()
+        batch2.fetchall.return_value = [(uuid.uuid4(),) for _ in range(2)]
+
+        empty = Mock()
+        empty.fetchall.return_value = []
+
+        mock_session.execute = AsyncMock(
+            side_effect=[
+                batch1,  # SELECT conv batch 1
+                None,    # DELETE conv batch 1
+                batch2,  # SELECT conv batch 2
+                None,    # DELETE conv batch 2
+                empty,   # SELECT conv batch 3 (empty)
+                empty,   # SELECT exec batch 1 (empty)
+            ]
+        )
+
+        @asynccontextmanager
+        async def mock_session_ctx():
+            yield mock_session
+
+        with patch("src.tasks.cleanup_tasks.get_settings", return_value=mock_settings_30_days):
+            with patch("src.tasks.cleanup_tasks.AsyncSessionLocal", mock_session_ctx):
+                result = cleanup_task()
+
+        assert result["conversations_deleted"] == 5
+        # Commit should be called at least 2 times (once per batch)
+        assert mock_session.commit.call_count >= 2

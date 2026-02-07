@@ -1,9 +1,5 @@
 """API tests for preferences router endpoints."""
 
-import pytest
-import uuid
-from datetime import datetime, timezone
-from unittest.mock import patch, Mock, AsyncMock
 
 
 class TestGetPreferencesEndpoint:
@@ -62,28 +58,23 @@ class TestUpdateArxivSearchesEndpoint:
             ]
         }
 
-        with patch("src.routers.preferences.UserRepository") as mock_repo_class:
-            mock_repo = AsyncMock()
-            mock_repo.update_preferences = AsyncMock()
-            mock_repo_class.return_value = mock_repo
-
-            response = client.put(
-                "/api/v1/preferences/arxiv-searches",
-                json={
-                    "arxiv_searches": [
-                        {
-                            "name": "New Search 1",
-                            "query": "new query 1",
-                            "enabled": True,
-                        },
-                        {
-                            "name": "New Search 2",
-                            "query": "new query 2",
-                            "enabled": False,
-                        },
-                    ]
-                },
-            )
+        response = client.put(
+            "/api/v1/preferences/arxiv-searches",
+            json={
+                "arxiv_searches": [
+                    {
+                        "name": "New Search 1",
+                        "query": "new query 1",
+                        "enabled": True,
+                    },
+                    {
+                        "name": "New Search 2",
+                        "query": "new query 2",
+                        "enabled": False,
+                    },
+                ]
+            },
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -144,27 +135,22 @@ class TestUpdateArxivSearchesEndpoint:
 
         assert response.status_code == 422
 
-    def test_persists_changes_to_database(self, client, mock_user, mock_db_session):
+    def test_persists_changes_to_database(self, client, mock_user, mock_db_session, mock_user_repo):
         """Verify changes are persisted to the database."""
         mock_user.preferences = {}
 
-        with patch("src.routers.preferences.UserRepository") as mock_repo_class:
-            mock_repo = AsyncMock()
-            mock_repo.update_preferences = AsyncMock()
-            mock_repo_class.return_value = mock_repo
-
-            response = client.put(
-                "/api/v1/preferences/arxiv-searches",
-                json={
-                    "arxiv_searches": [
-                        {"name": "Test", "query": "test query", "enabled": True}
-                    ]
-                },
-            )
+        response = client.put(
+            "/api/v1/preferences/arxiv-searches",
+            json={
+                "arxiv_searches": [
+                    {"name": "Test", "query": "test query", "enabled": True}
+                ]
+            },
+        )
 
         assert response.status_code == 200
         # Verify update_preferences was called
-        mock_repo.update_preferences.assert_called_once()
+        mock_user_repo.update_preferences.assert_called_once()
         # Verify commit was called
         mock_db_session.commit.assert_called()
 
@@ -189,21 +175,16 @@ class TestAddArxivSearchEndpoint:
             ]
         }
 
-        with patch("src.routers.preferences.UserRepository") as mock_repo_class:
-            mock_repo = AsyncMock()
-            mock_repo.update_preferences = AsyncMock()
-            mock_repo_class.return_value = mock_repo
-
-            response = client.post(
-                "/api/v1/preferences/arxiv-searches",
-                json={
-                    "name": "New Search",
-                    "query": "new query",
-                    "categories": ["cs.LG"],
-                    "max_results": 15,
-                    "enabled": True,
-                },
-            )
+        response = client.post(
+            "/api/v1/preferences/arxiv-searches",
+            json={
+                "name": "New Search",
+                "query": "new query",
+                "categories": ["cs.LG"],
+                "max_results": 15,
+                "enabled": True,
+            },
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -215,19 +196,14 @@ class TestAddArxivSearchEndpoint:
         """Verify list is created if user has no searches."""
         mock_user.preferences = None
 
-        with patch("src.routers.preferences.UserRepository") as mock_repo_class:
-            mock_repo = AsyncMock()
-            mock_repo.update_preferences = AsyncMock()
-            mock_repo_class.return_value = mock_repo
-
-            response = client.post(
-                "/api/v1/preferences/arxiv-searches",
-                json={
-                    "name": "First Search",
-                    "query": "first query",
-                    "enabled": True,
-                },
-            )
+        response = client.post(
+            "/api/v1/preferences/arxiv-searches",
+            json={
+                "name": "First Search",
+                "query": "first query",
+                "enabled": True,
+            },
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -247,20 +223,15 @@ class TestAddArxivSearchEndpoint:
         """Verify default max_results is used when not specified."""
         mock_user.preferences = {}
 
-        with patch("src.routers.preferences.UserRepository") as mock_repo_class:
-            mock_repo = AsyncMock()
-            mock_repo.update_preferences = AsyncMock()
-            mock_repo_class.return_value = mock_repo
-
-            response = client.post(
-                "/api/v1/preferences/arxiv-searches",
-                json={
-                    "name": "Test",
-                    "query": "test query",
-                    "enabled": True,
-                    # No max_results specified
-                },
-            )
+        response = client.post(
+            "/api/v1/preferences/arxiv-searches",
+            json={
+                "name": "Test",
+                "query": "test query",
+                "enabled": True,
+                # No max_results specified
+            },
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -280,12 +251,7 @@ class TestDeleteArxivSearchEndpoint:
             ]
         }
 
-        with patch("src.routers.preferences.UserRepository") as mock_repo_class:
-            mock_repo = AsyncMock()
-            mock_repo.update_preferences = AsyncMock()
-            mock_repo_class.return_value = mock_repo
-
-            response = client.delete("/api/v1/preferences/arxiv-searches/Delete%20This")
+        response = client.delete("/api/v1/preferences/arxiv-searches/Delete%20This")
 
         assert response.status_code == 200
         data = response.json()
@@ -300,12 +266,7 @@ class TestDeleteArxivSearchEndpoint:
             ]
         }
 
-        with patch("src.routers.preferences.UserRepository") as mock_repo_class:
-            mock_repo = AsyncMock()
-            mock_repo.update_preferences = AsyncMock()
-            mock_repo_class.return_value = mock_repo
-
-            response = client.delete("/api/v1/preferences/arxiv-searches/NonExistent")
+        response = client.delete("/api/v1/preferences/arxiv-searches/NonExistent")
 
         # Should succeed but not change anything
         assert response.status_code == 200
@@ -323,12 +284,7 @@ class TestDeleteArxivSearchEndpoint:
         """Verify endpoint handles user with no preferences."""
         mock_user.preferences = None
 
-        with patch("src.routers.preferences.UserRepository") as mock_repo_class:
-            mock_repo = AsyncMock()
-            mock_repo.update_preferences = AsyncMock()
-            mock_repo_class.return_value = mock_repo
-
-            response = client.delete("/api/v1/preferences/arxiv-searches/Test")
+        response = client.delete("/api/v1/preferences/arxiv-searches/Test")
 
         assert response.status_code == 200
         data = response.json()
@@ -342,13 +298,8 @@ class TestDeleteArxivSearchEndpoint:
             ]
         }
 
-        with patch("src.routers.preferences.UserRepository") as mock_repo_class:
-            mock_repo = AsyncMock()
-            mock_repo.update_preferences = AsyncMock()
-            mock_repo_class.return_value = mock_repo
-
-            # URL encoded: "ML & AI Papers" -> "ML%20%26%20AI%20Papers"
-            response = client.delete("/api/v1/preferences/arxiv-searches/ML%20%26%20AI%20Papers")
+        # URL encoded: "ML & AI Papers" -> "ML%20%26%20AI%20Papers"
+        response = client.delete("/api/v1/preferences/arxiv-searches/ML%20%26%20AI%20Papers")
 
         assert response.status_code == 200
         data = response.json()
