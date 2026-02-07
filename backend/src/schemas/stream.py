@@ -14,7 +14,7 @@ class StreamRequest(BaseModel):
     query: str = Field(..., description="Question to ask")
 
     # LLM Provider Selection
-    provider: Optional[Literal["openai", "zai"]] = Field(
+    provider: Optional[Literal["openai", "nvidia_nim"]] = Field(
         None, description="LLM provider to use. Uses system default if not specified."
     )
     model: Optional[str] = Field(

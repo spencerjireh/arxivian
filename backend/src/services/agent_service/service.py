@@ -8,7 +8,7 @@ from uuid import UUID
 from langchain_core.messages import HumanMessage, AIMessage
 
 from src.clients.base_llm_client import BaseLLMClient
-from src.clients.traced_llm_client import set_trace_context
+from src.clients.langfuse_utils import set_trace_context
 from src.config import get_settings
 
 try:
@@ -412,9 +412,9 @@ class AgentService:
         # Submit Langfuse scores for analytics
         if trace_id:
             try:
-                from src.clients.traced_llm_client import _get_langfuse
+                from src.clients.langfuse_utils import get_langfuse
 
-                langfuse = _get_langfuse()
+                langfuse = get_langfuse()
                 if langfuse:
                     if guardrail_score is not None:
                         langfuse.score(

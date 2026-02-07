@@ -41,27 +41,19 @@ async def generate_answer_node(state: AgentState, context: AgentContext) -> Agen
 
     log.debug("llm prompt", system_len=len(system), user_len=len(user))
 
-    # Use stream=True and emit tokens via custom events
-    response = await context.llm_client.generate_completion(
+    # Stream tokens and emit as custom events
+    tokens: list[str] = []
+    async for token in context.llm_client.generate_stream(
         messages=[  # ty: ignore[invalid-argument-type]  # dict works at runtime
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
         temperature=context.temperature,
         max_tokens=1000,
-        stream=True,
-    )
-
-    # Collect streamed tokens and emit as custom events
-    if isinstance(response, str):
-        answer = response
-        await adispatch_custom_event("token", response)
-    else:
-        tokens: list[str] = []
-        async for token in response:
-            tokens.append(token)
-            await adispatch_custom_event("token", token)
-        answer = "".join(tokens)
+    ):
+        tokens.append(token)
+        await adispatch_custom_event("token", token)
+    answer = "".join(tokens)
 
     log.info(
         "answer generated",

@@ -1,9 +1,11 @@
 """Abstract base class for LLM providers."""
 
 from abc import ABC, abstractmethod
-from typing import List, AsyncIterator, Type, Optional, TypeVar
-from pydantic import BaseModel
+from collections.abc import AsyncIterator
+from typing import TypeVar
+
 from openai.types.chat import ChatCompletionMessageParam
+from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -14,7 +16,7 @@ class BaseLLMClient(ABC):
     @property
     @abstractmethod
     def provider_name(self) -> str:
-        """Return provider name (e.g., 'openai', 'zai')."""
+        """Return provider name (e.g., 'openai', 'nvidia_nim')."""
         pass
 
     @property
@@ -26,47 +28,35 @@ class BaseLLMClient(ABC):
     @abstractmethod
     async def generate_completion(
         self,
-        messages: List[ChatCompletionMessageParam],
-        model: Optional[str] = None,
+        messages: list[ChatCompletionMessageParam],
+        model: str | None = None,
         temperature: float = 0.3,
         max_tokens: int = 1000,
-        stream: bool = False,
-        timeout: Optional[float] = None,
-    ) -> str | AsyncIterator[str]:
-        """
-        Generate completion from LLM.
-
-        Args:
-            messages: List of chat completion messages
-            model: Model to use (overrides default)
-            temperature: Sampling temperature (0-1)
-            max_tokens: Maximum tokens to generate
-            stream: Whether to stream the response
-            timeout: Optional timeout in seconds (uses client default if None)
-
-        Returns:
-            str if stream=False, AsyncIterator[str] if stream=True
-        """
+        timeout: float | None = None,
+    ) -> str:
+        """Generate a non-streaming completion from the LLM."""
         pass
+
+    @abstractmethod
+    async def generate_stream(
+        self,
+        messages: list[ChatCompletionMessageParam],
+        model: str | None = None,
+        temperature: float = 0.3,
+        max_tokens: int = 1000,
+        timeout: float | None = None,
+    ) -> AsyncIterator[str]:
+        """Generate a streaming completion from the LLM."""
+        pass
+        yield  # pragma: no cover -- makes this a valid abstract async generator
 
     @abstractmethod
     async def generate_structured(
         self,
-        messages: List[ChatCompletionMessageParam],
-        response_format: Type[T],
-        model: Optional[str] = None,
-        timeout: Optional[float] = None,
+        messages: list[ChatCompletionMessageParam],
+        response_format: type[T],
+        model: str | None = None,
+        timeout: float | None = None,
     ) -> T:
-        """
-        Generate structured output using provider's structured outputs API.
-
-        Args:
-            messages: List of chat completion messages
-            response_format: Pydantic model class for response schema
-            model: Model to use (overrides default)
-            timeout: Optional timeout in seconds (uses client default if None)
-
-        Returns:
-            Instance of response_format Pydantic model
-        """
+        """Generate structured output using the provider's structured outputs API."""
         pass

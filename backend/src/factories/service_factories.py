@@ -112,12 +112,13 @@ def get_agent_service(
     user_id: Optional[UUID] = None,
 ) -> AgentService:
     """
-    Create agent service with specified LLM provider.
+    Create agent service with specified LLM model.
 
     Args:
         db_session: Database session
-        provider: LLM provider ('openai' or 'zai'). Uses system default if None.
-        model: Model name. Uses provider's default if None.
+        provider: LLM provider prefix (e.g. 'openai', 'nvidia_nim'). Combined with
+                  model into LiteLLM format. Uses system default if both None.
+        model: Model name or full LiteLLM model string. Uses default if None.
         guardrail_threshold: Minimum guardrail score
         top_k: Number of chunks to use
         max_retrieval_attempts: Max query rewrites
@@ -130,8 +131,15 @@ def get_agent_service(
     Returns:
         AgentService instance
     """
-    # Get LLM client (validates provider/model)
-    llm_client = get_llm_client(provider=provider, model=model)
+    # Build LiteLLM model string from provider + model if both provided
+    litellm_model: Optional[str] = None
+    if provider and model:
+        litellm_model = f"{provider}/{model}"
+    elif model:
+        litellm_model = model
+
+    # Get LLM client (validates model)
+    llm_client = get_llm_client(model=litellm_model)
 
     # Get search service
     search_service = get_search_service(db_session)

@@ -7,10 +7,8 @@ from src.config import get_settings
 from src.clients.arxiv_client import ArxivClient
 from src.clients.embeddings_client import JinaEmbeddingsClient
 from src.clients.base_llm_client import BaseLLMClient
-from src.clients.openai_client import OpenAIClient
-from src.clients.zai_client import ZAIClient
-from src.clients.traced_llm_client import TracedLLMClient, LANGFUSE_AVAILABLE
-from src.exceptions import ConfigurationError, InvalidModelError, InvalidProviderError
+from src.clients.litellm_client import LiteLLMClient
+from src.exceptions import InvalidModelError
 
 
 @lru_cache(maxsize=1)
@@ -36,83 +34,31 @@ def get_embeddings_client() -> JinaEmbeddingsClient:
     return JinaEmbeddingsClient(api_key=settings.jina_api_key, model="jina-embeddings-v3")
 
 
-def get_llm_client(provider: Optional[str] = None, model: Optional[str] = None) -> BaseLLMClient:
+def get_llm_client(model: Optional[str] = None) -> BaseLLMClient:
     """
-    Create LLM client for specified provider and model.
+    Create LLM client for specified LiteLLM model.
 
     Args:
-        provider: LLM provider ('openai' or 'zai'). Uses default if None.
-        model: Model name. Uses provider's default if None.
+        model: LiteLLM-format model string (e.g. "openai/gpt-4o-mini").
+               Uses default_llm_model from settings if None.
 
     Returns:
-        BaseLLMClient instance for the specified provider
+        BaseLLMClient instance
 
     Raises:
-        ValueError: If provider is invalid or model not allowed
+        InvalidModelError: If model is not in the allowed list
     """
     settings = get_settings()
 
-    # Use default provider if not specified
-    if provider is None:
-        provider = settings.default_llm_provider
-
-    # Validate provider
-    if provider not in ["openai", "zai"]:
-        raise InvalidProviderError(provider=provider, valid_providers=["openai", "zai"])
-
-    # Use default model if not specified
     if model is None:
-        model = settings.get_default_model(provider)
+        model = settings.default_llm_model
 
-    # Validate model
-    if not settings.validate_model(provider, model):
-        allowed = settings.get_allowed_models(provider)
+    # Validate model against allowed list
+    if not settings.is_model_allowed(model):
+        allowed = settings.get_allowed_models_list()
+        provider = model.split("/", 1)[0] if "/" in model else "unknown"
         raise InvalidModelError(model=model, provider=provider, valid_models=allowed)
 
-    # Get LLM timeout from settings
     timeout = float(settings.llm_call_timeout_seconds)
 
-    # Create appropriate client
-    client: BaseLLMClient
-    if provider == "openai":
-        if not settings.openai_api_key:
-            raise ConfigurationError(
-                message="OpenAI API key not configured",
-                details={"required_env_var": "OPENAI_API_KEY"},
-            )
-        openai_key: str = settings.openai_api_key
-        client = OpenAIClient(api_key=openai_key, model=model, timeout=timeout)
-    elif provider == "zai":
-        if not settings.zai_api_key:
-            raise ConfigurationError(
-                message="Z.AI API key not configured",
-                details={"required_env_var": "ZAI_API_KEY"},
-            )
-        zai_key: str = settings.zai_api_key
-        client = ZAIClient(api_key=zai_key, model=model, timeout=timeout)
-    else:
-        raise InvalidProviderError(provider=provider, valid_providers=["openai", "zai"])
-
-    # Wrap with tracing if Langfuse is enabled
-    if LANGFUSE_AVAILABLE and settings.langfuse_enabled:
-        return TracedLLMClient(client)
-
-    return client
-
-
-@lru_cache(maxsize=1)
-def get_openai_client() -> OpenAIClient:
-    """
-    Create singleton OpenAI client (DEPRECATED).
-
-    Use get_llm_client() instead.
-
-    Returns:
-        OpenAIClient instance
-    """
-    settings = get_settings()
-    return OpenAIClient(
-        api_key=settings.openai_api_key,
-        model=settings.get_default_model("openai"),
-        timeout=float(settings.llm_call_timeout_seconds),
-    )
+    return LiteLLMClient(model=model, timeout=timeout)

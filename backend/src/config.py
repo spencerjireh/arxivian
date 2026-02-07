@@ -1,7 +1,7 @@
 """Application configuration using Pydantic Settings."""
 
 from functools import lru_cache
-from typing import List, Literal, Optional
+from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,16 +13,14 @@ class Settings(BaseSettings):
     # Database
     postgres_url: str = "postgresql+asyncpg://user:password@localhost:5432/arxiv_rag"
 
-    # LLM Provider Configuration
-    default_llm_provider: Literal["openai", "zai"] = "openai"
+    # LLM Configuration (LiteLLM-format model strings: "provider/model")
+    default_llm_model: str = "openai/gpt-4o-mini"
+    allowed_llm_models: str = "openai/gpt-4o-mini,openai/gpt-4o,openai/gpt-4-turbo"
 
-    # OpenAI Configuration
+    # Provider API Keys
     openai_api_key: str = ""
-    openai_allowed_models: str = "gpt-4o-mini,gpt-4o,gpt-4-turbo"
-
-    # Z.AI Configuration
-    zai_api_key: Optional[str] = None
-    zai_allowed_models: str = "glm-4.6,glm-4.5,glm-4-32b-0414-128k"
+    nvidia_nim_api_key: Optional[str] = None
+    nvidia_nim_api_base: Optional[str] = None
 
     # Embeddings
     jina_api_key: str = ""
@@ -81,25 +79,13 @@ class Settings(BaseSettings):
     report_include_health: bool = True
 
     # Helper methods
-    def get_allowed_models(self, provider: str) -> List[str]:
-        """Get list of allowed models for a provider."""
-        if provider == "openai":
-            return [m.strip() for m in self.openai_allowed_models.split(",")]
-        elif provider == "zai":
-            return [m.strip() for m in self.zai_allowed_models.split(",")]
-        else:
-            return []
+    def get_allowed_models_list(self) -> List[str]:
+        """Get list of all allowed LiteLLM model strings."""
+        return [m.strip() for m in self.allowed_llm_models.split(",") if m.strip()]
 
-    def get_default_model(self, provider: str) -> str:
-        """Get default model for a provider (first in allowed list)."""
-        models = self.get_allowed_models(provider)
-        if not models:
-            raise ValueError(f"No models configured for provider: {provider}")
-        return models[0]
-
-    def validate_model(self, provider: str, model: str) -> bool:
-        """Check if model is allowed for provider."""
-        return model in self.get_allowed_models(provider)
+    def is_model_allowed(self, model: str) -> bool:
+        """Check if a LiteLLM model string is in the allowed list."""
+        return model in self.get_allowed_models_list()
 
 
 @lru_cache(maxsize=1)

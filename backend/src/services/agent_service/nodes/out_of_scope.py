@@ -48,27 +48,19 @@ async def out_of_scope_node(state: AgentState, context: AgentContext) -> AgentSt
             .build()
         )
 
-        # Use stream=True and emit tokens via custom events
-        response = await context.llm_client.generate_completion(
+        # Stream tokens and emit as custom events
+        tokens: list[str] = []
+        async for token in context.llm_client.generate_stream(
             messages=[  # ty: ignore[invalid-argument-type]
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
             temperature=0.7,
             max_tokens=300,
-            stream=True,
-        )
-
-        # Collect streamed tokens and emit as custom events
-        if isinstance(response, str):
-            message = response
-            await adispatch_custom_event("token", response)
-        else:
-            tokens: list[str] = []
-            async for token in response:
-                tokens.append(token)
-                await adispatch_custom_event("token", token)
-            message = "".join(tokens)
+        ):
+            tokens.append(token)
+            await adispatch_custom_event("token", token)
+        message = "".join(tokens)
     else:
         message = "I specialize in AI/ML research papers. How can I help with that?"
         await adispatch_custom_event("token", message)

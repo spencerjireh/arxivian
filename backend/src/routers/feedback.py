@@ -18,11 +18,11 @@ async def submit_feedback(
 ) -> FeedbackResponse:
     """Submit user feedback for a trace."""
     try:
-        from src.clients.traced_llm_client import _get_langfuse
+        from src.clients.langfuse_utils import get_langfuse
     except ImportError:
         return FeedbackResponse(success=False, message="Langfuse not installed")
 
-    langfuse = _get_langfuse()
+    langfuse = get_langfuse()
     if not langfuse:
         return FeedbackResponse(success=False, message="Langfuse not enabled")
 

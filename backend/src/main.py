@@ -38,14 +38,22 @@ async def lifespan(app: FastAPI):
     await init_db()
     log.info("database initialized")
 
+    # Configure LiteLLM
+    import litellm
+
+    litellm.suppress_debug_info = True
+    litellm.set_verbose = False
+
     if settings.langfuse_enabled:
+        litellm.success_callback = ["langfuse"]
+        litellm.failure_callback = ["langfuse"]
         log.info("langfuse_enabled", host=settings.langfuse_host)
 
     yield
 
     # Flush any pending Langfuse events on shutdown
     try:
-        from src.clients.traced_llm_client import shutdown_langfuse
+        from src.clients.langfuse_utils import shutdown_langfuse
 
         shutdown_langfuse()
     except Exception as e:
@@ -102,7 +110,7 @@ async def root():
         "version": "0.3.0",
         "features": [
             "Jireh's Agent with LangGraph",
-            "Multi-provider LLM support (OpenAI, Z.AI)",
+            "Multi-provider LLM support (OpenAI, NVIDIA NIM) via LiteLLM",
             "Hybrid search (vector + full-text)",
             "arXiv paper ingestion",
             "SSE streaming responses",

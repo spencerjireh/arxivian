@@ -31,15 +31,7 @@ async def rewrite_query_node(state: AgentState, context: AgentContext) -> AgentS
         messages=[{"role": "user", "content": prompt}],
         temperature=0.5,  # ty: ignore[invalid-argument-type]
     )
-
-    # Handle both str and AsyncIterator responses
-    if isinstance(rewritten, str):
-        rewritten_text = rewritten.strip()
-    else:
-        chunks = []
-        async for chunk in rewritten:
-            chunks.append(chunk)
-        rewritten_text = "".join(chunks).strip()
+    rewritten_text = rewritten.strip()
 
     state["rewritten_query"] = rewritten_text
 

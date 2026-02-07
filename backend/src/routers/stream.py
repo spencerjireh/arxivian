@@ -44,7 +44,7 @@ async def stream(
     status updates, content tokens, and metadata as separate events.
 
     Features:
-    - Multi-provider LLM support (OpenAI, Z.AI)
+    - Multi-provider LLM support (OpenAI, NVIDIA NIM)
     - Guardrail validation (rejects out-of-scope queries)
     - Document grading (filters irrelevant chunks)
     - Query rewriting (improves retrieval iteratively)
