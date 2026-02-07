@@ -9,7 +9,7 @@ class TestFeedbackEndpoint:
 
     def test_feedback_success(self, client):
         """Test successful feedback submission."""
-        with patch("src.clients.traced_llm_client._get_langfuse") as mock_get_langfuse:
+        with patch("src.clients.langfuse_utils.get_langfuse") as mock_get_langfuse:
             mock_langfuse = Mock()
             mock_get_langfuse.return_value = mock_langfuse
 
@@ -36,7 +36,7 @@ class TestFeedbackEndpoint:
 
     def test_feedback_without_comment(self, client):
         """Test feedback submission without comment."""
-        with patch("src.clients.traced_llm_client._get_langfuse") as mock_get_langfuse:
+        with patch("src.clients.langfuse_utils.get_langfuse") as mock_get_langfuse:
             mock_langfuse = Mock()
             mock_get_langfuse.return_value = mock_langfuse
 
@@ -54,7 +54,7 @@ class TestFeedbackEndpoint:
 
     def test_feedback_langfuse_not_enabled(self, client):
         """Test feedback when Langfuse is not enabled."""
-        with patch("src.clients.traced_llm_client._get_langfuse") as mock_get_langfuse:
+        with patch("src.clients.langfuse_utils.get_langfuse") as mock_get_langfuse:
             mock_get_langfuse.return_value = None
 
             response = client.post(
@@ -72,7 +72,7 @@ class TestFeedbackEndpoint:
 
     def test_feedback_langfuse_error(self, client):
         """Test feedback when Langfuse throws an error."""
-        with patch("src.clients.traced_llm_client._get_langfuse") as mock_get_langfuse:
+        with patch("src.clients.langfuse_utils.get_langfuse") as mock_get_langfuse:
             mock_langfuse = Mock()
             mock_langfuse.score.side_effect = Exception("Langfuse error")
             mock_get_langfuse.return_value = mock_langfuse

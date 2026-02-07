@@ -129,15 +129,19 @@ def mock_embeddings_client():
 def mock_settings():
     """Create mock settings."""
     settings = Mock()
-    settings.default_llm_provider = "openai"
+    settings.default_llm_model = "openai/gpt-4o-mini"
+    settings.allowed_llm_models = "openai/gpt-4o-mini,openai/gpt-4o"
     settings.openai_api_key = "test-openai-key"
-    settings.zai_api_key = None
+    settings.nvidia_nim_api_key = None
     settings.jina_api_key = "test-jina-key"
     settings.langfuse_enabled = False
     settings.agent_timeout_seconds = 180
     settings.debug = False
     settings.log_level = "INFO"
-    settings.get_allowed_models = Mock(return_value=["gpt-4o-mini", "gpt-4o"])
+    settings.get_allowed_models_list = Mock(
+        return_value=["openai/gpt-4o-mini", "openai/gpt-4o"]
+    )
+    settings.is_model_allowed = Mock(return_value=True)
     return settings
 
 

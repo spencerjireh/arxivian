@@ -74,12 +74,13 @@ class TestHealthEndpoint:
 
         # Create settings with missing LLM key
         bad_settings = Mock()
-        bad_settings.default_llm_provider = "openai"
+        bad_settings.default_llm_model = "openai/gpt-4o-mini"
+        bad_settings.allowed_llm_models = "openai/gpt-4o-mini"
         bad_settings.openai_api_key = None
-        bad_settings.zai_api_key = None
+        bad_settings.nvidia_nim_api_key = None
         bad_settings.jina_api_key = "test-key"
         bad_settings.langfuse_enabled = False
-        bad_settings.get_allowed_models = Mock(return_value=["gpt-4o-mini"])
+        bad_settings.get_allowed_models_list = Mock(return_value=["openai/gpt-4o-mini"])
 
         # Monkeypatch get_settings in the health router module
         monkeypatch.setattr("src.routers.health.get_settings", lambda: bad_settings)
