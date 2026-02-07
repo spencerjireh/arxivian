@@ -14,7 +14,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - jirehs-agent-network
+      - arxivian-network
 
   # FastAPI Backend Service
   app:
@@ -30,11 +30,8 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./backend/data:/app/data
-      - ./backend/src:/app/src
-      - ./backend/alembic:/app/alembic
-      - ./backend/pyproject.toml:/app/pyproject.toml
-      - ./backend/uv.lock:/app/uv.lock
+      - ./backend:/app
+      - /app/.venv
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
       interval: 30s
@@ -42,7 +39,7 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - jirehs-agent-network
+      - arxivian-network
     profiles:
       - prod
       - dev
@@ -61,18 +58,10 @@ services:
       app:
         condition: service_healthy
     volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
-      - ./frontend/index.html:/app/index.html
-      - ./frontend/package.json:/app/package.json
-      - ./frontend/package-lock.json:/app/package-lock.json
-      - ./frontend/vite.config.ts:/app/vite.config.ts
-      - ./frontend/tsconfig.json:/app/tsconfig.json
-      - ./frontend/tsconfig.app.json:/app/tsconfig.app.json
-      - ./frontend/tsconfig.node.json:/app/tsconfig.node.json
+      - ./frontend:/app
       - /app/node_modules
     networks:
-      - jirehs-agent-network
+      - arxivian-network
     profiles:
       - prod
       - dev
@@ -90,7 +79,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - jirehs-agent-network
+      - arxivian-network
 
   # Celery Worker for background tasks
   celery-worker:
@@ -107,8 +96,8 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./backend/src:/app/src
-      - ./backend/data:/app/data
+      - ./backend:/app
+      - /app/.venv
     healthcheck:
       test: ["CMD-SHELL", "uv run celery -A src.celery_app inspect ping --timeout 5 2>/dev/null | grep -q pong || exit 1"]
       interval: 30s
@@ -116,7 +105,7 @@ services:
       retries: 3
       start_period: 30s
     networks:
-      - jirehs-agent-network
+      - arxivian-network
     profiles:
       - prod
       - dev
@@ -133,15 +122,10 @@ services:
     depends_on:
       - redis
     volumes:
-      - ./backend/src:/app/src
-    healthcheck:
-      test: ["CMD-SHELL", "test -f /proc/1/status || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
+      - ./backend:/app
+      - /app/.venv
     networks:
-      - jirehs-agent-network
+      - arxivian-network
     profiles:
       - prod
       - dev
@@ -157,7 +141,7 @@ services:
     depends_on:
       - redis
     networks:
-      - jirehs-agent-network
+      - arxivian-network
     profiles:
       - prod
       - dev
@@ -177,7 +161,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - jirehs-agent-network
+      - arxivian-network
     profiles:
       - dev
       - test
@@ -197,7 +181,7 @@ services:
       langfuse-db:
         condition: service_healthy
     networks:
-      - jirehs-agent-network
+      - arxivian-network
     profiles:
       - dev
       - test
@@ -215,7 +199,7 @@ services:
       timeout: 3s
       retries: 5
     networks:
-      - jirehs-agent-network
+      - arxivian-network
     profiles:
       - test
 
@@ -231,15 +215,11 @@ services:
       test-db:
         condition: service_healthy
     volumes:
-      - ./backend/src:/app/src
-      - ./backend/tests:/app/tests
-      - ./backend/alembic:/app/alembic
-      - ./backend/alembic.ini:/app/alembic.ini
-      - ./backend/pyproject.toml:/app/pyproject.toml
-      - ./backend/uv.lock:/app/uv.lock
+      - ./backend:/app
+      - /app/.venv
     working_dir: /app
     networks:
-      - jirehs-agent-network
+      - arxivian-network
     profiles:
       - test
 
@@ -250,18 +230,11 @@ services:
       dockerfile: Dockerfile
       target: development
     volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/tests:/app/tests
-      - ./frontend/vitest.config.ts:/app/vitest.config.ts
-      - ./frontend/vite.config.ts:/app/vite.config.ts
-      - ./frontend/tsconfig.json:/app/tsconfig.json
-      - ./frontend/tsconfig.test.json:/app/tsconfig.test.json
-      - ./frontend/package.json:/app/package.json
-      - ./frontend/package-lock.json:/app/package-lock.json
+      - ./frontend:/app
       - /app/node_modules
     working_dir: /app
     networks:
-      - jirehs-agent-network
+      - arxivian-network
     profiles:
       - test
 
@@ -274,5 +247,5 @@ volumes:
     driver: local
 
 networks:
-  jirehs-agent-network:
+  arxivian-network:
     driver: bridge

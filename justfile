@@ -1,4 +1,4 @@
-# Justfile for Jireh's Agent Project
+# Justfile for Arxivian
 # Run 'just --list' to see all available commands
 
 # Default recipe to display help
@@ -12,76 +12,75 @@ setup:
 
 # Build all services (with hot reload)
 build:
-    BUILD_TARGET=development docker-compose --profile dev build
+    BUILD_TARGET=development docker compose --profile dev build
 
 # Build with no cache (clean build)
 rebuild:
-    BUILD_TARGET=development docker-compose --profile dev build --no-cache
+    BUILD_TARGET=development docker compose --profile dev build --no-cache
 
 # Start all services (with hot reload)
 up:
-    BUILD_TARGET=development docker-compose --profile dev up
+    BUILD_TARGET=development docker compose --profile dev up
 
 # Start all services (detached)
 up-d:
-    BUILD_TARGET=development docker-compose --profile dev up -d
+    BUILD_TARGET=development docker compose --profile dev up -d
 
 # Stop all services
 down:
-    docker-compose --profile dev --profile test down
+    docker compose --profile dev --profile test down
 
 # Stop all services and remove volumes
 down-volumes:
-    docker-compose --profile dev --profile test down -v
+    docker compose --profile dev --profile test down -v
 
 # View logs from all services
 logs:
-    docker-compose --profile dev logs -f
+    docker compose --profile dev logs -f
 
 # View logs from specific service (usage: just logs-service app)
 logs-service service:
-    docker-compose --profile dev logs -f {{service}}
+    docker compose --profile dev logs -f {{service}}
 
 # Restart all services
 restart:
-    docker-compose --profile dev restart
+    docker compose --profile dev restart
 
 # Check status of all services
 ps:
-    docker-compose --profile dev --profile test ps
+    docker compose --profile dev --profile test ps
 
 # Execute command in backend container (usage: just exec-backend "ls -la")
 exec-backend cmd:
-    docker-compose --profile dev exec app {{cmd}}
+    docker compose --profile dev exec app {{cmd}}
 
 # Execute command in frontend container (usage: just exec-frontend "ls -la")
 exec-frontend cmd:
-    docker-compose --profile dev exec frontend {{cmd}}
+    docker compose --profile dev exec frontend {{cmd}}
 
 # Open shell in backend container
 shell-backend:
-    docker-compose --profile dev exec app sh
+    docker compose --profile dev exec app sh
 
 # Open shell in frontend container
 shell-frontend:
-    docker-compose --profile dev exec frontend sh
+    docker compose --profile dev exec frontend sh
 
 # Open PostgreSQL shell
 db-shell:
-    docker-compose exec db psql -U arxiv_user -d arxiv_rag
+    docker compose exec db psql -U arxiv_user -d arxiv_rag
 
 # Check backend health
 health:
-    @curl -sf http://localhost:${BACKEND_PORT:-8000}/api/v1/health && echo "" || echo "Health check failed - is the backend running?"
+    @curl -sf http://localhost:${BACKEND_PORT:-8000}/api/v1/health | python3 -m json.tool || echo "Health check failed - is the backend running?"
 
 # Run database migrations
 migrate:
-    docker-compose --profile dev exec app uv run alembic upgrade head
+    docker compose --profile dev exec app uv run alembic upgrade head
 
-# Clean up: stop containers, remove volumes, and prune unused images
+# Clean up: stop containers, remove volumes, and remove locally built images
 clean:
-    docker-compose --profile dev --profile test down -v
-    docker system prune -f
+    docker compose --profile dev --profile test down -v --rmi local
 
 # Full reset: clean everything and rebuild
 reset: clean setup build up-d
@@ -97,13 +96,13 @@ dev: build up
 test *args:
     #!/usr/bin/env bash
     set -uo pipefail
-    docker-compose --profile test run --rm test-runner sh -c "uv sync --extra dev && uv run pytest {{args}}"; rc=$?
-    docker-compose --profile test rm -fsv test-db 2>/dev/null
-    exit $rc
+    trap 'docker compose --profile test down 2>/dev/null' EXIT
+    docker compose --profile test build test-runner
+    docker compose --profile test run --rm test-runner uv run pytest {{args}}
 
 # Cleanup test containers
 test-clean:
-    docker-compose --profile test rm -fsv test-db test-runner frontend-test-runner 2>/dev/null
+    docker compose --profile test rm -fsv test-db test-runner frontend-test-runner 2>/dev/null
 
 # =============================================================================
 # Code Quality
@@ -111,23 +110,28 @@ test-clean:
 
 # Run Python linter
 lint:
-    docker-compose --profile dev exec app uv run ruff check src/
+    docker compose --profile dev exec app uv run ruff check src/
 
 # Run Python formatter
 format:
-    docker-compose --profile dev exec app uv run ruff format src/
+    docker compose --profile dev exec app uv run ruff format src/
 
 # Run Python type checker
 typecheck:
-    docker-compose --profile dev exec app uv run ty check src/
+    docker compose --profile dev exec app uv run ty check src/
 
 # Run all checks (lint + typecheck)
 check: lint typecheck
 
+# Auto-fix Python lint and formatting issues
+fix:
+    docker compose --profile dev exec app uv run ruff format src/
+    docker compose --profile dev exec app uv run ruff check src/ --fix
+
 # Run frontend linting
 lint-frontend:
-    docker-compose --profile dev exec frontend npm run lint
+    docker compose --profile dev exec frontend npm run lint
 
 # Run frontend tests (usage: just test-frontend, just test-frontend -- --reporter=verbose)
 test-frontend *args:
-    docker-compose --profile test run --rm frontend-test-runner npm test -- {{args}}
+    docker compose --profile test run --rm frontend-test-runner npm test -- {{args}}
