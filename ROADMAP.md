@@ -55,7 +55,7 @@ _Ensure requests can be bounded and cancelled._
 | Status | Item | Notes |
 |--------|------|-------|
 | [x] | Unit tests for services and repositories |  |
-| [x] | Integration tests for API endpoints | 92 tests covering all 8 routers |
+| [x] | Integration tests for API endpoints | ~450 tests (unit, API, integration) covering all 10 routers |
 | [ ] | Agent flow tests with mocked LLM | |
 
 ### Authentication
@@ -86,7 +86,22 @@ _Daily limits on expensive operations for free-tier users._
 | Status | Item | Notes |
 |--------|------|-------|
 | [ ] | Input sanitization audit | |
-| [ ] | Prompt injection mitigation | |
+| [x] | Prompt injection mitigation | 3-layer defense: regex pattern scanning, guardrail integration, defensive system prompts with message isolation |
+
+### LiteLLM Integration
+
+_Replace custom multi-provider LLM clients with LiteLLM's unified API. Providers: OpenAI and NVIDIA NIM. Eliminates duplicate client code, adds provider fallbacks, and simplifies observability. See `litellm-implementation-plan.md` for full migration plan._
+
+| Status | Item | Notes |
+|--------|------|-------|
+| [ ] | Implement LiteLLMClient replacing BaseLLMClient | Single client using `litellm.acompletion()` with same `generate_completion` / `generate_structured` interface |
+| [ ] | Remove OpenAIClient, ZAIClient, and InstrumentedLLMClient | LiteLLM handles provider-specific differences; ~400 lines of duplicate code removed |
+| [ ] | Migrate Langfuse tracing to LiteLLM callbacks | Use `success_callback=["langfuse"]` with per-call `metadata={"trace_id": ...}` for trace nesting; simplify TracedLLMClient to a thin Langfuse score/singleton module |
+| [ ] | Update config and factory | Replace per-provider API key fields with LiteLLM model list format; update `get_llm_client()` factory; add NVIDIA NIM config |
+| [ ] | Configure LiteLLM Router for fallbacks | Auto-failover between OpenAI and NVIDIA NIM with configurable retry policies and exponential backoff |
+| [ ] | Cost tracking per request | Use `litellm.completion_cost()` to log spend per conversation turn in metadata |
+| [ ] | Update tests | Migrate mocks from OpenAI/ZAI client interfaces to LiteLLM; update factory and service tests |
+| [ ] | Update frontend provider options | Replace ZAI with NVIDIA NIM in settings panel and model selector |
 
 ---
 
@@ -120,7 +135,8 @@ Improved retrieval quality, reliability, and deployment readiness.
 
 | Status | Item | Notes |
 |--------|------|-------|
-| [ ] | Rate limiting per IP | Basic per-IP rate limiting |
+| [x] | Rate limiting per user | Daily counters via UsageCounter model, 429 enforcement on queries and ingestion |
+| [ ] | Rate limiting per IP | Complement per-user limits with IP-based throttling for unauthenticated routes |
 | [ ] | Graceful degradation when LLM unavailable | |
 
 ### User Feedback
@@ -162,7 +178,7 @@ Scheduled tasks and performance optimization.
 |--------|------|-------|
 | [x] | Celery Beat integration | Running as Docker service |
 | [x] | Scheduled task: ingest papers | Daily 2am UTC via cron config |
-| [x] | Scheduled task: generate weekly digests | Weekly Monday 6am UTC |
+| [x] | Scheduled task: generate weekly reports | Weekly Monday 6am UTC (usage and health reports) |
 
 ### Performance
 
@@ -170,7 +186,7 @@ Scheduled tasks and performance optimization.
 |--------|------|-------|
 | [ ] | Redis caching layer | embeddings, search results, context |
 | [ ] | Connection pooling optimization | |
-| [ ] | Batch embedding requests | |
+| [x] | Batch embedding requests | embed_documents() processes in batches of 100 |
 
 ---
 
