@@ -29,7 +29,7 @@ def parse_cron(cron_expr: str) -> dict:
 
 
 celery_app = Celery(
-    "jirehs_agent",
+    "arxivian",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
 )
@@ -59,10 +59,6 @@ celery_app.conf.beat_schedule = {
     "daily-ingest": {
         "task": "src.tasks.scheduled_tasks.daily_ingest_task",
         "schedule": crontab(**parse_cron(settings.ingest_schedule_cron)),
-    },
-    "weekly-report": {
-        "task": "src.tasks.report_tasks.generate_report_task",
-        "schedule": crontab(**parse_cron(settings.report_schedule_cron)),
     },
     "daily-cleanup": {
         "task": "src.tasks.cleanup_tasks.cleanup_task",

@@ -13,6 +13,7 @@ class ReportResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID = Field(..., description="Report ID")
+    user_id: UUID = Field(..., description="Owner user ID")
     report_type: str = Field(..., description="Type of report")
     period_start: datetime = Field(..., description="Report period start")
     period_end: datetime = Field(..., description="Report period end")

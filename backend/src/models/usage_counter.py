@@ -15,9 +15,7 @@ class UsageCounter(Base):
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
-    )
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     usage_date = Column(Date, nullable=False, server_default=func.current_date())
     query_count = Column(Integer, nullable=False, server_default="0")
     ingest_count = Column(Integer, nullable=False, server_default="0")

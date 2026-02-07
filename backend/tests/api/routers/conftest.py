@@ -182,6 +182,8 @@ def mock_report_repo():
     repo.create = AsyncMock()
     repo.get_by_id = AsyncMock(return_value=None)
     repo.list_reports = AsyncMock(return_value=([], 0))
+    repo.get_or_create_daily_report = AsyncMock()
+    repo.append_ingest_result = AsyncMock()
     return repo
 
 

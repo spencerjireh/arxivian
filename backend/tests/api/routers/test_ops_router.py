@@ -1,17 +1,17 @@
-"""Tests for admin router."""
+"""Tests for ops router."""
 
 import pytest
 from unittest.mock import Mock
 
 
 class TestCleanupEndpoint:
-    """Tests for POST /api/v1/admin/cleanup endpoint."""
+    """Tests for POST /api/v1/ops/cleanup endpoint."""
 
     def test_cleanup_no_orphaned_papers(self, client, mock_paper_repo):
         """Test cleanup when no orphaned papers exist."""
         mock_paper_repo.get_orphaned_papers.return_value = []
 
-        response = client.post("/api/v1/admin/cleanup")
+        response = client.post("/api/v1/ops/cleanup")
 
         assert response.status_code == 200
         data = response.json()
@@ -28,7 +28,7 @@ class TestCleanupEndpoint:
 
         mock_paper_repo.get_orphaned_papers.return_value = [orphaned_paper]
 
-        response = client.post("/api/v1/admin/cleanup")
+        response = client.post("/api/v1/ops/cleanup")
 
         assert response.status_code == 200
         data = response.json()
@@ -49,7 +49,7 @@ class TestCleanupEndpoint:
 
         mock_paper_repo.get_orphaned_papers.return_value = orphaned_papers
 
-        response = client.post("/api/v1/admin/cleanup")
+        response = client.post("/api/v1/ops/cleanup")
 
         assert response.status_code == 200
         data = response.json()
@@ -66,7 +66,7 @@ class TestCleanupEndpoint:
 
         mock_paper_repo.get_orphaned_papers.return_value = [orphaned_paper]
 
-        response = client.post("/api/v1/admin/cleanup")
+        response = client.post("/api/v1/ops/cleanup")
 
         assert response.status_code == 200
         mock_paper_repo.delete.assert_called_once_with("paper-uuid-1")
@@ -80,7 +80,7 @@ class TestCleanupEndpoint:
 
         mock_paper_repo.get_orphaned_papers.return_value = [orphaned_paper]
 
-        response = client.post("/api/v1/admin/cleanup")
+        response = client.post("/api/v1/ops/cleanup")
 
         assert response.status_code == 200
         data = response.json()

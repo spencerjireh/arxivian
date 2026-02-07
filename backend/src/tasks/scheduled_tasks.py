@@ -56,12 +56,16 @@ def daily_ingest_task() -> dict[str, Any]:
 
                     det_id = _deterministic_task_id(str(user.id), query)
 
+                    search_name = search.get("name", "Unnamed")
+
                     # Queue ingestion task with staggered countdown
                     task = ingest_papers_task.apply_async(
                         kwargs={
                             "query": query,
                             "categories": search.get("categories"),
                             "max_results": search.get("max_results", 10),
+                            "user_id": str(user.id),
+                            "search_name": search_name,
                         },
                         countdown=task_index * STAGGER_SECONDS,
                         task_id=det_id,
@@ -71,7 +75,7 @@ def daily_ingest_task() -> dict[str, Any]:
                         {
                             "task_id": task.id,
                             "user_id": str(user.id),
-                            "search_name": search.get("name", "Unnamed"),
+                            "search_name": search_name,
                             "query": query,
                         }
                     )

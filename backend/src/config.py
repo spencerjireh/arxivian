@@ -69,14 +69,8 @@ class Settings(BaseSettings):
 
     # Scheduled jobs
     ingest_schedule_cron: str = "0 2 * * *"  # Daily at 2am UTC
-    report_schedule_cron: str = "0 6 * * 1"  # Weekly Monday 6am
     cleanup_schedule_cron: str = "0 3 * * *"  # Daily at 3am UTC
     cleanup_retention_days: int = 90
-
-    # Report toggles
-    report_include_usage: bool = True
-    report_include_papers: bool = True
-    report_include_health: bool = True
 
     # Helper methods
     def get_allowed_models_list(self) -> List[str]:

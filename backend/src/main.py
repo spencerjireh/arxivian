@@ -14,7 +14,8 @@ from src.routers import (
     stream,
     papers,
     conversations,
-    admin,
+    reports,
+    ops,
     feedback,
     tasks,
     preferences,
@@ -65,8 +66,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Jireh's Agent System API",
-    description="Jireh's Agent system for AI/ML research papers from arXiv",
+    title="Arxivian API",
+    description="Arxivian - agentic RAG system for AI/ML research papers from arXiv",
     version="0.3.0",
     lifespan=lifespan,
 )
@@ -96,7 +97,8 @@ app.include_router(ingest.router, prefix="/api/v1", tags=["Ingest"])
 app.include_router(stream.router, prefix="/api/v1", tags=["Stream"])
 app.include_router(conversations.router, prefix="/api/v1", tags=["Conversations"])
 app.include_router(papers.router, prefix="/api/v1", tags=["Papers"])
-app.include_router(admin.router, prefix="/api/v1", tags=["Admin"])
+app.include_router(reports.router, prefix="/api/v1", tags=["Reports"])
+app.include_router(ops.router, prefix="/api/v1", tags=["Ops"])
 app.include_router(feedback.router, prefix="/api/v1", tags=["Feedback"])
 app.include_router(tasks.router, prefix="/api/v1", tags=["Tasks"])
 app.include_router(preferences.router, prefix="/api/v1", tags=["Preferences"])
@@ -106,10 +108,10 @@ app.include_router(preferences.router, prefix="/api/v1", tags=["Preferences"])
 async def root():
     """Root endpoint with API information."""
     return {
-        "name": "Jireh's Agent System API",
+        "name": "Arxivian API",
         "version": "0.3.0",
         "features": [
-            "Jireh's Agent with LangGraph",
+            "Agentic RAG with LangGraph",
             "Multi-provider LLM support (OpenAI, NVIDIA NIM) via LiteLLM",
             "Hybrid search (vector + full-text)",
             "arXiv paper ingestion",
@@ -123,6 +125,8 @@ async def root():
             "stream": "/api/v1/stream",
             "papers": "/api/v1/papers",
             "conversations": "/api/v1/conversations",
+            "reports": "/api/v1/reports",
+            "ops": "/api/v1/ops",
             "tasks": "/api/v1/tasks",
             "preferences": "/api/v1/preferences",
         },

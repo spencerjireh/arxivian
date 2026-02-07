@@ -1,4 +1,4 @@
-"""Admin operation schemas."""
+"""Ops operation schemas."""
 
 from typing import List
 
