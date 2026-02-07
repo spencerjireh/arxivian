@@ -13,7 +13,7 @@ from src.config import get_settings
 from src.database import Base
 
 # Import all models to register them with Base.metadata
-from src.models import Paper, Chunk, Conversation, ConversationTurn  # noqa: F401
+from src.models import *  # noqa: F401, F403
 
 # this is the Alembic Config object
 config = context.config
