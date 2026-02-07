@@ -2,7 +2,7 @@
 
 from typing import Optional, List, Literal
 from datetime import datetime, timezone
-from sqlalchemy import select, update, delete, func, desc, asc, or_
+from sqlalchemy import select, update, delete, func, desc, asc, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.paper import Paper
 from src.utils.logger import get_logger
@@ -161,21 +161,17 @@ class PaperRepository:
             apply_filter(Paper.pdf_processed == processed_only)
 
         if category_filter:
-            # Use raw SQL for LATERAL subquery - SRFs must be in FROM clause
-            from sqlalchemy import literal_column
-            condition = literal_column(
-                f"EXISTS (SELECT 1 FROM jsonb_array_elements_text(papers.categories) AS elem "
-                f"WHERE lower(elem) LIKE '%{category_filter.lower()}%')"
-            )
+            condition = text(
+                "EXISTS (SELECT 1 FROM jsonb_array_elements_text(papers.categories) AS elem "
+                "WHERE lower(elem) LIKE '%' || lower(:cat_filter) || '%')"
+            ).bindparams(cat_filter=category_filter)
             apply_filter(condition)
 
         if author_filter:
-            # Use raw SQL for LATERAL subquery - SRFs must be in FROM clause
-            from sqlalchemy import literal_column
-            condition = literal_column(
-                f"EXISTS (SELECT 1 FROM jsonb_array_elements_text(papers.authors) AS elem "
-                f"WHERE lower(elem) LIKE '%{author_filter.lower()}%')"
-            )
+            condition = text(
+                "EXISTS (SELECT 1 FROM jsonb_array_elements_text(papers.authors) AS elem "
+                "WHERE lower(elem) LIKE '%' || lower(:auth_filter) || '%')"
+            ).bindparams(auth_filter=author_filter)
             apply_filter(condition)
 
         if start_date:
