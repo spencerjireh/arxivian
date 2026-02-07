@@ -2,8 +2,7 @@
 
 from fastapi import APIRouter
 
-from src.dependencies import CurrentUserRequired, DbSession
-from src.repositories.user_repository import UserRepository
+from src.dependencies import CurrentUserRequired, DbSession, UserRepoDep
 from src.schemas.preferences import (
     ArxivSearchConfig,
     UpdateArxivSearchesRequest,
@@ -25,8 +24,7 @@ async def get_preferences(
 
     return UserPreferences(
         arxiv_searches=[
-            ArxivSearchConfig(**search)
-            for search in preferences.get("arxiv_searches", [])
+            ArxivSearchConfig(**search) for search in preferences.get("arxiv_searches", [])
         ],
         notification_settings=preferences.get("notification_settings", {}),
     )
@@ -37,6 +35,7 @@ async def update_arxiv_searches(
     request: UpdateArxivSearchesRequest,
     current_user: CurrentUserRequired,
     db: DbSession,
+    user_repo: UserRepoDep,
 ) -> UserPreferences:
     """Update the user's saved arXiv searches.
 
@@ -52,12 +51,9 @@ async def update_arxiv_searches(
 
     # Get current preferences and update arxiv_searches
     current_prefs = current_user.preferences or {}
-    current_prefs["arxiv_searches"] = [
-        search.model_dump() for search in request.arxiv_searches
-    ]
+    current_prefs["arxiv_searches"] = [search.model_dump() for search in request.arxiv_searches]
 
     # Update user preferences
-    user_repo = UserRepository(db)
     await user_repo.update_preferences(current_user, current_prefs)
     await db.commit()
 
@@ -78,6 +74,7 @@ async def add_arxiv_search(
     search: ArxivSearchConfig,
     current_user: CurrentUserRequired,
     db: DbSession,
+    user_repo: UserRepoDep,
 ) -> UserPreferences:
     """Add a new arXiv search to the user's preferences."""
     log.info(
@@ -93,7 +90,6 @@ async def add_arxiv_search(
     current_prefs["arxiv_searches"] = arxiv_searches
 
     # Update user preferences
-    user_repo = UserRepository(db)
     await user_repo.update_preferences(current_user, current_prefs)
     await db.commit()
 
@@ -114,6 +110,7 @@ async def delete_arxiv_search(
     search_name: str,
     current_user: CurrentUserRequired,
     db: DbSession,
+    user_repo: UserRepoDep,
 ) -> UserPreferences:
     """Delete an arXiv search by name from the user's preferences."""
     log.info(
@@ -129,7 +126,6 @@ async def delete_arxiv_search(
     current_prefs["arxiv_searches"] = arxiv_searches
 
     # Update user preferences
-    user_repo = UserRepository(db)
     await user_repo.update_preferences(current_user, current_prefs)
     await db.commit()
 

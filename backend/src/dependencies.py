@@ -17,6 +17,8 @@ from src.repositories.chunk_repository import ChunkRepository
 from src.repositories.search_repository import SearchRepository
 from src.repositories.conversation_repository import ConversationRepository
 from src.repositories.user_repository import UserRepository
+from src.repositories.task_execution_repository import TaskExecutionRepository
+from src.repositories.report_repository import ReportRepository
 from src.models.user import User
 from src.exceptions import MissingTokenError
 
@@ -42,28 +44,12 @@ EmbeddingsClientDep = Annotated[JinaEmbeddingsClient, Depends(get_embeddings_cli
 
 # Service dependencies
 def get_search_service_dep(db: DbSession) -> SearchService:
-    """
-    Get SearchService with database session.
-
-    Args:
-        db: Database session
-
-    Returns:
-        SearchService instance
-    """
+    """Get SearchService with database session."""
     return get_search_service(db)
 
 
 def get_ingest_service_dep(db: DbSession) -> IngestService:
-    """
-    Get IngestService with database session.
-
-    Args:
-        db: Database session
-
-    Returns:
-        IngestService instance
-    """
+    """Get IngestService with database session."""
     return get_ingest_service(db)
 
 
@@ -75,54 +61,22 @@ PDFParserDep = Annotated[PDFParser, Depends(get_pdf_parser)]
 
 # Repository dependencies (request-scoped)
 def get_paper_repository(db: DbSession) -> PaperRepository:
-    """
-    Get PaperRepository with database session.
-
-    Args:
-        db: Database session
-
-    Returns:
-        PaperRepository instance
-    """
+    """Get PaperRepository with database session."""
     return PaperRepository(db)
 
 
 def get_chunk_repository(db: DbSession) -> ChunkRepository:
-    """
-    Get ChunkRepository with database session.
-
-    Args:
-        db: Database session
-
-    Returns:
-        ChunkRepository instance
-    """
+    """Get ChunkRepository with database session."""
     return ChunkRepository(db)
 
 
 def get_search_repository(db: DbSession) -> SearchRepository:
-    """
-    Get SearchRepository with database session.
-
-    Args:
-        db: Database session
-
-    Returns:
-        SearchRepository instance
-    """
+    """Get SearchRepository with database session."""
     return SearchRepository(db)
 
 
 def get_conversation_repository(db: DbSession) -> ConversationRepository:
-    """
-    Get ConversationRepository with database session.
-
-    Args:
-        db: Database session
-
-    Returns:
-        ConversationRepository instance
-    """
+    """Get ConversationRepository with database session."""
     return ConversationRepository(db)
 
 
@@ -138,15 +92,7 @@ ConversationRepoDep = Annotated[ConversationRepository, Depends(get_conversation
 
 
 def get_user_repository(db: DbSession) -> UserRepository:
-    """
-    Get UserRepository with database session.
-
-    Args:
-        db: Database session
-
-    Returns:
-        UserRepository instance
-    """
+    """Get UserRepository with database session."""
     return UserRepository(db)
 
 
@@ -154,81 +100,42 @@ UserRepoDep = Annotated[UserRepository, Depends(get_user_repository)]
 
 
 # ============================================================================
+# Task Execution Repository
+# ============================================================================
+
+
+def get_task_execution_repository(db: DbSession) -> TaskExecutionRepository:
+    """Get TaskExecutionRepository with database session."""
+    return TaskExecutionRepository(db)
+
+
+TaskExecRepoDep = Annotated[TaskExecutionRepository, Depends(get_task_execution_repository)]
+
+
+# ============================================================================
+# Report Repository
+# ============================================================================
+
+
+def get_report_repository(db: DbSession) -> ReportRepository:
+    """Get ReportRepository with database session."""
+    return ReportRepository(db)
+
+
+ReportRepoDep = Annotated[ReportRepository, Depends(get_report_repository)]
+
+
+# ============================================================================
 # Authentication Dependencies
 # ============================================================================
 
 
-async def get_current_user_optional(
-    authorization: Annotated[Optional[str], Header(alias="Authorization")] = None,
-    db: AsyncSession = Depends(get_db),
-) -> Optional[User]:
-    """
-    Get current user if authenticated, None otherwise.
-
-    Use this dependency when authentication is optional (e.g., guest access).
-    The user will be synced/created in the database on first authenticated request.
-
-    Args:
-        authorization: Authorization header value
-        db: Database session
-
-    Returns:
-        User if authenticated, None if no valid token
-    """
-    if not authorization:
-        return None
-
-    try:
-        auth_service = get_auth_service()
-        auth_user = await auth_service.verify_token(authorization)
-
-        # Sync user to database
-        user_repo = UserRepository(db)
-        user, created = await user_repo.get_or_create(
-            clerk_id=auth_user.clerk_id,
-            email=auth_user.email,
-            first_name=auth_user.first_name,
-            last_name=auth_user.last_name,
-            profile_image_url=auth_user.profile_image_url,
-        )
-        await db.commit()
-
-        return user
-    except Exception:
-        # For optional auth, swallow errors and return None
-        return None
-
-
-async def get_current_user_required(
-    authorization: Annotated[Optional[str], Header(alias="Authorization")] = None,
-    db: AsyncSession = Depends(get_db),
-) -> User:
-    """
-    Get current user, raise 401 if not authenticated.
-
-    Use this dependency when authentication is required.
-    The user will be synced/created in the database on first authenticated request.
-
-    Args:
-        authorization: Authorization header value
-        db: Database session
-
-    Returns:
-        Authenticated User
-
-    Raises:
-        MissingTokenError: If no token provided
-        InvalidTokenError: If token is invalid
-    """
-    if not authorization:
-        raise MissingTokenError()
-
+async def _sync_user(authorization: str, db: AsyncSession) -> User:
+    """Verify token and sync user to database."""
     auth_service = get_auth_service()
     auth_user = await auth_service.verify_token(authorization)
-
-    # Sync user to database
     user_repo = UserRepository(db)
-    user, created = await user_repo.get_or_create(
+    user, _ = await user_repo.get_or_create(
         clerk_id=auth_user.clerk_id,
         email=auth_user.email,
         first_name=auth_user.first_name,
@@ -236,8 +143,32 @@ async def get_current_user_required(
         profile_image_url=auth_user.profile_image_url,
     )
     await db.commit()
-
     return user
+
+
+async def get_current_user_optional(
+    db: DbSession,
+    authorization: Annotated[Optional[str], Header(alias="Authorization")] = None,
+) -> Optional[User]:
+    """Get current user if authenticated, None otherwise."""
+    if not authorization:
+        return None
+
+    try:
+        return await _sync_user(authorization, db)
+    except Exception:
+        return None
+
+
+async def get_current_user_required(
+    db: DbSession,
+    authorization: Annotated[Optional[str], Header(alias="Authorization")] = None,
+) -> User:
+    """Get current user, raise 401 if not authenticated."""
+    if not authorization:
+        raise MissingTokenError()
+
+    return await _sync_user(authorization, db)
 
 
 # Type aliases for auth dependencies
