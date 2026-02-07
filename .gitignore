@@ -373,7 +373,6 @@ $RECYCLE.BIN/
 *.sqlite3
 
 # Docker
-.dockerignore
 
 # Alembic (if not tracking migrations)
 # alembic/versions/*.py

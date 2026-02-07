@@ -28,66 +28,66 @@ up-d:
 
 # Stop all services
 down:
-    docker-compose down
+    docker-compose --profile dev --profile test down
 
 # Stop all services and remove volumes
 down-volumes:
-    docker-compose down -v
+    docker-compose --profile dev --profile test down -v
 
 # View logs from all services
 logs:
-    docker-compose logs -f
+    docker-compose --profile dev logs -f
 
-# View logs from specific service (usage: just logs-service backend)
+# View logs from specific service (usage: just logs-service app)
 logs-service service:
-    docker-compose logs -f {{service}}
+    docker-compose --profile dev logs -f {{service}}
 
 # Restart all services
 restart:
-    docker-compose restart
+    docker-compose --profile dev restart
 
 # Check status of all services
 ps:
-    docker-compose ps
+    docker-compose --profile dev --profile test ps
 
 # Execute command in backend container (usage: just exec-backend "ls -la")
 exec-backend cmd:
-    docker exec -it jirehs-agent-backend {{cmd}}
+    docker-compose --profile dev exec app {{cmd}}
 
 # Execute command in frontend container (usage: just exec-frontend "ls -la")
 exec-frontend cmd:
-    docker exec -it jirehs-agent-frontend {{cmd}}
+    docker-compose --profile dev exec frontend {{cmd}}
 
 # Open shell in backend container
 shell-backend:
-    docker exec -it jirehs-agent-backend sh
+    docker-compose --profile dev exec app sh
 
 # Open shell in frontend container
 shell-frontend:
-    docker exec -it jirehs-agent-frontend sh
+    docker-compose --profile dev exec frontend sh
 
 # Open PostgreSQL shell
 db-shell:
-    docker exec -it jirehs-agent-db psql -U arxiv_user -d arxiv_rag
+    docker-compose exec db psql -U arxiv_user -d arxiv_rag
 
 # Check backend health
 health:
-    curl http://localhost:${BACKEND_PORT:-8000}/api/v1/health
+    @curl -sf http://localhost:${BACKEND_PORT:-8000}/api/v1/health && echo "" || echo "Health check failed - is the backend running?"
 
 # Run database migrations
 migrate:
-    docker exec jirehs-agent-backend uv run alembic upgrade head
+    docker-compose --profile dev exec app uv run alembic upgrade head
 
 # Clean up: stop containers, remove volumes, and prune unused images
 clean:
-    docker-compose down -v
+    docker-compose --profile dev --profile test down -v
     docker system prune -f
 
 # Full reset: clean everything and rebuild
 reset: clean setup build up-d
 
-# Development workflow: rebuild and start with hot reload
-dev: rebuild up
+# Development workflow: build and start with hot reload
+dev: build up
 
 # =============================================================================
 # Testing
@@ -95,9 +95,35 @@ dev: rebuild up
 
 # Run tests (usage: just test, just test tests/integration, just test -k "pattern")
 test *args:
-    docker-compose --profile test run --rm test-runner sh -c "uv sync --extra dev && uv run pytest {{args}}"
-    docker-compose --profile test down
+    #!/usr/bin/env bash
+    set -uo pipefail
+    docker-compose --profile test run --rm test-runner sh -c "uv sync --extra dev && uv run pytest {{args}}"; rc=$?
+    docker-compose --profile test rm -fsv test-db 2>/dev/null
+    exit $rc
 
 # Cleanup test containers
 test-clean:
-    docker-compose --profile test down -v
+    docker-compose --profile test rm -fsv test-db test-runner 2>/dev/null
+
+# =============================================================================
+# Code Quality
+# =============================================================================
+
+# Run Python linter
+lint:
+    docker-compose --profile dev exec app uv run ruff check src/
+
+# Run Python formatter
+format:
+    docker-compose --profile dev exec app uv run ruff format src/
+
+# Run Python type checker
+typecheck:
+    docker-compose --profile dev exec app uv run ty check src/
+
+# Run all checks (lint + typecheck)
+check: lint typecheck
+
+# Run frontend linting
+lint-frontend:
+    docker-compose --profile dev exec frontend npm run lint

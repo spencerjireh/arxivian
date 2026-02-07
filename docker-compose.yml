@@ -2,7 +2,6 @@ services:
   # PostgreSQL Database Service
   db:
     image: pgvector/pgvector:pg16
-    container_name: jirehs-agent-db
     env_file:
       - ./backend/.env
     ports:
@@ -23,7 +22,6 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       target: ${BUILD_TARGET:-development}
-    container_name: jirehs-agent-backend
     env_file:
       - ./backend/.env
     ports:
@@ -55,7 +53,6 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: ${BUILD_TARGET:-development}
-    container_name: jirehs-agent-frontend
     env_file:
       - ./frontend/.env
     ports:
@@ -83,7 +80,6 @@ services:
   # Redis for Celery message broker
   redis:
     image: redis:7-alpine
-    container_name: jirehs-agent-redis
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
@@ -102,8 +98,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       target: ${BUILD_TARGET:-development}
-    container_name: jirehs-agent-celery-worker
-    command: celery -A src.celery_app worker --loglevel=info --concurrency=2
+    command: uv run celery -A src.celery_app worker --loglevel=info --concurrency=2
     env_file:
       - ./backend/.env
     depends_on:
@@ -114,6 +109,12 @@ services:
     volumes:
       - ./backend/src:/app/src
       - ./backend/data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "uv run celery -A src.celery_app inspect ping --timeout 5 2>/dev/null | grep -q pong || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - jirehs-agent-network
     profiles:
@@ -126,14 +127,19 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       target: ${BUILD_TARGET:-development}
-    container_name: jirehs-agent-celery-beat
-    command: celery -A src.celery_app beat --loglevel=info
+    command: uv run celery -A src.celery_app beat --loglevel=info
     env_file:
       - ./backend/.env
     depends_on:
       - redis
     volumes:
       - ./backend/src:/app/src
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /proc/1/status || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - jirehs-agent-network
     profiles:
@@ -143,7 +149,6 @@ services:
   # Flower monitoring dashboard for Celery
   flower:
     image: mher/flower:2.0
-    container_name: jirehs-agent-flower
     command: celery --broker=${CELERY_BROKER_URL:-redis://redis:6379/0} flower --port=5555
     ports:
       - "${FLOWER_PORT:-5555}:5555"
@@ -160,7 +165,6 @@ services:
   # Langfuse Observability Database
   langfuse-db:
     image: postgres:16-alpine
-    container_name: jirehs-agent-langfuse-db
     environment:
       POSTGRES_USER: langfuse
       POSTGRES_PASSWORD: langfuse
@@ -174,11 +178,13 @@ services:
       retries: 5
     networks:
       - jirehs-agent-network
+    profiles:
+      - dev
+      - test
 
   # Langfuse Observability Service
   langfuse:
-    image: langfuse/langfuse:latest
-    container_name: jirehs-agent-langfuse
+    image: langfuse/langfuse:2
     environment:
       DATABASE_URL: postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
       NEXTAUTH_URL: http://localhost:3001
@@ -192,11 +198,13 @@ services:
         condition: service_healthy
     networks:
       - jirehs-agent-network
+    profiles:
+      - dev
+      - test
 
   # Test Database
   test-db:
     image: pgvector/pgvector:pg16
-    container_name: jirehs-agent-test-db
     env_file:
       - ./backend/.env.test
     ports:
@@ -217,14 +225,18 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       target: development
-    container_name: jirehs-agent-test-runner
     env_file:
       - ./backend/.env.test
     depends_on:
       test-db:
         condition: service_healthy
     volumes:
-      - ./backend:/app
+      - ./backend/src:/app/src
+      - ./backend/tests:/app/tests
+      - ./backend/alembic:/app/alembic
+      - ./backend/alembic.ini:/app/alembic.ini
+      - ./backend/pyproject.toml:/app/pyproject.toml
+      - ./backend/uv.lock:/app/uv.lock
     working_dir: /app
     networks:
       - jirehs-agent-network
