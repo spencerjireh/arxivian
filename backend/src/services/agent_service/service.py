@@ -250,7 +250,7 @@ class AgentService:
                                 message=f"Decided to {decision.action}",
                                 details={
                                     "action": decision.action,
-                                    "tool": decision.tool_name,
+                                    "tools": [tc.tool_name for tc in decision.tool_calls],
                                     "iteration": output.get("iteration", 0),
                                     "reasoning": decision.reasoning,
                                 },
