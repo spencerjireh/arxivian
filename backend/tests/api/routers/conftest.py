@@ -15,10 +15,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 @pytest.fixture(autouse=True)
 def mock_database_init():
     """Mock database initialization for all router tests."""
+    mock_session = AsyncMock(spec=AsyncSession)
+
+    @asynccontextmanager
+    async def mock_session_factory():
+        yield mock_session
+
     with patch("src.database.init_db", new_callable=AsyncMock):
         with patch("src.database.engine") as mock_engine:
             mock_engine.dispose = AsyncMock()
-            yield
+            with patch("src.main.AsyncSessionLocal", side_effect=mock_session_factory):
+                with patch("src.tiers.init_system_user", new_callable=AsyncMock):
+                    with patch("redis.asyncio.from_url") as mock_redis_factory:
+                        mock_redis = AsyncMock()
+                        mock_redis_factory.return_value = mock_redis
+                        yield
 
 
 @pytest.fixture
@@ -157,6 +168,7 @@ def mock_user():
     user.email = "test@example.com"
     user.first_name = "Test"
     user.last_name = "User"
+    user.tier = "free"
     user.profile_image_url = None
     user.created_at = datetime.now(timezone.utc)
     user.updated_at = datetime.now(timezone.utc)
@@ -228,6 +240,10 @@ def _create_test_client(
         get_search_service_dep,
         get_ingest_service_dep,
         get_current_user_required,
+        get_current_user_optional,
+        get_tier_policy,
+        enforce_chat_limit,
+        get_redis,
         get_task_execution_repository,
         get_report_repository,
         get_user_repository,
@@ -235,6 +251,7 @@ def _create_test_client(
     )
     from src.factories.client_factories import get_embeddings_client
     from src.config import get_settings
+    from src.tiers import get_policy
 
     async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
         yield mock_db_session
@@ -250,9 +267,14 @@ def _create_test_client(
     app.dependency_overrides[get_task_execution_repository] = lambda: mock_task_exec_repo
     app.dependency_overrides[get_report_repository] = lambda: mock_report_repo
     app.dependency_overrides[get_user_repository] = lambda: mock_user_repo
+    # Always override Redis and chat guard to avoid needing a real Redis in API tests
+    app.dependency_overrides[get_redis] = lambda: AsyncMock()
+    app.dependency_overrides[enforce_chat_limit] = lambda: None
 
     if mock_user is not None:
         app.dependency_overrides[get_current_user_required] = lambda: mock_user
+        app.dependency_overrides[get_current_user_optional] = lambda: mock_user
+        app.dependency_overrides[get_tier_policy] = lambda: get_policy(mock_user)
         app.dependency_overrides[verify_api_key] = lambda: None
 
     with TestClient(app, raise_server_exceptions=False) as test_client:
@@ -365,11 +387,12 @@ def sample_task_execution():
 
 
 @pytest.fixture
-def sample_paper():
+def sample_paper(mock_user):
     """Create a sample paper mock object with all required fields."""
     paper = Mock()
     paper.id = uuid.uuid4()
     paper.arxiv_id = "2301.00001"
+    paper.user_id = mock_user.id
     paper.title = "Test Paper Title"
     paper.authors = ["Author One", "Author Two"]
     paper.abstract = "This is a test abstract."

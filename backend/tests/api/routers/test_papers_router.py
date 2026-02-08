@@ -7,22 +7,24 @@ from datetime import datetime, timezone
 class TestPapersAuthentication:
     """Tests for papers endpoint authentication."""
 
-    def test_list_papers_unauthenticated_returns_401(self, unauthenticated_client):
-        """Test that unauthenticated requests return 401."""
+    def test_list_papers_unauthenticated_allowed(self, unauthenticated_client, mock_paper_repo):
+        """Test that unauthenticated list requests are allowed (anonymous sees system papers)."""
+        mock_paper_repo.get_all.return_value = ([], 0)
+
         response = unauthenticated_client.get("/api/v1/papers")
 
-        assert response.status_code == 401
-        data = response.json()
-        assert data["error"]["code"] == "MISSING_TOKEN"
+        assert response.status_code == 200
 
-    def test_get_paper_unauthenticated_returns_401(self, unauthenticated_client):
-        """Test that unauthenticated requests return 401."""
+    def test_get_paper_unauthenticated_allowed(self, unauthenticated_client, mock_paper_repo):
+        """Test that unauthenticated get requests are allowed (anonymous sees system papers)."""
+        mock_paper_repo.get_by_arxiv_id.return_value = None
+
         response = unauthenticated_client.get("/api/v1/papers/2301.00001")
 
-        assert response.status_code == 401
+        assert response.status_code == 404
 
     def test_delete_paper_unauthenticated_returns_401(self, unauthenticated_client):
-        """Test that unauthenticated requests return 401."""
+        """Test that unauthenticated delete requests return 401."""
         response = unauthenticated_client.delete("/api/v1/papers/2301.00001")
 
         assert response.status_code == 401
@@ -191,7 +193,7 @@ class TestDeletePaperEndpoint:
         assert "not found" in response.json()["detail"].lower()
 
     def test_delete_paper_calls_repository(
-        self, client, mock_paper_repo, mock_chunk_repo, sample_paper
+        self, client, mock_paper_repo, mock_chunk_repo, mock_user, sample_paper
     ):
         """Test that deletion calls repository correctly."""
         mock_paper_repo.get_by_arxiv_id.return_value = sample_paper
@@ -200,4 +202,6 @@ class TestDeletePaperEndpoint:
         response = client.delete("/api/v1/papers/2301.00001")
 
         assert response.status_code == 200
-        mock_paper_repo.delete_by_arxiv_id.assert_called_once_with("2301.00001")
+        mock_paper_repo.delete_by_arxiv_id.assert_called_once_with(
+            "2301.00001", user_id=mock_user.id
+        )

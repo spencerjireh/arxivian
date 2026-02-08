@@ -1,5 +1,6 @@
 """Tests for IngestService - meaningful logic tests only."""
 
+import uuid
 import pytest
 from unittest.mock import AsyncMock, Mock
 from datetime import datetime, timezone
@@ -10,6 +11,8 @@ from sqlalchemy.exc import OperationalError
 from src.services.ingest_service import IngestService
 from src.schemas.ingest import IngestRequest
 from src.exceptions import PDFProcessingError, InsufficientChunksError, EmbeddingServiceError
+
+TEST_USER_ID = str(uuid.uuid4())
 
 
 class TestIngestPapersErrorHandling:
@@ -32,6 +35,7 @@ class TestIngestPapersErrorHandling:
             chunking_service=mock_chunking_service,
             paper_repository=mock_paper_repository,
             chunk_repository=mock_chunk_repository,
+            user_id=TEST_USER_ID,
         )
 
     @pytest.mark.asyncio
@@ -88,6 +92,7 @@ class TestIngestByIds:
             chunking_service=mock_chunking_service,
             paper_repository=mock_paper_repository,
             chunk_repository=mock_chunk_repository,
+            user_id=TEST_USER_ID,
         )
 
     @pytest.mark.asyncio
@@ -129,6 +134,7 @@ class TestProcessSinglePaper:
             chunking_service=mock_chunking_service,
             paper_repository=mock_paper_repository,
             chunk_repository=mock_chunk_repository,
+            user_id=TEST_USER_ID,
         )
 
     @pytest.mark.asyncio
@@ -250,6 +256,7 @@ class TestListPapersFormatting:
             chunking_service=mock_chunking_service,
             paper_repository=mock_paper_repository,
             chunk_repository=mock_chunk_repository,
+            user_id=TEST_USER_ID,
         )
 
     @pytest.mark.asyncio

@@ -137,13 +137,15 @@ class TestPaperRepositoryFiltering:
         assert len(papers) == 1
 
     @pytest.mark.asyncio
-    async def test_get_all_with_category_filter(self, db_session):
+    async def test_get_all_with_category_filter(self, db_session, sample_paper_data):
         """Verify category filtering works."""
         repo = PaperRepository(session=db_session)
+        uid = sample_paper_data["user_id"]
 
         await repo.create(
             {
                 "arxiv_id": "2301.00001",
+                "user_id": uid,
                 "title": "ML Paper",
                 "authors": ["Author"],
                 "abstract": "Abstract",
@@ -155,6 +157,7 @@ class TestPaperRepositoryFiltering:
         await repo.create(
             {
                 "arxiv_id": "2301.00002",
+                "user_id": uid,
                 "title": "AI Paper",
                 "authors": ["Author"],
                 "abstract": "Abstract",

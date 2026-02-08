@@ -171,7 +171,7 @@ class TestAddArxivSearchEndpoint:
         """Verify search is added to existing list."""
         mock_user.preferences = {
             "arxiv_searches": [
-                {"name": "Existing Search", "query": "existing query", "enabled": True}
+                {"name": "Existing Search", "query": "existing query", "enabled": False}
             ]
         }
 

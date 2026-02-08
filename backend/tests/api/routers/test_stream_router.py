@@ -94,14 +94,30 @@ class TestStreamEndpoint:
         from src.main import app
         from src.database import get_db
         from src.config import get_settings
-        from src.dependencies import get_current_user_required
+        from src.dependencies import (
+            get_current_user_required,
+            get_current_user_optional,
+            get_tier_policy,
+            enforce_chat_limit,
+            get_redis,
+            get_usage_counter_repository,
+        )
+        from src.tiers import get_policy
 
         def mock_get_agent_service(**kwargs):
             return mock_agent_service
 
+        mock_usage_repo = AsyncMock()
+        mock_usage_repo.increment_query_count = AsyncMock()
+
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
         app.dependency_overrides[get_current_user_required] = lambda: mock_user
+        app.dependency_overrides[get_current_user_optional] = lambda: mock_user
+        app.dependency_overrides[get_tier_policy] = lambda: get_policy(mock_user)
+        app.dependency_overrides[enforce_chat_limit] = lambda: None
+        app.dependency_overrides[get_redis] = lambda: AsyncMock()
+        app.dependency_overrides[get_usage_counter_repository] = lambda: mock_usage_repo
 
         with patch(
             "src.routers.stream.get_agent_service", mock_get_agent_service
@@ -192,11 +208,23 @@ class TestStreamEndpoint:
     def test_stream_with_custom_provider(
         self, mock_db_session, mock_settings, mock_user
     ):
-        """Test stream with custom provider parameter."""
+        """Test stream with custom provider parameter.
+
+        Free tier cannot select model, so the resolved model is the default.
+        Pro tier users can select model.
+        """
         from src.main import app
         from src.database import get_db
         from src.config import get_settings
-        from src.dependencies import get_current_user_required
+        from src.dependencies import (
+            get_current_user_required,
+            get_current_user_optional,
+            get_tier_policy,
+            enforce_chat_limit,
+            get_redis,
+            get_usage_counter_repository,
+        )
+        from src.tiers import TIER_POLICIES, UserTier
 
         captured_kwargs = {}
 
@@ -210,37 +238,53 @@ class TestStreamEndpoint:
             mock_service.ask_stream = mock_stream
             return mock_service
 
+        # Use pro tier so model selection works
+        mock_user.tier = "pro"
+        mock_usage_repo = AsyncMock()
+
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
         app.dependency_overrides[get_current_user_required] = lambda: mock_user
+        app.dependency_overrides[get_current_user_optional] = lambda: mock_user
+        app.dependency_overrides[get_tier_policy] = lambda: TIER_POLICIES[UserTier.PRO]
+        app.dependency_overrides[enforce_chat_limit] = lambda: None
+        app.dependency_overrides[get_redis] = lambda: AsyncMock()
+        app.dependency_overrides[get_usage_counter_repository] = lambda: mock_usage_repo
 
         with patch(
             "src.routers.stream.get_agent_service", capture_get_agent_service
         ):
             from fastapi.testclient import TestClient
 
-            with TestClient(app) as client:
+            with TestClient(app, raise_server_exceptions=False) as client:
                 response = client.post(
                     "/api/v1/stream",
                     json={
                         "query": "test",
-                        "provider": "openai",
-                        "model": "gpt-4o",
+                        "model": "openai/gpt-4o",
                     },
                 )
 
         app.dependency_overrides.clear()
 
         assert response.status_code == 200
-        assert captured_kwargs.get("provider") == "openai"
-        assert captured_kwargs.get("model") == "gpt-4o"
+        # Model is resolved by policy.resolve_model -- pro tier can select model
+        assert captured_kwargs.get("model") == "openai/gpt-4o"
 
     def test_stream_with_session_id(self, mock_db_session, mock_settings, mock_user):
         """Test stream with session_id for conversation continuity."""
         from src.main import app
         from src.database import get_db
         from src.config import get_settings
-        from src.dependencies import get_current_user_required
+        from src.dependencies import (
+            get_current_user_required,
+            get_current_user_optional,
+            get_tier_policy,
+            enforce_chat_limit,
+            get_redis,
+            get_usage_counter_repository,
+        )
+        from src.tiers import get_policy
 
         captured_kwargs = {}
 
@@ -254,16 +298,23 @@ class TestStreamEndpoint:
             mock_service.ask_stream = mock_stream
             return mock_service
 
+        mock_usage_repo = AsyncMock()
+
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
         app.dependency_overrides[get_current_user_required] = lambda: mock_user
+        app.dependency_overrides[get_current_user_optional] = lambda: mock_user
+        app.dependency_overrides[get_tier_policy] = lambda: get_policy(mock_user)
+        app.dependency_overrides[enforce_chat_limit] = lambda: None
+        app.dependency_overrides[get_redis] = lambda: AsyncMock()
+        app.dependency_overrides[get_usage_counter_repository] = lambda: mock_usage_repo
 
         with patch(
             "src.routers.stream.get_agent_service", capture_get_agent_service
         ):
             from fastapi.testclient import TestClient
 
-            with TestClient(app) as client:
+            with TestClient(app, raise_server_exceptions=False) as client:
                 response = client.post(
                     "/api/v1/stream",
                     json={
@@ -287,11 +338,24 @@ class TestStreamValidation:
         from src.main import app
         from src.database import get_db
         from src.config import get_settings
-        from src.dependencies import get_current_user_required
+        from src.dependencies import (
+            get_current_user_required,
+            get_current_user_optional,
+            get_tier_policy,
+            enforce_chat_limit,
+            get_redis,
+            get_usage_counter_repository,
+        )
+        from src.tiers import get_policy
 
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
         app.dependency_overrides[get_current_user_required] = lambda: mock_user
+        app.dependency_overrides[get_current_user_optional] = lambda: mock_user
+        app.dependency_overrides[get_tier_policy] = lambda: get_policy(mock_user)
+        app.dependency_overrides[enforce_chat_limit] = lambda: None
+        app.dependency_overrides[get_redis] = lambda: AsyncMock()
+        app.dependency_overrides[get_usage_counter_repository] = lambda: AsyncMock()
 
         from fastapi.testclient import TestClient
 
@@ -361,7 +425,15 @@ class TestStreamErrorHandling:
         from src.main import app
         from src.database import get_db
         from src.config import get_settings
-        from src.dependencies import get_current_user_required
+        from src.dependencies import (
+            get_current_user_required,
+            get_current_user_optional,
+            get_tier_policy,
+            enforce_chat_limit,
+            get_redis,
+            get_usage_counter_repository,
+        )
+        from src.tiers import get_policy
 
         mock_settings.agent_timeout_seconds = 1  # Very short timeout
 
@@ -378,13 +450,18 @@ class TestStreamErrorHandling:
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
         app.dependency_overrides[get_current_user_required] = lambda: mock_user
+        app.dependency_overrides[get_current_user_optional] = lambda: mock_user
+        app.dependency_overrides[get_tier_policy] = lambda: get_policy(mock_user)
+        app.dependency_overrides[enforce_chat_limit] = lambda: None
+        app.dependency_overrides[get_redis] = lambda: AsyncMock()
+        app.dependency_overrides[get_usage_counter_repository] = lambda: AsyncMock()
 
         with patch(
             "src.routers.stream.get_agent_service", slow_agent_service
         ):
             from fastapi.testclient import TestClient
 
-            with TestClient(app) as client:
+            with TestClient(app, raise_server_exceptions=False) as client:
                 response = client.post(
                     "/api/v1/stream",
                     json={"query": "test", "timeout_seconds": 10},
@@ -400,7 +477,15 @@ class TestStreamErrorHandling:
         from src.main import app
         from src.database import get_db
         from src.config import get_settings
-        from src.dependencies import get_current_user_required
+        from src.dependencies import (
+            get_current_user_required,
+            get_current_user_optional,
+            get_tier_policy,
+            enforce_chat_limit,
+            get_redis,
+            get_usage_counter_repository,
+        )
+        from src.tiers import get_policy
 
         def error_agent_service(**kwargs):
             mock_service = Mock()
@@ -415,13 +500,18 @@ class TestStreamErrorHandling:
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
         app.dependency_overrides[get_current_user_required] = lambda: mock_user
+        app.dependency_overrides[get_current_user_optional] = lambda: mock_user
+        app.dependency_overrides[get_tier_policy] = lambda: get_policy(mock_user)
+        app.dependency_overrides[enforce_chat_limit] = lambda: None
+        app.dependency_overrides[get_redis] = lambda: AsyncMock()
+        app.dependency_overrides[get_usage_counter_repository] = lambda: AsyncMock()
 
         with patch(
             "src.routers.stream.get_agent_service", error_agent_service
         ):
             from fastapi.testclient import TestClient
 
-            with TestClient(app) as client:
+            with TestClient(app, raise_server_exceptions=False) as client:
                 response = client.post(
                     "/api/v1/stream",
                     json={"query": "test"},

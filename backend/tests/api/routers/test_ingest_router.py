@@ -1,10 +1,16 @@
-"""Tests for ingest router."""
+"""Tests for ingest router.
+
+The /api/v1/ingest HTTP endpoint was removed in favour of ingestion via the
+chat agent's ingest tool. These tests are kept for reference but skipped.
+"""
 
 import pytest
 from unittest.mock import AsyncMock
 
 from src.schemas.ingest import IngestResponse
 from src.utils.idempotency import IdempotencyEntry
+
+pytestmark = pytest.mark.skip(reason="Ingest HTTP endpoint removed -- ingestion via chat agent only")
 
 
 class TestIngestEndpoint:
