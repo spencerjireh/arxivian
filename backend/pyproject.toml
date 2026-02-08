@@ -44,7 +44,7 @@ dependencies = [
     "structlog>=24.4.0",
 
     # Observability
-    "langfuse>=3.0.0",
+    "langfuse>=2.60.0,<3.0.0",
 
     # Authentication
     "clerk-backend-api>=1.0.0",
