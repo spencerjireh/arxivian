@@ -1,6 +1,8 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Loader2, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react'
+import clsx from 'clsx'
 import { usePapers, useDeletePaper } from '../api/papers'
+import { useDebounce } from '../hooks/useDebounce'
 import PaperCard from '../components/library/PaperCard'
 import Button from '../components/ui/Button'
 import type { PaperListParams } from '../types/api'
@@ -14,19 +16,15 @@ const LIMIT = 20
 export default function LibraryPage() {
   const [offset, setOffset] = useState(0)
   const [categoryInput, setCategoryInput] = useState('')
-  const [debouncedCategory, setDebouncedCategory] = useState('')
+  const debouncedCategory = useDebounce(categoryInput, 300)
   const [processedFilter, setProcessedFilter] = useState<ProcessedFilter>('all')
   const [sortBy, setSortBy] = useState<SortBy>('created_at')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
 
-  // Debounce category input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedCategory(categoryInput)
-      setOffset(0)
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [categoryInput])
+  const handleCategoryChange = (value: string) => {
+    setCategoryInput(value)
+    setOffset(0)
+  }
 
   const params = useMemo<PaperListParams>(() => {
     const p: PaperListParams = {
@@ -81,7 +79,7 @@ export default function LibraryPage() {
         <input
           type="text"
           value={categoryInput}
-          onChange={(e) => setCategoryInput(e.target.value)}
+          onChange={(e) => handleCategoryChange(e.target.value)}
           placeholder="Filter by category..."
           className={`${selectClass} w-48`}
         />
@@ -94,11 +92,12 @@ export default function LibraryPage() {
                 setProcessedFilter(value)
                 setOffset(0)
               }}
-              className={`px-3 py-2 text-sm transition-colors duration-150 ${
+              className={clsx(
+                'px-3 py-2 text-sm transition-colors duration-150',
                 processedFilter === value
                   ? 'bg-stone-900 text-white'
                   : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-              }`}
+              )}
             >
               {label}
             </button>

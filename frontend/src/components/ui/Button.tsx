@@ -1,6 +1,7 @@
 import { forwardRef } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
+import clsx from 'clsx'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'icon'
 type ButtonSize = 'sm' | 'md' | 'lg'
@@ -51,20 +52,16 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const shouldReduceMotion = useReducedMotion()
     const isIconOnly = variant === 'icon' && !children
 
-    const baseClasses = [
+    const classes = clsx(
       'inline-flex items-center justify-center',
       'font-medium rounded-lg',
       'transition-colors duration-150',
       'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
       'disabled:opacity-50 disabled:pointer-events-none',
-    ].join(' ')
-
-    const classes = [
-      baseClasses,
       variantClasses[variant],
       isIconOnly ? iconSizeClasses[size] : sizeClasses[size],
       className,
-    ].join(' ')
+    )
 
     return (
       <motion.button

@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import { setAuthTokenGetter } from '../../api/client'
 
@@ -8,18 +7,6 @@ import { setAuthTokenGetter } from '../../api/client'
  */
 export default function AuthTokenProvider({ children }: { children: React.ReactNode }) {
   const { getToken } = useAuth()
-
-  useEffect(() => {
-    // Register the token getter with the API client
-    setAuthTokenGetter(async () => {
-      try {
-        const token = await getToken()
-        return token
-      } catch {
-        return null
-      }
-    })
-  }, [getToken])
-
+  setAuthTokenGetter(() => getToken().catch(() => null))
   return <>{children}</>
 }

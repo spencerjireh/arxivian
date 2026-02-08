@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { User, Sparkles } from 'lucide-react'
+import clsx from 'clsx'
 import type { Message } from '../../types/api'
 import SourceCard from './SourceCard'
 import MetadataPanel from './MetadataPanel'
@@ -44,9 +45,9 @@ export default function ChatMessage({
   const showCursor = isStreaming || cursorPhase === 'complete'
 
   return (
-    <div className={isUser ? 'flex justify-end' : ''}>
-      <div className={isUser ? 'max-w-[80%]' : ''}>
-        <div className={`flex items-center gap-2.5 mb-3 ${isUser ? 'justify-end' : ''}`}>
+    <div className={clsx(isUser && 'flex justify-end')}>
+      <div className={clsx(isUser && 'max-w-[80%]')}>
+        <div className={clsx('flex items-center gap-2.5 mb-3', isUser && 'justify-end')}>
           {isUser ? (
             <>
               <span className="text-sm font-medium text-stone-500">You</span>
@@ -64,7 +65,7 @@ export default function ChatMessage({
           )}
         </div>
 
-        <div className={isUser ? 'pr-9 text-right' : 'pl-9'}>
+        <div className={clsx(isUser ? 'pr-9 text-right' : 'pl-9')}>
           {!isUser && thinkingSteps && thinkingSteps.length > 0 && (
             <div className="mb-4">
               <ThinkingTimeline steps={thinkingSteps} isStreaming={isStreaming} />

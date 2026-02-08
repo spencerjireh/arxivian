@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import { Loader2, Trash2 } from 'lucide-react'
+import clsx from 'clsx'
 import type { ConversationListItem } from '../../types/api'
 import { transitions } from '../../lib/animations'
 
@@ -33,18 +34,14 @@ export default function SidebarConversationItem({
   return (
     <motion.div
       onClick={onClick}
-      className={`
-        group relative px-3 py-1.5 rounded-lg cursor-pointer
-        transition-colors duration-150
-        ${isActive
-          ? 'bg-stone-100'
-          : 'hover:bg-stone-100'
-        }
-      `}
+      className={clsx(
+        'group relative px-3 py-1.5 rounded-lg cursor-pointer transition-colors duration-150',
+        isActive ? 'bg-stone-100' : 'hover:bg-stone-100'
+      )}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <p className={`text-sm leading-tight truncate ${isActive ? 'text-stone-900 font-medium' : 'text-stone-700'}`}>
+          <p className={clsx('text-sm leading-tight truncate', isActive ? 'text-stone-900 font-medium' : 'text-stone-700')}>
             {conversation.last_query
               ? truncate(conversation.last_query, 50)
               : 'New conversation'}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Trash2, ExternalLink } from 'lucide-react'
+import clsx from 'clsx'
 import { transitions } from '../../lib/animations'
 import type { PaperListItem } from '../../types/api'
 
@@ -39,7 +40,7 @@ export default function PaperCard({ paper, onDelete, isDeleting }: PaperCardProp
             {paper.arxiv_id}
           </span>
           <span
-            className={`w-2 h-2 rounded-full ${paper.pdf_processed ? 'bg-emerald-400' : 'bg-amber-400'}`}
+            className={clsx('w-2 h-2 rounded-full', paper.pdf_processed ? 'bg-emerald-400' : 'bg-amber-400')}
             title={paper.pdf_processed ? 'Processed' : 'Not processed'}
           />
         </div>

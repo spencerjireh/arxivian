@@ -1,4 +1,5 @@
 import { forwardRef } from 'react'
+import clsx from 'clsx'
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string
@@ -7,7 +8,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, className = '', ...props }, ref) => {
-    const baseClasses = [
+    const classes = clsx(
       'block w-full rounded-lg',
       'border border-stone-200',
       'bg-white text-stone-900',
@@ -16,13 +17,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       'placeholder:text-stone-400',
       'sm:text-sm',
       'transition-colors duration-150',
-    ].join(' ')
-
-    const errorClasses = error
-      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-      : ''
-
-    const classes = `${baseClasses} ${errorClasses} ${className}`
+      error && 'border-red-300 focus:border-red-500 focus:ring-red-500',
+      className,
+    )
 
     return (
       <div>
