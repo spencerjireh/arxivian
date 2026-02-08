@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect, type FormEvent, type KeyboardEvent } from 'react'
 import { Settings2, X, ArrowUp, RotateCcw } from 'lucide-react'
 import type { LLMProvider } from '../../types/api'
-import type { ChatOptions } from '../../hooks/useChat'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { AnimatedCollapse } from '../ui/AnimatedCollapse'
 import Button from '../ui/Button'
 
 interface ChatInputProps {
-  onSend: (query: string, options: ChatOptions) => void
+  onSend: (query: string) => void
   isStreaming: boolean
   onCancel?: () => void
   variant?: 'bottom' | 'centered'
@@ -74,17 +73,7 @@ export default function ChatInput({ onSend, isStreaming, onCancel, variant = 'bo
     e.preventDefault()
     if (!query.trim() || isStreaming) return
 
-    const options: ChatOptions = {
-      provider,
-      model,
-      temperature,
-      top_k,
-      guardrail_threshold,
-      max_retrieval_attempts,
-      conversation_window,
-    }
-
-    onSend(query.trim(), options)
+    onSend(query.trim())
     setQuery('')
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'

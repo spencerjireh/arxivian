@@ -1,5 +1,4 @@
 export { useDebounce } from './useDebounce'
 export { useChat } from './useChat'
-export type { ChatOptions } from './useChat'
 export { useAutoScroll } from './useAutoScroll'
 export type { AutoScrollOptions } from './useAutoScroll'

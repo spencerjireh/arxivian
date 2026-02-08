@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiGet, apiPost, apiDelete } from './client'
+import { useOptimisticMutation } from './helpers'
 import type { UserPreferences, ArxivSearchConfig } from '../types/api'
 
 // Query keys
@@ -45,31 +46,12 @@ export function useAddArxivSearch() {
 }
 
 export function useDeleteArxivSearch() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
+  return useOptimisticMutation<UserPreferences, string>({
     mutationFn: deleteArxivSearch,
-    onMutate: async (searchName) => {
-      await queryClient.cancelQueries({ queryKey: preferencesKeys.detail() })
-
-      const previous = queryClient.getQueryData<UserPreferences>(preferencesKeys.detail())
-
-      if (previous) {
-        queryClient.setQueryData<UserPreferences>(preferencesKeys.detail(), {
-          ...previous,
-          arxiv_searches: previous.arxiv_searches.filter((s) => s.name !== searchName),
-        })
-      }
-
-      return { previous }
-    },
-    onError: (_err, _name, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(preferencesKeys.detail(), context.previous)
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: preferencesKeys.detail() })
-    },
+    queryKey: preferencesKeys.detail(),
+    updater: (old, searchName) => ({
+      ...old,
+      arxiv_searches: old.arxiv_searches.filter((s) => s.name !== searchName),
+    }),
   })
 }

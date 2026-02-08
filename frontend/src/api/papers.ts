@@ -1,7 +1,8 @@
 // Papers REST API + TanStack Query hooks
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { apiGet, apiDelete } from './client'
+import { useOptimisticListMutation } from './helpers'
 import type {
   PaperListResponse,
   PaperListParams,
@@ -47,38 +48,13 @@ export function usePapers(params: PaperListParams) {
 }
 
 export function useDeletePaper() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
+  return useOptimisticListMutation<PaperListResponse, string>({
     mutationFn: deletePaper,
-    onMutate: async (arxivId) => {
-      await queryClient.cancelQueries({ queryKey: paperKeys.lists() })
-
-      const previousLists = queryClient.getQueriesData({ queryKey: paperKeys.lists() })
-
-      queryClient.setQueriesData<PaperListResponse>(
-        { queryKey: paperKeys.lists() },
-        (old) => {
-          if (!old) return old
-          return {
-            ...old,
-            total: old.total - 1,
-            papers: old.papers.filter((p) => p.arxiv_id !== arxivId),
-          }
-        }
-      )
-
-      return { previousLists }
-    },
-    onError: (_err, _arxivId, context) => {
-      if (context?.previousLists) {
-        context.previousLists.forEach(([queryKey, data]) => {
-          queryClient.setQueryData(queryKey, data)
-        })
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: paperKeys.lists() })
-    },
+    listQueryKey: paperKeys.lists(),
+    updater: (old, arxivId) => ({
+      ...old,
+      total: old.total - 1,
+      papers: old.papers.filter((p) => p.arxiv_id !== arxivId),
+    }),
   })
 }

@@ -2,7 +2,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { Check, Loader2, AlertCircle } from 'lucide-react'
 import clsx from 'clsx'
 import type { ThinkingStep } from '../../types/api'
-import { STEP_LABELS } from '../../types/api'
+import { STEP_LABELS } from '../../lib/thinking/constants'
 import { pulseVariants, scaleInStable, transitions } from '../../lib/animations'
 
 interface ThinkingStepperProps {

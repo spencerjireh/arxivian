@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Sparkles } from 'lucide-react'
-import type { ChatOptions } from '../../hooks/useChat'
 import { transitions } from '../../lib/animations'
 import ChatInput from './ChatInput'
 import SuggestionChips from './SuggestionChips'
 
 interface EmptyConversationStateProps {
-  onSend: (query: string, options: ChatOptions) => void
+  onSend: (query: string) => void
   isStreaming: boolean
   onCancel?: () => void
 }

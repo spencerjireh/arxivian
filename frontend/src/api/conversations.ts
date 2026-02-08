@@ -1,7 +1,8 @@
 // Conversation REST API + TanStack Query hooks
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { apiGet, apiDelete } from './client'
+import { useOptimisticListMutation } from './helpers'
 import type {
   ConversationListResponse,
   ConversationDetailResponse,
@@ -57,44 +58,13 @@ export function useConversation(sessionId: string | undefined) {
 }
 
 export function useDeleteConversation() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
+  return useOptimisticListMutation<ConversationListResponse, string>({
     mutationFn: deleteConversation,
-    // Optimistic update - remove from list immediately
-    onMutate: async (sessionId) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: conversationKeys.lists() })
-
-      // Snapshot the previous value
-      const previousLists = queryClient.getQueriesData({ queryKey: conversationKeys.lists() })
-
-      // Optimistically remove from all list caches
-      queryClient.setQueriesData<ConversationListResponse>(
-        { queryKey: conversationKeys.lists() },
-        (old) => {
-          if (!old) return old
-          return {
-            ...old,
-            total: old.total - 1,
-            conversations: old.conversations.filter((c) => c.session_id !== sessionId),
-          }
-        }
-      )
-
-      return { previousLists }
-    },
-    // If mutation fails, rollback
-    onError: (_err, _sessionId, context) => {
-      if (context?.previousLists) {
-        context.previousLists.forEach(([queryKey, data]) => {
-          queryClient.setQueryData(queryKey, data)
-        })
-      }
-    },
-    // Always refetch after error or success
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: conversationKeys.lists() })
-    },
+    listQueryKey: conversationKeys.lists(),
+    updater: (old, sessionId) => ({
+      ...old,
+      total: old.total - 1,
+      conversations: old.conversations.filter((c) => c.session_id !== sessionId),
+    }),
   })
 }
