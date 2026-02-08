@@ -1,6 +1,6 @@
 """API routes for user preferences management."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from src.dependencies import CurrentUserRequired, DbSession, UserRepoDep
 from src.schemas.preferences import (
@@ -86,6 +86,14 @@ async def add_arxiv_search(
     # Get current preferences and add the new search
     current_prefs = current_user.preferences or {}
     arxiv_searches = current_prefs.get("arxiv_searches", [])
+
+    # Enforce unique names (case-insensitive)
+    if any(s.get("name", "").lower() == search.name.lower() for s in arxiv_searches):
+        raise HTTPException(
+            status_code=409,
+            detail=f"A search with the name '{search.name}' already exists",
+        )
+
     arxiv_searches.append(search.model_dump())
     current_prefs["arxiv_searches"] = arxiv_searches
 
