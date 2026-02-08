@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import Sidebar from '../sidebar/Sidebar'
 import SidebarToggle from '../sidebar/SidebarToggle'
@@ -7,13 +7,13 @@ import { useSidebarStore } from '../../stores/sidebarStore'
 const Layout = () => {
   const isOpen = useSidebarStore((state) => state.isOpen)
   const shouldReduceMotion = useReducedMotion()
+  const location = useLocation()
 
   const springTransition = { type: 'spring' as const, stiffness: 400, damping: 30 }
   const fastTransition = { duration: 0.15, ease: 'easeOut' as const }
 
-  // Use stable key for all chat pages to prevent unmount/remount during navigation
-  // All routes now render ChatPage, so we use a single key
-  const pageKey = 'chat'
+  // Use stable key per section to prevent unmount/remount during within-section navigation
+  const pageKey = location.pathname.startsWith('/chat') ? 'chat' : location.pathname
 
   return (
     <div className="h-screen bg-[#FAFAF9] flex overflow-hidden">

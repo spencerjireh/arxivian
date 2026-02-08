@@ -32,7 +32,7 @@ export default function OAuthButtons() {
     await signIn.authenticateWithRedirect({
       strategy: 'oauth_google',
       redirectUrl: '/sso-callback',
-      redirectUrlComplete: '/',
+      redirectUrlComplete: '/chat',
     })
   }
 

@@ -167,7 +167,7 @@ export function useChat(sessionId: string | null) {
         queryClient.invalidateQueries({ queryKey: conversationKeys.lists() })
 
         // Navigate - useEffect will ensure cache continuity
-        navigate(`/${metadata.session_id}`, { replace: true })
+        navigate(`/chat/${metadata.session_id}`, { replace: true })
       } else {
         // Replace placeholder with finalized message
         setMessages((prev) => prev.map((msg) => (msg.id === placeholderId ? assistantMessage : msg)))

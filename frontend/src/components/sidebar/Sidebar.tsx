@@ -1,43 +1,24 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { Plus, PanelLeftClose, Loader2, MessageSquare, ChevronUp, ChevronDown } from 'lucide-react'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { Plus, PanelLeftClose, Loader2, MessageSquare, BookOpen, Settings, ChevronUp, ChevronDown } from 'lucide-react'
 import { useConversations, useDeleteConversation } from '../../api/conversations'
 import { useSidebarStore } from '../../stores/sidebarStore'
 import SidebarConversationItem from './SidebarConversationItem'
 import UserMenu from './UserMenu'
 import Button from '../ui/Button'
 
+const navItems = [
+  { path: '/chat', label: 'Chat', icon: MessageSquare },
+  { path: '/library', label: 'Library', icon: BookOpen },
+  { path: '/settings', label: 'Settings', icon: Settings },
+] as const
+
 export default function Sidebar() {
   const navigate = useNavigate()
-  const { sessionId } = useParams()
+  const location = useLocation()
   const close = useSidebarStore((state) => state.close)
 
-  const [offset, setOffset] = useState(0)
-  const limit = 30
-
-  const { data, isLoading, error } = useConversations(offset, limit)
-  const deleteConversation = useDeleteConversation()
-
-  const handleNewConversation = () => {
-    navigate('/')
-  }
-
-  const handleNavigate = (id: string) => {
-    navigate(`/${id}`)
-  }
-
-  const handleDelete = (id: string) => {
-    deleteConversation.mutate(id, {
-      onSuccess: () => {
-        if (id === sessionId) {
-          navigate('/')
-        }
-      },
-    })
-  }
-
-  const hasMore = data ? offset + limit < data.total : false
-  const hasPrev = offset > 0
+  const isChatRoute = location.pathname.startsWith('/chat')
 
   return (
     <div className="w-72 h-screen bg-stone-50 border-r border-stone-200 flex flex-col">
@@ -57,7 +38,71 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <div className="px-3 py-3">
+      <nav className="px-3 py-3 space-y-0.5">
+        {navItems.map(({ path, label, icon: Icon }) => {
+          const isActive = path === '/chat'
+            ? location.pathname.startsWith('/chat')
+            : location.pathname === path
+          return (
+            <button
+              key={path}
+              onClick={() => navigate(path)}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors duration-150 ${
+                isActive
+                  ? 'bg-stone-100 text-stone-900 font-medium'
+                  : 'text-stone-600 hover:bg-stone-100'
+              }`}
+            >
+              <Icon className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+              {label}
+            </button>
+          )
+        })}
+      </nav>
+
+      {isChatRoute ? <SidebarConversations /> : <div className="flex-1" />}
+
+      <div className="px-2 py-3 border-t border-stone-200">
+        <UserMenu />
+      </div>
+    </div>
+  )
+}
+
+function SidebarConversations() {
+  const navigate = useNavigate()
+  const { sessionId } = useParams()
+
+  const [offset, setOffset] = useState(0)
+  const limit = 30
+
+  const { data, isLoading, error } = useConversations(offset, limit)
+  const deleteConversation = useDeleteConversation()
+
+  const handleNewConversation = () => {
+    navigate('/chat')
+  }
+
+  const handleNavigate = (id: string) => {
+    navigate(`/chat/${id}`)
+  }
+
+  const handleDelete = (id: string) => {
+    deleteConversation.mutate(id, {
+      onSuccess: () => {
+        if (id === sessionId) {
+          navigate('/chat')
+        }
+      },
+    })
+  }
+
+  const hasMore = data ? offset + limit < data.total : false
+  const hasPrev = offset > 0
+
+  return (
+    <>
+      <div className="px-3 pb-3">
         <Button
           variant="primary"
           className="w-full !px-3 !py-1.5"
@@ -86,24 +131,24 @@ export default function Sidebar() {
           </div>
         ) : (
           <>
-            <h2 className="text-xs text-stone-600 px-3 pt-8 pb-2">
+            <h2 className="text-xs text-stone-600 px-3 pt-4 pb-2">
               Recent conversations
             </h2>
             <div className="space-y-0.5 pb-4">
               {data.conversations.map((conversation) => (
                 <div key={conversation.session_id}>
-                <SidebarConversationItem
-                  conversation={conversation}
-                  isActive={conversation.session_id === sessionId}
-                  onClick={() => handleNavigate(conversation.session_id)}
-                  onDelete={() => handleDelete(conversation.session_id)}
-                  isDeleting={
-                    deleteConversation.isPending &&
-                    deleteConversation.variables === conversation.session_id
-                  }
-                />
-              </div>
-            ))}
+                  <SidebarConversationItem
+                    conversation={conversation}
+                    isActive={conversation.session_id === sessionId}
+                    onClick={() => handleNavigate(conversation.session_id)}
+                    onDelete={() => handleDelete(conversation.session_id)}
+                    isDeleting={
+                      deleteConversation.isPending &&
+                      deleteConversation.variables === conversation.session_id
+                    }
+                  />
+                </div>
+              ))}
             </div>
           </>
         )}
@@ -136,10 +181,6 @@ export default function Sidebar() {
           </div>
         </div>
       )}
-
-      <div className="px-2 py-3 border-t border-stone-200">
-        <UserMenu />
-      </div>
-    </div>
+    </>
   )
 }

@@ -112,6 +112,67 @@ export interface DeleteConversationResponse {
   turns_deleted: number
 }
 
+// Paper types
+
+export interface PaperListItem {
+  arxiv_id: string
+  title: string
+  authors: string[]
+  abstract: string
+  categories: string[]
+  published_date: string
+  pdf_url: string
+  sections: string[] | null
+  pdf_processed: boolean
+  pdf_processing_date: string | null
+  parser_used: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PaperListResponse {
+  total: number
+  offset: number
+  limit: number
+  papers: PaperListItem[]
+}
+
+export interface DeletePaperResponse {
+  arxiv_id: string
+  title: string
+  chunks_deleted: number
+  message: string
+}
+
+export interface PaperListParams {
+  offset?: number
+  limit?: number
+  processed_only?: boolean
+  category?: string
+  author?: string
+  sort_by?: 'created_at' | 'published_date' | 'updated_at'
+  sort_order?: 'asc' | 'desc'
+}
+
+// Preferences types
+
+export interface ArxivSearchConfig {
+  name: string
+  query: string
+  categories?: string[]
+  max_results?: number
+  enabled?: boolean
+}
+
+export interface NotificationSettings {
+  email_digest: boolean
+}
+
+export interface UserPreferences {
+  arxiv_searches: ArxivSearchConfig[]
+  notification_settings: NotificationSettings
+}
+
 // Thinking/Reasoning types for UI
 
 export type ThinkingStepType =
