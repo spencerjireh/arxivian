@@ -164,16 +164,25 @@ class ProcessingLimitError(BusinessLogicError):
 class UsageLimitExceededError(BaseAPIException):
     """Raised when a user exceeds their daily usage limit."""
 
-    def __init__(self, action: str, current: int, limit: int):
+    def __init__(self, current: int, limit: int):
         super().__init__(
-            message=(
-                f"Daily {action} limit exceeded ({current}/{limit}). "
-                "Limits reset daily at midnight UTC."
-            ),
+            message=f"Daily limit reached ({current}/{limit}). Resets at midnight UTC.",
             status_code=429,
             error_code="USAGE_LIMIT_EXCEEDED",
-            details={"action": action, "current": current, "limit": limit},
+            details={"current": current, "limit": limit},
         )
+
+
+# ============================================================================
+# Forbidden Errors (403)
+# ============================================================================
+
+
+class ForbiddenError(BaseAPIException):
+    """Raised when a tier-gated action is denied."""
+
+    def __init__(self, message: str):
+        super().__init__(message, status_code=403, error_code="FORBIDDEN")
 
 
 # ============================================================================

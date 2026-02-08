@@ -10,7 +10,13 @@ from pydantic import BaseModel
 
 from src.config import get_settings
 from src.schemas.stream import StreamRequest, StreamEventType, ErrorEventData, StreamEvent
-from src.dependencies import DbSession, CurrentUserRequired, QueryUsageCheck, UsageCounterRepoDep
+from src.dependencies import (
+    DbSession,
+    CurrentUserOptional,
+    TierPolicyDep,
+    ChatGuard,
+    UsageCounterRepoDep,
+)
 from src.factories.service_factories import get_agent_service
 from src.services.task_registry import task_registry
 from src.utils.logger import get_logger
@@ -33,44 +39,21 @@ async def stream(
     request: StreamRequest,
     db: DbSession,
     http_request: Request,
-    current_user: CurrentUserRequired,
+    current_user: CurrentUserOptional,
+    policy: TierPolicyDep,
     usage_repo: UsageCounterRepoDep,
-    _usage_check: QueryUsageCheck,
+    _limit: ChatGuard,
 ) -> StreamingResponse:
     """
     Stream agent response via Server-Sent Events (SSE).
 
-    This endpoint streams the agent's response in real-time, providing
-    status updates, content tokens, and metadata as separate events.
-
-    Features:
-    - Multi-provider LLM support (OpenAI, NVIDIA NIM)
-    - Guardrail validation (rejects out-of-scope queries)
-    - Document grading (filters irrelevant chunks)
-    - Query rewriting (improves retrieval iteratively)
-    - Streaming answer generation
-    - Multi-turn conversation memory (optional)
-    - Configurable request timeout
-    - Client disconnect detection
-    - Task cancellation support
-
-    SSE Event Types:
-    - status: Workflow step updates (guardrail, retrieval, grading, generation)
-    - content: Streaming answer tokens
-    - sources: Retrieved document sources
-    - metadata: Final execution metadata
-    - error: Error information (if any)
-    - done: Stream complete
-
-    Args:
-        request: Question and parameters (including optional provider/model and session_id)
-        db: Database session
-        http_request: FastAPI request for disconnect detection
-
-    Returns:
-        StreamingResponse with SSE events
+    Supports anonymous (limited tools, Redis rate limit), free (all tools,
+    DB rate limit), and pro (unlimited) tiers.
     """
     settings = get_settings()
+
+    # Resolve model based on tier policy
+    model = policy.resolve_model(request.model, settings)
 
     # Determine timeout: request override > server default
     timeout_seconds = (
@@ -82,21 +65,25 @@ async def stream(
     # Use session_id if provided, otherwise generate a temporary task ID
     task_id = request.session_id or str(uuid.uuid4())
 
+    user_id = current_user.id if current_user else None
+
     log.info(
         "stream request",
         query=request.query[:100],
-        provider=request.provider,
+        model=model,
         session_id=request.session_id,
         task_id=task_id,
         timeout_seconds=timeout_seconds,
         max_iterations=request.max_iterations,
-        user_id=str(current_user.id),
+        user_id=str(user_id) if user_id else "anonymous",
+        tier=current_user.tier if current_user else "anonymous",
     )
 
     async def event_generator():
-        # Increment usage counter before LLM work
-        await usage_repo.increment_query_count(current_user.id)
-        await db.flush()
+        # Increment usage counter for authenticated users
+        if current_user is not None:
+            await usage_repo.increment_query_count(current_user.id)
+            await db.flush()
 
         # Register the current task for cancellation support
         current_task = asyncio.current_task()
@@ -105,11 +92,10 @@ async def stream(
 
         try:
             async with asyncio.timeout(timeout_seconds):
-                # Create service with request parameters
+                # Create service with request parameters and tier-based tool gating
                 agent_service = get_agent_service(
                     db_session=db,
-                    provider=request.provider,
-                    model=request.model,
+                    model=model,
                     guardrail_threshold=request.guardrail_threshold,
                     top_k=request.top_k,
                     max_retrieval_attempts=request.max_retrieval_attempts,
@@ -117,7 +103,9 @@ async def stream(
                     session_id=request.session_id,
                     conversation_window=request.conversation_window,
                     max_iterations=request.max_iterations,
-                    user_id=current_user.id,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
+                    user_id=user_id,  # ty: ignore[invalid-argument-type]
+                    can_ingest=policy.can_ingest,
+                    can_search_arxiv=policy.can_search_arxiv,
                 )
 
                 # Stream events from the agent service

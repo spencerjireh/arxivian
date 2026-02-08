@@ -103,7 +103,7 @@ def ingest_papers_task(
 
     async def _run() -> dict[str, Any]:
         async with AsyncSessionLocal() as session:
-            service = get_ingest_service(session)
+            service = get_ingest_service(session, user_id=user_id)
             request = IngestRequest(
                 query=query,
                 max_results=max_results,

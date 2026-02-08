@@ -92,6 +92,7 @@ class AgentService:
             max_retrieval_attempts=max_retrieval_attempts,
             max_iterations=max_iterations,
             temperature=temperature,
+            user_id=user_id,
         )
         self.llm_client = llm_client
         self.search_service = search_service

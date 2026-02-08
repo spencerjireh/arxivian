@@ -1,7 +1,7 @@
 """Paper model for arXiv papers."""
 
 import uuid
-from sqlalchemy import Column, String, Text, Boolean, TIMESTAMP, func
+from sqlalchemy import Column, String, Text, Boolean, TIMESTAMP, ForeignKey, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from src.database import Base
 
@@ -10,12 +10,18 @@ class Paper(Base):
     """arXiv paper metadata and content."""
 
     __tablename__ = "papers"
+    __table_args__ = (
+        UniqueConstraint("user_id", "arxiv_id", name="uq_papers_user_arxiv"),
+    )
 
     # Primary key
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
+    # Ownership
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+
     # arXiv metadata
-    arxiv_id = Column(String(50), unique=True, nullable=False, index=True)
+    arxiv_id = Column(String(50), nullable=False, index=True)
     title = Column(Text, nullable=False)
     authors = Column(JSONB, nullable=False)  # List of author names
     abstract = Column(Text, nullable=False)

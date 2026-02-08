@@ -2,7 +2,8 @@
 
 from fastapi import APIRouter, HTTPException
 
-from src.dependencies import CurrentUserRequired, DbSession, UserRepoDep
+from src.dependencies import CurrentUserRequired, DbSession, UserRepoDep, TierPolicyDep
+from src.exceptions import ForbiddenError
 from src.schemas.preferences import (
     ArxivSearchConfig,
     UpdateArxivSearchesRequest,
@@ -36,13 +37,16 @@ async def update_arxiv_searches(
     current_user: CurrentUserRequired,
     db: DbSession,
     user_repo: UserRepoDep,
+    policy: TierPolicyDep,
 ) -> UserPreferences:
-    """Update the user's saved arXiv searches.
+    """Update the user's saved arXiv searches. Enforces slot limits."""
+    # Enforce search slot limit
+    enabled_count = sum(1 for s in request.arxiv_searches if s.enabled)
+    if enabled_count > policy.search_slots:
+        raise ForbiddenError(
+            f"Search slot limit reached ({enabled_count}/{policy.search_slots})"
+        )
 
-    This replaces all existing arXiv searches with the provided list.
-    Searches are used by the daily ingestion job to automatically
-    fetch new papers matching the user's interests.
-    """
     log.info(
         "updating_arxiv_searches",
         user_id=str(current_user.id),
@@ -75,17 +79,24 @@ async def add_arxiv_search(
     current_user: CurrentUserRequired,
     db: DbSession,
     user_repo: UserRepoDep,
+    policy: TierPolicyDep,
 ) -> UserPreferences:
     """Add a new arXiv search to the user's preferences."""
+    # Get current preferences and check slot limit
+    current_prefs = current_user.preferences or {}
+    arxiv_searches = current_prefs.get("arxiv_searches", [])
+
+    enabled_count = sum(1 for s in arxiv_searches if s.get("enabled", True))
+    if search.enabled and enabled_count >= policy.search_slots:
+        raise ForbiddenError(
+            f"Search slot limit reached ({enabled_count}/{policy.search_slots})"
+        )
+
     log.info(
         "adding_arxiv_search",
         user_id=str(current_user.id),
         search_name=search.name,
     )
-
-    # Get current preferences and add the new search
-    current_prefs = current_user.preferences or {}
-    arxiv_searches = current_prefs.get("arxiv_searches", [])
 
     # Enforce unique names (case-insensitive)
     if any(s.get("name", "").lower() == search.name.lower() for s in arxiv_searches):

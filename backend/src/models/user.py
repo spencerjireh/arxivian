@@ -18,6 +18,9 @@ class User(Base):
     # Clerk identity
     clerk_id = Column(String(255), unique=True, nullable=False, index=True)
 
+    # Tier (free / pro)
+    tier = Column(String(20), nullable=False, server_default="free")
+
     # Profile information (from Clerk)
     email = Column(String(255), nullable=True, index=True)
     first_name = Column(String(255), nullable=True)

@@ -10,7 +10,13 @@ from src.schemas.papers import (
     PaperListItem,
     DeletePaperResponse,
 )
-from src.dependencies import PaperRepoDep, ChunkRepoDep, DbSession, CurrentUserRequired
+from src.dependencies import (
+    PaperRepoDep,
+    ChunkRepoDep,
+    DbSession,
+    CurrentUserOptional,
+    CurrentUserRequired,
+)
 
 router = APIRouter()
 
@@ -18,7 +24,7 @@ router = APIRouter()
 @router.get("/papers", response_model=PaperListResponse)
 async def list_papers(
     paper_repo: PaperRepoDep,
-    current_user: CurrentUserRequired,
+    current_user: CurrentUserOptional,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     processed_only: Optional[bool] = None,
@@ -29,33 +35,8 @@ async def list_papers(
     sort_by: Literal["created_at", "published_date", "updated_at"] = "created_at",
     sort_order: Literal["asc", "desc"] = "desc",
 ) -> PaperListResponse:
-    """
-    Get paginated list of papers with optional filters.
-
-    Supports filtering by:
-    - Processing status (processed_only)
-    - Category (substring match, case-insensitive)
-    - Author (substring match, case-insensitive)
-    - Publication date range (start_date, end_date)
-
-    Results can be sorted by created_at, published_date, or updated_at.
-    List response excludes raw_text for performance.
-
-    Args:
-        paper_repo: Injected paper repository
-        offset: Number of papers to skip
-        limit: Maximum number of papers to return
-        processed_only: Filter by pdf_processed status
-        category: Filter by category
-        author: Filter by author name
-        start_date: Filter papers published on or after this date
-        end_date: Filter papers published on or before this date
-        sort_by: Field to sort by
-        sort_order: Sort order (asc or desc)
-
-    Returns:
-        PaperListResponse with paginated papers
-    """
+    """Get paginated list of papers. Anonymous sees system papers only."""
+    user_id = current_user.id if current_user else None
     papers, total = await paper_repo.get_all(
         offset=offset,
         limit=limit,
@@ -66,6 +47,7 @@ async def list_papers(
         end_date=end_date,
         sort_by=sort_by,
         sort_order=sort_order,
+        user_id=user_id,
     )
 
     paper_items = [PaperListItem.model_validate(p, from_attributes=True) for p in papers]
@@ -77,24 +59,11 @@ async def list_papers(
 async def get_paper_by_arxiv_id(
     arxiv_id: str,
     paper_repo: PaperRepoDep,
-    current_user: CurrentUserRequired,
+    current_user: CurrentUserOptional,
 ) -> PaperResponse:
-    """
-    Get a single paper by arXiv ID.
-
-    Includes all paper fields including raw_text.
-
-    Args:
-        arxiv_id: arXiv ID of the paper
-        paper_repo: Injected paper repository
-
-    Returns:
-        PaperResponse with full paper details
-
-    Raises:
-        HTTPException: 404 if paper not found
-    """
-    paper = await paper_repo.get_by_arxiv_id(arxiv_id)
+    """Get a single paper by arXiv ID. Scoped to user + system ownership."""
+    user_id = current_user.id if current_user else None
+    paper = await paper_repo.get_by_arxiv_id(arxiv_id, user_id=user_id)
     if not paper:
         raise HTTPException(status_code=404, detail=f"Paper with arXiv ID '{arxiv_id}' not found")
     return PaperResponse.model_validate(paper, from_attributes=True)
@@ -108,32 +77,15 @@ async def delete_paper(
     db: DbSession,
     current_user: CurrentUserRequired,
 ) -> DeletePaperResponse:
-    """
-    Delete a paper and all its associated chunks by arXiv ID.
-
-    This performs a hard delete. Chunks are automatically deleted via
-    CASCADE foreign key constraint.
-
-    Args:
-        arxiv_id: arXiv ID of the paper to delete
-        paper_repo: Injected paper repository
-        chunk_repo: Injected chunk repository
-        db: Database session
-
-    Returns:
-        DeletePaperResponse with deletion summary
-
-    Raises:
-        HTTPException: 404 if paper not found
-    """
-    paper = await paper_repo.get_by_arxiv_id(arxiv_id)
+    """Delete a paper and its chunks. Requires authentication."""
+    paper = await paper_repo.get_by_arxiv_id(arxiv_id, user_id=current_user.id)
     if not paper:
         raise HTTPException(status_code=404, detail=f"Paper with arXiv ID '{arxiv_id}' not found")
 
     chunk_count = await chunk_repo.count_by_paper_id(str(paper.id))
     title = paper.title
 
-    await paper_repo.delete_by_arxiv_id(arxiv_id)
+    await paper_repo.delete_by_arxiv_id(arxiv_id, user_id=current_user.id)
     await db.commit()
 
     return DeletePaperResponse(

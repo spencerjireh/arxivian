@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Query
 
 from src.schemas.reports import ReportResponse, ReportListResponse
-from src.dependencies import CurrentUserRequired, ReportRepoDep
+from src.dependencies import CurrentUserOptional, ReportRepoDep
 from src.exceptions import ResourceNotFoundError
 from src.utils.logger import get_logger
 
@@ -16,14 +16,15 @@ router = APIRouter(prefix="/reports", tags=["Reports"])
 
 @router.get("/", response_model=ReportListResponse)
 async def list_reports(
-    current_user: CurrentUserRequired,
+    current_user: CurrentUserOptional,
     report_repo: ReportRepoDep,
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ) -> ReportListResponse:
-    """List reports for the current user."""
+    """List reports. Anonymous sees system reports, signed-in sees system + own."""
+    user_id = current_user.id if current_user else None
     reports, total = await report_repo.list_reports(
-        user_id=current_user.id, limit=limit, offset=offset
+        user_id=user_id, limit=limit, offset=offset
     )
 
     return ReportListResponse(
@@ -37,11 +38,12 @@ async def list_reports(
 @router.get("/{report_id}", response_model=ReportResponse)
 async def get_report(
     report_id: UUID,
-    current_user: CurrentUserRequired,
+    current_user: CurrentUserOptional,
     report_repo: ReportRepoDep,
 ) -> ReportResponse:
     """Get a specific report by ID."""
-    report = await report_repo.get_by_id(report_id, user_id=current_user.id)
+    user_id = current_user.id if current_user else None
+    report = await report_repo.get_by_id(report_id, user_id=user_id)
     if report is None:
         raise ResourceNotFoundError("Report", str(report_id))
 

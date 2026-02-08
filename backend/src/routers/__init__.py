@@ -2,7 +2,6 @@
 
 from src.routers import (
     health,
-    ingest,
     search,
     stream,
     conversations,
@@ -12,11 +11,11 @@ from src.routers import (
     feedback,
     tasks,
     preferences,
+    users,
 )
 
 __all__ = [
     "health",
-    "ingest",
     "search",
     "stream",
     "conversations",
@@ -26,4 +25,5 @@ __all__ = [
     "feedback",
     "tasks",
     "preferences",
+    "users",
 ]

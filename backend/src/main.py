@@ -4,12 +4,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.config import get_settings
-from src.database import engine, init_db
+from src.database import engine, init_db, AsyncSessionLocal
 
 # Import routers
 from src.routers import (
     health,
-    ingest,
     search,
     stream,
     papers,
@@ -19,6 +18,7 @@ from src.routers import (
     feedback,
     tasks,
     preferences,
+    users,
 )
 
 # Import middleware
@@ -50,7 +50,22 @@ async def lifespan(app: FastAPI):
         litellm.failure_callback = ["langfuse"]
         log.info("langfuse_enabled", host=settings.langfuse_host)
 
+    # Redis for anonymous rate limiting
+    import redis.asyncio as aioredis
+
+    app.state.redis = aioredis.from_url(settings.redis_url, decode_responses=True)
+
+    # Load system user ID (seeded by migration)
+    from src.tiers import init_system_user
+
+    async with AsyncSessionLocal() as db:
+        await init_system_user(db)
+    log.info("system user loaded")
+
     yield
+
+    # Shutdown Redis
+    await app.state.redis.aclose()
 
     # Flush any pending Langfuse events on shutdown
     try:
@@ -68,7 +83,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Arxivian API",
     description="Arxivian - agentic RAG system for AI/ML research papers from arXiv",
-    version="0.3.0",
+    version="0.4.0",
     lifespan=lifespan,
 )
 
@@ -93,7 +108,6 @@ app.middleware("http")(transaction_middleware)
 # Register routers
 app.include_router(health.router, prefix="/api/v1", tags=["Health"])
 app.include_router(search.router, prefix="/api/v1", tags=["Search"])
-app.include_router(ingest.router, prefix="/api/v1", tags=["Ingest"])
 app.include_router(stream.router, prefix="/api/v1", tags=["Stream"])
 app.include_router(conversations.router, prefix="/api/v1", tags=["Conversations"])
 app.include_router(papers.router, prefix="/api/v1", tags=["Papers"])
@@ -102,6 +116,7 @@ app.include_router(ops.router, prefix="/api/v1", tags=["Ops"])
 app.include_router(feedback.router, prefix="/api/v1", tags=["Feedback"])
 app.include_router(tasks.router, prefix="/api/v1", tags=["Tasks"])
 app.include_router(preferences.router, prefix="/api/v1", tags=["Preferences"])
+app.include_router(users.router, prefix="/api/v1", tags=["Users"])
 
 
 @app.get("/")
@@ -109,7 +124,7 @@ async def root():
     """Root endpoint with API information."""
     return {
         "name": "Arxivian API",
-        "version": "0.3.0",
+        "version": "0.4.0",
         "features": [
             "Agentic RAG with LangGraph",
             "Multi-provider LLM support (OpenAI, NVIDIA NIM) via LiteLLM",
@@ -117,11 +132,11 @@ async def root():
             "arXiv paper ingestion",
             "SSE streaming responses",
             "Conversation history management",
+            "User tiers (Anonymous, Free, Pro)",
         ],
         "endpoints": {
             "health": "/api/v1/health",
             "search": "/api/v1/search",
-            "ingest": "/api/v1/ingest",
             "stream": "/api/v1/stream",
             "papers": "/api/v1/papers",
             "conversations": "/api/v1/conversations",
@@ -129,6 +144,7 @@ async def root():
             "ops": "/api/v1/ops",
             "tasks": "/api/v1/tasks",
             "preferences": "/api/v1/preferences",
+            "users": "/api/v1/users",
         },
         "docs": "/docs",
     }

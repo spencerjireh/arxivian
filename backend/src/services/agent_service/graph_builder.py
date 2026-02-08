@@ -11,6 +11,8 @@ Graph flow:
     out_of_scope -> END
 """
 
+from uuid import UUID
+
 from langgraph.graph import StateGraph, END, START
 
 from src.schemas.langgraph_state import AgentState
@@ -56,6 +58,7 @@ def build_agent_graph(
     max_retrieval_attempts: int = 3,
     max_iterations: int = 5,
     temperature: float = 0.3,
+    user_id: UUID | None = None,
 ):
     """
     Build and compile the agent workflow graph with router architecture.
@@ -88,6 +91,7 @@ def build_agent_graph(
         max_retrieval_attempts=max_retrieval_attempts,
         max_iterations=max_iterations,
         temperature=temperature,
+        user_id=user_id,
     )
 
     # Create workflow

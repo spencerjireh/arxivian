@@ -1,6 +1,7 @@
 """Summarize paper tool for generating paper summaries."""
 
 from typing import ClassVar
+from uuid import UUID
 
 from src.clients.base_llm_client import BaseLLMClient
 from src.repositories.paper_repository import PaperRepository
@@ -35,9 +36,15 @@ class SummarizePaperTool(BaseTool):
     extends_chunks: ClassVar[bool] = False
     required_dependencies: ClassVar[list[str]] = ["paper_repository", "llm_client"]
 
-    def __init__(self, paper_repository: PaperRepository, llm_client: BaseLLMClient):
+    def __init__(
+        self,
+        paper_repository: PaperRepository,
+        llm_client: BaseLLMClient,
+        user_id: UUID | None = None,
+    ):
         self.paper_repository = paper_repository
         self.llm_client = llm_client
+        self.user_id = user_id
 
     @property
     def parameters_schema(self) -> dict:
@@ -56,7 +63,7 @@ class SummarizePaperTool(BaseTool):
         log.debug("summarize_paper", arxiv_id=arxiv_id)
 
         try:
-            paper = await self.paper_repository.get_by_arxiv_id(arxiv_id)
+            paper = await self.paper_repository.get_by_arxiv_id(arxiv_id, user_id=self.user_id)
 
             if not paper:
                 return ToolResult(

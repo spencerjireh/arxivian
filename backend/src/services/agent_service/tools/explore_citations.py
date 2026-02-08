@@ -1,6 +1,7 @@
 """Explore citations tool for retrieving paper references."""
 
 from typing import ClassVar
+from uuid import UUID
 
 from src.repositories.paper_repository import PaperRepository
 from src.utils.logger import get_logger
@@ -25,8 +26,9 @@ class ExploreCitationsTool(BaseTool):
     extends_chunks: ClassVar[bool] = False
     required_dependencies: ClassVar[list[str]] = ["paper_repository"]
 
-    def __init__(self, paper_repository: PaperRepository):
+    def __init__(self, paper_repository: PaperRepository, user_id: UUID | None = None):
         self.paper_repository = paper_repository
+        self.user_id = user_id
 
     @property
     def parameters_schema(self) -> dict:
@@ -45,7 +47,7 @@ class ExploreCitationsTool(BaseTool):
         log.debug("explore_citations", arxiv_id=arxiv_id)
 
         try:
-            paper = await self.paper_repository.get_by_arxiv_id(arxiv_id)
+            paper = await self.paper_repository.get_by_arxiv_id(arxiv_id, user_id=self.user_id)
 
             if not paper:
                 return ToolResult(

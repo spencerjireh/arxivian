@@ -69,7 +69,9 @@ def get_pdf_parser() -> PDFParser:
     return PDFParser()
 
 
-def get_ingest_service(db_session: AsyncSession) -> IngestService:
+def get_ingest_service(
+    db_session: AsyncSession, user_id: Optional[str] = None
+) -> IngestService:
     """
     Create IngestService with dependencies.
 
@@ -77,6 +79,7 @@ def get_ingest_service(db_session: AsyncSession) -> IngestService:
 
     Args:
         db_session: Database session
+        user_id: Owner for newly created papers (defaults to system user)
 
     Returns:
         IngestService instance
@@ -95,6 +98,7 @@ def get_ingest_service(db_session: AsyncSession) -> IngestService:
         chunking_service=chunking_service,
         paper_repository=paper_repository,
         chunk_repository=chunk_repository,
+        user_id=user_id,
     )
 
 
@@ -110,6 +114,8 @@ def get_agent_service(
     conversation_window: int = 5,
     max_iterations: int = 5,
     user_id: Optional[UUID] = None,
+    can_ingest: bool = True,
+    can_search_arxiv: bool = True,
 ) -> AgentService:
     """
     Create agent service with specified LLM model.
@@ -127,6 +133,8 @@ def get_agent_service(
         conversation_window: Number of previous turns to include in context
         max_iterations: Maximum router iterations for tool execution
         user_id: Optional user ID for conversation ownership
+        can_ingest: Whether the ingest tool is available (tier-gated)
+        can_search_arxiv: Whether the arxiv_search tool is available (tier-gated)
 
     Returns:
         AgentService instance
@@ -144,17 +152,19 @@ def get_agent_service(
     # Get search service
     search_service = get_search_service(db_session)
 
-    # Get ingest service for paper ingestion tool
-    ingest_service = get_ingest_service(db_session)
+    # Conditionally create services based on tier policy
+    user_id_str = str(user_id) if user_id else None
+    ingest_service = get_ingest_service(db_session, user_id=user_id_str) if can_ingest else None
+    arxiv_client = get_arxiv_client() if can_search_arxiv else None
 
-    # Get arxiv client for arxiv search tool
-    arxiv_client = get_arxiv_client()
+    # Paper repository: get from ingest_service if available, otherwise create directly
+    if ingest_service is not None:
+        paper_repository = ingest_service.paper_repository
+    else:
+        paper_repository = PaperRepository(db_session)
 
-    # Reuse paper repository from ingest service for summarize/citations tools
-    paper_repository = ingest_service.paper_repository
-
-    # Get conversation repository for persistence
-    conversation_repo = ConversationRepository(db_session)
+    # Get conversation repository for persistence (skip for anonymous)
+    conversation_repo = ConversationRepository(db_session) if user_id else None
 
     return AgentService(
         llm_client=llm_client,

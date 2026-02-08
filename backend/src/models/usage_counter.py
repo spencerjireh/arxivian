@@ -18,7 +18,6 @@ class UsageCounter(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     usage_date = Column(Date, nullable=False, server_default=func.current_date())
     query_count = Column(Integer, nullable=False, server_default="0")
-    ingest_count = Column(Integer, nullable=False, server_default="0")
 
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -26,5 +25,5 @@ class UsageCounter(Base):
     def __repr__(self):
         return (
             f"<UsageCounter(user_id='{self.user_id}', date='{self.usage_date}', "
-            f"queries={self.query_count}, ingests={self.ingest_count})>"
+            f"queries={self.query_count})>"
         )

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from src.models.report import Report
+from src.tiers import get_system_user_id
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -20,6 +21,13 @@ class ReportRepository:
 
     def __init__(self, session: AsyncSession):
         self.session = session
+
+    def _ownership_filter(self, user_id: UUID | None):
+        """System content for anon, system + own for authenticated."""
+        system_id = get_system_user_id()
+        if user_id is None:
+            return Report.user_id == system_id
+        return Report.user_id.in_([user_id, system_id])
 
     async def create(
         self,
@@ -43,25 +51,29 @@ class ReportRepository:
         log.debug("report_created", report_type=report_type, user_id=str(user_id))
         return report
 
-    async def get_by_id(self, report_id: UUID, user_id: UUID) -> Optional[Report]:
-        """Get report by ID, scoped to user."""
-        result = await self.session.execute(
-            select(Report).where(Report.id == report_id, Report.user_id == user_id)
-        )
+    async def get_by_id(
+        self, report_id: UUID, user_id: UUID | None = None
+    ) -> Optional[Report]:
+        """Get report by ID, scoped to user + system ownership."""
+        stmt = select(Report).where(Report.id == report_id)
+        stmt = stmt.where(self._ownership_filter(user_id))
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def list_reports(
-        self, user_id: UUID, limit: int = 20, offset: int = 0
+        self, user_id: UUID | None = None, limit: int = 20, offset: int = 0
     ) -> tuple[list[Report], int]:
-        """List reports for a user with pagination, newest first."""
+        """List reports with pagination, newest first. Scoped to user + system."""
+        ownership = self._ownership_filter(user_id)
+
         count_result = await self.session.execute(
-            select(func.count()).select_from(Report).where(Report.user_id == user_id)
+            select(func.count()).select_from(Report).where(ownership)
         )
         total = count_result.scalar_one()
 
         result = await self.session.execute(
             select(Report)
-            .where(Report.user_id == user_id)
+            .where(ownership)
             .order_by(Report.created_at.desc())
             .offset(offset)
             .limit(limit)

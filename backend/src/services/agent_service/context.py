@@ -1,5 +1,7 @@
 """Context object passed to all LangGraph nodes."""
 
+from uuid import UUID
+
 from src.clients.base_llm_client import BaseLLMClient
 from src.clients.arxiv_client import ArxivClient
 from src.services.search_service import SearchService
@@ -100,6 +102,7 @@ class AgentContext:
         max_retrieval_attempts: int = 3,
         max_iterations: int = 5,
         temperature: float = 0.3,
+        user_id: UUID | None = None,
     ):
         self.llm_client = llm_client
         self.search_service = search_service
@@ -126,7 +129,11 @@ class AgentContext:
             if arxiv_client:
                 self.tool_registry.register(ArxivSearchTool(arxiv_client=arxiv_client))
             if paper_repository:
-                self.tool_registry.register(ExploreCitationsTool(paper_repository=paper_repository))
                 self.tool_registry.register(
-                    SummarizePaperTool(paper_repository=paper_repository, llm_client=llm_client)
+                    ExploreCitationsTool(paper_repository=paper_repository, user_id=user_id)
+                )
+                self.tool_registry.register(
+                    SummarizePaperTool(
+                        paper_repository=paper_repository, llm_client=llm_client, user_id=user_id
+                    )
                 )

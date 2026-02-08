@@ -1,9 +1,11 @@
 """FastAPI dependency injection providers."""
 
 import hmac
+from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import Depends, Header
+from fastapi import Depends, Header, Request
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
@@ -24,6 +26,7 @@ from src.repositories.report_repository import ReportRepository
 from src.repositories.usage_counter_repository import UsageCounterRepository
 from src.models.user import User
 from src.config import Settings, get_settings
+from src.tiers import TierPolicy, get_policy
 from src.exceptions import InvalidApiKeyError, MissingTokenError, UsageLimitExceededError
 
 from src.utils.logger import get_logger
@@ -197,46 +200,61 @@ CurrentUserRequired = Annotated[User, Depends(get_current_user_required)]
 
 
 # ============================================================================
-# Usage Limit Check Dependencies
+# Redis Dependency
 # ============================================================================
 
 
-async def check_query_usage_limit(
-    current_user: CurrentUserRequired,
-    usage_repo: UsageCounterRepoDep,
+async def get_redis(request: Request) -> Redis:
+    """Get async Redis client from app state."""
+    return request.app.state.redis
+
+
+RedisDep = Annotated[Redis, Depends(get_redis)]
+
+
+# ============================================================================
+# Tier Policy + Rate Limit Dependencies
+# ============================================================================
+
+
+async def get_tier_policy(user: CurrentUserOptional) -> TierPolicy:
+    """Resolve tier policy from user. No rate-limit enforcement."""
+    return get_policy(user)
+
+
+TierPolicyDep = Annotated[TierPolicy, Depends(get_tier_policy)]
+
+
+async def enforce_chat_limit(
+    user: CurrentUserOptional,
+    policy: TierPolicyDep,
+    request: Request,
+    redis: RedisDep,
+    db: DbSession,
 ) -> None:
-    """Raise 429 if user has exceeded daily query limit."""
-    settings = get_settings()
-    if settings.daily_query_limit <= 0:
-        return
-    query_count, _ = await usage_repo.get_today_counts(current_user.id)
-    if query_count >= settings.daily_query_limit:
-        raise UsageLimitExceededError(
-            action="query",
-            current=query_count,
-            limit=settings.daily_query_limit,
-        )
+    """Enforce daily chat limit. Raises 429 if exceeded."""
+    if policy.daily_chats is None:
+        return  # Pro -- unlimited
+
+    if user is None:
+        # Anonymous: Redis-based, atomic INCR keyed by IP + UTC date
+        forwarded = request.headers.get("x-forwarded-for", "")
+        ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "unknown")
+        today_utc = datetime.now(timezone.utc).date()
+        key = f"anon_chats:{ip}:{today_utc}"
+        count = await redis.incr(key)
+        if count == 1:
+            await redis.expire(key, 86400)
+    else:
+        # Authenticated: DB-based
+        usage_repo = UsageCounterRepository(db)
+        count = await usage_repo.get_today_query_count(user.id)
+
+    if count > policy.daily_chats:
+        raise UsageLimitExceededError(current=count, limit=policy.daily_chats)
 
 
-async def check_ingest_usage_limit(
-    current_user: CurrentUserRequired,
-    usage_repo: UsageCounterRepoDep,
-) -> None:
-    """Raise 429 if user has exceeded daily ingest limit."""
-    settings = get_settings()
-    if settings.daily_ingest_limit <= 0:
-        return
-    _, ingest_count = await usage_repo.get_today_counts(current_user.id)
-    if ingest_count >= settings.daily_ingest_limit:
-        raise UsageLimitExceededError(
-            action="ingest",
-            current=ingest_count,
-            limit=settings.daily_ingest_limit,
-        )
-
-
-QueryUsageCheck = Annotated[None, Depends(check_query_usage_limit)]
-IngestUsageCheck = Annotated[None, Depends(check_ingest_usage_limit)]
+ChatGuard = Annotated[None, Depends(enforce_chat_limit)]
 
 
 # ============================================================================
