@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser, useClerk } from '@clerk/clerk-react'
 import { ChevronUp, LogOut, Trash2 } from 'lucide-react'
+import { useUserStore } from '../../stores/userStore'
 
 export default function UserMenu() {
   const navigate = useNavigate()
@@ -29,7 +30,10 @@ export default function UserMenu() {
     return () => document.removeEventListener('click', handleClickOutside)
   }, [isOpen])
 
+  const clearUserStore = useUserStore((s) => s.clear)
+
   const handleSignOut = async () => {
+    clearUserStore()
     await signOut()
     navigate('/sign-in')
   }

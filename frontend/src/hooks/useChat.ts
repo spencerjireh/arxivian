@@ -5,6 +5,7 @@ import { streamChat, createStreamAbortController, StreamAbortError } from '../ap
 import { conversationKeys } from '../api/conversations'
 import { useChatStore } from '../stores/chatStore'
 import { useSettingsStore, DEFAULT_SETTINGS } from '../stores/settingsStore'
+import { useUserStore } from '../stores/userStore'
 import { generateMessageId } from '../utils/id'
 import { useMessageCache, chatKeys } from './useMessageCache'
 import type {
@@ -241,6 +242,8 @@ export function useChat(sessionId: string | null) {
         setStreaming(false)
       } finally {
         abortControllerRef.current = null
+        // Refresh user usage counts after stream completes
+        useUserStore.getState().fetchMe()
       }
     },
     [

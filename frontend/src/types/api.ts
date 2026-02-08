@@ -164,6 +164,21 @@ export interface UserPreferences {
   notification_settings: NotificationSettings
 }
 
+// User/Tier types
+
+export interface MeResponse {
+  id: string
+  email: string | null
+  first_name: string | null
+  last_name: string | null
+  tier: 'free' | 'pro'
+  daily_chat_limit: number | null  // null = unlimited
+  chats_used_today: number
+  search_slot_limit: number
+  search_slots_used: number
+  can_select_model: boolean
+}
+
 // Thinking/Reasoning types for UI
 
 export type ThinkingStepType =

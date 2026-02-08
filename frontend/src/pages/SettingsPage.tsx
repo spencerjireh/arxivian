@@ -1,5 +1,6 @@
 import { RotateCcw } from 'lucide-react'
 import { useSettingsStore } from '../stores/settingsStore'
+import { useUserStore } from '../stores/userStore'
 import Button from '../components/ui/Button'
 import type { LLMProvider } from '../types/api'
 import AccountSection from './settings/AccountSection'
@@ -23,6 +24,8 @@ export default function SettingsPage() {
 }
 
 function LLMPreferencesSection() {
+  const canSelectModel = useUserStore((s) => s.me?.can_select_model ?? false)
+
   const {
     provider,
     model,
@@ -57,29 +60,33 @@ function LLMPreferencesSection() {
       <p className="text-xs text-stone-400 mb-4">Stored in this browser only</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        <div>
-          <label className={labelClass}>Provider</label>
-          <select
-            value={provider || ''}
-            onChange={(e) => setProvider((e.target.value || undefined) as LLMProvider | undefined)}
-            className={inputClass}
-          >
-            <option value="">Default</option>
-            <option value="openai">OpenAI</option>
-            <option value="nvidia_nim">NVIDIA NIM</option>
-          </select>
-        </div>
+        {canSelectModel && (
+          <>
+            <div>
+              <label className={labelClass}>Provider</label>
+              <select
+                value={provider || ''}
+                onChange={(e) => setProvider((e.target.value || undefined) as LLMProvider | undefined)}
+                className={inputClass}
+              >
+                <option value="">Default</option>
+                <option value="openai">OpenAI</option>
+                <option value="nvidia_nim">NVIDIA NIM</option>
+              </select>
+            </div>
 
-        <div>
-          <label className={labelClass}>Model</label>
-          <input
-            type="text"
-            value={model || ''}
-            onChange={(e) => setModel(e.target.value || undefined)}
-            placeholder="Default model"
-            className={inputClass}
-          />
-        </div>
+            <div>
+              <label className={labelClass}>Model</label>
+              <input
+                type="text"
+                value={model || ''}
+                onChange={(e) => setModel(e.target.value || undefined)}
+                placeholder="Default model"
+                className={inputClass}
+              />
+            </div>
+          </>
+        )}
 
         <div>
           <label className={labelClass}>

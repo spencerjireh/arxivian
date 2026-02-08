@@ -3,11 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { useUser, useClerk } from '@clerk/clerk-react'
 import { LogOut, Trash2 } from 'lucide-react'
 import Button from '../../components/ui/Button'
+import { useUserStore } from '../../stores/userStore'
 
 export default function AccountSection() {
   const navigate = useNavigate()
   const { user } = useUser()
   const { signOut } = useClerk()
+
+  const me = useUserStore((s) => s.me)
+  const clearUserStore = useUserStore((s) => s.clear)
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -16,6 +20,7 @@ export default function AccountSection() {
   if (!user) return null
 
   const handleSignOut = async () => {
+    clearUserStore()
     await signOut()
     navigate('/sign-in')
   }
@@ -54,13 +59,40 @@ export default function AccountSection() {
           className="w-12 h-12 rounded-full ring-2 ring-stone-200"
         />
         <div>
-          <p className="text-sm font-medium text-stone-900">{displayName}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-stone-900">{displayName}</p>
+            {me && (
+              <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${me.tier === 'pro' ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-600'}`}>
+                {me.tier === 'pro' ? 'Pro' : 'Free'}
+              </span>
+            )}
+          </div>
           <p className="text-sm text-stone-500">{email}</p>
           {joinedDate && (
             <p className="text-xs text-stone-400 mt-0.5">Joined {joinedDate}</p>
           )}
         </div>
       </div>
+
+      {me && (
+        <div className="mb-6 p-4 bg-stone-50 rounded-lg border border-stone-100">
+          <h3 className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">Usage</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-stone-500">Daily chats</p>
+              <p className="text-sm font-medium text-stone-800">
+                {me.chats_used_today} / {me.daily_chat_limit ?? 'Unlimited'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-stone-500">Saved searches</p>
+              <p className="text-sm font-medium text-stone-800">
+                {me.search_slots_used} / {me.search_slot_limit}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-3">
         <Button

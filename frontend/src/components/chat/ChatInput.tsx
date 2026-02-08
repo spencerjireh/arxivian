@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, type FormEvent, type KeyboardEvent } from 
 import { Settings2, X, ArrowUp, RotateCcw } from 'lucide-react'
 import type { LLMProvider } from '../../types/api'
 import { useSettingsStore } from '../../stores/settingsStore'
+import { useUserStore } from '../../stores/userStore'
 import { AnimatedCollapse } from '../ui/AnimatedCollapse'
 import Button from '../ui/Button'
 
@@ -50,6 +51,8 @@ export default function ChatInput({ onSend, isStreaming, onCancel, variant = 'bo
     textarea.style.height = `${newHeight}px`
     setIsOverflowing(scrollHeight > MAX_HEIGHT)
   }, [query])
+
+  const canSelectModel = useUserStore((s) => s.me?.can_select_model ?? false)
 
   const {
     provider,
@@ -110,31 +113,35 @@ export default function ChatInput({ onSend, isStreaming, onCancel, variant = 'bo
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
-                  <div>
-                    <label className="block text-xs text-stone-500 mb-1.5">Provider</label>
-                    <select
-                      value={provider ?? ''}
-                      onChange={(e) =>
-                        setProvider((e.target.value || undefined) as LLMProvider | undefined)
-                      }
-                      className="w-full px-3 py-2 text-sm text-stone-800 bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-stone-200 focus:border-stone-300 transition-colors duration-150"
-                    >
-                      <option value="">Default</option>
-                      <option value="openai">OpenAI</option>
-                      <option value="nvidia_nim">NVIDIA NIM</option>
-                    </select>
-                  </div>
+                  {canSelectModel && (
+                    <>
+                      <div>
+                        <label className="block text-xs text-stone-500 mb-1.5">Provider</label>
+                        <select
+                          value={provider ?? ''}
+                          onChange={(e) =>
+                            setProvider((e.target.value || undefined) as LLMProvider | undefined)
+                          }
+                          className="w-full px-3 py-2 text-sm text-stone-800 bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-stone-200 focus:border-stone-300 transition-colors duration-150"
+                        >
+                          <option value="">Default</option>
+                          <option value="openai">OpenAI</option>
+                          <option value="nvidia_nim">NVIDIA NIM</option>
+                        </select>
+                      </div>
 
-                  <div>
-                    <label className="block text-xs text-stone-500 mb-1.5">Model</label>
-                    <input
-                      type="text"
-                      value={model ?? ''}
-                      onChange={(e) => setModel(e.target.value || undefined)}
-                      placeholder="Default"
-                      className="w-full px-3 py-2 text-sm text-stone-800 bg-white border border-stone-200 rounded-lg placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-200 focus:border-stone-300 transition-colors duration-150"
-                    />
-                  </div>
+                      <div>
+                        <label className="block text-xs text-stone-500 mb-1.5">Model</label>
+                        <input
+                          type="text"
+                          value={model ?? ''}
+                          onChange={(e) => setModel(e.target.value || undefined)}
+                          placeholder="Default"
+                          className="w-full px-3 py-2 text-sm text-stone-800 bg-white border border-stone-200 rounded-lg placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-200 focus:border-stone-300 transition-colors duration-150"
+                        />
+                      </div>
+                    </>
+                  )}
 
                   <div>
                     <label className="block text-xs text-stone-500 mb-1.5">
