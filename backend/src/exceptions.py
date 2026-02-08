@@ -339,3 +339,11 @@ class MissingTokenError(AuthenticationError):
     def __init__(self):
         super().__init__(message="Authentication required")
         self.error_code = "MISSING_TOKEN"
+
+
+class InvalidApiKeyError(AuthenticationError):
+    """Raised when the provided API key is missing or invalid."""
+
+    def __init__(self):
+        super().__init__(message="Invalid or missing API key")
+        self.error_code = "INVALID_API_KEY"

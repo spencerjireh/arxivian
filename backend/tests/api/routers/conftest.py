@@ -142,6 +142,7 @@ def mock_settings():
         return_value=["openai/gpt-4o-mini", "openai/gpt-4o"]
     )
     settings.is_model_allowed = Mock(return_value=True)
+    settings.api_key = "test-api-key"
     return settings
 
 
@@ -197,6 +198,69 @@ def mock_user_repo():
     return repo
 
 
+def _create_test_client(
+    mock_db_session,
+    mock_paper_repo,
+    mock_chunk_repo,
+    mock_conversation_repo,
+    mock_search_service,
+    mock_ingest_service,
+    mock_embeddings_client,
+    mock_settings,
+    mock_task_exec_repo,
+    mock_report_repo,
+    mock_user_repo,
+    *,
+    mock_user=None,
+):
+    """Build a TestClient with all infra dependencies overridden.
+
+    When mock_user is provided, JWT auth and API key auth are also bypassed
+    (fully authenticated client). When omitted, auth dependencies run normally
+    so tests can assert 401 behaviour.
+    """
+    from src.main import app
+    from src.database import get_db
+    from src.dependencies import (
+        get_paper_repository,
+        get_chunk_repository,
+        get_conversation_repository,
+        get_search_service_dep,
+        get_ingest_service_dep,
+        get_current_user_required,
+        get_task_execution_repository,
+        get_report_repository,
+        get_user_repository,
+        verify_api_key,
+    )
+    from src.factories.client_factories import get_embeddings_client
+    from src.config import get_settings
+
+    async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
+        yield mock_db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_paper_repository] = lambda: mock_paper_repo
+    app.dependency_overrides[get_chunk_repository] = lambda: mock_chunk_repo
+    app.dependency_overrides[get_conversation_repository] = lambda: mock_conversation_repo
+    app.dependency_overrides[get_search_service_dep] = lambda: mock_search_service
+    app.dependency_overrides[get_ingest_service_dep] = lambda: mock_ingest_service
+    app.dependency_overrides[get_embeddings_client] = lambda: mock_embeddings_client
+    app.dependency_overrides[get_settings] = lambda: mock_settings
+    app.dependency_overrides[get_task_execution_repository] = lambda: mock_task_exec_repo
+    app.dependency_overrides[get_report_repository] = lambda: mock_report_repo
+    app.dependency_overrides[get_user_repository] = lambda: mock_user_repo
+
+    if mock_user is not None:
+        app.dependency_overrides[get_current_user_required] = lambda: mock_user
+        app.dependency_overrides[verify_api_key] = lambda: None
+
+    with TestClient(app, raise_server_exceptions=False) as test_client:
+        yield test_client
+
+    app.dependency_overrides.clear()
+
+
 @pytest.fixture
 def client(
     mock_db_session,
@@ -213,79 +277,20 @@ def client(
     mock_user_repo,
 ):
     """Create TestClient with all dependencies overridden including auth."""
-    from src.main import app
-    from src.database import get_db
-    from src.dependencies import (
-        get_paper_repository,
-        get_chunk_repository,
-        get_conversation_repository,
-        get_search_service_dep,
-        get_ingest_service_dep,
-        get_current_user_required,
-        get_task_execution_repository,
-        get_report_repository,
-        get_user_repository,
+    yield from _create_test_client(
+        mock_db_session,
+        mock_paper_repo,
+        mock_chunk_repo,
+        mock_conversation_repo,
+        mock_search_service,
+        mock_ingest_service,
+        mock_embeddings_client,
+        mock_settings,
+        mock_task_exec_repo,
+        mock_report_repo,
+        mock_user_repo,
+        mock_user=mock_user,
     )
-    from src.factories.client_factories import get_embeddings_client
-    from src.config import get_settings
-
-    # Create async generator override for get_db
-    async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
-        yield mock_db_session
-
-    # Override functions that return the mocks directly (no db parameter needed)
-    def override_paper_repo() -> Mock:
-        return mock_paper_repo
-
-    def override_chunk_repo() -> Mock:
-        return mock_chunk_repo
-
-    def override_conversation_repo() -> Mock:
-        return mock_conversation_repo
-
-    def override_search_service() -> Mock:
-        return mock_search_service
-
-    def override_ingest_service() -> Mock:
-        return mock_ingest_service
-
-    def override_embeddings_client() -> Mock:
-        return mock_embeddings_client
-
-    def override_settings() -> Mock:
-        return mock_settings
-
-    # Override auth dependency to return mock user (no authentication required in tests)
-    def override_current_user_required() -> Mock:
-        return mock_user
-
-    def override_task_exec_repo() -> Mock:
-        return mock_task_exec_repo
-
-    def override_report_repo() -> Mock:
-        return mock_report_repo
-
-    def override_user_repo() -> Mock:
-        return mock_user_repo
-
-    # Override dependencies
-    app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_paper_repository] = override_paper_repo
-    app.dependency_overrides[get_chunk_repository] = override_chunk_repo
-    app.dependency_overrides[get_conversation_repository] = override_conversation_repo
-    app.dependency_overrides[get_search_service_dep] = override_search_service
-    app.dependency_overrides[get_ingest_service_dep] = override_ingest_service
-    app.dependency_overrides[get_embeddings_client] = override_embeddings_client
-    app.dependency_overrides[get_settings] = override_settings
-    app.dependency_overrides[get_current_user_required] = override_current_user_required
-    app.dependency_overrides[get_task_execution_repository] = override_task_exec_repo
-    app.dependency_overrides[get_report_repository] = override_report_repo
-    app.dependency_overrides[get_user_repository] = override_user_repo
-
-    with TestClient(app, raise_server_exceptions=False) as test_client:
-        yield test_client
-
-    app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -303,73 +308,19 @@ def unauthenticated_client(
     mock_user_repo,
 ):
     """Create TestClient WITHOUT auth override to test 401 responses."""
-    from src.main import app
-    from src.database import get_db
-    from src.dependencies import (
-        get_paper_repository,
-        get_chunk_repository,
-        get_conversation_repository,
-        get_search_service_dep,
-        get_ingest_service_dep,
-        get_task_execution_repository,
-        get_report_repository,
-        get_user_repository,
+    yield from _create_test_client(
+        mock_db_session,
+        mock_paper_repo,
+        mock_chunk_repo,
+        mock_conversation_repo,
+        mock_search_service,
+        mock_ingest_service,
+        mock_embeddings_client,
+        mock_settings,
+        mock_task_exec_repo,
+        mock_report_repo,
+        mock_user_repo,
     )
-    from src.factories.client_factories import get_embeddings_client
-    from src.config import get_settings
-
-    # Create async generator override for get_db
-    async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
-        yield mock_db_session
-
-    # Override functions that return the mocks directly (no db parameter needed)
-    def override_paper_repo() -> Mock:
-        return mock_paper_repo
-
-    def override_chunk_repo() -> Mock:
-        return mock_chunk_repo
-
-    def override_conversation_repo() -> Mock:
-        return mock_conversation_repo
-
-    def override_search_service() -> Mock:
-        return mock_search_service
-
-    def override_ingest_service() -> Mock:
-        return mock_ingest_service
-
-    def override_embeddings_client() -> Mock:
-        return mock_embeddings_client
-
-    def override_settings() -> Mock:
-        return mock_settings
-
-    def override_task_exec_repo() -> Mock:
-        return mock_task_exec_repo
-
-    def override_report_repo() -> Mock:
-        return mock_report_repo
-
-    def override_user_repo() -> Mock:
-        return mock_user_repo
-
-    # Override dependencies (NO auth override - will require real auth)
-    app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_paper_repository] = override_paper_repo
-    app.dependency_overrides[get_chunk_repository] = override_chunk_repo
-    app.dependency_overrides[get_conversation_repository] = override_conversation_repo
-    app.dependency_overrides[get_search_service_dep] = override_search_service
-    app.dependency_overrides[get_ingest_service_dep] = override_ingest_service
-    app.dependency_overrides[get_embeddings_client] = override_embeddings_client
-    app.dependency_overrides[get_settings] = override_settings
-    app.dependency_overrides[get_task_execution_repository] = override_task_exec_repo
-    app.dependency_overrides[get_report_repository] = override_report_repo
-    app.dependency_overrides[get_user_repository] = override_user_repo
-
-    with TestClient(app, raise_server_exceptions=False) as test_client:
-        yield test_client
-
-    app.dependency_overrides.clear()
 
 
 @pytest.fixture(autouse=True)

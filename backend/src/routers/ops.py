@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 
 from src.schemas.ops import CleanupResponse, OrphanedPaper
-from src.dependencies import PaperRepoDep, DbSession, CurrentUserRequired
+from src.dependencies import PaperRepoDep, DbSession, ApiKeyCheck
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/ops", tags=["Ops"])
 async def cleanup_orphaned_records(
     paper_repo: PaperRepoDep,
     db: DbSession,
-    current_user: CurrentUserRequired,
+    _api_key: ApiKeyCheck,
 ) -> CleanupResponse:
     """
     Clean up orphaned database records.

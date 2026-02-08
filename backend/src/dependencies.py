@@ -1,6 +1,8 @@
 """FastAPI dependency injection providers."""
 
-from typing import Annotated, Optional
+import hmac
+from typing import Annotated
+
 from fastapi import Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,9 +23,10 @@ from src.repositories.task_execution_repository import TaskExecutionRepository
 from src.repositories.report_repository import ReportRepository
 from src.repositories.usage_counter_repository import UsageCounterRepository
 from src.models.user import User
-from src.config import get_settings
-from src.exceptions import MissingTokenError, UsageLimitExceededError
+from src.config import Settings, get_settings
+from src.exceptions import InvalidApiKeyError, MissingTokenError, UsageLimitExceededError
 
+from src.utils.logger import get_logger
 from src.factories.client_factories import (
     get_arxiv_client,
     get_embeddings_client,
@@ -34,6 +37,8 @@ from src.factories.service_factories import (
     get_pdf_parser,
     get_ingest_service,
 )
+
+log = get_logger(__name__)
 
 
 # Type aliases for cleaner router signatures
@@ -163,8 +168,8 @@ async def _sync_user(authorization: str, db: AsyncSession) -> User:
 
 async def get_current_user_optional(
     db: DbSession,
-    authorization: Annotated[Optional[str], Header(alias="Authorization")] = None,
-) -> Optional[User]:
+    authorization: Annotated[str | None, Header(alias="Authorization")] = None,
+) -> User | None:
     """Get current user if authenticated, None otherwise."""
     if not authorization:
         return None
@@ -177,7 +182,7 @@ async def get_current_user_optional(
 
 async def get_current_user_required(
     db: DbSession,
-    authorization: Annotated[Optional[str], Header(alias="Authorization")] = None,
+    authorization: Annotated[str | None, Header(alias="Authorization")] = None,
 ) -> User:
     """Get current user, raise 401 if not authenticated."""
     if not authorization:
@@ -187,7 +192,7 @@ async def get_current_user_required(
 
 
 # Type aliases for auth dependencies
-CurrentUserOptional = Annotated[Optional[User], Depends(get_current_user_optional)]
+CurrentUserOptional = Annotated[User | None, Depends(get_current_user_optional)]
 CurrentUserRequired = Annotated[User, Depends(get_current_user_required)]
 
 
@@ -232,3 +237,24 @@ async def check_ingest_usage_limit(
 
 QueryUsageCheck = Annotated[None, Depends(check_query_usage_limit)]
 IngestUsageCheck = Annotated[None, Depends(check_ingest_usage_limit)]
+
+
+# ============================================================================
+# API Key Dependencies
+# ============================================================================
+
+
+def verify_api_key(
+    settings: Annotated[Settings, Depends(get_settings)],
+    x_api_key: Annotated[str | None, Header()] = None,
+) -> None:
+    """Verify the X-Api-Key header matches the configured API key."""
+    if not settings.api_key or not x_api_key:
+        log.warning("ops api key rejected", reason="missing key or unconfigured")
+        raise InvalidApiKeyError()
+    if not hmac.compare_digest(x_api_key, settings.api_key):
+        log.warning("ops api key rejected", reason="key mismatch")
+        raise InvalidApiKeyError()
+
+
+ApiKeyCheck = Annotated[None, Depends(verify_api_key)]

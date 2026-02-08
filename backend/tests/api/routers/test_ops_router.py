@@ -1,6 +1,5 @@
 """Tests for ops router."""
 
-import pytest
 from unittest.mock import Mock
 
 
@@ -86,3 +85,29 @@ class TestCleanupEndpoint:
         data = response.json()
         # Title should be truncated to 100 characters
         assert len(data["deleted_papers"][0]["title"]) == 100
+
+
+class TestOpsAuthentication:
+    """Tests for ops endpoint API key authentication."""
+
+    def test_missing_api_key_returns_401(self, unauthenticated_client):
+        """Test that missing API key returns 401."""
+        response = unauthenticated_client.post("/api/v1/ops/cleanup")
+        assert response.status_code == 401
+
+    def test_invalid_api_key_returns_401(self, unauthenticated_client):
+        """Test that an invalid API key returns 401."""
+        response = unauthenticated_client.post(
+            "/api/v1/ops/cleanup",
+            headers={"X-Api-Key": "wrong-key"},
+        )
+        assert response.status_code == 401
+
+    def test_valid_api_key_returns_200(self, unauthenticated_client, mock_paper_repo):
+        """Test that a valid API key authenticates successfully."""
+        mock_paper_repo.get_orphaned_papers.return_value = []
+        response = unauthenticated_client.post(
+            "/api/v1/ops/cleanup",
+            headers={"X-Api-Key": "test-api-key"},
+        )
+        assert response.status_code == 200

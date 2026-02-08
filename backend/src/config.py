@@ -67,6 +67,9 @@ class Settings(BaseSettings):
     celery_result_backend: str = "redis://redis:6379/1"
     celery_task_timeout: int = 600  # 10 minutes
 
+    # API Authentication
+    api_key: str = ""
+
     # Scheduled jobs
     ingest_schedule_cron: str = "0 2 * * *"  # Daily at 2am UTC
     cleanup_schedule_cron: str = "0 3 * * *"  # Daily at 3am UTC
