@@ -3,6 +3,8 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import Sidebar from '../sidebar/Sidebar'
 import SidebarToggle from '../sidebar/SidebarToggle'
 import { useSidebarStore } from '../../stores/sidebarStore'
+import ErrorBoundary from '../ui/ErrorBoundary'
+import PageErrorFallback from '../ui/PageErrorFallback'
 
 const Layout = () => {
   const isOpen = useSidebarStore((state) => state.isOpen)
@@ -53,7 +55,12 @@ const Layout = () => {
             exit={shouldReduceMotion ? undefined : { opacity: 0 }}
             transition={shouldReduceMotion ? { duration: 0 } : fastTransition}
           >
-            <Outlet />
+            <ErrorBoundary
+              resetKey={pageKey}
+              fallback={(props) => <PageErrorFallback {...props} />}
+            >
+              <Outlet />
+            </ErrorBoundary>
           </motion.div>
         </AnimatePresence>
       </main>

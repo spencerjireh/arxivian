@@ -7,6 +7,9 @@ import { useSidebarStore } from '../../stores/sidebarStore'
 import SidebarConversationItem from './SidebarConversationItem'
 import UserMenu from './UserMenu'
 import Button from '../ui/Button'
+import ErrorBoundary from '../ui/ErrorBoundary'
+import SectionErrorFallback from '../ui/SectionErrorFallback'
+import { getUserMessage } from '../../lib/errors'
 
 const navItems = [
   { path: '/chat', label: 'Chat', icon: MessageSquare },
@@ -62,7 +65,13 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {isChatRoute ? <SidebarConversations /> : <div className="flex-1" />}
+      {isChatRoute ? (
+        <ErrorBoundary fallback={(props) => <SectionErrorFallback {...props} />}>
+          <SidebarConversations />
+        </ErrorBoundary>
+      ) : (
+        <div className="flex-1" />
+      )}
 
       <div className="px-2 py-3 border-t border-stone-200">
         <UserMenu />
@@ -123,7 +132,7 @@ function SidebarConversations() {
           </div>
         ) : error ? (
           <div className="px-3 py-8 text-center">
-            <p className="text-sm text-stone-500">Unable to load</p>
+            <p className="text-sm text-stone-500">{getUserMessage(error)}</p>
           </div>
         ) : !data || data.conversations.length === 0 ? (
           <div className="px-3 py-12 text-center">

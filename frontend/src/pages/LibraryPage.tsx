@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react'
-import { Loader2, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Loader2, BookOpen, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react'
 import clsx from 'clsx'
 import { usePapers } from '../api/papers'
 import { useDebounce } from '../hooks/useDebounce'
 import PaperCard from '../components/library/PaperCard'
 import Button from '../components/ui/Button'
+import { getUserMessage } from '../lib/errors'
 import type { PaperListParams } from '../types/api'
 
 type ProcessedFilter = 'all' | 'processed' | 'unprocessed'
@@ -123,8 +124,11 @@ export default function LibraryPage() {
             <Loader2 className="w-6 h-6 animate-spin text-stone-300" strokeWidth={1.5} />
           </div>
         ) : error ? (
-          <div className="flex items-center justify-center py-24">
-            <p className="text-sm text-stone-500">Unable to load papers</p>
+          <div className="flex flex-col items-center justify-center py-24">
+            <div className="w-12 h-12 rounded-full bg-[var(--color-error-soft)] flex items-center justify-center mb-3">
+              <AlertCircle className="w-5 h-5 text-[var(--color-error)]" strokeWidth={1.5} />
+            </div>
+            <p className="text-sm text-stone-500">{getUserMessage(error)}</p>
           </div>
         ) : !data || data.papers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24">

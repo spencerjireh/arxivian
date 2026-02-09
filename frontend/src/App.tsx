@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import type { RouteObject } from 'react-router-dom'
 import { AuthenticateWithRedirectCallback } from '@clerk/clerk-react'
 import { Loader2 } from 'lucide-react'
@@ -8,10 +8,12 @@ import ChatPage from './pages/ChatPage'
 import SignInPage from './pages/SignInPage'
 import SignUpPage from './pages/SignUpPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
+import RouteErrorPage from './pages/RouteErrorPage'
 
 const LandingPage = lazy(() => import('./pages/LandingPage'))
 const LibraryPage = lazy(() => import('./pages/LibraryPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 function PageFallback() {
   return (
@@ -31,6 +33,7 @@ export const routes: RouteObject[] = [
         <LandingPage />
       </Suspense>
     ),
+    errorElement: <RouteErrorPage />,
   },
   {
     path: '/sign-in',
@@ -51,6 +54,7 @@ export const routes: RouteObject[] = [
         <Layout />
       </ProtectedRoute>
     ),
+    errorElement: <RouteErrorPage />,
     children: [
       { path: '/chat', element: <ChatPage /> },
       { path: '/chat/:sessionId', element: <ChatPage /> },
@@ -72,10 +76,14 @@ export const routes: RouteObject[] = [
       },
     ],
   },
-  // Catch-all redirect
+  // Catch-all 404
   {
     path: '*',
-    element: <Navigate to="/" replace />,
+    element: (
+      <Suspense fallback={<PageFallback />}>
+        <NotFoundPage />
+      </Suspense>
+    ),
   },
 ]
 

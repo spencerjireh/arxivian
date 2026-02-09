@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { AlertCircle } from 'lucide-react'
+import { toast } from 'sonner'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useConversation } from '../api/conversations'
 import { useChat } from '../hooks/useChat'
@@ -23,6 +23,7 @@ export default function ChatPage() {
   // Subscribe to streaming state directly from store for real-time updates
   const isStreaming = useChatStore((state) => state.isStreaming)
   const error = useChatStore((state) => state.error)
+  const setError = useChatStore((state) => state.setError)
 
   const {
     messages,
@@ -64,6 +65,14 @@ export default function ChatPage() {
     }
   }, [isNewChat, clearMessages])
 
+  // Show error as toast and clear store error
+  useEffect(() => {
+    if (error) {
+      toast.error('Something went wrong', { description: error })
+      setError(null)
+    }
+  }, [error, setError])
+
   const isEmpty = messages.length === 0
   const motionProps = shouldReduceMotion
     ? {}
@@ -71,19 +80,6 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-screen">
-      {/* Error state */}
-      {error && (
-        <div className="mx-6 mt-6 p-4 bg-red-50 border border-red-100 rounded-xl animate-fade-in">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
-            <div>
-              <p className="text-sm font-medium text-red-800">Something went wrong</p>
-              <p className="text-sm text-red-600 mt-0.5">{error}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       <AnimatePresence mode="wait">
         {isEmpty ? (
           <motion.div key="empty" className="flex-1 flex flex-col" {...motionProps}>
