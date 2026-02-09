@@ -90,7 +90,7 @@ class AgentExecutionRepository:
                 AgentExecution.session_id == session_id,
                 AgentExecution.status == "paused",
             )
-            .order_by(desc(AgentExecution.updated_at))
+            .order_by(desc(AgentExecution.updated_at), desc(AgentExecution.iteration))
             .limit(1)
         )
         return result.scalar_one_or_none()
@@ -157,7 +157,7 @@ class AgentExecutionRepository:
         result = await self.session.execute(
             select(AgentExecution)
             .where(AgentExecution.session_id == session_id)
-            .order_by(desc(AgentExecution.created_at))
+            .order_by(desc(AgentExecution.created_at), desc(AgentExecution.iteration))
             .limit(limit)
         )
         return list(result.scalars().all())
@@ -200,7 +200,7 @@ class AgentExecutionRepository:
         result = await self.session.execute(
             select(AgentExecution)
             .where(AgentExecution.session_id == session_id)
-            .order_by(desc(AgentExecution.created_at))
+            .order_by(desc(AgentExecution.created_at), desc(AgentExecution.iteration))
         )
         executions = list(result.scalars().all())
 

@@ -1,7 +1,6 @@
 """FastAPI dependency injection providers."""
 
 import hmac
-from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import Depends, Header, Request
@@ -159,7 +158,12 @@ async def get_current_user_optional(
     db: DbSession,
     authorization: Annotated[str | None, Header(alias="Authorization")] = None,
 ) -> User | None:
-    """Get current user if authenticated, None otherwise."""
+    """Get current user if authenticated, None otherwise.
+
+    NOT currently wired into any route. Kept intentionally so that future
+    endpoints needing optional auth can use it without re-implementing the
+    pattern. Remove only if the project decides never to support optional auth.
+    """
     if not authorization:
         return None
 
@@ -181,6 +185,7 @@ async def get_current_user_required(
 
 
 # Type aliases for auth dependencies
+# Not wired into any route. Kept for future optional-auth endpoints (see docstring above).
 CurrentUserOptional = Annotated[User | None, Depends(get_current_user_optional)]
 CurrentUserRequired = Annotated[User, Depends(get_current_user_required)]
 
@@ -203,8 +208,8 @@ RedisDep = Annotated[Redis, Depends(get_redis)]
 # ============================================================================
 
 
-async def get_tier_policy(user: CurrentUserOptional) -> TierPolicy:
-    """Resolve tier policy from user. No rate-limit enforcement."""
+async def get_tier_policy(user: CurrentUserRequired) -> TierPolicy:
+    """Resolve tier policy from authenticated user."""
     return get_policy(user)
 
 
@@ -212,29 +217,16 @@ TierPolicyDep = Annotated[TierPolicy, Depends(get_tier_policy)]
 
 
 async def enforce_chat_limit(
-    user: CurrentUserOptional,
+    user: CurrentUserRequired,
     policy: TierPolicyDep,
-    request: Request,
-    redis: RedisDep,
     db: DbSession,
 ) -> None:
     """Enforce daily chat limit. Raises 429 if exceeded."""
     if policy.daily_chats is None:
         return  # Pro -- unlimited
 
-    if user is None:
-        # Anonymous: Redis-based, atomic INCR keyed by IP + UTC date
-        forwarded = request.headers.get("x-forwarded-for", "")
-        ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "unknown")
-        today_utc = datetime.now(timezone.utc).date()
-        key = f"anon_chats:{ip}:{today_utc}"
-        count = await redis.incr(key)
-        if count == 1:
-            await redis.expire(key, 86400)
-    else:
-        # Authenticated: DB-based
-        usage_repo = UsageCounterRepository(db)
-        count = await usage_repo.get_today_query_count(str(user.id))
+    usage_repo = UsageCounterRepository(db)
+    count = await usage_repo.get_today_query_count(str(user.id))
 
     if count > policy.daily_chats:
         raise UsageLimitExceededError(current=count, limit=policy.daily_chats)

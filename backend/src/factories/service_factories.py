@@ -1,7 +1,6 @@
 """Factory functions for business logic services."""
 
 from functools import lru_cache
-from typing import Optional
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import get_settings
@@ -70,7 +69,7 @@ def get_pdf_parser() -> PDFParser:
 
 
 def get_ingest_service(
-    db_session: AsyncSession, ingested_by: Optional[str] = None
+    db_session: AsyncSession, ingested_by: str | None = None
 ) -> IngestService:
     """
     Create IngestService with dependencies.
@@ -104,16 +103,16 @@ def get_ingest_service(
 
 def get_agent_service(
     db_session: AsyncSession,
-    provider: Optional[str] = None,
-    model: Optional[str] = None,
+    user_id: UUID,
+    provider: str | None = None,
+    model: str | None = None,
     guardrail_threshold: int = 75,
     top_k: int = 3,
     max_retrieval_attempts: int = 3,
     temperature: float = 0.3,
-    session_id: Optional[str] = None,
+    session_id: str | None = None,
     conversation_window: int = 5,
     max_iterations: int = 5,
-    user_id: Optional[UUID] = None,
     can_ingest: bool = True,
     can_search_arxiv: bool = True,
 ) -> AgentService:
@@ -122,6 +121,7 @@ def get_agent_service(
 
     Args:
         db_session: Database session
+        user_id: User ID for conversation ownership
         provider: LLM provider prefix (e.g. 'openai', 'nvidia_nim'). Combined with
                   model into LiteLLM format. Uses system default if both None.
         model: Model name or full LiteLLM model string. Uses default if None.
@@ -132,7 +132,6 @@ def get_agent_service(
         session_id: Optional session ID for conversation continuity
         conversation_window: Number of previous turns to include in context
         max_iterations: Maximum router iterations for tool execution
-        user_id: Optional user ID for conversation ownership
         can_ingest: Whether the ingest tool is available (tier-gated)
         can_search_arxiv: Whether the arxiv_search tool is available (tier-gated)
 
@@ -140,7 +139,7 @@ def get_agent_service(
         AgentService instance
     """
     # Build LiteLLM model string from provider + model if both provided
-    litellm_model: Optional[str] = None
+    litellm_model: str | None = None
     if provider and model:
         litellm_model = f"{provider}/{model}"
     elif model:
@@ -153,7 +152,7 @@ def get_agent_service(
     search_service = get_search_service(db_session)
 
     # Conditionally create services based on tier policy
-    user_id_str = str(user_id) if user_id else None
+    user_id_str = str(user_id)
     ingest_service = get_ingest_service(db_session, ingested_by=user_id_str) if can_ingest else None
     arxiv_client = get_arxiv_client() if can_search_arxiv else None
 
@@ -163,8 +162,8 @@ def get_agent_service(
     else:
         paper_repository = PaperRepository(db_session)
 
-    # Get conversation repository for persistence (skip for anonymous)
-    conversation_repo = ConversationRepository(db_session) if user_id else None
+    # Get conversation repository for persistence
+    conversation_repo = ConversationRepository(db_session)
 
     return AgentService(
         llm_client=llm_client,

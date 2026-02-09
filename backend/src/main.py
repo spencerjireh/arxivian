@@ -48,7 +48,7 @@ async def lifespan(app: FastAPI):
         litellm.failure_callback = ["langfuse"]
         log.info("langfuse_enabled", host=settings.langfuse_host)
 
-    # Redis for anonymous rate limiting
+    # Redis for rate limiting and caching
     import redis.asyncio as aioredis
 
     app.state.redis = aioredis.from_url(settings.redis_url, decode_responses=True)
@@ -128,7 +128,7 @@ async def root():
             "arXiv paper ingestion",
             "SSE streaming responses",
             "Conversation history management",
-            "User tiers (Anonymous, Free, Pro)",
+            "User tiers (Free, Pro)",
         ],
         "endpoints": {
             "health": "/api/v1/health",

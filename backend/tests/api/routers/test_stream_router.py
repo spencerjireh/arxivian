@@ -95,7 +95,6 @@ class TestStreamEndpoint:
         from src.config import get_settings
         from src.dependencies import (
             get_current_user_required,
-            get_current_user_optional,
             get_tier_policy,
             enforce_chat_limit,
             get_redis,
@@ -112,7 +111,6 @@ class TestStreamEndpoint:
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
         app.dependency_overrides[get_current_user_required] = lambda: mock_user
-        app.dependency_overrides[get_current_user_optional] = lambda: mock_user
         app.dependency_overrides[get_tier_policy] = lambda: get_policy(mock_user)
         app.dependency_overrides[enforce_chat_limit] = lambda: None
         app.dependency_overrides[get_redis] = lambda: AsyncMock()
@@ -217,7 +215,6 @@ class TestStreamEndpoint:
         from src.config import get_settings
         from src.dependencies import (
             get_current_user_required,
-            get_current_user_optional,
             get_tier_policy,
             enforce_chat_limit,
             get_redis,
@@ -244,7 +241,6 @@ class TestStreamEndpoint:
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
         app.dependency_overrides[get_current_user_required] = lambda: mock_user
-        app.dependency_overrides[get_current_user_optional] = lambda: mock_user
         app.dependency_overrides[get_tier_policy] = lambda: TIER_POLICIES[UserTier.PRO]
         app.dependency_overrides[enforce_chat_limit] = lambda: None
         app.dependency_overrides[get_redis] = lambda: AsyncMock()
@@ -279,7 +275,6 @@ class TestStreamEndpoint:
         from src.config import get_settings
         from src.dependencies import (
             get_current_user_required,
-            get_current_user_optional,
             get_tier_policy,
             enforce_chat_limit,
             get_redis,
@@ -304,7 +299,6 @@ class TestStreamEndpoint:
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
         app.dependency_overrides[get_current_user_required] = lambda: mock_user
-        app.dependency_overrides[get_current_user_optional] = lambda: mock_user
         app.dependency_overrides[get_tier_policy] = lambda: get_policy(mock_user)
         app.dependency_overrides[enforce_chat_limit] = lambda: None
         app.dependency_overrides[get_redis] = lambda: AsyncMock()
@@ -341,7 +335,6 @@ class TestStreamValidation:
         from src.config import get_settings
         from src.dependencies import (
             get_current_user_required,
-            get_current_user_optional,
             get_tier_policy,
             enforce_chat_limit,
             get_redis,
@@ -352,7 +345,6 @@ class TestStreamValidation:
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
         app.dependency_overrides[get_current_user_required] = lambda: mock_user
-        app.dependency_overrides[get_current_user_optional] = lambda: mock_user
         app.dependency_overrides[get_tier_policy] = lambda: get_policy(mock_user)
         app.dependency_overrides[enforce_chat_limit] = lambda: None
         app.dependency_overrides[get_redis] = lambda: AsyncMock()
@@ -428,7 +420,6 @@ class TestStreamErrorHandling:
         from src.config import get_settings
         from src.dependencies import (
             get_current_user_required,
-            get_current_user_optional,
             get_tier_policy,
             enforce_chat_limit,
             get_redis,
@@ -451,7 +442,6 @@ class TestStreamErrorHandling:
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
         app.dependency_overrides[get_current_user_required] = lambda: mock_user
-        app.dependency_overrides[get_current_user_optional] = lambda: mock_user
         app.dependency_overrides[get_tier_policy] = lambda: get_policy(mock_user)
         app.dependency_overrides[enforce_chat_limit] = lambda: None
         app.dependency_overrides[get_redis] = lambda: AsyncMock()
@@ -485,7 +475,6 @@ class TestStreamErrorHandling:
         from src.config import get_settings
         from src.dependencies import (
             get_current_user_required,
-            get_current_user_optional,
             get_tier_policy,
             enforce_chat_limit,
             get_redis,
@@ -506,7 +495,6 @@ class TestStreamErrorHandling:
         app.dependency_overrides[get_db] = lambda: mock_db_session
         app.dependency_overrides[get_settings] = lambda: mock_settings
         app.dependency_overrides[get_current_user_required] = lambda: mock_user
-        app.dependency_overrides[get_current_user_optional] = lambda: mock_user
         app.dependency_overrides[get_tier_policy] = lambda: get_policy(mock_user)
         app.dependency_overrides[enforce_chat_limit] = lambda: None
         app.dependency_overrides[get_redis] = lambda: AsyncMock()

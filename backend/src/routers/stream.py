@@ -12,7 +12,7 @@ from src.config import get_settings
 from src.schemas.stream import StreamRequest, StreamEventType, ErrorEventData, StreamEvent
 from src.dependencies import (
     DbSession,
-    CurrentUserOptional,
+    CurrentUserRequired,
     TierPolicyDep,
     ChatGuard,
     UsageCounterRepoDep,
@@ -39,7 +39,7 @@ async def stream(
     request: StreamRequest,
     db: DbSession,
     http_request: Request,
-    current_user: CurrentUserOptional,
+    current_user: CurrentUserRequired,
     policy: TierPolicyDep,
     usage_repo: UsageCounterRepoDep,
     _limit: ChatGuard,
@@ -47,8 +47,8 @@ async def stream(
     """
     Stream agent response via Server-Sent Events (SSE).
 
-    Supports anonymous (limited tools, Redis rate limit), free (all tools,
-    DB rate limit), and pro (unlimited) tiers.
+    Supports free (all tools, DB rate limit) and pro (unlimited) tiers.
+    Requires authentication.
     """
     settings = get_settings()
 
@@ -65,7 +65,7 @@ async def stream(
     # Use session_id if provided, otherwise generate a temporary task ID
     task_id = request.session_id or str(uuid.uuid4())
 
-    user_id = current_user.id if current_user else None
+    user_id = current_user.id
 
     log.info(
         "stream request",
@@ -75,15 +75,14 @@ async def stream(
         task_id=task_id,
         timeout_seconds=timeout_seconds,
         max_iterations=request.max_iterations,
-        user_id=str(user_id) if user_id else "anonymous",
-        tier=current_user.tier if current_user else "anonymous",
+        user_id=str(user_id),
+        tier=current_user.tier,
     )
 
     async def event_generator():
-        # Increment usage counter for authenticated users
-        if current_user is not None:
-            await usage_repo.increment_query_count(current_user.id)
-            await db.flush()
+        # Increment usage counter
+        await usage_repo.increment_query_count(current_user.id)
+        await db.flush()
 
         # Register the current task for cancellation support
         current_task = asyncio.current_task()

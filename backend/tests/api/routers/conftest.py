@@ -227,7 +227,6 @@ def _create_test_client(
         get_search_service_dep,
         get_ingest_service_dep,
         get_current_user_required,
-        get_current_user_optional,
         get_tier_policy,
         enforce_chat_limit,
         get_redis,
@@ -258,7 +257,6 @@ def _create_test_client(
 
     if mock_user is not None:
         app.dependency_overrides[get_current_user_required] = lambda: mock_user
-        app.dependency_overrides[get_current_user_optional] = lambda: mock_user
         app.dependency_overrides[get_tier_policy] = lambda: get_policy(mock_user)
         app.dependency_overrides[verify_api_key] = lambda: None
 

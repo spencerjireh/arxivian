@@ -13,6 +13,7 @@ from uuid import UUID
 
 if TYPE_CHECKING:
     from src.config import Settings
+    from src.models.user import User
 
 SYSTEM_USER_CLERK_ID = "system"
 
@@ -41,14 +42,6 @@ class TierPolicy:
         return requested
 
 
-ANONYMOUS_POLICY = TierPolicy(
-    daily_chats=3,
-    search_slots=0,
-    can_ingest=False,
-    can_search_arxiv=False,
-    can_select_model=False,
-)
-
 TIER_POLICIES: dict[str, TierPolicy] = {
     UserTier.FREE: TierPolicy(
         daily_chats=20,
@@ -67,12 +60,9 @@ TIER_POLICIES: dict[str, TierPolicy] = {
 }
 
 
-def get_policy(user: object | None) -> TierPolicy:
-    """Resolve tier policy for a user (or None for anonymous)."""
-    if user is None:
-        return ANONYMOUS_POLICY
-    tier = getattr(user, "tier", UserTier.FREE)
-    return TIER_POLICIES.get(tier, TIER_POLICIES[UserTier.FREE])
+def get_policy(user: User) -> TierPolicy:
+    """Resolve tier policy for a user."""
+    return TIER_POLICIES.get(user.tier, TIER_POLICIES[UserTier.FREE])
 
 
 # --- System user ID (loaded once at startup) ---
