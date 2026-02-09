@@ -1,14 +1,9 @@
-import { useState } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
-import { Trash2, ExternalLink } from 'lucide-react'
+import { ExternalLink } from 'lucide-react'
 import clsx from 'clsx'
-import { transitions } from '../../lib/animations'
 import type { PaperListItem } from '../../types/api'
 
 interface PaperCardProps {
   paper: PaperListItem
-  onDelete: (arxivId: string) => void
-  isDeleting: boolean
 }
 
 function formatAuthors(authors: string[]): string {
@@ -24,14 +19,7 @@ function formatDate(dateStr: string): string {
   })
 }
 
-export default function PaperCard({ paper, onDelete, isDeleting }: PaperCardProps) {
-  const shouldReduceMotion = useReducedMotion()
-  const [showConfirm, setShowConfirm] = useState(false)
-
-  const handleDelete = () => {
-    onDelete(paper.arxiv_id)
-  }
-
+export default function PaperCard({ paper }: PaperCardProps) {
   return (
     <div className="group bg-white border border-stone-200 rounded-xl p-5 transition-colors hover:border-stone-300">
       <div className="flex items-center justify-between mb-3">
@@ -44,40 +32,6 @@ export default function PaperCard({ paper, onDelete, isDeleting }: PaperCardProp
             title={paper.pdf_processed ? 'Processed' : 'Not processed'}
           />
         </div>
-        {showConfirm ? (
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="px-2 py-1 text-xs font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
-            >
-              {isDeleting ? 'Deleting...' : 'Confirm'}
-            </button>
-            <button
-              onClick={() => setShowConfirm(false)}
-              disabled={isDeleting}
-              className="px-2 py-1 text-xs text-stone-500 rounded-md hover:bg-stone-100 transition-colors disabled:opacity-50"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <motion.button
-            onClick={() => setShowConfirm(true)}
-            whileHover={shouldReduceMotion ? {} : { scale: 1.1 }}
-            whileTap={shouldReduceMotion ? {} : { scale: 0.9 }}
-            transition={transitions.fast}
-            className="
-              p-1.5 rounded-md opacity-0 group-hover:opacity-100
-              text-stone-400 hover:text-red-600 hover:bg-red-50
-              transition-[opacity,color,background-color] duration-150
-              flex-shrink-0
-            "
-            aria-label="Delete paper"
-          >
-            <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
-          </motion.button>
-        )}
       </div>
 
       <h3 className="font-display text-lg font-semibold text-stone-900 leading-snug line-clamp-2 mb-1.5">

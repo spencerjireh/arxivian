@@ -128,13 +128,6 @@ export interface PaperListResponse {
   papers: PaperListItem[]
 }
 
-export interface DeletePaperResponse {
-  arxiv_id: string
-  title: string
-  chunks_deleted: number
-  message: string
-}
-
 export interface PaperListParams {
   offset?: number
   limit?: number

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Loader2, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
-import { usePapers, useDeletePaper } from '../api/papers'
+import { usePapers } from '../api/papers'
 import { useDebounce } from '../hooks/useDebounce'
 import PaperCard from '../components/library/PaperCard'
 import Button from '../components/ui/Button'
@@ -40,11 +40,6 @@ export default function LibraryPage() {
   }, [offset, debouncedCategory, processedFilter, sortBy, sortOrder])
 
   const { data, isLoading, error } = usePapers(params)
-  const deletePaper = useDeletePaper()
-
-  const handleDelete = (arxivId: string) => {
-    deletePaper.mutate(arxivId)
-  }
 
   const total = data?.total ?? 0
   const hasPages = total > LIMIT
@@ -136,7 +131,7 @@ export default function LibraryPage() {
             <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center mb-3">
               <BookOpen className="w-5 h-5 text-stone-400" strokeWidth={1.5} />
             </div>
-            <p className="text-sm font-medium text-stone-700">No papers yet</p>
+            <p className="text-sm font-medium text-stone-700">No papers in the knowledge base yet</p>
             <p className="text-sm text-stone-400 mt-1">
               Papers will appear here once ingested via chat
             </p>
@@ -147,10 +142,6 @@ export default function LibraryPage() {
               <PaperCard
                 key={paper.arxiv_id}
                 paper={paper}
-                onDelete={handleDelete}
-                isDeleting={
-                  deletePaper.isPending && deletePaper.variables === paper.arxiv_id
-                }
               />
             ))}
           </div>
