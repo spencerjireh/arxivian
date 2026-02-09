@@ -90,7 +90,7 @@ register_exception_handlers(app)
 
 # CORS middleware (must be first in middleware stack)
 app.add_middleware(
-    CORSMiddleware,  # ty: ignore[invalid-argument-type]  # Starlette stub issue
+    CORSMiddleware,
     allow_origins=["*"],  # Configure appropriately for production
     allow_credentials=True,
     allow_methods=["*"],

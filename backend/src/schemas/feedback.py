@@ -1,7 +1,5 @@
 """Feedback schemas for Langfuse integration."""
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -10,7 +8,7 @@ class FeedbackRequest(BaseModel):
 
     trace_id: str = Field(..., description="Langfuse trace ID from response metadata")
     score: float = Field(..., ge=0, le=1, description="Feedback score (0=negative, 1=positive)")
-    comment: Optional[str] = Field(None, max_length=1000, description="Optional feedback comment")
+    comment: str | None = Field(None, max_length=1000, description="Optional feedback comment")
 
 
 class FeedbackResponse(BaseModel):

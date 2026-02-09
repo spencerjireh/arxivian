@@ -1,6 +1,7 @@
 """Health check schemas."""
 
-from typing import Dict, Literal
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -9,7 +10,7 @@ class ServiceStatus(BaseModel):
 
     status: Literal["healthy", "unhealthy"]
     message: str
-    details: Dict = {}
+    details: dict = {}
 
 
 class HealthResponse(BaseModel):
@@ -17,5 +18,5 @@ class HealthResponse(BaseModel):
 
     status: Literal["ok", "degraded"]
     version: str
-    services: Dict[str, ServiceStatus]
+    services: dict[str, ServiceStatus]
     timestamp: str

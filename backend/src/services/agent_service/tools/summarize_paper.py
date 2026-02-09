@@ -79,7 +79,7 @@ class SummarizePaperTool(BaseTool):
             prompt = SUMMARY_PROMPT.format(title=paper.title, abstract=paper.abstract)
 
             summary = await self.llm_client.generate_completion(
-                messages=[{"role": "user", "content": prompt}],  # ty: ignore[invalid-argument-type]
+                messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,
                 max_tokens=200,
             )

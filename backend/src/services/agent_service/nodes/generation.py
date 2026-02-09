@@ -44,7 +44,7 @@ async def generate_answer_node(state: AgentState, context: AgentContext) -> Agen
     # Stream tokens and emit as custom events
     tokens: list[str] = []
     async for token in context.llm_client.generate_stream(
-        messages=[  # ty: ignore[invalid-argument-type]  # dict works at runtime
+        messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],

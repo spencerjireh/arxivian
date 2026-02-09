@@ -28,7 +28,7 @@ async def grade_documents_node(state: AgentState, context: AgentContext) -> Agen
         log.debug("grading chunk", chunk_id=chunk["chunk_id"], arxiv_id=chunk["arxiv_id"])
 
         result = await context.llm_client.generate_structured(
-            messages=[{"role": "user", "content": prompt}],  # ty: ignore[invalid-argument-type]
+            messages=[{"role": "user", "content": prompt}],
             response_format=GradingResult,
         )
         result.chunk_id = chunk["chunk_id"]

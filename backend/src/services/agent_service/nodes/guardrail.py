@@ -44,7 +44,7 @@ async def guardrail_node(state: AgentState, context: AgentContext) -> AgentState
     )
 
     result = await context.llm_client.generate_structured(
-        messages=[  # ty: ignore[invalid-argument-type]
+        messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],

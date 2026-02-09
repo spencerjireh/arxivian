@@ -21,7 +21,7 @@ BATCH_SIZE = 2000
 
 async def _batched_delete(
     session: AsyncSession,
-    model: type,
+    model: type[Any],
     cutoff_date: datetime,
     batch_size: int = BATCH_SIZE,
 ) -> int:

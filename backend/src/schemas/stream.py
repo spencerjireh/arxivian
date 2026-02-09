@@ -1,7 +1,7 @@
 """Streaming request and response schemas with SSE event types."""
 
 from enum import Enum
-from typing import List, Optional, Literal, Union
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -14,10 +14,10 @@ class StreamRequest(BaseModel):
     query: str = Field(..., description="Question to ask")
 
     # LLM Provider Selection
-    provider: Optional[Literal["openai", "nvidia_nim"]] = Field(
+    provider: Literal["openai", "nvidia_nim"] | None = Field(
         None, description="LLM provider to use. Uses system default if not specified."
     )
-    model: Optional[str] = Field(
+    model: str | None = Field(
         None, description="Model to use. Uses provider's default if not specified."
     )
 
@@ -37,7 +37,7 @@ class StreamRequest(BaseModel):
     temperature: float = Field(0.3, ge=0.0, le=1.0, description="Generation temperature")
 
     # Request Lifecycle Parameters
-    timeout_seconds: Optional[int] = Field(
+    timeout_seconds: int | None = Field(
         None,
         ge=10,
         le=600,
@@ -45,7 +45,7 @@ class StreamRequest(BaseModel):
     )
 
     # Conversation Parameters
-    session_id: Optional[str] = Field(None, description="Session UUID for conversation continuity")
+    session_id: str | None = Field(None, description="Session UUID for conversation continuity")
     conversation_window: int = Field(
         5, ge=1, le=10, description="Number of previous turns to include in context"
     )
@@ -70,7 +70,7 @@ class StatusEventData(BaseModel):
 
     step: str = Field(..., description="Current workflow step name")
     message: str = Field(..., description="Human-readable status message")
-    details: Optional[dict] = Field(
+    details: dict | None = Field(
         default=None, description="Optional extra info (score, attempt number, etc.)"
     )
 
@@ -84,7 +84,7 @@ class ContentEventData(BaseModel):
 class SourcesEventData(BaseModel):
     """Data for sources event with retrieved documents."""
 
-    sources: List[SourceInfo] = Field(..., description="Retrieved document sources")
+    sources: list[SourceInfo] = Field(..., description="Retrieved document sources")
 
 
 class MetadataEventData(BaseModel):
@@ -93,27 +93,27 @@ class MetadataEventData(BaseModel):
     query: str
     execution_time_ms: float
     retrieval_attempts: int
-    rewritten_query: Optional[str] = None
-    guardrail_score: Optional[int] = None
+    rewritten_query: str | None = None
+    guardrail_score: int | None = None
     provider: str
     model: str
-    session_id: Optional[str] = None
+    session_id: str | None = None
     turn_number: int = 0
-    reasoning_steps: List[str] = Field(default_factory=list)
-    trace_id: Optional[str] = None  # Langfuse trace ID for feedback
+    reasoning_steps: list[str] = Field(default_factory=list)
+    trace_id: str | None = None  # Langfuse trace ID for feedback
 
 
 class ErrorEventData(BaseModel):
     """Data for error events."""
 
     error: str = Field(..., description="Error message")
-    code: Optional[str] = Field(default=None, description="Error code if available")
+    code: str | None = Field(default=None, description="Error code if available")
 
 
 class StreamEvent(BaseModel):
     """SSE event wrapper with event type and data."""
 
     event: StreamEventType
-    data: Union[
-        StatusEventData, ContentEventData, SourcesEventData, MetadataEventData, ErrorEventData, dict
-    ]
+    data: (
+        StatusEventData | ContentEventData | SourcesEventData | MetadataEventData | ErrorEventData | dict
+    )

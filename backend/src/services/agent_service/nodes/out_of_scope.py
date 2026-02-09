@@ -51,7 +51,7 @@ async def out_of_scope_node(state: AgentState, context: AgentContext) -> AgentSt
         # Stream tokens and emit as custom events
         tokens: list[str] = []
         async for token in context.llm_client.generate_stream(
-            messages=[  # ty: ignore[invalid-argument-type]
+            messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],

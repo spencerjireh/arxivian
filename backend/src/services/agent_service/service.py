@@ -139,8 +139,8 @@ class AgentService:
         if session_id and self.conversation_repo:
             turns = await self.conversation_repo.get_history(session_id, self.conversation_window)
             for t in turns:
-                history.append({"role": "user", "content": t.user_query})  # ty: ignore[invalid-argument-type]
-                history.append({"role": "assistant", "content": t.agent_response})  # ty: ignore[invalid-argument-type]
+                history.append({"role": "user", "content": t.user_query})
+                history.append({"role": "assistant", "content": t.agent_response})
             log.debug("loaded conversation history", session_id=session_id, turns=len(turns))
 
         # Build LangGraph config with Langfuse callback
@@ -443,7 +443,7 @@ class AgentService:
                 provider=self.llm_client.provider_name,
                 model=self.llm_client.model,
                 session_id=session_id,
-                turn_number=turn_number,  # ty: ignore[invalid-argument-type]
+                turn_number=turn_number,
                 reasoning_steps=final_state.get("metadata", {}).get("reasoning_steps", []),
                 trace_id=trace_id,
             ),

@@ -1,6 +1,7 @@
 """LangGraph state and structured output models."""
 
-from typing import List, Optional, TypedDict, Annotated, Literal
+from typing import TypedDict, Annotated, Literal
+
 from pydantic import BaseModel, Field, ConfigDict
 from langchain_core.messages import AnyMessage
 from langgraph.graph.message import add_messages
@@ -55,7 +56,7 @@ class ToolExecution(BaseModel):
     tool_args: dict = Field(default_factory=dict, description="Arguments passed to the tool")
     success: bool = Field(..., description="Whether the execution succeeded")
     result_summary: str = Field(default="", description="Brief summary of the result")
-    error: Optional[str] = Field(default=None, description="Error message if failed")
+    error: str | None = Field(default=None, description="Error message if failed")
 
 
 class GradingResult(BaseModel):
@@ -72,11 +73,11 @@ class AgentState(TypedDict):
     """State passed between LangGraph nodes."""
 
     # Messages (LangChain message history with reducer)
-    messages: Annotated[List[AnyMessage], add_messages]
+    messages: Annotated[list[AnyMessage], add_messages]
 
     # Query tracking
-    original_query: Optional[str]
-    rewritten_query: Optional[str]
+    original_query: str | None
+    rewritten_query: str | None
 
     # Execution state (for router architecture)
     status: ExecutionStatus
@@ -84,34 +85,34 @@ class AgentState(TypedDict):
     max_iterations: int
 
     # Router decision (LLM's tool selection)
-    router_decision: Optional[RouterDecision]
+    router_decision: RouterDecision | None
 
     # Tool execution history
-    tool_history: List[ToolExecution]
-    last_executed_tools: List[str]  # Tool names from current batch (for routing)
+    tool_history: list[ToolExecution]
+    last_executed_tools: list[str]  # Tool names from current batch (for routing)
 
     # Pause/resume support (for future HITL)
-    pause_reason: Optional[str]
+    pause_reason: str | None
 
     # Legacy fields (kept for grading support)
     retrieval_attempts: int
 
     # Guardrail results
-    guardrail_result: Optional[GuardrailScoring]
+    guardrail_result: GuardrailScoring | None
 
     # Routing decisions (legacy - kept for backwards compat during migration)
-    routing_decision: Optional[str]
+    routing_decision: str | None
 
     # Retrieved content
-    retrieved_chunks: List[dict]
-    relevant_chunks: List[dict]
+    retrieved_chunks: list[dict]
+    relevant_chunks: list[dict]
 
     # Grading results
-    grading_results: List[GradingResult]
+    grading_results: list[GradingResult]
 
     # Metadata
     metadata: dict
 
     # Conversation memory
-    conversation_history: List[ConversationMessage]
-    session_id: Optional[str]
+    conversation_history: list[ConversationMessage]
+    session_id: str | None

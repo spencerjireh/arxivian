@@ -1,6 +1,7 @@
 """Search request and response schemas."""
 
-from typing import List, Optional, Literal
+from typing import Literal
+
 from pydantic import BaseModel, Field
 from src.schemas.common import ChunkInfo
 
@@ -21,8 +22,8 @@ class SearchRequest(BaseModel):
         "hybrid", description="Search mode"
     )
     min_score: float = Field(0.0, ge=0.0, le=1.0, description="Minimum relevance score")
-    categories: Optional[List[str]] = Field(None, description="Filter by arXiv categories")
-    date_range: Optional[DateRange] = Field(None, description="Filter by date range")
+    categories: list[str] | None = Field(None, description="Filter by arXiv categories")
+    date_range: DateRange | None = Field(None, description="Filter by date range")
 
 
 class SearchResponse(BaseModel):
@@ -30,6 +31,6 @@ class SearchResponse(BaseModel):
 
     query: str
     total: int
-    results: List[ChunkInfo]
+    results: list[ChunkInfo]
     search_mode: str
     execution_time_ms: float

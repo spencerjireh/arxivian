@@ -151,7 +151,7 @@ class ConversationRepository:
                 continue
 
         # Should never reach here, but satisfy type checker
-        raise IntegrityError("Failed to save turn after max retries", None, None)  # ty: ignore[invalid-argument-type]
+        raise IntegrityError("Failed to save turn after max retries", None, None)
 
     async def delete(self, session_id: str, user_id: Optional[UUID] = None) -> bool:
         """

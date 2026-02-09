@@ -103,7 +103,7 @@ async def stream(
                     session_id=request.session_id,
                     conversation_window=request.conversation_window,
                     max_iterations=request.max_iterations,
-                    user_id=user_id,  # ty: ignore[invalid-argument-type]
+                    user_id=user_id,
                     can_ingest=policy.can_ingest,
                     can_search_arxiv=policy.can_search_arxiv,
                 )

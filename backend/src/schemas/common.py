@@ -1,6 +1,5 @@
 """Common schemas used across the application."""
 
-from typing import List, Optional
 from pydantic import BaseModel
 
 
@@ -9,11 +8,11 @@ class SourceInfo(BaseModel):
 
     arxiv_id: str
     title: str
-    authors: List[str]
+    authors: list[str]
     pdf_url: str
     relevance_score: float
-    published_date: Optional[str] = None
-    was_graded_relevant: Optional[bool] = None
+    published_date: str | None = None
+    was_graded_relevant: bool | None = None
 
 
 class ChunkInfo(BaseModel):
@@ -23,7 +22,7 @@ class ChunkInfo(BaseModel):
     arxiv_id: str
     title: str
     chunk_text: str
-    section_name: Optional[str] = None
+    section_name: str | None = None
     score: float
-    vector_score: Optional[float] = None
-    text_score: Optional[float] = None
+    vector_score: float | None = None
+    text_score: float | None = None

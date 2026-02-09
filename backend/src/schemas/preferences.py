@@ -1,6 +1,5 @@
 """Schemas for user preferences."""
 
-from typing import Optional
 from pydantic import BaseModel, Field
 
 
@@ -9,7 +8,7 @@ class ArxivSearchConfig(BaseModel):
 
     name: str = Field(..., description="Display name for this search", max_length=100)
     query: str = Field(..., description="arXiv search query", min_length=1, max_length=500)
-    categories: Optional[list[str]] = Field(
+    categories: list[str] | None = Field(
         None, description="arXiv categories to filter (e.g., cs.AI, cs.LG)"
     )
     max_results: int = Field(10, ge=1, le=50, description="Maximum papers to fetch per run")

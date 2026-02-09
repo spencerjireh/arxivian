@@ -1,6 +1,5 @@
 """Ops operation schemas."""
 
-from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
@@ -19,7 +18,7 @@ class CleanupResponse(BaseModel):
 
     orphaned_papers_found: int
     papers_deleted: int
-    deleted_papers: List[OrphanedPaper]
+    deleted_papers: list[OrphanedPaper]
 
 
 class UpdateTierRequest(BaseModel):
@@ -33,7 +32,7 @@ class UpdateTierResponse(BaseModel):
 
     user_id: UUID
     tier: str
-    email: Optional[str] = None
+    email: str | None = None
 
 
 class BulkIngestRequest(BaseModel):

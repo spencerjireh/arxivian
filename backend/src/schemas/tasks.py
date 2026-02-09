@@ -1,7 +1,8 @@
 """Schemas for background task operations."""
 
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -21,14 +22,14 @@ class TaskStatusResponse(BaseModel):
         Field(..., description="Current task status")
     )
     ready: bool = Field(..., description="Whether the task has completed (success or failure)")
-    result: Optional[dict] = Field(
+    result: dict | None = Field(
         None, description="Task result if completed successfully (only included on success)"
     )
-    error: Optional[str] = Field(
+    error: str | None = Field(
         None, description="Error message if task failed (only included on failure)"
     )
-    task_type: Optional[str] = Field(None, description="Type of the task")
-    created_at: Optional[datetime] = Field(None, description="When the task was created")
+    task_type: str | None = Field(None, description="Type of the task")
+    created_at: datetime | None = Field(None, description="When the task was created")
 
 
 class TaskListItem(BaseModel):
@@ -39,11 +40,11 @@ class TaskListItem(BaseModel):
     task_id: str = Field(..., description="Celery task ID", validation_alias="celery_task_id")
     task_type: str = Field(..., description="Type of the task")
     status: str = Field(..., description="Current task status")
-    error: Optional[str] = Field(
+    error: str | None = Field(
         None, description="Error message if task failed", validation_alias="error_message"
     )
     created_at: datetime = Field(..., description="When the task was created")
-    completed_at: Optional[datetime] = Field(None, description="When the task completed")
+    completed_at: datetime | None = Field(None, description="When the task completed")
 
 
 class TaskListResponse(BaseModel):

@@ -1,6 +1,7 @@
 """Ingestion request and response schemas."""
 
-from typing import List, Optional, Literal
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -9,11 +10,11 @@ class IngestRequest(BaseModel):
 
     query: str = Field(..., description="arXiv search query")
     max_results: int = Field(10, ge=1, le=50, description="Maximum papers to fetch")
-    categories: Optional[List[str]] = Field(None, description="arXiv categories filter")
-    start_date: Optional[str] = Field(None, description="Start date (YYYY-MM-DD)")
-    end_date: Optional[str] = Field(None, description="End date (YYYY-MM-DD)")
+    categories: list[str] | None = Field(None, description="arXiv categories filter")
+    start_date: str | None = Field(None, description="Start date (YYYY-MM-DD)")
+    end_date: str | None = Field(None, description="End date (YYYY-MM-DD)")
     force_reprocess: bool = Field(False, description="Re-process existing papers")
-    idempotency_key: Optional[str] = Field(
+    idempotency_key: str | None = Field(
         default=None,
         description="Unique key to prevent duplicate processing. If provided, duplicate requests return cached response.",
         max_length=64,
@@ -44,5 +45,5 @@ class IngestResponse(BaseModel):
     papers_processed: int
     chunks_created: int
     duration_seconds: float
-    errors: List[PaperError] = []
-    papers: List[PaperResult] = []
+    errors: list[PaperError] = []
+    papers: list[PaperResult] = []

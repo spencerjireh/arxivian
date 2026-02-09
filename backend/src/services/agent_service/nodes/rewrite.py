@@ -29,7 +29,7 @@ async def rewrite_query_node(state: AgentState, context: AgentContext) -> AgentS
 
     rewritten = await context.llm_client.generate_completion(
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.5,  # ty: ignore[invalid-argument-type]
+        temperature=0.5,
     )
     rewritten_text = rewritten.strip()
 

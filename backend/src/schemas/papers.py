@@ -1,6 +1,5 @@
 """Schemas for papers management endpoints."""
 
-from typing import List, Optional
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
@@ -12,15 +11,15 @@ class PaperResponseBase(BaseModel):
 
     arxiv_id: str
     title: str
-    authors: List[str]
+    authors: list[str]
     abstract: str
-    categories: List[str]
+    categories: list[str]
     published_date: datetime
     pdf_url: str
-    sections: Optional[List[dict]] = None
+    sections: list[dict] | None = None
     pdf_processed: bool
-    pdf_processing_date: Optional[datetime] = None
-    parser_used: Optional[str] = None
+    pdf_processing_date: datetime | None = None
+    parser_used: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -28,7 +27,7 @@ class PaperResponseBase(BaseModel):
 class PaperResponse(PaperResponseBase):
     """Full paper response including raw_text."""
 
-    raw_text: Optional[str] = None
+    raw_text: str | None = None
 
 
 class PaperListItem(PaperResponseBase):
@@ -41,7 +40,7 @@ class PaperListResponse(BaseModel):
     total: int
     offset: int
     limit: int
-    papers: List[PaperListItem]
+    papers: list[PaperListItem]
 
 
 class DeletePaperResponse(BaseModel):

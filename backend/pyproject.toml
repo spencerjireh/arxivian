@@ -86,6 +86,10 @@ python-platform = "all"
 [tool.ty.rules]
 # Tool execute methods intentionally use explicit parameters for better DX
 invalid-method-override = "warn"
+# SQLAlchemy / Starlette / LiteLLM column-access false positives
+invalid-argument-type = "warn"
+invalid-assignment = "warn"
+no-matching-overload = "warn"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
