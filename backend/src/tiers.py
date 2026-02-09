@@ -26,7 +26,6 @@ class UserTier(StrEnum):
 @dataclass(frozen=True, slots=True)
 class TierPolicy:
     daily_chats: int | None  # None = unlimited
-    search_slots: int
     can_ingest: bool
     can_search_arxiv: bool
     can_select_model: bool
@@ -45,14 +44,12 @@ class TierPolicy:
 TIER_POLICIES: dict[str, TierPolicy] = {
     UserTier.FREE: TierPolicy(
         daily_chats=20,
-        search_slots=1,
         can_ingest=True,
         can_search_arxiv=True,
         can_select_model=False,
     ),
     UserTier.PRO: TierPolicy(
         daily_chats=None,
-        search_slots=5,
         can_ingest=True,
         can_search_arxiv=True,
         can_select_model=True,

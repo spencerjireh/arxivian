@@ -138,25 +138,6 @@ export interface PaperListParams {
   sort_order?: 'asc' | 'desc'
 }
 
-// Preferences types
-
-export interface ArxivSearchConfig {
-  name: string
-  query: string
-  categories?: string[]
-  max_results?: number
-  enabled?: boolean
-}
-
-export interface NotificationSettings {
-  email_digest: boolean
-}
-
-export interface UserPreferences {
-  arxiv_searches: ArxivSearchConfig[]
-  notification_settings: NotificationSettings
-}
-
 // User/Tier types
 
 export interface MeResponse {
@@ -167,8 +148,6 @@ export interface MeResponse {
   tier: 'free' | 'pro'
   daily_chat_limit: number | null  // null = unlimited
   chats_used_today: number
-  search_slot_limit: number
-  search_slots_used: number
   can_select_model: boolean
 }
 

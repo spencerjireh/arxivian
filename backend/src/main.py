@@ -15,7 +15,6 @@ from src.routers import (
     conversations,
     ops,
     feedback,
-    preferences,
     users,
 )
 
@@ -111,7 +110,6 @@ app.include_router(conversations.router, prefix="/api/v1", tags=["Conversations"
 app.include_router(papers.router, prefix="/api/v1", tags=["Papers"])
 app.include_router(ops.router, prefix="/api/v1", tags=["Ops"])
 app.include_router(feedback.router, prefix="/api/v1", tags=["Feedback"])
-app.include_router(preferences.router, prefix="/api/v1", tags=["Preferences"])
 app.include_router(users.router, prefix="/api/v1", tags=["Users"])
 
 
@@ -137,7 +135,6 @@ async def root():
             "papers": "/api/v1/papers",
             "conversations": "/api/v1/conversations",
             "ops": "/api/v1/ops",
-            "preferences": "/api/v1/preferences",
             "users": "/api/v1/users",
         },
         "docs": "/docs",

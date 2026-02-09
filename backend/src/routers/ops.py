@@ -11,11 +11,12 @@ from src.schemas.ops import (
     BulkIngestResponse,
     CleanupResponse,
     OrphanedPaper,
+    SystemSearchesResponse,
+    UpdateSystemSearchesRequest,
     UpdateTierRequest,
     UpdateTierResponse,
 )
 from src.schemas.papers import DeletePaperResponse
-from src.schemas.preferences import UpdateArxivSearchesRequest, UserPreferences
 from src.schemas.tasks import (
     RevokeTaskResponse,
     TaskListItem,
@@ -121,11 +122,11 @@ async def update_user_tier(
     )
 
 
-@router.get("/system/arxiv-searches", response_model=UserPreferences)
+@router.get("/system/arxiv-searches", response_model=SystemSearchesResponse)
 async def get_system_searches(
     user_repo: UserRepoDep,
     _api_key: ApiKeyCheck,
-) -> UserPreferences:
+) -> SystemSearchesResponse:
     """Read current system user arXiv search configuration."""
     system_user = await user_repo.get_by_clerk_id(SYSTEM_USER_CLERK_ID)
     if system_user is None:
@@ -133,16 +134,16 @@ async def get_system_searches(
 
     prefs = system_user.preferences or {}
 
-    return UserPreferences.from_raw(prefs)
+    return SystemSearchesResponse(arxiv_searches=prefs.get("arxiv_searches", []))
 
 
-@router.put("/system/arxiv-searches", response_model=UserPreferences)
+@router.put("/system/arxiv-searches", response_model=SystemSearchesResponse)
 async def update_system_searches(
-    request: UpdateArxivSearchesRequest,
+    request: UpdateSystemSearchesRequest,
     db: DbSession,
     user_repo: UserRepoDep,
     _api_key: ApiKeyCheck,
-) -> UserPreferences:
+) -> SystemSearchesResponse:
     """Replace all system user arXiv searches. Idempotent PUT."""
     system_user = await user_repo.get_by_clerk_id(SYSTEM_USER_CLERK_ID)
     if system_user is None:
@@ -159,7 +160,7 @@ async def update_system_searches(
         search_count=len(request.arxiv_searches),
     )
 
-    return UserPreferences.from_raw(current_prefs)
+    return SystemSearchesResponse(arxiv_searches=request.arxiv_searches)
 
 
 @router.post("/ingest", response_model=BulkIngestResponse)

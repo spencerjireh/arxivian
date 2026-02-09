@@ -9,6 +9,7 @@ from src.database import AsyncSessionLocal
 from src.repositories.user_repository import UserRepository
 from src.tasks.ingest_tasks import ingest_papers_task
 from src.tasks.utils import run_async
+from src.tiers import SYSTEM_USER_CLERK_ID
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -24,10 +25,10 @@ def _deterministic_task_id(user_id: str, query: str) -> str:
 
 @celery_app.task(name="src.tasks.scheduled_tasks.daily_ingest_task")
 def daily_ingest_task() -> dict[str, Any]:
-    """Run daily ingestion for all user-defined arXiv searches.
+    """Run daily ingestion for system user arXiv searches.
 
-    Iterates through all users with saved arXiv searches in their
-    preferences and queues an ingest task for each enabled search.
+    Reads arXiv search configs from the system user's preferences
+    and queues an ingest task for each enabled search.
     Tasks are staggered with countdown to avoid thundering herd.
 
     Returns:
@@ -40,53 +41,61 @@ def daily_ingest_task() -> dict[str, Any]:
         task_index = 0
         async with AsyncSessionLocal() as session:
             user_repo = UserRepository(session)
-            users = await user_repo.get_users_with_searches()
+            system_user = await user_repo.get_by_clerk_id(SYSTEM_USER_CLERK_ID)
 
-            for user in users:
-                preferences = user.preferences or {}
-                arxiv_searches = preferences.get("arxiv_searches", [])
+            if system_user is None:
+                log.warning("system_user_not_found")
+                return {
+                    "status": "completed",
+                    "tasks_queued": 0,
+                    "tasks": [],
+                    "spread_duration_minutes": 0,
+                }
 
-                for search in arxiv_searches:
-                    if not search.get("enabled", True):
-                        continue
+            preferences = system_user.preferences or {}
+            arxiv_searches = preferences.get("arxiv_searches", [])
 
-                    query = search.get("query")
-                    if not query:
-                        continue
+            for search in arxiv_searches:
+                if not search.get("enabled", True):
+                    continue
 
-                    det_id = _deterministic_task_id(str(user.id), query)
+                query = search.get("query")
+                if not query:
+                    continue
 
-                    search_name = search.get("name", "Unnamed")
+                det_id = _deterministic_task_id(str(system_user.id), query)
 
-                    # Queue ingestion task with staggered countdown
-                    task = ingest_papers_task.apply_async(
-                        kwargs={
-                            "query": query,
-                            "categories": search.get("categories"),
-                            "max_results": search.get("max_results", 10),
-                        },
-                        countdown=task_index * STAGGER_SECONDS,
-                        task_id=det_id,
-                    )
+                search_name = search.get("name", "Unnamed")
 
-                    queued_tasks.append(
-                        {
-                            "task_id": task.id,
-                            "user_id": str(user.id),
-                            "search_name": search_name,
-                            "query": query,
-                        }
-                    )
+                # Queue ingestion task with staggered countdown
+                task = ingest_papers_task.apply_async(
+                    kwargs={
+                        "query": query,
+                        "categories": search.get("categories"),
+                        "max_results": search.get("max_results", 10),
+                    },
+                    countdown=task_index * STAGGER_SECONDS,
+                    task_id=det_id,
+                )
 
-                    log.info(
-                        "ingest_task_queued",
-                        task_id=task.id,
-                        user_id=str(user.id),
-                        query=query,
-                        countdown=task_index * STAGGER_SECONDS,
-                    )
+                queued_tasks.append(
+                    {
+                        "task_id": task.id,
+                        "user_id": str(system_user.id),
+                        "search_name": search_name,
+                        "query": query,
+                    }
+                )
 
-                    task_index += 1
+                log.info(
+                    "ingest_task_queued",
+                    task_id=task.id,
+                    user_id=str(system_user.id),
+                    query=query,
+                    countdown=task_index * STAGGER_SECONDS,
+                )
+
+                task_index += 1
 
         spread_duration_minutes = (task_index - 1) * STAGGER_SECONDS / 60 if task_index > 0 else 0
 

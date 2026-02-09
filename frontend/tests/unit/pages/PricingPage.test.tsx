@@ -38,8 +38,6 @@ describe('PricingPage', () => {
         tier: 'free',
         daily_chat_limit: 20,
         chats_used_today: 0,
-        search_slot_limit: 5,
-        search_slots_used: 0,
         can_select_model: false,
       },
     })

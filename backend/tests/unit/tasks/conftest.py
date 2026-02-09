@@ -42,21 +42,21 @@ def mock_ingest_service():
 
 @pytest.fixture
 def mock_user_repository():
-    """Mock UserRepository with sample users."""
+    """Mock UserRepository."""
     repo = AsyncMock()
-    repo.get_users_with_searches = AsyncMock(return_value=[])
+    repo.get_by_clerk_id = AsyncMock(return_value=None)
     return repo
 
 
 @pytest.fixture
-def sample_user_with_searches():
-    """User with arxiv_searches in preferences."""
+def sample_system_user_with_searches():
+    """System user with arxiv_searches in preferences."""
     from src.models.user import User
 
     user = Mock(spec=User)
     user.id = uuid.uuid4()
-    user.clerk_id = "user_test123"
-    user.email = "test@example.com"
+    user.clerk_id = "system"
+    user.email = "system@arxivian.com"
     user.preferences = {
         "arxiv_searches": [
             {
@@ -79,14 +79,14 @@ def sample_user_with_searches():
 
 
 @pytest.fixture
-def sample_user_with_disabled_search():
-    """User with a disabled arxiv search."""
+def sample_system_user_with_disabled_search():
+    """System user with a disabled arxiv search."""
     from src.models.user import User
 
     user = Mock(spec=User)
     user.id = uuid.uuid4()
-    user.clerk_id = "user_disabled123"
-    user.email = "disabled@example.com"
+    user.clerk_id = "system"
+    user.email = "system@arxivian.com"
     user.preferences = {
         "arxiv_searches": [
             {
@@ -100,14 +100,14 @@ def sample_user_with_disabled_search():
 
 
 @pytest.fixture
-def sample_user_empty_query():
-    """User with empty query in arxiv search."""
+def sample_system_user_empty_query():
+    """System user with empty query in arxiv search."""
     from src.models.user import User
 
     user = Mock(spec=User)
     user.id = uuid.uuid4()
-    user.clerk_id = "user_empty123"
-    user.email = "empty@example.com"
+    user.clerk_id = "system"
+    user.email = "system@arxivian.com"
     user.preferences = {
         "arxiv_searches": [
             {

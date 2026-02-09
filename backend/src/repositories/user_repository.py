@@ -169,25 +169,6 @@ class UserRepository:
         log.debug("user last_login updated", clerk_id=user.clerk_id)
         return user
 
-    async def get_users_with_searches(self) -> list[User]:
-        """
-        Get all users that have arXiv searches configured in preferences.
-
-        Returns:
-            List of users with non-empty arxiv_searches in preferences
-        """
-        log.debug("query users with arxiv searches")
-        result = await self.session.execute(
-            select(User).where(
-                User.preferences.isnot(None),
-                User.preferences["arxiv_searches"].astext != "[]",
-                User.preferences["arxiv_searches"].astext != "null",
-            )
-        )
-        users = list(result.scalars().all())
-        log.debug("query result", count=len(users))
-        return users
-
     async def update_tier(self, user: User, tier: str) -> User:
         """
         Update user's tier.

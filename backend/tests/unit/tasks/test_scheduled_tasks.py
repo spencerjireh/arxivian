@@ -7,8 +7,8 @@ from contextlib import asynccontextmanager
 class TestDailyIngestTask:
     """Tests for the daily_ingest_task."""
 
-    def test_queues_tasks_for_users_with_searches(
-        self, sample_user_with_searches
+    def test_queues_tasks_for_system_user_searches(
+        self, sample_system_user_with_searches
     ):
         """Verify the task queues ingest tasks for each enabled search."""
         from src.tasks.scheduled_tasks import daily_ingest_task
@@ -16,8 +16,8 @@ class TestDailyIngestTask:
         mock_session = AsyncMock()
 
         mock_repo = AsyncMock()
-        mock_repo.get_users_with_searches = AsyncMock(
-            return_value=[sample_user_with_searches]
+        mock_repo.get_by_clerk_id = AsyncMock(
+            return_value=sample_system_user_with_searches
         )
 
         mock_task = Mock()
@@ -39,7 +39,7 @@ class TestDailyIngestTask:
 
                     result = daily_ingest_task()
 
-        # Should queue 2 tasks (one for each search in user's preferences)
+        # Should queue 2 tasks (one for each search in system user's preferences)
         assert result["status"] == "completed"
         assert result["tasks_queued"] == 2
         assert len(result["tasks"]) == 2
@@ -55,15 +55,18 @@ class TestDailyIngestTask:
         assert calls[1].kwargs["kwargs"]["categories"] == ["cs.AI"]
         assert calls[1].kwargs["kwargs"]["max_results"] == 5
 
-    def test_uses_staggered_countdown(self, sample_user_with_searches):
+        # Verify system user clerk_id was used
+        mock_repo.get_by_clerk_id.assert_called_once_with("system")
+
+    def test_uses_staggered_countdown(self, sample_system_user_with_searches):
         """Verify tasks are staggered with countdown values."""
         from src.tasks.scheduled_tasks import daily_ingest_task
 
         mock_session = AsyncMock()
 
         mock_repo = AsyncMock()
-        mock_repo.get_users_with_searches = AsyncMock(
-            return_value=[sample_user_with_searches]
+        mock_repo.get_by_clerk_id = AsyncMock(
+            return_value=sample_system_user_with_searches
         )
 
         mock_task = Mock()
@@ -90,15 +93,15 @@ class TestDailyIngestTask:
         assert calls[0].kwargs["countdown"] == 0
         assert calls[1].kwargs["countdown"] == 30
 
-    def test_uses_deterministic_task_ids(self, sample_user_with_searches):
+    def test_uses_deterministic_task_ids(self, sample_system_user_with_searches):
         """Verify deterministic task IDs are generated."""
         from src.tasks.scheduled_tasks import daily_ingest_task
 
         mock_session = AsyncMock()
 
         mock_repo = AsyncMock()
-        mock_repo.get_users_with_searches = AsyncMock(
-            return_value=[sample_user_with_searches]
+        mock_repo.get_by_clerk_id = AsyncMock(
+            return_value=sample_system_user_with_searches
         )
 
         mock_task = Mock()
@@ -126,15 +129,15 @@ class TestDailyIngestTask:
             assert "task_id" in call.kwargs
             assert len(call.kwargs["task_id"]) == 32  # SHA-256 truncated
 
-    def test_returns_spread_duration_minutes(self, sample_user_with_searches):
+    def test_returns_spread_duration_minutes(self, sample_system_user_with_searches):
         """Verify spread_duration_minutes is in the result."""
         from src.tasks.scheduled_tasks import daily_ingest_task
 
         mock_session = AsyncMock()
 
         mock_repo = AsyncMock()
-        mock_repo.get_users_with_searches = AsyncMock(
-            return_value=[sample_user_with_searches]
+        mock_repo.get_by_clerk_id = AsyncMock(
+            return_value=sample_system_user_with_searches
         )
 
         mock_task = Mock()
@@ -160,15 +163,15 @@ class TestDailyIngestTask:
         # 2 tasks, staggered by 30s: (2-1) * 30 / 60 = 0.5 minutes
         assert result["spread_duration_minutes"] == 0.5
 
-    def test_skips_disabled_searches(self, sample_user_with_disabled_search):
+    def test_skips_disabled_searches(self, sample_system_user_with_disabled_search):
         """Verify the task skips disabled searches."""
         from src.tasks.scheduled_tasks import daily_ingest_task
 
         mock_session = AsyncMock()
 
         mock_repo = AsyncMock()
-        mock_repo.get_users_with_searches = AsyncMock(
-            return_value=[sample_user_with_disabled_search]
+        mock_repo.get_by_clerk_id = AsyncMock(
+            return_value=sample_system_user_with_disabled_search
         )
 
         mock_task = Mock()
@@ -196,15 +199,15 @@ class TestDailyIngestTask:
         assert len(result["tasks"]) == 0
         mock_apply_async.assert_not_called()
 
-    def test_skips_searches_without_query(self, sample_user_empty_query):
+    def test_skips_searches_without_query(self, sample_system_user_empty_query):
         """Verify the task skips searches with empty query."""
         from src.tasks.scheduled_tasks import daily_ingest_task
 
         mock_session = AsyncMock()
 
         mock_repo = AsyncMock()
-        mock_repo.get_users_with_searches = AsyncMock(
-            return_value=[sample_user_empty_query]
+        mock_repo.get_by_clerk_id = AsyncMock(
+            return_value=sample_system_user_empty_query
         )
 
         mock_task = Mock()
@@ -231,14 +234,14 @@ class TestDailyIngestTask:
         assert result["tasks_queued"] == 0
         mock_apply_async.assert_not_called()
 
-    def test_handles_empty_user_list(self):
-        """Verify the task handles case with no users with searches."""
+    def test_handles_system_user_not_found(self):
+        """Verify the task handles case when system user doesn't exist."""
         from src.tasks.scheduled_tasks import daily_ingest_task
 
         mock_session = AsyncMock()
 
         mock_repo = AsyncMock()
-        mock_repo.get_users_with_searches = AsyncMock(return_value=[])
+        mock_repo.get_by_clerk_id = AsyncMock(return_value=None)
 
         @asynccontextmanager
         async def mock_session_ctx():
@@ -259,39 +262,20 @@ class TestDailyIngestTask:
         assert result["tasks"] == []
         mock_ingest_task.apply_async.assert_not_called()
 
-    def test_handles_multiple_users(self, sample_user_with_searches):
-        """Verify the task processes multiple users correctly."""
+    def test_handles_no_searches_configured(self):
+        """Verify the task handles system user with no searches."""
         from src.tasks.scheduled_tasks import daily_ingest_task
         from src.models.user import User
-        import uuid
 
-        # Create a second user
-        user2 = Mock(spec=User)
-        user2.id = uuid.uuid4()
-        user2.clerk_id = "user_second123"
-        user2.email = "second@example.com"
-        user2.preferences = {
-            "arxiv_searches": [
-                {
-                    "name": "NLP Papers",
-                    "query": "natural language processing",
-                    "categories": ["cs.CL"],
-                    "max_results": 15,
-                    "enabled": True,
-                }
-            ]
-        }
+        system_user = Mock(spec=User)
+        system_user.id = "system-id"
+        system_user.clerk_id = "system"
+        system_user.preferences = {}
 
         mock_session = AsyncMock()
 
         mock_repo = AsyncMock()
-        mock_repo.get_users_with_searches = AsyncMock(
-            return_value=[sample_user_with_searches, user2]
-        )
-
-        mock_task = Mock()
-        mock_task.id = "queued-task-id"
-        mock_apply_async = Mock(return_value=mock_task)
+        mock_repo.get_by_clerk_id = AsyncMock(return_value=system_user)
 
         @asynccontextmanager
         async def mock_session_ctx():
@@ -304,31 +288,22 @@ class TestDailyIngestTask:
                 with patch(
                     "src.tasks.scheduled_tasks.ingest_papers_task"
                 ) as mock_ingest_task:
-                    mock_ingest_task.apply_async = mock_apply_async
-
                     result = daily_ingest_task()
 
-        # Should queue 3 tasks (2 from first user + 1 from second)
-        assert result["tasks_queued"] == 3
-        assert len(result["tasks"]) == 3
-
-        # Verify countdown stagger: 0, 30, 60
-        calls = mock_apply_async.call_args_list
-        assert calls[0].kwargs["countdown"] == 0
-        assert calls[1].kwargs["countdown"] == 30
-        assert calls[2].kwargs["countdown"] == 60
+        assert result["status"] == "completed"
+        assert result["tasks_queued"] == 0
+        assert result["tasks"] == []
+        mock_ingest_task.apply_async.assert_not_called()
 
     def test_uses_default_max_results_when_not_specified(self):
         """Verify the task uses default max_results of 10 when not specified."""
         from src.tasks.scheduled_tasks import daily_ingest_task
         from src.models.user import User
-        import uuid
 
-        user = Mock(spec=User)
-        user.id = uuid.uuid4()
-        user.clerk_id = "user_no_max123"
-        user.email = "nomax@example.com"
-        user.preferences = {
+        system_user = Mock(spec=User)
+        system_user.id = "system-id"
+        system_user.clerk_id = "system"
+        system_user.preferences = {
             "arxiv_searches": [
                 {
                     "name": "Simple Search",
@@ -342,7 +317,7 @@ class TestDailyIngestTask:
         mock_session = AsyncMock()
 
         mock_repo = AsyncMock()
-        mock_repo.get_users_with_searches = AsyncMock(return_value=[user])
+        mock_repo.get_by_clerk_id = AsyncMock(return_value=system_user)
 
         mock_task = Mock()
         mock_task.id = "queued-task-id"

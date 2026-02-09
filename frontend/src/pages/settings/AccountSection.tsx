@@ -78,19 +78,11 @@ export default function AccountSection() {
       {me && (
         <div className="mb-6 p-4 bg-stone-50 rounded-lg border border-stone-100">
           <h3 className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">Usage</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-stone-500">Daily chats</p>
-              <p className="text-sm font-medium text-stone-800">
-                {me.chats_used_today} / {me.daily_chat_limit ?? 'Unlimited'}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-stone-500">Saved searches</p>
-              <p className="text-sm font-medium text-stone-800">
-                {me.search_slots_used} / {me.search_slot_limit}
-              </p>
-            </div>
+          <div>
+            <p className="text-xs text-stone-500">Daily chats</p>
+            <p className="text-sm font-medium text-stone-800">
+              {me.chats_used_today} / {me.daily_chat_limit ?? 'Unlimited'}
+            </p>
           </div>
         </div>
       )}

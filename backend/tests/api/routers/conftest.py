@@ -194,7 +194,6 @@ def mock_user_repo():
     repo = AsyncMock()
     repo.update_preferences = AsyncMock()
     repo.get_or_create = AsyncMock(return_value=(Mock(), False))
-    repo.get_users_with_searches = AsyncMock(return_value=[])
     return repo
 
 
