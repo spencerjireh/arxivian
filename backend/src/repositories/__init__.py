@@ -7,7 +7,6 @@ from src.repositories.conversation_repository import ConversationRepository
 from src.repositories.agent_execution_repository import AgentExecutionRepository
 from src.repositories.user_repository import UserRepository
 from src.repositories.task_execution_repository import TaskExecutionRepository
-from src.repositories.report_repository import ReportRepository
 
 __all__ = [
     "PaperRepository",
@@ -17,5 +16,4 @@ __all__ = [
     "AgentExecutionRepository",
     "UserRepository",
     "TaskExecutionRepository",
-    "ReportRepository",
 ]

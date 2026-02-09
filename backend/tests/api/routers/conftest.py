@@ -189,18 +189,6 @@ def mock_task_exec_repo():
 
 
 @pytest.fixture
-def mock_report_repo():
-    """Create a mock ReportRepository."""
-    repo = AsyncMock()
-    repo.create = AsyncMock()
-    repo.get_by_id = AsyncMock(return_value=None)
-    repo.list_reports = AsyncMock(return_value=([], 0))
-    repo.get_or_create_daily_report = AsyncMock()
-    repo.append_ingest_result = AsyncMock()
-    return repo
-
-
-@pytest.fixture
 def mock_user_repo():
     """Create a mock UserRepository."""
     repo = AsyncMock()
@@ -220,7 +208,6 @@ def _create_test_client(
     mock_embeddings_client,
     mock_settings,
     mock_task_exec_repo,
-    mock_report_repo,
     mock_user_repo,
     *,
     mock_user=None,
@@ -245,7 +232,6 @@ def _create_test_client(
         enforce_chat_limit,
         get_redis,
         get_task_execution_repository,
-        get_report_repository,
         get_user_repository,
         verify_api_key,
     )
@@ -265,7 +251,6 @@ def _create_test_client(
     app.dependency_overrides[get_embeddings_client] = lambda: mock_embeddings_client
     app.dependency_overrides[get_settings] = lambda: mock_settings
     app.dependency_overrides[get_task_execution_repository] = lambda: mock_task_exec_repo
-    app.dependency_overrides[get_report_repository] = lambda: mock_report_repo
     app.dependency_overrides[get_user_repository] = lambda: mock_user_repo
     # Always override Redis and chat guard to avoid needing a real Redis in API tests
     app.dependency_overrides[get_redis] = lambda: AsyncMock()
@@ -295,7 +280,6 @@ def client(
     mock_settings,
     mock_user,
     mock_task_exec_repo,
-    mock_report_repo,
     mock_user_repo,
 ):
     """Create TestClient with all dependencies overridden including auth."""
@@ -309,7 +293,6 @@ def client(
         mock_embeddings_client,
         mock_settings,
         mock_task_exec_repo,
-        mock_report_repo,
         mock_user_repo,
         mock_user=mock_user,
     )
@@ -326,7 +309,6 @@ def unauthenticated_client(
     mock_embeddings_client,
     mock_settings,
     mock_task_exec_repo,
-    mock_report_repo,
     mock_user_repo,
 ):
     """Create TestClient WITHOUT auth override to test 401 responses."""
@@ -340,7 +322,6 @@ def unauthenticated_client(
         mock_embeddings_client,
         mock_settings,
         mock_task_exec_repo,
-        mock_report_repo,
         mock_user_repo,
     )
 

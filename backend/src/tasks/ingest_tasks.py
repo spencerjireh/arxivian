@@ -1,8 +1,6 @@
 """Background tasks for paper ingestion."""
 
-from datetime import datetime, timezone
 from typing import Any, Optional
-from uuid import UUID
 
 from src.celery_app import celery_app
 from src.database import AsyncSessionLocal
@@ -13,41 +11,6 @@ from src.tasks.tracing import trace_task
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
-
-
-def _persist_report(user_id: str, search_name: str, query: str, result: dict) -> None:
-    """Best-effort persistence of ingest result to user's daily report.
-
-    Opens a separate DB session so failures here never affect the ingest task.
-    """
-
-    async def _run() -> None:
-        from src.repositories.report_repository import ReportRepository
-
-        async with AsyncSessionLocal() as session:
-            repo = ReportRepository(session)
-            report = await repo.get_or_create_daily_report(
-                user_id=UUID(user_id),
-                report_date=datetime.now(timezone.utc).date(),
-            )
-            await repo.append_ingest_result(
-                report=report,
-                search_name=search_name,
-                query=query,
-                result=result,
-            )
-            await session.commit()
-
-    try:
-        run_async(_run())
-        log.debug("report_persisted", user_id=user_id, search_name=search_name)
-    except Exception as exc:
-        log.warning(
-            "report_persist_failed",
-            user_id=user_id,
-            search_name=search_name,
-            error=str(exc),
-        )
 
 
 @celery_app.task(
@@ -68,8 +31,6 @@ def ingest_papers_task(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     force_reprocess: bool = False,
-    user_id: Optional[str] = None,
-    search_name: Optional[str] = None,
 ) -> dict[str, Any]:
     """Background task for paper ingestion.
 
@@ -84,8 +45,6 @@ def ingest_papers_task(
         start_date: Optional start date filter (YYYY-MM-DD)
         end_date: Optional end date filter (YYYY-MM-DD)
         force_reprocess: Whether to re-process existing papers
-        user_id: Optional user ID for report persistence (from scheduled tasks)
-        search_name: Optional search name for report persistence
 
     Returns:
         Dictionary with ingestion results
@@ -103,7 +62,7 @@ def ingest_papers_task(
 
     async def _run() -> dict[str, Any]:
         async with AsyncSessionLocal() as session:
-            service = get_ingest_service(session, ingested_by=user_id)
+            service = get_ingest_service(session)
             request = IngestRequest(
                 query=query,
                 max_results=max_results,
@@ -143,13 +102,6 @@ def ingest_papers_task(
                         "chunks_created": result.get("chunks_created", 0),
                     }
                 )
-
-            # Persist to user report if called from scheduled task
-            if user_id and search_name:
-                try:
-                    _persist_report(user_id, search_name, query, result)
-                except Exception:
-                    pass  # _persist_report logs internally; never fail the task
 
             return result
         except Exception as exc:

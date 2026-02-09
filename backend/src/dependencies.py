@@ -22,7 +22,6 @@ from src.repositories.search_repository import SearchRepository
 from src.repositories.conversation_repository import ConversationRepository
 from src.repositories.user_repository import UserRepository
 from src.repositories.task_execution_repository import TaskExecutionRepository
-from src.repositories.report_repository import ReportRepository
 from src.repositories.usage_counter_repository import UsageCounterRepository
 from src.models.user import User
 from src.config import Settings, get_settings
@@ -120,19 +119,6 @@ def get_task_execution_repository(db: DbSession) -> TaskExecutionRepository:
 
 
 TaskExecRepoDep = Annotated[TaskExecutionRepository, Depends(get_task_execution_repository)]
-
-
-# ============================================================================
-# Report Repository
-# ============================================================================
-
-
-def get_report_repository(db: DbSession) -> ReportRepository:
-    """Get ReportRepository with database session."""
-    return ReportRepository(db)
-
-
-ReportRepoDep = Annotated[ReportRepository, Depends(get_report_repository)]
 
 
 # ============================================================================

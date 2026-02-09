@@ -64,8 +64,6 @@ def daily_ingest_task() -> dict[str, Any]:
                             "query": query,
                             "categories": search.get("categories"),
                             "max_results": search.get("max_results", 10),
-                            "user_id": str(user.id),
-                            "search_name": search_name,
                         },
                         countdown=task_index * STAGGER_SECONDS,
                         task_id=det_id,

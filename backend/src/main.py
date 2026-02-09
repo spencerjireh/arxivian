@@ -13,7 +13,6 @@ from src.routers import (
     stream,
     papers,
     conversations,
-    reports,
     ops,
     feedback,
     tasks,
@@ -111,7 +110,6 @@ app.include_router(search.router, prefix="/api/v1", tags=["Search"])
 app.include_router(stream.router, prefix="/api/v1", tags=["Stream"])
 app.include_router(conversations.router, prefix="/api/v1", tags=["Conversations"])
 app.include_router(papers.router, prefix="/api/v1", tags=["Papers"])
-app.include_router(reports.router, prefix="/api/v1", tags=["Reports"])
 app.include_router(ops.router, prefix="/api/v1", tags=["Ops"])
 app.include_router(feedback.router, prefix="/api/v1", tags=["Feedback"])
 app.include_router(tasks.router, prefix="/api/v1", tags=["Tasks"])
@@ -140,7 +138,6 @@ async def root():
             "stream": "/api/v1/stream",
             "papers": "/api/v1/papers",
             "conversations": "/api/v1/conversations",
-            "reports": "/api/v1/reports",
             "ops": "/api/v1/ops",
             "tasks": "/api/v1/tasks",
             "preferences": "/api/v1/preferences",
