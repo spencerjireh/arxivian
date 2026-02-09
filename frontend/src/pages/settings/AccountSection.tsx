@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser, useClerk } from '@clerk/clerk-react'
+import clsx from 'clsx'
 import { LogOut, Trash2 } from 'lucide-react'
 import Button from '../../components/ui/Button'
 import { useUserStore } from '../../stores/userStore'
@@ -62,7 +63,7 @@ export default function AccountSection() {
           <div className="flex items-center gap-2">
             <p className="text-sm font-medium text-stone-900">{displayName}</p>
             {me && (
-              <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${me.tier === 'pro' ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-600'}`}>
+              <span className={clsx('inline-block px-2 py-0.5 text-xs font-medium rounded-full', me.tier === 'pro' ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-600')}>
                 {me.tier === 'pro' ? 'Pro' : 'Free'}
               </span>
             )}

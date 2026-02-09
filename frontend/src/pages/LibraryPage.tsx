@@ -77,7 +77,7 @@ export default function LibraryPage() {
           value={categoryInput}
           onChange={(e) => handleCategoryChange(e.target.value)}
           placeholder="Filter by category..."
-          className={`${selectClass} w-48`}
+          className={clsx(selectClass, 'w-48')}
         />
 
         <div className="inline-flex rounded-lg overflow-hidden border border-stone-200">

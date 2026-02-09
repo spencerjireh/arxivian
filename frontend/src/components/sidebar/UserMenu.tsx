@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser, useClerk } from '@clerk/clerk-react'
+import clsx from 'clsx'
 import { ChevronUp, LogOut, Trash2 } from 'lucide-react'
 import { useUserStore } from '../../stores/userStore'
 
@@ -130,7 +131,7 @@ export default function UserMenu() {
           </p>
         </div>
         <ChevronUp
-          className={`w-4 h-4 text-stone-400 transition-transform ${isOpen ? '' : 'rotate-180'}`}
+          className={clsx('w-4 h-4 text-stone-400 transition-transform', !isOpen && 'rotate-180')}
           strokeWidth={1.5}
         />
       </button>
