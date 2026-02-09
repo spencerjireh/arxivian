@@ -1,4 +1,4 @@
-import { screen, fireEvent } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { renderWithProviders } from '../../../helpers/renderWithProviders'
 import PaperCard from '../../../../src/components/library/PaperCard'
 import type { PaperListItem } from '../../../../src/types/api'
@@ -22,15 +22,9 @@ const samplePaper: PaperListItem = {
 }
 
 describe('PaperCard', () => {
-  const onDelete = vi.fn()
-
-  beforeEach(() => {
-    onDelete.mockClear()
-  })
-
   it('renders title, authors, arXiv ID, and categories', () => {
     renderWithProviders(
-      <PaperCard paper={samplePaper} onDelete={onDelete} isDeleting={false} />,
+      <PaperCard paper={samplePaper} />,
     )
 
     expect(screen.getByText('Attention Is All You Need')).toBeInTheDocument()
@@ -40,45 +34,9 @@ describe('PaperCard', () => {
     expect(screen.getByText('cs.AI')).toBeInTheDocument()
   })
 
-  it('shows confirm/cancel on delete click', () => {
-    renderWithProviders(
-      <PaperCard paper={samplePaper} onDelete={onDelete} isDeleting={false} />,
-    )
-
-    const deleteButton = screen.getByLabelText('Delete paper')
-    fireEvent.click(deleteButton)
-
-    expect(screen.getByText('Confirm')).toBeInTheDocument()
-    expect(screen.getByText('Cancel')).toBeInTheDocument()
-  })
-
-  it('calls onDelete with correct ID on confirm', () => {
-    renderWithProviders(
-      <PaperCard paper={samplePaper} onDelete={onDelete} isDeleting={false} />,
-    )
-
-    fireEvent.click(screen.getByLabelText('Delete paper'))
-    fireEvent.click(screen.getByText('Confirm'))
-
-    expect(onDelete).toHaveBeenCalledWith('2401.00001')
-  })
-
-  it('hides confirmation on cancel', () => {
-    renderWithProviders(
-      <PaperCard paper={samplePaper} onDelete={onDelete} isDeleting={false} />,
-    )
-
-    fireEvent.click(screen.getByLabelText('Delete paper'))
-    expect(screen.getByText('Confirm')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByText('Cancel'))
-    expect(screen.queryByText('Confirm')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Delete paper')).toBeInTheDocument()
-  })
-
   it('has target="_blank" and no rel attribute on PDF link', () => {
     renderWithProviders(
-      <PaperCard paper={samplePaper} onDelete={onDelete} isDeleting={false} />,
+      <PaperCard paper={samplePaper} />,
     )
 
     const pdfLink = screen.getByText('PDF').closest('a')

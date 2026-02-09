@@ -10,7 +10,7 @@ vi.mock('../../../src/components/auth/ProtectedRoute', () => ({
 }))
 
 describe('App routes', () => {
-  it('redirects unknown paths to /', async () => {
+  it('shows 404 page for unknown paths', async () => {
     const { routes } = await import('../../../src/App')
 
     const router = createMemoryRouter(routes, {
@@ -20,7 +20,7 @@ describe('App routes', () => {
     render(<RouterProvider router={router} />)
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/')
+      expect(screen.getByText('Page not found')).toBeInTheDocument()
     })
   })
 
@@ -34,7 +34,7 @@ describe('App routes', () => {
     render(<RouterProvider router={router} />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Navigate the arXiv/)).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /Navigate the arXiv/ })).toBeInTheDocument()
     })
   })
 })

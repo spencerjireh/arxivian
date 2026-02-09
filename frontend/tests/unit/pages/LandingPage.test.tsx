@@ -15,7 +15,7 @@ describe('LandingPage', () => {
   it('renders hero and Get started CTA when unauthenticated', () => {
     renderWithProviders(<LandingPage />)
 
-    expect(screen.getByText(/Navigate the arXiv/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Navigate the arXiv/ })).toBeInTheDocument()
     // "Get started" appears in both nav and hero CTA
     const buttons = screen.getAllByText('Get started')
     expect(buttons.length).toBeGreaterThanOrEqual(1)

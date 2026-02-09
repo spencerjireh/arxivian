@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 
 import ErrorBoundary from '../../../../src/components/ui/ErrorBoundary'
 
@@ -37,6 +37,23 @@ describe('ErrorBoundary', () => {
 
     expect(screen.getByText('something went wrong')).toBeInTheDocument()
     expect(screen.queryByText('child content')).not.toBeInTheDocument()
+  })
+
+  it('calls render-prop fallback with error and reset function', () => {
+    render(
+      <ErrorBoundary fallback={({ error, resetErrorBoundary }) => (
+        <div>
+          <p>{error.message}</p>
+          <button onClick={resetErrorBoundary}>reset</button>
+        </div>
+      )}>
+        <ThrowingChild shouldThrow={true} />
+      </ErrorBoundary>
+    )
+
+    expect(screen.getByText('test error')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'reset' })).toBeInTheDocument()
+    fireEvent.click(screen.getByText('reset'))
   })
 
   it('calls componentDidCatch and logs the error', () => {

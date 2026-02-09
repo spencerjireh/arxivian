@@ -12,3 +12,15 @@ const localStorageMock: Storage = {
 }
 
 Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock })
+
+// Provide document.fonts for EquationConstellation in jsdom
+Object.defineProperty(document, 'fonts', {
+  value: { ready: Promise.resolve() },
+})
+
+// Provide ResizeObserver for EquationConstellation in jsdom
+globalThis.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
