@@ -11,6 +11,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 import RouteErrorPage from './pages/RouteErrorPage'
 
 const LandingPage = lazy(() => import('./pages/LandingPage'))
+const PricingPage = lazy(() => import('./pages/PricingPage'))
 const LibraryPage = lazy(() => import('./pages/LibraryPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
@@ -42,6 +43,15 @@ export const routes: RouteObject[] = [
   {
     path: '/sign-up',
     element: <SignUpPage />,
+  },
+  {
+    path: '/pricing',
+    element: (
+      <Suspense fallback={<PageFallback />}>
+        <PricingPage />
+      </Suspense>
+    ),
+    errorElement: <RouteErrorPage />,
   },
   {
     path: '/sso-callback',
