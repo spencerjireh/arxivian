@@ -275,7 +275,7 @@ export default function LandingPage() {
 
     tl.to('.hero-badge-text', {
       scrambleText: {
-        text: 'AI-powered research',
+        text: 'Research, accelerated',
         chars: 'arxiv0123456789',
         speed: 0.4,
         revealDelay: 0.3,
@@ -347,7 +347,7 @@ export default function LandingPage() {
           <div className="max-w-3xl mx-auto">
             <div className="mb-6">
               <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stone-100 text-stone-600 text-xs font-medium tracking-wide uppercase">
-                <span className="hero-badge-text">AI-powered research</span>
+                <span className="hero-badge-text">Research, accelerated</span>
               </span>
             </div>
 

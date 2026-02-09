@@ -7,7 +7,7 @@ Agentic RAG system for working with arXiv papers. Chat with an AI agent that can
 - **Backend**: FastAPI, Python 3.11, async SQLAlchemy
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS v4
 - **Database**: PostgreSQL 16 + pgvector
-- **AI/ML**: LangGraph agent, LiteLLM (model routing), Jina Embeddings v3
+- **AI/Agent**: LangGraph agent, LiteLLM (model routing), Jina Embeddings v3
 - **Infra**: Celery + Redis (async tasks), Clerk (auth), Langfuse (observability)
 
 ## Quick Start
