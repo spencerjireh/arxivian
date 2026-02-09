@@ -36,7 +36,7 @@ class IngestService:
         chunking_service: ChunkingService,
         paper_repository: PaperRepository,
         chunk_repository: ChunkRepository,
-        user_id: Optional[str] = None,
+        ingested_by: Optional[str] = None,
     ):
         self.arxiv_client = arxiv_client
         self.pdf_parser = pdf_parser
@@ -44,7 +44,7 @@ class IngestService:
         self.chunking_service = chunking_service
         self.paper_repository = paper_repository
         self.chunk_repository = chunk_repository
-        self.user_id = user_id
+        self.ingested_by = ingested_by
 
     async def ingest_papers(self, request: IngestRequest) -> IngestResponse:
         """
@@ -142,16 +142,8 @@ class IngestService:
         arxiv_id = paper_meta.arxiv_id
         session = self.paper_repository.session
 
-        # Resolve owner for scoped lookups
-        from uuid import UUID as _UUID
-        owner_id = self.user_id
-        if owner_id is None:
-            from src.tiers import get_system_user_id
-            owner_id = str(get_system_user_id())
-        owner_uuid = _UUID(owner_id) if isinstance(owner_id, str) else owner_id
-
-        # Quick check if exists for this user (read-only, outside transaction)
-        existing = await self.paper_repository.get_by_arxiv_id(arxiv_id, user_id=owner_uuid)
+        # Quick check if paper already exists globally (read-only, outside transaction)
+        existing = await self.paper_repository.get_by_arxiv_id(arxiv_id)
         if existing and not force_reprocess:
             log.debug("paper skipped (exists)", arxiv_id=arxiv_id)
             return None
@@ -203,7 +195,7 @@ class IngestService:
             # Re-check with locking to prevent race conditions
             try:
                 existing_locked = await self.paper_repository.get_by_arxiv_id_for_update(
-                    arxiv_id, user_id=owner_uuid
+                    arxiv_id
                 )
             except OperationalError:
                 # Another transaction has this paper locked - skip
@@ -218,7 +210,7 @@ class IngestService:
             # Create or update paper record
             paper_data = {
                 "arxiv_id": arxiv_id,
-                "user_id": owner_id,
+                "ingested_by": self.ingested_by,
                 "title": paper_meta.title,
                 "authors": paper_meta.authors,
                 "abstract": paper_meta.abstract,
@@ -362,10 +354,7 @@ class IngestService:
         offset: int = 0,
     ) -> tuple[list[dict], int]:
         """List papers with optional filters. Returns (papers, total_count)."""
-        from uuid import UUID as _UUID
-
         category = categories[0] if categories else None
-        user_id = _UUID(self.user_id) if self.user_id else None
 
         papers, total = await self.paper_repository.get_all(
             offset=offset,
@@ -375,7 +364,6 @@ class IngestService:
             category_filter=category,
             start_date=start_date,
             end_date=end_date,
-            user_id=user_id,
         )
 
         return [

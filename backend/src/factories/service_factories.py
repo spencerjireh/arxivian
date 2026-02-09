@@ -70,7 +70,7 @@ def get_pdf_parser() -> PDFParser:
 
 
 def get_ingest_service(
-    db_session: AsyncSession, user_id: Optional[str] = None
+    db_session: AsyncSession, ingested_by: Optional[str] = None
 ) -> IngestService:
     """
     Create IngestService with dependencies.
@@ -79,7 +79,7 @@ def get_ingest_service(
 
     Args:
         db_session: Database session
-        user_id: Owner for newly created papers (defaults to system user)
+        ingested_by: Audit trail -- user who triggered the ingestion
 
     Returns:
         IngestService instance
@@ -98,7 +98,7 @@ def get_ingest_service(
         chunking_service=chunking_service,
         paper_repository=paper_repository,
         chunk_repository=chunk_repository,
-        user_id=user_id,
+        ingested_by=ingested_by,
     )
 
 
@@ -154,7 +154,7 @@ def get_agent_service(
 
     # Conditionally create services based on tier policy
     user_id_str = str(user_id) if user_id else None
-    ingest_service = get_ingest_service(db_session, user_id=user_id_str) if can_ingest else None
+    ingest_service = get_ingest_service(db_session, ingested_by=user_id_str) if can_ingest else None
     arxiv_client = get_arxiv_client() if can_search_arxiv else None
 
     # Paper repository: get from ingest_service if available, otherwise create directly

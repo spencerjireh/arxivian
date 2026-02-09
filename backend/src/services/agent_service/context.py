@@ -130,10 +130,10 @@ class AgentContext:
                 self.tool_registry.register(ArxivSearchTool(arxiv_client=arxiv_client))
             if paper_repository:
                 self.tool_registry.register(
-                    ExploreCitationsTool(paper_repository=paper_repository, user_id=user_id)
+                    ExploreCitationsTool(paper_repository=paper_repository)
                 )
                 self.tool_registry.register(
                     SummarizePaperTool(
-                        paper_repository=paper_repository, llm_client=llm_client, user_id=user_id
+                        paper_repository=paper_repository, llm_client=llm_client
                     )
                 )

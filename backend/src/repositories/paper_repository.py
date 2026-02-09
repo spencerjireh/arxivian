@@ -2,11 +2,9 @@
 
 from typing import Optional, List, Literal
 from datetime import datetime, timezone
-from uuid import UUID
 from sqlalchemy import select, update, delete, func, desc, asc, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.paper import Paper
-from src.tiers import get_system_user_id
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -18,13 +16,6 @@ class PaperRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    def _ownership_filter(self, user_id: UUID | None):
-        """System content for anon, system + own for authenticated."""
-        system_id = get_system_user_id()
-        if user_id is None:
-            return Paper.user_id == system_id
-        return Paper.user_id.in_([user_id, system_id])
-
     async def get_by_id(self, paper_id: str) -> Optional[Paper]:
         """Get paper by UUID."""
         log.debug("query paper by id", paper_id=paper_id)
@@ -33,21 +24,16 @@ class PaperRepository:
         log.debug("query result", found=paper is not None)
         return paper
 
-    async def get_by_arxiv_id(
-        self, arxiv_id: str, user_id: UUID | None = None
-    ) -> Optional[Paper]:
-        """Get paper by arXiv ID, optionally scoped to user + system ownership."""
+    async def get_by_arxiv_id(self, arxiv_id: str) -> Optional[Paper]:
+        """Get paper by arXiv ID."""
         log.debug("query paper by arxiv_id", arxiv_id=arxiv_id)
         stmt = select(Paper).where(Paper.arxiv_id == arxiv_id)
-        stmt = stmt.where(self._ownership_filter(user_id))
         result = await self.session.execute(stmt)
         paper = result.scalar_one_or_none()
         log.debug("query result", found=paper is not None)
         return paper
 
-    async def get_by_arxiv_id_for_update(
-        self, arxiv_id: str, user_id: UUID | None = None
-    ) -> Optional[Paper]:
+    async def get_by_arxiv_id_for_update(self, arxiv_id: str) -> Optional[Paper]:
         """
         Get paper by arXiv ID with row-level lock.
 
@@ -56,7 +42,6 @@ class PaperRepository:
 
         Args:
             arxiv_id: arXiv paper ID
-            user_id: If provided, scope to this user's papers
 
         Returns:
             Paper if found, None otherwise
@@ -66,8 +51,6 @@ class PaperRepository:
         """
         log.debug("query paper by arxiv_id with lock", arxiv_id=arxiv_id)
         stmt = select(Paper).where(Paper.arxiv_id == arxiv_id)
-        if user_id is not None:
-            stmt = stmt.where(Paper.user_id == user_id)
         result = await self.session.execute(stmt.with_for_update(nowait=True))
         paper = result.scalar_one_or_none()
         log.debug("query result with lock", found=paper is not None)
@@ -138,7 +121,6 @@ class PaperRepository:
         query: Optional[str] = None,
         sort_by: Literal["created_at", "published_date", "updated_at"] = "created_at",
         sort_order: Literal["asc", "desc"] = "desc",
-        user_id: UUID | None = None,
     ) -> tuple[List[Paper], int]:
         """
         Get paginated list of papers with optional filters.
@@ -174,9 +156,6 @@ class PaperRepository:
             nonlocal stmt, count_stmt
             stmt = stmt.where(condition)
             count_stmt = count_stmt.where(condition)
-
-        # Ownership filter: anon sees system only, authenticated sees system + own
-        apply_filter(self._ownership_filter(user_id))
 
         if processed_only is not None:
             apply_filter(Paper.pdf_processed == processed_only)
@@ -236,7 +215,7 @@ class PaperRepository:
             log.info("paper deleted", paper_id=paper_id)
         return deleted
 
-    async def delete_by_arxiv_id(self, arxiv_id: str, user_id: UUID | None = None) -> bool:
+    async def delete_by_arxiv_id(self, arxiv_id: str) -> bool:
         """
         Delete a paper by arXiv ID. Caller is responsible for committing the transaction.
 
@@ -244,14 +223,11 @@ class PaperRepository:
 
         Args:
             arxiv_id: arXiv ID of the paper to delete
-            user_id: If provided, only delete if owned by this user or system
 
         Returns:
             True if paper was deleted, False if not found
         """
         stmt = delete(Paper).where(Paper.arxiv_id == arxiv_id)
-        if user_id is not None:
-            stmt = stmt.where(self._ownership_filter(user_id))
         result = await self.session.execute(stmt)
         await self.session.flush()
         deleted = (result.rowcount or 0) > 0

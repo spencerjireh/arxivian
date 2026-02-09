@@ -11,14 +11,14 @@ class Paper(Base):
 
     __tablename__ = "papers"
     __table_args__ = (
-        UniqueConstraint("user_id", "arxiv_id", name="uq_papers_user_arxiv"),
+        UniqueConstraint("arxiv_id", name="uq_papers_arxiv_id"),
     )
 
     # Primary key
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
-    # Ownership
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    # Audit
+    ingested_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
 
     # arXiv metadata
     arxiv_id = Column(String(50), nullable=False, index=True)
