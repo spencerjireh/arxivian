@@ -10,8 +10,9 @@ from src.schemas.ops import (
     UpdateTierRequest,
     UpdateTierResponse,
 )
+from src.schemas.papers import DeletePaperResponse
 from src.schemas.preferences import UpdateArxivSearchesRequest, UserPreferences
-from src.dependencies import PaperRepoDep, DbSession, ApiKeyCheck, UserRepoDep
+from src.dependencies import PaperRepoDep, ChunkRepoDep, DbSession, ApiKeyCheck, UserRepoDep
 from src.exceptions import ResourceNotFoundError
 from src.tiers import SYSTEM_USER_CLERK_ID, UserTier
 from src.utils.logger import get_logger
@@ -125,4 +126,30 @@ async def update_system_searches(
     return UserPreferences(
         arxiv_searches=request.arxiv_searches,
         notification_settings=current_prefs.get("notification_settings", {}),
+    )
+
+
+@router.delete("/papers/{arxiv_id}", response_model=DeletePaperResponse)
+async def delete_paper(
+    arxiv_id: str,
+    paper_repo: PaperRepoDep,
+    chunk_repo: ChunkRepoDep,
+    db: DbSession,
+    _api_key: ApiKeyCheck,
+) -> DeletePaperResponse:
+    """Delete a paper and its chunks. Protected by API key."""
+    paper = await paper_repo.get_by_arxiv_id(arxiv_id)
+    if not paper:
+        raise ResourceNotFoundError("Paper", arxiv_id)
+
+    chunk_count = await chunk_repo.count_by_paper_id(str(paper.id))
+    title = paper.title
+
+    await paper_repo.delete_by_arxiv_id(arxiv_id)
+    await db.commit()
+
+    return DeletePaperResponse(
+        arxiv_id=arxiv_id,
+        title=title,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
+        chunks_deleted=chunk_count,
     )

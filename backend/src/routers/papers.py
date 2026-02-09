@@ -8,15 +8,8 @@ from src.schemas.papers import (
     PaperResponse,
     PaperListResponse,
     PaperListItem,
-    DeletePaperResponse,
 )
-from src.dependencies import (
-    PaperRepoDep,
-    ChunkRepoDep,
-    DbSession,
-    CurrentUserOptional,
-    CurrentUserRequired,
-)
+from src.dependencies import PaperRepoDep
 
 router = APIRouter()
 
@@ -24,7 +17,6 @@ router = APIRouter()
 @router.get("/papers", response_model=PaperListResponse)
 async def list_papers(
     paper_repo: PaperRepoDep,
-    current_user: CurrentUserOptional,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     processed_only: Optional[bool] = None,
@@ -35,8 +27,7 @@ async def list_papers(
     sort_by: Literal["created_at", "published_date", "updated_at"] = "created_at",
     sort_order: Literal["asc", "desc"] = "desc",
 ) -> PaperListResponse:
-    """Get paginated list of papers. Anonymous sees system papers only."""
-    user_id = current_user.id if current_user else None
+    """Get paginated list of papers from the communal knowledge base."""
     papers, total = await paper_repo.get_all(
         offset=offset,
         limit=limit,
@@ -47,7 +38,6 @@ async def list_papers(
         end_date=end_date,
         sort_by=sort_by,
         sort_order=sort_order,
-        user_id=user_id,
     )
 
     paper_items = [PaperListItem.model_validate(p, from_attributes=True) for p in papers]
@@ -59,37 +49,9 @@ async def list_papers(
 async def get_paper_by_arxiv_id(
     arxiv_id: str,
     paper_repo: PaperRepoDep,
-    current_user: CurrentUserOptional,
 ) -> PaperResponse:
-    """Get a single paper by arXiv ID. Scoped to user + system ownership."""
-    user_id = current_user.id if current_user else None
-    paper = await paper_repo.get_by_arxiv_id(arxiv_id, user_id=user_id)
+    """Get a single paper by arXiv ID."""
+    paper = await paper_repo.get_by_arxiv_id(arxiv_id)
     if not paper:
         raise HTTPException(status_code=404, detail=f"Paper with arXiv ID '{arxiv_id}' not found")
     return PaperResponse.model_validate(paper, from_attributes=True)
-
-
-@router.delete("/papers/{arxiv_id}", response_model=DeletePaperResponse)
-async def delete_paper(
-    arxiv_id: str,
-    paper_repo: PaperRepoDep,
-    chunk_repo: ChunkRepoDep,
-    db: DbSession,
-    current_user: CurrentUserRequired,
-) -> DeletePaperResponse:
-    """Delete a paper and its chunks. Requires authentication."""
-    paper = await paper_repo.get_by_arxiv_id(arxiv_id, user_id=current_user.id)
-    if not paper:
-        raise HTTPException(status_code=404, detail=f"Paper with arXiv ID '{arxiv_id}' not found")
-
-    chunk_count = await chunk_repo.count_by_paper_id(str(paper.id))
-    title = paper.title
-
-    await paper_repo.delete_by_arxiv_id(arxiv_id, user_id=current_user.id)
-    await db.commit()
-
-    return DeletePaperResponse(
-        arxiv_id=arxiv_id,
-        title=title,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
-        chunks_deleted=chunk_count,
-    )
