@@ -1,59 +1,52 @@
 # Arxivian
 
- A full-stack app utilizing agentic RAG workflows for working with arXiv papers.
+Agentic RAG system for working with arXiv papers. Chat with an AI agent that can search, ingest, summarize, and explore citations across a shared knowledge base of research papers.
 
 ## Stack
 
-- **Backend**: FastAPI + Python 3.11
-- **Frontend**: React 19 + TypeScript + Vite
+- **Backend**: FastAPI, Python 3.11, async SQLAlchemy
+- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS v4
 - **Database**: PostgreSQL 16 + pgvector
-- **AI**: OpenAI + LangChain + LangGraph
+- **AI/ML**: LangGraph agent, LiteLLM (model routing), Jina Embeddings v3
+- **Infra**: Celery + Redis (async tasks), Clerk (auth), Langfuse (observability)
 
 ## Quick Start
 
-1. Install [just](https://github.com/casey/just):
-   ```bash
-   brew install just
-   ```
+Prerequisites: Docker, Docker Compose, [just](https://github.com/casey/just)
 
-2. Setup environment:
-   ```bash
-   just setup
-   ```
-   Edit `.env` and add your API keys.
+```bash
+just setup              # Create .env files from examples
+# Edit backend/.env and frontend/.env with your API keys
+just dev                # Build and start everything
+```
 
-3. Start the application:
-   ```bash
-   just dev
-   ```
+Access:
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8000/docs
+- Langfuse: http://localhost:3001
+- Flower (Celery): http://localhost:5555
 
-4. Access the application:
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:8000
-   - API Docs: http://localhost:8000/docs
+## Required API Keys
 
-## Hot Reload
-
-The development environment includes hot reloading for both services:
-
-- **Backend**: Auto-reloads on code changes (FastAPI with `--reload`)
-- **Frontend**: Vite HMR (Hot Module Replacement) for instant updates
-- Source code is mounted as volumes for live editing
+| Key | Where | Purpose |
+|-----|-------|---------|
+| `OPENAI_API_KEY` | `backend/.env` | LLM calls via LiteLLM |
+| `JINA_API_KEY` | `backend/.env` | Document embeddings |
+| `CLERK_SECRET_KEY` | `backend/.env` | JWT verification |
+| `VITE_CLERK_PUBLISHABLE_KEY` | `frontend/.env` | Clerk auth UI |
 
 ## Common Commands
 
 ```bash
-just --list      # Show all commands
-just dev         # Build and start with hot reload
-just up          # Start services (after building)
-just down        # Stop services
-just logs        # View logs
-just db-shell    # Access database
-just clean       # Clean up everything
+just dev                # Build and start with hot reload
+just down               # Stop services
+just logs               # View all logs
+just test               # Run all tests (spins up test containers)
+just test -k "pattern"  # Run tests matching pattern
+just lint               # Ruff linter
+just check              # Lint + typecheck
+just lint-frontend      # ESLint
+just test-frontend      # Vitest
+just db-shell           # PostgreSQL shell
+just --list             # All available commands
 ```
-
-## Requirements
-
-- Docker & Docker Compose
-- OpenAI API key
-- Jina AI API key

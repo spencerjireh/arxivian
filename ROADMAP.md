@@ -43,7 +43,7 @@ _Ensure requests can be bounded and cancelled._
 
 | Status | Item | Notes |
 |--------|------|-------|
-| [x] | Langfuse SDK integration | Basic setup with CallbackHandler and TracedLLMClient |
+| [x] | Langfuse SDK integration | Via LiteLLM global callbacks (`success_callback=["langfuse"]`) |
 | [x] | Session and user context in traces | session_id/user_id passed to CallbackHandler |
 | [x] | Trace ID in response metadata | Enables frontend feedback submission |
 | [x] | Feedback endpoint | POST /api/v1/feedback with trace_id linking |
@@ -55,8 +55,8 @@ _Ensure requests can be bounded and cancelled._
 | Status | Item | Notes |
 |--------|------|-------|
 | [x] | Unit tests for services and repositories |  |
-| [x] | Integration tests for API endpoints | ~450 tests (unit, API, integration) covering all 10 routers |
-| [ ] | Agent flow tests with mocked LLM | |
+| [x] | Integration tests for API endpoints | ~466 tests (unit, API, integration) covering all routers |
+| [x] | Agent flow tests with mocked LLM | Guardrail, tools, executor, edges tested with AsyncMock |
 
 ### Authentication
 
@@ -90,18 +90,18 @@ _Daily limits on expensive operations for free-tier users._
 
 ### LiteLLM Integration
 
-_Replace custom multi-provider LLM clients with LiteLLM's unified API. Providers: OpenAI and NVIDIA NIM. Eliminates duplicate client code, adds provider fallbacks, and simplifies observability. See `litellm-implementation-plan.md` for full migration plan._
+_Unified LLM client via LiteLLM with model prefix routing (e.g. `openai/gpt-4o-mini`). Replaced custom multi-provider clients._
 
 | Status | Item | Notes |
 |--------|------|-------|
-| [ ] | Implement LiteLLMClient replacing BaseLLMClient | Single client using `litellm.acompletion()` with same `generate_completion` / `generate_structured` interface |
-| [ ] | Remove OpenAIClient, ZAIClient, and InstrumentedLLMClient | LiteLLM handles provider-specific differences; ~400 lines of duplicate code removed |
-| [ ] | Migrate Langfuse tracing to LiteLLM callbacks | Use `success_callback=["langfuse"]` with per-call `metadata={"trace_id": ...}` for trace nesting; simplify TracedLLMClient to a thin Langfuse score/singleton module |
-| [ ] | Update config and factory | Replace per-provider API key fields with LiteLLM model list format; update `get_llm_client()` factory; add NVIDIA NIM config |
-| [ ] | Configure LiteLLM Router for fallbacks | Auto-failover between OpenAI and NVIDIA NIM with configurable retry policies and exponential backoff |
-| [ ] | Cost tracking per request | Use `litellm.completion_cost()` to log spend per conversation turn in metadata |
-| [ ] | Update tests | Migrate mocks from OpenAI/ZAI client interfaces to LiteLLM; update factory and service tests |
-| [ ] | Update frontend provider options | Replace ZAI with NVIDIA NIM in settings panel and model selector |
+| [x] | Implement LiteLLMClient replacing BaseLLMClient | Single client using `litellm.acompletion()` with `generate_completion` / `generate_stream` / `generate_structured` |
+| [x] | Remove OpenAIClient, ZAIClient, and InstrumentedLLMClient | All legacy clients removed |
+| [x] | Migrate Langfuse tracing to LiteLLM callbacks | `success_callback=["langfuse"]` configured in lifespan; trace nesting via `langfuse_utils.py` contextvars |
+| [x] | Update config and factory | `default_llm_model` / `allowed_llm_models` in LiteLLM format; `get_llm_client()` factory with model validation |
+| [ ] | Configure LiteLLM Router for fallbacks | Auto-failover between providers with retry policies |
+| [ ] | Cost tracking per request | Use `litellm.completion_cost()` to log spend per conversation turn |
+| [x] | Update tests | Tests mock LiteLLMClient via AsyncMock |
+| [x] | Update frontend provider options | NVIDIA NIM added in settings panel and model selector |
 
 ---
 
@@ -163,7 +163,7 @@ _Deferred from P0. Use mocked LLM responses for determinism._
 
 | Status | Item | Notes |
 |--------|------|-------|
-| [ ] | GitHub Actions workflow | lint, typecheck, test, build |
+| [x] | GitHub Actions workflow | ruff, ty, unit/API tests (backend); eslint, tsc, vitest (frontend) |
 | [ ] | Production deployment automation | Coolify docker-compose |
 
 ---
@@ -178,7 +178,7 @@ Scheduled tasks and performance optimization.
 |--------|------|-------|
 | [x] | Celery Beat integration | Running as Docker service |
 | [x] | Scheduled task: ingest papers | Daily 2am UTC via cron config |
-| [x] | Scheduled task: generate weekly reports | Weekly Monday 6am UTC (usage and health reports) |
+| [ ] | Scheduled task: generate weekly reports | Report model/router exist but no beat schedule entry yet |
 
 ### Performance
 
@@ -234,7 +234,6 @@ Items to consider for future releases. Not prioritized.
 
 ### Agent Tools
 - [x] `retrieve_chunks` - hybrid search over paper database
-- [x] `web_search` - DuckDuckGo API for recent information
 - [x] `ingest_papers` - agent-triggered paper ingestion from arXiv
 - [x] `list_papers` - query papers in database with filters
 - [x] `arxiv_search` - search arXiv directly without ingesting
@@ -258,9 +257,9 @@ Items to consider for future releases. Not prioritized.
 
 ### LLM Integration
 - [x] Abstract `BaseLLMClient` interface
-- [x] OpenAI client with structured outputs
-- [x] Z.AI client for GLM models
+- [x] LiteLLM client with model prefix routing (e.g. `openai/gpt-4o-mini`)
 - [x] Per-request provider/model selection
+- [x] Structured outputs via LiteLLM
 
 ### Conversation Management
 - [x] Multi-turn conversation persistence
@@ -277,14 +276,13 @@ Items to consider for future releases. Not prioritized.
 - [x] Responsive design with Framer Motion animations
 
 ### Observability
-- [x] Langfuse SDK integration (v3.0.0+)
-- [x] TracedLLMClient wrapper for LLM call tracing
-- [x] LangGraph CallbackHandler passed to astream_events
-- [x] Session and user context in CallbackHandler trace
+- [x] Langfuse tracing via LiteLLM global callbacks
+- [x] Trace context management via contextvars (`langfuse_utils.py`)
+- [x] Session and user context in traces
 - [x] Trace ID returned in response metadata
 - [x] Feedback endpoint (POST /api/v1/feedback) for user feedback scores
 - [x] Lifespan integration with graceful shutdown
-- [x] Unified trace hierarchy (LLM generations nested under graph trace via contextvars)
+- [x] Unified trace hierarchy (LLM generations nested under graph trace)
 - [x] Custom Langfuse scores (guardrail_score, retrieval_attempts)
 
 </details>
