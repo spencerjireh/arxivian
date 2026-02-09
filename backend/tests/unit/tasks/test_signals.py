@@ -138,6 +138,9 @@ class TestTaskStatusSignals:
         """Verify DB errors in status update are caught and logged."""
         from src.tasks.signals import _update_task_execution_status
 
-        with patch("src.database.AsyncSessionLocal", side_effect=Exception("DB error")):
-            # Should not raise
-            _update_task_execution_status("test-task", "started")
+        with patch("src.tasks.signals.log") as mock_log:
+            with patch("src.database.AsyncSessionLocal", side_effect=Exception("DB error")):
+                # Should not raise
+                _update_task_execution_status("test-task", "started")
+
+            mock_log.warning.assert_called_once()

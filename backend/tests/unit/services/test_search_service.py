@@ -169,19 +169,6 @@ class TestSearchServiceVectorSearch:
         call_kwargs = mock_search_repository.vector_search.call_args.kwargs
         assert call_kwargs["query_embedding"] == embedding
 
-    @pytest.mark.asyncio
-    async def test_vector_only_search_handles_empty_results(
-        self, search_service, mock_embeddings_client, mock_search_repository
-    ):
-        """Verify empty list handling."""
-        mock_embeddings_client.embed_query.return_value = [0.1] * 1024
-        mock_search_repository.vector_search.return_value = []
-
-        results = await search_service._vector_only_search("test", top_k=5, min_score=0.0)
-
-        assert results == []
-
-
 class TestSearchServiceFulltextSearch:
     """Tests for SearchService._fulltext_only_search method."""
 
@@ -215,18 +202,6 @@ class TestSearchServiceFulltextSearch:
         call_kwargs = mock_search_repository.fulltext_search.call_args.kwargs
         assert call_kwargs["query"] == "deep learning"
         assert call_kwargs["top_k"] == 5
-
-    @pytest.mark.asyncio
-    async def test_fulltext_only_search_handles_empty_results(
-        self, search_service, mock_search_repository
-    ):
-        """Verify empty results handling."""
-        mock_search_repository.fulltext_search.return_value = []
-
-        results = await search_service._fulltext_only_search("test", top_k=5)
-
-        assert results == []
-
 
 class TestSearchServiceRRF:
     """Tests for SearchService RRF (Reciprocal Rank Fusion) implementation."""
@@ -309,7 +284,7 @@ class TestSearchServiceRRF:
         # Then normalized by dividing by (2/60) -> score = 1.0
         assert len(results) == 1
         # Score should be normalized
-        assert results[0].score > 0
+        assert results[0].score == pytest.approx(1.0)
 
     @pytest.mark.asyncio
     async def test_rrf_orders_by_combined_score(

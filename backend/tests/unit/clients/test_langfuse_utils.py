@@ -53,6 +53,8 @@ class TestShutdownLangfuse:
     """Tests for shutdown_langfuse."""
 
     def test_shutdown_flushes_and_clears(self):
+        import src.clients.langfuse_utils as langfuse_utils
+
         mock_client = MagicMock()
 
         with patch("src.clients.langfuse_utils._langfuse_client", mock_client):
@@ -60,7 +62,13 @@ class TestShutdownLangfuse:
             mock_client.flush.assert_called_once()
             mock_client.shutdown.assert_called_once()
 
+        assert langfuse_utils._langfuse_client is None
+
     def test_shutdown_noop_when_no_client(self):
+        import src.clients.langfuse_utils as langfuse_utils
+
         with patch("src.clients.langfuse_utils._langfuse_client", None):
             # Should not raise
             shutdown_langfuse()
+
+        assert langfuse_utils._langfuse_client is None

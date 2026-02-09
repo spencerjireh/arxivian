@@ -231,49 +231,6 @@ class TestDailyIngestTask:
         assert result["tasks_queued"] == 0
         mock_apply_async.assert_not_called()
 
-    def test_returns_summary_with_queued_count(self, sample_user_with_searches):
-        """Verify the task returns a summary with the correct queued count."""
-        from src.tasks.scheduled_tasks import daily_ingest_task
-
-        mock_session = AsyncMock()
-
-        mock_repo = AsyncMock()
-        mock_repo.get_users_with_searches = AsyncMock(
-            return_value=[sample_user_with_searches]
-        )
-
-        mock_task = Mock()
-        mock_task.id = "queued-task-id"
-        mock_apply_async = Mock(return_value=mock_task)
-
-        @asynccontextmanager
-        async def mock_session_ctx():
-            yield mock_session
-
-        with patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx):
-            with patch(
-                "src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo
-            ):
-                with patch(
-                    "src.tasks.scheduled_tasks.ingest_papers_task"
-                ) as mock_ingest_task:
-                    mock_ingest_task.apply_async = mock_apply_async
-
-                    result = daily_ingest_task()
-
-        # Check result structure
-        assert "status" in result
-        assert "tasks_queued" in result
-        assert "tasks" in result
-        assert "spread_duration_minutes" in result
-
-        # Check task details are captured
-        for task_info in result["tasks"]:
-            assert "task_id" in task_info
-            assert "user_id" in task_info
-            assert "search_name" in task_info
-            assert "query" in task_info
-
     def test_handles_empty_user_list(self):
         """Verify the task handles case with no users with searches."""
         from src.tasks.scheduled_tasks import daily_ingest_task

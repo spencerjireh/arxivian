@@ -121,7 +121,7 @@ class TestSearchRepositoryVectorSearch:
             min_score=0.0,
         )
 
-        assert len(results) <= 2
+        assert len(results) == 2
 
     @pytest.mark.asyncio
     async def test_vector_search_respects_min_score(self, db_session, populated_db):
@@ -138,9 +138,8 @@ class TestSearchRepositoryVectorSearch:
             min_score=0.8,
         )
 
-        # All returned results should meet min_score threshold
-        for result in results:
-            assert result.score >= 0.8
+        # With min_score=0.8 and a query orthogonal to all embeddings, expect no results
+        assert len(results) == 0
 
     @pytest.mark.asyncio
     async def test_vector_search_returns_complete_result(self, db_session, populated_db):
@@ -159,13 +158,13 @@ class TestSearchRepositoryVectorSearch:
         assert len(results) == 1
         result = results[0]
 
+        assert result.arxiv_id == "2301.00001"
+        assert result.title == "Deep Learning for Image Recognition"
+        assert result.score > 0
+        assert result.vector_score > 0
+        assert "Image recognition" in result.chunk_text or "convolutional" in result.chunk_text
         assert result.chunk_id is not None
         assert result.paper_id is not None
-        assert result.arxiv_id is not None
-        assert result.title is not None
-        assert result.chunk_text is not None
-        assert result.score is not None
-        assert result.vector_score is not None
 
 
 class TestSearchRepositoryFulltextSearch:
@@ -246,4 +245,4 @@ class TestSearchRepositoryFulltextSearch:
             top_k=1,
         )
 
-        assert len(results) <= 1
+        assert len(results) == 1

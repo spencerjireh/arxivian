@@ -154,7 +154,7 @@ class TestIngestPapersTask:
         assert ingest_papers_task.max_retries == 3
         assert ingest_papers_task.autoretry_for == (Exception,)
         # retry_backoff and retry_jitter are set
-        assert hasattr(ingest_papers_task, "retry_backoff")
+        assert ingest_papers_task.retry_backoff is True
 
     def test_ingest_task_raises_exception_on_failure(self):
         """Verify the task raises exception on service failure (for retry)."""

@@ -148,6 +148,12 @@ class TestBulkIngestEndpoint:
         assert data["tasks_queued"] == 1
         assert len(data["task_ids"]) == 1
         mock_task_exec_repo.create.assert_called_once()
+        # Verify delay() was called with a query built from the arxiv IDs
+        self.mock_task.delay.assert_called_once()
+        call_kwargs = self.mock_task.delay.call_args.kwargs
+        assert "id:2301.00001" in call_kwargs["query"]
+        assert "id:2301.00002" in call_kwargs["query"]
+        assert call_kwargs["max_results"] == 2
 
     def test_ingest_by_search_query(self, client, mock_task_exec_repo):
         """Test ingestion by providing a search query."""
@@ -160,6 +166,11 @@ class TestBulkIngestEndpoint:
         data = response.json()
         assert data["tasks_queued"] == 1
         assert len(data["task_ids"]) == 1
+        # Verify delay() was called with the correct query and max_results
+        self.mock_task.delay.assert_called_once()
+        call_kwargs = self.mock_task.delay.call_args.kwargs
+        assert call_kwargs["query"] == "transformer attention mechanism"
+        assert call_kwargs["max_results"] == 5
 
     def test_ingest_both(self, client, mock_task_exec_repo):
         """Test ingestion with both arXiv IDs and search query queues two tasks."""

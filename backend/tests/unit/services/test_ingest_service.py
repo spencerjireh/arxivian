@@ -51,6 +51,7 @@ class TestIngestPapersErrorHandling:
         assert response.status == "failed"
         assert response.papers_fetched == 0
         assert len(response.errors) > 0
+        assert "API error" in str(response.errors[0])
 
     @pytest.mark.asyncio
     async def test_ingest_papers_collects_processing_errors(
@@ -106,6 +107,7 @@ class TestIngestByIds:
 
         assert response.status == "failed"
         assert len(response.errors) > 0
+        assert "API error" in str(response.errors[0])
 
 
 class TestProcessSinglePaper:

@@ -151,4 +151,4 @@ class TestGetPaperEndpoint:
 
         assert response.status_code == 200
         data = response.json()
-        assert "raw_text" in data
+        assert data["raw_text"] == "Raw text content of the paper."

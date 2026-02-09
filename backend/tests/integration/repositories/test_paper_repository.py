@@ -1,10 +1,13 @@
 """Integration tests for PaperRepository with real database."""
 
 import pytest
+import random
 import uuid
 from datetime import datetime, timezone
 
 from src.repositories.paper_repository import PaperRepository
+from src.repositories.chunk_repository import ChunkRepository
+from tests.integration.conftest import make_chunk_data
 
 
 class TestPaperRepositoryCRUD:
@@ -221,8 +224,9 @@ class TestPaperRepositoryProcessing:
     async def test_get_orphaned_papers(self, db_session, sample_paper_data):
         """Verify orphaned papers detection (papers with no chunks)."""
         repo = PaperRepository(session=db_session)
+        chunk_repo = ChunkRepository(session=db_session)
 
-        # Create a processed paper with no chunks
+        # Create a processed paper with no chunks (orphaned)
         processed_data = {
             **sample_paper_data,
             "pdf_processed": True,
@@ -230,7 +234,24 @@ class TestPaperRepositoryProcessing:
             "parser_used": "marker",
             "raw_text": "Text",
         }
-        paper = await repo.create(processed_data)
+        orphaned_paper = await repo.create(processed_data)
+
+        # Create a processed paper WITH chunks (non-orphaned)
+        random.seed(99)
+        embedding = [random.uniform(-1, 1) for _ in range(1024)]
+        non_orphaned_data = {
+            **sample_paper_data,
+            "arxiv_id": f"2301.{uuid.uuid4().hex[:5]}",
+            "pdf_processed": True,
+            "pdf_processing_date": datetime.now(timezone.utc),
+            "parser_used": "marker",
+            "raw_text": "Text with chunks",
+        }
+        non_orphaned_paper = await repo.create(non_orphaned_data)
+        chunk_data = make_chunk_data(non_orphaned_paper.id, non_orphaned_paper.arxiv_id, 0, embedding)
+        await chunk_repo.create_bulk([chunk_data])
 
         orphaned = await repo.get_orphaned_papers()
-        assert any(p.id == paper.id for p in orphaned)
+        orphaned_ids = [p.id for p in orphaned]
+        assert orphaned_paper.id in orphaned_ids
+        assert non_orphaned_paper.id not in orphaned_ids

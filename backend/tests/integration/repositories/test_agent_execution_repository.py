@@ -114,8 +114,8 @@ class TestAgentExecutionRepositoryPaused:
             iteration=1,
         )
 
-        # Create paused execution
-        paused = await repo.save_state(
+        # Create first paused execution
+        first_paused = await repo.save_state(
             session_id=session_id,
             state_snapshot={"iteration": 2},
             status="paused",
@@ -123,11 +123,23 @@ class TestAgentExecutionRepositoryPaused:
             pause_reason="User pause",
         )
 
+        # Create second (more recent) paused execution
+        second_paused = await repo.save_state(
+            session_id=session_id,
+            state_snapshot={"iteration": 3},
+            status="paused",
+            iteration=3,
+            pause_reason="Another pause",
+        )
+
         loaded = await repo.load_latest_paused(session_id)
 
         assert loaded is not None
-        assert loaded.id == paused.id
+        # Should return the most recent paused execution, not the first
+        assert loaded.id == second_paused.id
+        assert loaded.id != first_paused.id
         assert loaded.status == "paused"
+        assert loaded.iteration == 3
 
     @pytest.mark.asyncio
     async def test_load_latest_paused_no_paused_execution(self, db_session):
@@ -247,6 +259,9 @@ class TestAgentExecutionRepositoryQuery:
         executions = await repo.get_by_session(session_id, limit=2)
 
         assert len(executions) == 2
+        # Verify ordering: most recent first (desc created_at)
+        assert executions[0].iteration == 4
+        assert executions[1].iteration == 3
 
 
 class TestAgentExecutionRepositoryDelete:

@@ -149,8 +149,10 @@ class TestUpdateArxivSearchesEndpoint:
         )
 
         assert response.status_code == 200
-        # Verify update_preferences was called
+        # Verify update_preferences was called with the user object and preferences dict
         mock_user_repo.update_preferences.assert_called_once()
+        call_args = mock_user_repo.update_preferences.call_args
+        assert call_args[0][0].id == mock_user.id
         # Verify commit was called
         mock_db_session.commit.assert_called()
 

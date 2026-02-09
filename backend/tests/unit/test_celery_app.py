@@ -98,14 +98,14 @@ class TestCeleryAppConfiguration:
         from src.celery_app import celery_app
 
         # The broker URL should be set from settings
-        assert celery_app.conf.broker_url is not None
+        assert "redis://" in celery_app.conf.broker_url
 
     def test_celery_app_backend_configured(self):
         """Verify the celery app has result backend configured."""
         from src.celery_app import celery_app
 
         # The result backend should be set from settings
-        assert celery_app.conf.result_backend is not None
+        assert "redis://" in celery_app.conf.result_backend
 
     def test_celery_app_serializer_is_json(self):
         """Verify the celery app uses JSON serialization."""
@@ -160,4 +160,4 @@ class TestCeleryAppConfiguration:
         """Verify the celery app has RedBeat Redis URL configured."""
         from src.celery_app import celery_app
 
-        assert celery_app.conf.redbeat_redis_url is not None
+        assert "redis://" in celery_app.conf.redbeat_redis_url

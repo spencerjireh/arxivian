@@ -194,6 +194,10 @@ class TestDeleteConversationEndpoint:
         mock_conversation_repo.delete.assert_called_once_with(
             "test-session-123", user_id=mock_user.id
         )
+        # Verify get_by_session_id was called with ownership parameter
+        mock_conversation_repo.get_by_session_id.assert_called_once_with(
+            "test-session-123", user_id=mock_user.id
+        )
 
 
 class TestCancelStreamEndpoint:

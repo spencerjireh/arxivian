@@ -472,6 +472,11 @@ class TestStreamErrorHandling:
 
         # Should still return 200 (SSE stream)
         assert response.status_code == 200
+        # Verify that SSE events were emitted (error or done)
+        events = parse_sse_events(response.text)
+        assert len(events) > 0
+        event_types = [e.get("event") for e in events]
+        assert "error" in event_types or "done" in event_types
 
     def test_stream_exception_returns_error_event(self, mock_db_session, mock_settings, mock_user):
         """Test that exceptions produce error SSE event."""

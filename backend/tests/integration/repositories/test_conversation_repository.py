@@ -192,8 +192,10 @@ class TestConversationRepositoryTurns:
 
         history = await repo.get_history(session_id, limit=2)
 
-        # Should return most recent 2 turns
+        # Should return most recent 2 turns in chronological order
         assert len(history) == 2
+        assert history[0].user_query == "Question 3"
+        assert history[1].user_query == "Question 4"
 
     @pytest.mark.asyncio
     async def test_get_turn_count(self, db_session):
