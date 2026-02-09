@@ -151,7 +151,7 @@ class GuardrailRejectionError(BusinessLogicError):
 
     def __init__(self, query: str, score: float, threshold: float):
         super().__init__(
-            message="Query rejected by guardrail - not related to AI/ML research",
+            message="Query rejected by guardrail - not related to academic research",
             details={"query": query, "score": score, "threshold": threshold},
         )
         self.error_code = "GUARDRAIL_REJECTION"

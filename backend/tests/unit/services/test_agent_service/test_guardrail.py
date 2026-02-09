@@ -175,7 +175,7 @@ class TestGuardrailNode:
 
         mock_context.llm_client.generate_structured = AsyncMock(
             return_value=GuardrailScoring(
-                score=95, reasoning="Direct AI/ML query", is_in_scope=True
+                score=95, reasoning="Direct academic research query", is_in_scope=True
             )
         )
 
@@ -193,7 +193,7 @@ class TestGuardrailNode:
 
         mock_context.llm_client.generate_structured = AsyncMock(
             return_value=GuardrailScoring(
-                score=10, reasoning="Not related to AI/ML", is_in_scope=False
+                score=10, reasoning="Not related to academic research", is_in_scope=False
             )
         )
 
@@ -214,7 +214,7 @@ class TestGuardrailNode:
 
         mock_context.llm_client.generate_structured = AsyncMock(
             return_value=GuardrailScoring(
-                score=85, reasoning="Follow-up to AI/ML discussion", is_in_scope=True
+                score=85, reasoning="Follow-up to academic research discussion", is_in_scope=True
             )
         )
 

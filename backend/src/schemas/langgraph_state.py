@@ -19,7 +19,7 @@ class GuardrailScoring(BaseModel):
 
     score: int = Field(..., ge=0, le=100, description="Relevance score (0-100)")
     reasoning: str = Field(..., description="Brief explanation of the score")
-    is_in_scope: bool = Field(..., description="Whether query is in scope for AI/ML research")
+    is_in_scope: bool = Field(..., description="Whether query is in scope for academic research")
 
 
 class ToolCall(BaseModel):
@@ -94,13 +94,13 @@ class AgentState(TypedDict):
     # Pause/resume support (for future HITL)
     pause_reason: str | None
 
-    # Legacy fields (kept for grading support)
+    # Retrieval tracking
     retrieval_attempts: int
 
     # Guardrail results
     guardrail_result: GuardrailScoring | None
 
-    # Routing decisions (legacy - kept for backwards compat during migration)
+    # Grading-based routing (set by grading node, read by continue_after_grading edge)
     routing_decision: str | None
 
     # Retrieved content

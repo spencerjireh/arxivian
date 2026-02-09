@@ -10,13 +10,13 @@ from ..prompts import PromptBuilder
 
 log = get_logger(__name__)
 
-OUT_OF_SCOPE_ENHANCED_PROMPT = """You are an AI/ML research assistant.
+OUT_OF_SCOPE_ENHANCED_PROMPT = """You are an academic research assistant.
 The user's query is outside your scope. Generate a helpful response that:
 
 1. Acknowledges their message naturally (don't be robotic)
 2. References the conversation topic if relevant
-3. Explains your focus on AI/ML research papers
-4. Suggests a relevant angle if their query could relate to AI/ML
+3. Explains your focus on academic research papers from arXiv
+4. Suggests a relevant angle if their query could relate to academic research
 
 Keep response to 2-3 sentences. Be warm but direct."""
 
@@ -62,7 +62,7 @@ async def out_of_scope_node(state: AgentState, context: AgentContext) -> AgentSt
             await adispatch_custom_event("token", token)
         message = "".join(tokens)
     else:
-        message = "I specialize in AI/ML research papers. How can I help with that?"
+        message = "I specialize in academic research papers from arXiv. How can I help with that?"
         await adispatch_custom_event("token", message)
 
     log.info(

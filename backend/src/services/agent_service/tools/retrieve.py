@@ -16,9 +16,9 @@ class RetrieveChunksTool(BaseTool):
 
     name = "retrieve_chunks"
     description = (
-        "Search the AI/ML research paper database for relevant document chunks. "
-        "Use this when you need information from academic papers about machine learning, "
-        "deep learning, transformers, neural networks, or related AI topics."
+        "Search the arXiv research paper database for relevant document chunks. "
+        "Use this when you need information from ingested academic papers on any "
+        "scientific or technical topic."
     )
 
     result_key: ClassVar[str | None] = None

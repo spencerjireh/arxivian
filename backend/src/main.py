@@ -80,7 +80,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Arxivian API",
-    description="Arxivian - agentic RAG system for AI/ML research papers from arXiv",
+    description="Arxivian - academic research assistant powered by arXiv",
     version="0.4.0",
     lifespan=lifespan,
 )
