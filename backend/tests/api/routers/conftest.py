@@ -392,7 +392,7 @@ def sample_paper(mock_user):
     paper = Mock()
     paper.id = uuid.uuid4()
     paper.arxiv_id = "2301.00001"
-    paper.user_id = mock_user.id
+    paper.ingested_by = mock_user.id
     paper.title = "Test Paper Title"
     paper.authors = ["Author One", "Author Two"]
     paper.abstract = "This is a test abstract."

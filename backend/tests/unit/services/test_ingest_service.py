@@ -35,7 +35,7 @@ class TestIngestPapersErrorHandling:
             chunking_service=mock_chunking_service,
             paper_repository=mock_paper_repository,
             chunk_repository=mock_chunk_repository,
-            user_id=TEST_USER_ID,
+            ingested_by=TEST_USER_ID,
         )
 
     @pytest.mark.asyncio
@@ -92,7 +92,7 @@ class TestIngestByIds:
             chunking_service=mock_chunking_service,
             paper_repository=mock_paper_repository,
             chunk_repository=mock_chunk_repository,
-            user_id=TEST_USER_ID,
+            ingested_by=TEST_USER_ID,
         )
 
     @pytest.mark.asyncio
@@ -134,7 +134,7 @@ class TestProcessSinglePaper:
             chunking_service=mock_chunking_service,
             paper_repository=mock_paper_repository,
             chunk_repository=mock_chunk_repository,
-            user_id=TEST_USER_ID,
+            ingested_by=TEST_USER_ID,
         )
 
     @pytest.mark.asyncio
@@ -256,7 +256,7 @@ class TestListPapersFormatting:
             chunking_service=mock_chunking_service,
             paper_repository=mock_paper_repository,
             chunk_repository=mock_chunk_repository,
-            user_id=TEST_USER_ID,
+            ingested_by=TEST_USER_ID,
         )
 
     @pytest.mark.asyncio

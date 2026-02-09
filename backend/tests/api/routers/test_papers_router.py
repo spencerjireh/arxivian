@@ -1,14 +1,11 @@
 """Tests for papers management router."""
 
-import pytest
-from datetime import datetime, timezone
-
 
 class TestPapersAuthentication:
     """Tests for papers endpoint authentication."""
 
     def test_list_papers_unauthenticated_allowed(self, unauthenticated_client, mock_paper_repo):
-        """Test that unauthenticated list requests are allowed (anonymous sees system papers)."""
+        """Test that unauthenticated list requests are allowed."""
         mock_paper_repo.get_all.return_value = ([], 0)
 
         response = unauthenticated_client.get("/api/v1/papers")
@@ -16,18 +13,12 @@ class TestPapersAuthentication:
         assert response.status_code == 200
 
     def test_get_paper_unauthenticated_allowed(self, unauthenticated_client, mock_paper_repo):
-        """Test that unauthenticated get requests are allowed (anonymous sees system papers)."""
+        """Test that unauthenticated get requests are allowed."""
         mock_paper_repo.get_by_arxiv_id.return_value = None
 
         response = unauthenticated_client.get("/api/v1/papers/2301.00001")
 
         assert response.status_code == 404
-
-    def test_delete_paper_unauthenticated_returns_401(self, unauthenticated_client):
-        """Test that unauthenticated delete requests return 401."""
-        response = unauthenticated_client.delete("/api/v1/papers/2301.00001")
-
-        assert response.status_code == 401
 
 
 class TestListPapersEndpoint:
@@ -163,45 +154,3 @@ class TestGetPaperEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert "raw_text" in data
-
-
-class TestDeletePaperEndpoint:
-    """Tests for DELETE /api/v1/papers/{arxiv_id} endpoint."""
-
-    def test_delete_paper_success(
-        self, client, mock_paper_repo, mock_chunk_repo, sample_paper
-    ):
-        """Test successful paper deletion."""
-        mock_paper_repo.get_by_arxiv_id.return_value = sample_paper
-        mock_chunk_repo.count_by_paper_id.return_value = 10
-
-        response = client.delete("/api/v1/papers/2301.00001")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["arxiv_id"] == "2301.00001"
-        assert data["title"] == "Test Paper Title"
-        assert data["chunks_deleted"] == 10
-
-    def test_delete_paper_not_found(self, client, mock_paper_repo):
-        """Test deleting a paper that doesn't exist."""
-        mock_paper_repo.get_by_arxiv_id.return_value = None
-
-        response = client.delete("/api/v1/papers/nonexistent")
-
-        assert response.status_code == 404
-        assert "not found" in response.json()["detail"].lower()
-
-    def test_delete_paper_calls_repository(
-        self, client, mock_paper_repo, mock_chunk_repo, mock_user, sample_paper
-    ):
-        """Test that deletion calls repository correctly."""
-        mock_paper_repo.get_by_arxiv_id.return_value = sample_paper
-        mock_chunk_repo.count_by_paper_id.return_value = 5
-
-        response = client.delete("/api/v1/papers/2301.00001")
-
-        assert response.status_code == 200
-        mock_paper_repo.delete_by_arxiv_id.assert_called_once_with(
-            "2301.00001", user_id=mock_user.id
-        )

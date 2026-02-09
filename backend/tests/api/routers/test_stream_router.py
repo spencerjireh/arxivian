@@ -253,6 +253,8 @@ class TestStreamEndpoint:
 
         with patch(
             "src.routers.stream.get_agent_service", capture_get_agent_service
+        ), patch(
+            "src.routers.stream.get_settings", return_value=mock_settings
         ):
             from fastapi.testclient import TestClient
 

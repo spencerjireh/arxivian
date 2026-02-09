@@ -149,7 +149,7 @@ def sample_paper_data(created_user) -> dict:
     """Sample paper data for testing."""
     return {
         "arxiv_id": f"2301.{uuid.uuid4().hex[:5]}",
-        "user_id": str(created_user.id),
+        "ingested_by": str(created_user.id),
         "title": "Test Paper: Machine Learning Approaches",
         "authors": ["Alice Smith", "Bob Jones"],
         "abstract": "This paper explores novel machine learning techniques.",
