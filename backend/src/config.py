@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     postgres_url: str = "postgresql+asyncpg://user:password@localhost:5432/arxiv_rag"
 
     # LLM Configuration (LiteLLM-format model strings: "provider/model")
-    default_llm_model: str = "openai/gpt-4o-mini"
-    allowed_llm_models: str = "openai/gpt-4o-mini,openai/gpt-4o,openai/gpt-4-turbo"
+    default_llm_model: str = "openai/gpt-5-nano"
+    allowed_llm_models: str = "openai/gpt-5-nano,openai/gpt-4o-mini"
 
     # Provider API Keys
     openai_api_key: str = ""
@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     agent_timeout_seconds: int = 180  # 3 minutes max per request
     llm_call_timeout_seconds: int = 60  # 1 minute per LLM call
 
-    # Redis (for anonymous rate limiting, separate DB from Celery)
+    # Redis (separate DB from Celery)
     redis_url: str = "redis://redis:6379/2"
 
     # App
