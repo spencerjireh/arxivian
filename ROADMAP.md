@@ -178,7 +178,6 @@ Scheduled tasks and performance optimization.
 |--------|------|-------|
 | [x] | Celery Beat integration | Running as Docker service |
 | [x] | Scheduled task: ingest papers | Daily 2am UTC via cron config |
-| [ ] | Scheduled task: generate weekly reports | Report model/router exist but no beat schedule entry yet |
 
 ### Performance
 
@@ -200,7 +199,6 @@ Items to consider for future releases. Not prioritized.
 - [ ] Research trend analysis
 - [ ] User preference learning
 - [ ] Slack/Discord/Telegram bot integration
-- [ ] Time-based report generation
 - [ ] Expansion to IEEE, PubMed, etc.
 
 ---

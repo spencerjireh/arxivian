@@ -52,8 +52,9 @@
 
 - [x] Celery Beat with worker + beat containers
 - [x] Scheduled paper ingestion (daily, configurable cron)
-- [ ] Scheduled report generation (report model/router exist, beat schedule not configured)
 - [x] Orphaned record cleanup task
+- [x] Ops bulk ingestion endpoint (POST /ops/ingest)
+- [x] Ops task management endpoints (GET/DELETE /ops/tasks)
 
 ## Observability
 
@@ -68,6 +69,7 @@
 
 - [x] Prompt injection mitigation (regex scanning, guardrail, defensive prompts)
 - [x] API key auth for ops/admin endpoints
+- [x] Papers detail endpoint requires authentication
 - [ ] Input sanitization audit
 
 ## Frontend
