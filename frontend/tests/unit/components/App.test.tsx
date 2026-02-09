@@ -34,7 +34,21 @@ describe('App routes', () => {
     render(<RouterProvider router={router} />)
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /Navigate the arXiv/ })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /Understand research/ })).toBeInTheDocument()
+    })
+  })
+
+  it('renders PricingPage at /pricing', async () => {
+    const { routes } = await import('../../../src/App')
+
+    const router = createMemoryRouter(routes, {
+      initialEntries: ['/pricing'],
+    })
+
+    render(<RouterProvider router={router} />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Simple, transparent pricing/ })).toBeInTheDocument()
     })
   })
 })

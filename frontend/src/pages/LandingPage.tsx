@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { Sparkles, BookOpen, Search, Bell, ArrowRight, ChevronDown, ChevronRight, User, FileText } from 'lucide-react'
+import { Sparkles, BookOpen, Search, GitBranch, ArrowRight, ChevronDown, ChevronRight, User, FileText } from 'lucide-react'
 import clsx from 'clsx'
 import gsap from 'gsap'
 import { useGSAP } from '@gsap/react'
@@ -11,6 +11,7 @@ import { ScrambleTextPlugin } from 'gsap/ScrambleTextPlugin'
 import { staggerContainer, staggerItem, transitions } from '../lib/animations'
 import Button from '../components/ui/Button'
 import EquationConstellation from '../components/ui/EquationConstellation'
+import PublicHeader from '../components/layout/PublicHeader'
 import Footer from '../components/layout/Footer'
 
 gsap.registerPlugin(SplitText, ScrambleTextPlugin)
@@ -174,23 +175,23 @@ function SmartSearchIllustration() {
   )
 }
 
-function ScheduledIngestionIllustration() {
+function CitationExplorerIllustration() {
   return (
     <div className="space-y-2">
-      {/* Schedule indicator */}
-      <div className="flex items-center gap-2">
-        <Bell className="w-4 h-4 text-stone-500" strokeWidth={1.5} />
-        <span className="text-xs text-stone-500 font-medium">Daily at 2:00 AM UTC</span>
+      {/* Root paper */}
+      <div className="bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 flex items-center gap-2">
+        <FileText className="w-3.5 h-3.5 text-stone-400 shrink-0" strokeWidth={1.5} />
+        <span className="text-xs text-stone-600 truncate">Attention Is All You Need</span>
       </div>
-      {/* Queued papers */}
-      <div className="space-y-1.5">
-        <div className="bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-          <div className="text-xs text-stone-600 truncate">+3 papers added to library</div>
+      {/* Citation branches */}
+      <div className="pl-4 border-l-2 border-stone-200 space-y-1.5">
+        <div className="bg-white border border-stone-100 rounded px-2.5 py-1.5 flex items-center gap-2">
+          <GitBranch className="w-3 h-3 text-stone-400 shrink-0" strokeWidth={1.5} />
+          <span className="text-[11px] text-stone-500 truncate">BERT: Pre-training of Deep...</span>
         </div>
-        <div className="bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-          <div className="text-xs text-stone-600 truncate">+1 paper added to library</div>
+        <div className="bg-white border border-stone-100 rounded px-2.5 py-1.5 flex items-center gap-2">
+          <GitBranch className="w-3 h-3 text-stone-400 shrink-0" strokeWidth={1.5} />
+          <span className="text-[11px] text-stone-500 truncate">GPT-2: Language Models are...</span>
         </div>
       </div>
     </div>
@@ -205,8 +206,8 @@ function FeatureIllustration({ title }: { title: string }) {
       return <PaperLibraryIllustration />
     case 'Smart Search':
       return <SmartSearchIllustration />
-    case 'Scheduled Ingestion':
-      return <ScheduledIngestionIllustration />
+    case 'Citation Explorer':
+      return <CitationExplorerIllustration />
     default:
       return null
   }
@@ -237,10 +238,10 @@ const features = [
     size: 'small' as const,
   },
   {
-    icon: Bell,
-    title: 'Scheduled Ingestion',
+    icon: GitBranch,
+    title: 'Citation Explorer',
     description:
-      'Configure saved arXiv searches that run daily, automatically adding new papers to your library as they appear.',
+      'Trace the lineage of ideas by exploring citation graphs -- see what a paper builds on and what builds on it.',
     size: 'small' as const,
   },
 ]
@@ -275,7 +276,7 @@ export default function LandingPage() {
 
     tl.to('.hero-badge-text', {
       scrambleText: {
-        text: 'Research, accelerated',
+        text: 'AI-powered research depth',
         chars: 'arxiv0123456789',
         speed: 0.4,
         revealDelay: 0.3,
@@ -312,32 +313,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#FAFAF9] flex flex-col paper-grain">
-      {/* Navigation */}
-      <header className="relative sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-stone-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link to="/" className="font-display text-xl font-semibold text-stone-900 tracking-tight">
-            Arxivian
-          </Link>
-          <nav className="flex items-center gap-3">
-            {isSignedIn ? (
-              <Link to="/chat">
-                <Button variant="primary" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />}>
-                  Go to Chat
-                </Button>
-              </Link>
-            ) : (
-              <>
-                <Link to="/sign-in">
-                  <Button variant="ghost" size="sm">Sign in</Button>
-                </Link>
-                <Link to="/sign-up">
-                  <Button variant="primary" size="sm">Get started</Button>
-                </Link>
-              </>
-            )}
-          </nav>
-        </div>
-      </header>
+      <PublicHeader />
 
       {/* Hero */}
       <section ref={heroRef} className="relative flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
@@ -347,15 +323,15 @@ export default function LandingPage() {
           <div className="max-w-3xl mx-auto">
             <div className="mb-6">
               <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stone-100 text-stone-600 text-xs font-medium tracking-wide uppercase">
-                <span className="hero-badge-text">Research, accelerated</span>
+                <span className="hero-badge-text">AI-powered research depth</span>
               </span>
             </div>
 
             <div className="hero-ornament-line h-px w-20 bg-stone-300 mx-auto mb-4" />
             <h1 className="hero-heading font-display text-5xl sm:text-6xl text-stone-900 tracking-tight leading-[1.1] mb-2 letterpress">
-              Navigate the arXiv
+              Understand research
               <br />
-              with clarity
+              at depth
             </h1>
             <div className="hero-ornament-line h-px w-20 bg-stone-300 mx-auto mt-4 mb-6" />
 
@@ -375,17 +351,24 @@ export default function LandingPage() {
                 </Button>
               </Link>
               {!isSignedIn && (
-                <button
-                  onClick={() => {
-                    document.getElementById('credibility')?.scrollIntoView({
-                      behavior: shouldReduceMotion ? 'auto' : 'smooth',
-                    })
-                  }}
-                  className="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-700 transition-colors duration-200 px-4 py-2.5"
-                >
-                  See how it works
-                  <ChevronDown className="w-4 h-4" strokeWidth={1.5} />
-                </button>
+                <>
+                  <Link to="/pricing">
+                    <Button variant="secondary" size="lg">
+                      See plans
+                    </Button>
+                  </Link>
+                  <button
+                    onClick={() => {
+                      document.getElementById('credibility')?.scrollIntoView({
+                        behavior: shouldReduceMotion ? 'auto' : 'smooth',
+                      })
+                    }}
+                    className="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-700 transition-colors duration-200 px-4 py-2.5"
+                  >
+                    See how it works
+                    <ChevronDown className="w-4 h-4" strokeWidth={1.5} />
+                  </button>
+                </>
               )}
             </div>
           </div>

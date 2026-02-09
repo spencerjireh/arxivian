@@ -3,7 +3,7 @@ const Footer = () => {
     <footer className="bg-white border-t border-stone-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center text-stone-500 text-sm">
-          <p>2026 Arxivian. All rights reserved.</p>
+          <p>2026 Arxivian. Built for researchers.</p>
         </div>
       </div>
     </footer>

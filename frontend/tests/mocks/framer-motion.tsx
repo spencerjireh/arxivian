@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // Lightweight mock for framer-motion that renders plain HTML elements
 
 import { forwardRef } from 'react'

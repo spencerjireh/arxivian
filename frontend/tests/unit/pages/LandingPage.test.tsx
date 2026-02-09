@@ -15,7 +15,7 @@ describe('LandingPage', () => {
   it('renders hero and Get started CTA when unauthenticated', () => {
     renderWithProviders(<LandingPage />)
 
-    expect(screen.getByRole('heading', { name: /Navigate the arXiv/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Understand research/ })).toBeInTheDocument()
     // "Get started" appears in both nav and hero CTA
     const buttons = screen.getAllByText('Get started')
     expect(buttons.length).toBeGreaterThanOrEqual(1)
@@ -27,6 +27,13 @@ describe('LandingPage', () => {
     renderWithProviders(<LandingPage />)
 
     expect(screen.getByText('Go to Chat')).toBeInTheDocument()
+  })
+
+  it('shows See plans link to /pricing when unauthenticated', () => {
+    renderWithProviders(<LandingPage />)
+
+    const link = screen.getByRole('link', { name: /See plans/ })
+    expect(link).toHaveAttribute('href', '/pricing')
   })
 
   it('redirects to /chat when authenticated', async () => {

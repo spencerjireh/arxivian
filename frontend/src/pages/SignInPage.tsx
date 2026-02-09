@@ -5,7 +5,7 @@ export default function SignInPage() {
   return (
     <AuthLayout
       title="Welcome back"
-      subtitle="Sign in to continue exploring academic research literature"
+      subtitle="Sign in to your research workspace"
     >
       <SignInForm />
     </AuthLayout>

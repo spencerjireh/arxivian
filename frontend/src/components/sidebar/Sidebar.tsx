@@ -30,6 +30,9 @@ export default function Sidebar() {
         <div className="flex items-center justify-between">
           <h1 className="font-display text-xl font-semibold text-stone-900 tracking-tight">
             Arxivian
+            <span className="ml-2 text-[10px] font-mono font-normal uppercase tracking-wider text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded">
+              Beta
+            </span>
           </h1>
           <Button
             variant="ghost"

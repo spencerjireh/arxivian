@@ -5,7 +5,7 @@ export default function SignUpPage() {
   return (
     <AuthLayout
       title="Create an account"
-      subtitle="Start exploring academic research literature with Arxivian"
+      subtitle="Your AI-powered academic research workspace"
     >
       <SignUpForm />
     </AuthLayout>
