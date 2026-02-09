@@ -218,7 +218,7 @@ class TestGuardrailNode:
             )
         )
 
-        result = await guardrail_node(base_state, mock_context)
+        await guardrail_node(base_state, mock_context)
 
         # Verify context was passed to LLM
         call_args = mock_context.llm_client.generate_structured.call_args

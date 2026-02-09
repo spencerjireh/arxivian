@@ -123,7 +123,7 @@ async def db_session(
         async_session = AsyncSession(bind=conn, expire_on_commit=False)
 
         # Begin a nested transaction (savepoint)
-        nested = await conn.begin_nested()
+        await conn.begin_nested()
 
         # Listen for session commit events and restart the nested savepoint
         @event.listens_for(async_session.sync_session, "after_transaction_end")

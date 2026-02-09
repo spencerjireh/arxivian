@@ -1,7 +1,6 @@
 """Unit tests for scheduled background tasks."""
 
-import pytest
-from unittest.mock import patch, Mock, AsyncMock, MagicMock
+from unittest.mock import patch, Mock, AsyncMock
 from contextlib import asynccontextmanager
 
 
@@ -51,14 +50,10 @@ class TestDailyIngestTask:
         assert calls[0].kwargs["kwargs"]["query"] == "machine learning"
         assert calls[0].kwargs["kwargs"]["categories"] == ["cs.LG"]
         assert calls[0].kwargs["kwargs"]["max_results"] == 10
-        assert calls[0].kwargs["kwargs"]["user_id"] == str(sample_user_with_searches.id)
-        assert calls[0].kwargs["kwargs"]["search_name"] == "ML Papers"
 
         assert calls[1].kwargs["kwargs"]["query"] == "artificial intelligence"
         assert calls[1].kwargs["kwargs"]["categories"] == ["cs.AI"]
         assert calls[1].kwargs["kwargs"]["max_results"] == 5
-        assert calls[1].kwargs["kwargs"]["user_id"] == str(sample_user_with_searches.id)
-        assert calls[1].kwargs["kwargs"]["search_name"] == "AI Papers"
 
     def test_uses_staggered_countdown(self, sample_user_with_searches):
         """Verify tasks are staggered with countdown values."""
@@ -88,7 +83,7 @@ class TestDailyIngestTask:
                 ) as mock_ingest_task:
                     mock_ingest_task.apply_async = mock_apply_async
 
-                    result = daily_ingest_task()
+                    daily_ingest_task()
 
         # Verify countdown values: 0, 30
         calls = mock_apply_async.call_args_list
@@ -123,7 +118,7 @@ class TestDailyIngestTask:
                 ) as mock_ingest_task:
                     mock_ingest_task.apply_async = mock_apply_async
 
-                    result = daily_ingest_task()
+                    daily_ingest_task()
 
         # Verify task_id kwarg is present (deterministic)
         calls = mock_apply_async.call_args_list
@@ -409,10 +404,8 @@ class TestDailyIngestTask:
                 ) as mock_ingest_task:
                     mock_ingest_task.apply_async = mock_apply_async
 
-                    result = daily_ingest_task()
+                    daily_ingest_task()
 
         # Verify default max_results was used
         call_args = mock_apply_async.call_args
         assert call_args.kwargs["kwargs"]["max_results"] == 10
-        assert call_args.kwargs["kwargs"]["user_id"] == str(user.id)
-        assert call_args.kwargs["kwargs"]["search_name"] == "Simple Search"

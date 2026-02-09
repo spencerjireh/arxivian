@@ -1,8 +1,7 @@
 """Unit tests for Celery signals."""
 
 import asyncio
-import pytest
-from unittest.mock import patch, Mock, AsyncMock, MagicMock
+from unittest.mock import patch, Mock
 
 
 class TestWorkerLifecycleSignals:

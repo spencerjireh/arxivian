@@ -2,7 +2,7 @@
 
 import uuid
 import pytest
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 

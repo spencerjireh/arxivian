@@ -5,13 +5,12 @@ from src.config import get_settings
 
 get_settings.cache_clear()
 
-import pytest
-import uuid
-from unittest.mock import AsyncMock, Mock, MagicMock
-from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+import pytest  # noqa: E402
+import uuid  # noqa: E402
+from unittest.mock import AsyncMock, Mock  # noqa: E402
+from contextlib import asynccontextmanager  # noqa: E402
 
-from src.services.agent_service.context import ConversationFormatter, AgentContext
+from src.services.agent_service.context import ConversationFormatter, AgentContext  # noqa: E402
 
 
 @pytest.fixture

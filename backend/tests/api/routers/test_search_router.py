@@ -1,6 +1,5 @@
 """Tests for search router."""
 
-import pytest
 
 
 class TestSearchAuthentication:

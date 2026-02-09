@@ -10,7 +10,6 @@ from src.schemas.stream import (
     StatusEventData,
     ContentEventData,
     MetadataEventData,
-    ErrorEventData,
 )
 
 

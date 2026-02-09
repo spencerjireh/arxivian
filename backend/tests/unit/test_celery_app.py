@@ -1,7 +1,6 @@
 """Unit tests for Celery application configuration."""
 
 import pytest
-from unittest.mock import patch, Mock
 
 
 class TestParseCron:

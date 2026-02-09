@@ -1,6 +1,5 @@
 """Tests for health check router."""
 
-import pytest
 
 
 class TestHealthEndpoint:

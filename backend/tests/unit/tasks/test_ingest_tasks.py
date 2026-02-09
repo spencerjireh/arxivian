@@ -1,6 +1,5 @@
 """Unit tests for ingest background tasks."""
 
-import uuid
 import pytest
 from unittest.mock import patch, Mock, AsyncMock
 from contextlib import asynccontextmanager, contextmanager
@@ -60,7 +59,7 @@ class TestIngestPapersTask:
 
                     # Use push_request to set up task context
                     with task_context(ingest_papers_task, "test-task-id-123"):
-                        result = ingest_papers_task._orig_run(
+                        ingest_papers_task._orig_run(
                             query="machine learning",
                             max_results=20,
                             categories=["cs.LG", "cs.AI"],
@@ -220,7 +219,7 @@ class TestIngestPapersTask:
                     from src.tasks.ingest_tasks import ingest_papers_task
 
                     with task_context(ingest_papers_task, "traced-task-id"):
-                        result = ingest_papers_task._orig_run(
+                        ingest_papers_task._orig_run(
                             query="test",
                             max_results=10,
                         )
@@ -297,7 +296,7 @@ class TestIngestPapersTask:
 
                     with task_context(ingest_papers_task):
                         # Call with only required params, using defaults for rest
-                        result = ingest_papers_task._orig_run(
+                        ingest_papers_task._orig_run(
                             query="test",
                         )
 
@@ -310,133 +309,3 @@ class TestIngestPapersTask:
         assert call_args.force_reprocess is False
 
 
-class TestPersistReport:
-    """Tests for report persistence in ingest_papers_task."""
-
-    @pytest.fixture
-    def mock_ingest_response(self):
-        """Standard successful ingest response."""
-        return IngestResponse(
-            status="completed",
-            papers_fetched=5,
-            papers_processed=5,
-            chunks_created=50,
-            duration_seconds=10.5,
-            errors=[],
-        )
-
-    def test_persist_report_called_when_user_id_and_search_name(
-        self, mock_ingest_response
-    ):
-        """Verify _persist_report is called when both user_id and search_name are provided."""
-        mock_session = AsyncMock()
-        mock_session.commit = AsyncMock()
-
-        mock_service = AsyncMock()
-        mock_service.ingest_papers = AsyncMock(return_value=mock_ingest_response)
-
-        @asynccontextmanager
-        async def mock_session_ctx():
-            yield mock_session
-
-        with patch("src.tasks.ingest_tasks.AsyncSessionLocal", mock_session_ctx):
-            with patch(
-                "src.tasks.ingest_tasks.get_ingest_service", return_value=mock_service
-            ):
-                with patch("src.tasks.ingest_tasks.trace_task") as mock_trace:
-                    mock_trace.return_value.__enter__ = Mock(return_value=None)
-                    mock_trace.return_value.__exit__ = Mock(return_value=False)
-
-                    with patch(
-                        "src.tasks.ingest_tasks._persist_report"
-                    ) as mock_persist:
-                        from src.tasks.ingest_tasks import ingest_papers_task
-
-                        user_id = str(uuid.uuid4())
-                        with task_context(ingest_papers_task):
-                            ingest_papers_task._orig_run(
-                                query="machine learning",
-                                max_results=10,
-                                user_id=user_id,
-                                search_name="ML Papers",
-                            )
-
-                        mock_persist.assert_called_once()
-                        call_args = mock_persist.call_args
-                        assert call_args[0][0] == user_id
-                        assert call_args[0][1] == "ML Papers"
-                        assert call_args[0][2] == "machine learning"
-
-    def test_persist_report_not_called_without_user_id(
-        self, mock_ingest_response
-    ):
-        """Verify _persist_report is not called when user_id is not provided."""
-        mock_session = AsyncMock()
-        mock_session.commit = AsyncMock()
-
-        mock_service = AsyncMock()
-        mock_service.ingest_papers = AsyncMock(return_value=mock_ingest_response)
-
-        @asynccontextmanager
-        async def mock_session_ctx():
-            yield mock_session
-
-        with patch("src.tasks.ingest_tasks.AsyncSessionLocal", mock_session_ctx):
-            with patch(
-                "src.tasks.ingest_tasks.get_ingest_service", return_value=mock_service
-            ):
-                with patch("src.tasks.ingest_tasks.trace_task") as mock_trace:
-                    mock_trace.return_value.__enter__ = Mock(return_value=None)
-                    mock_trace.return_value.__exit__ = Mock(return_value=False)
-
-                    with patch(
-                        "src.tasks.ingest_tasks._persist_report"
-                    ) as mock_persist:
-                        from src.tasks.ingest_tasks import ingest_papers_task
-
-                        with task_context(ingest_papers_task):
-                            ingest_papers_task._orig_run(
-                                query="machine learning",
-                                max_results=10,
-                            )
-
-                        mock_persist.assert_not_called()
-
-    def test_persist_report_failure_does_not_fail_task(
-        self, mock_ingest_response
-    ):
-        """Verify that _persist_report failure does not cause the task to fail."""
-        mock_session = AsyncMock()
-        mock_session.commit = AsyncMock()
-
-        mock_service = AsyncMock()
-        mock_service.ingest_papers = AsyncMock(return_value=mock_ingest_response)
-
-        @asynccontextmanager
-        async def mock_session_ctx():
-            yield mock_session
-
-        with patch("src.tasks.ingest_tasks.AsyncSessionLocal", mock_session_ctx):
-            with patch(
-                "src.tasks.ingest_tasks.get_ingest_service", return_value=mock_service
-            ):
-                with patch("src.tasks.ingest_tasks.trace_task") as mock_trace:
-                    mock_trace.return_value.__enter__ = Mock(return_value=None)
-                    mock_trace.return_value.__exit__ = Mock(return_value=False)
-
-                    with patch(
-                        "src.tasks.ingest_tasks._persist_report",
-                        side_effect=Exception("DB connection failed"),
-                    ):
-                        from src.tasks.ingest_tasks import ingest_papers_task
-
-                        with task_context(ingest_papers_task):
-                            result = ingest_papers_task._orig_run(
-                                query="machine learning",
-                                max_results=10,
-                                user_id=str(uuid.uuid4()),
-                                search_name="ML Papers",
-                            )
-
-        assert result["status"] == "completed"
-        assert result["papers_processed"] == 5

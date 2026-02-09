@@ -2,7 +2,7 @@
 
 import pytest
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
+from unittest.mock import patch, MagicMock
 import jwt as pyjwt
 
 from src.services.auth_service import AuthService, AuthenticatedUser

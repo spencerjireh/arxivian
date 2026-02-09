@@ -1,7 +1,6 @@
 """Tests for conversations router."""
 
-import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 
 class TestConversationsAuthentication:
@@ -134,7 +133,7 @@ class TestGetConversationEndpoint:
         response = client.get("/api/v1/conversations/nonexistent")
 
         assert response.status_code == 404
-        assert "not found" in response.json()["detail"].lower()
+        assert "not found" in response.json()["error"]["message"].lower()
 
     def test_get_conversation_includes_turn_metadata(
         self, client, mock_conversation_repo, sample_conversation, sample_conversation_turn
@@ -179,7 +178,7 @@ class TestDeleteConversationEndpoint:
         response = client.delete("/api/v1/conversations/nonexistent")
 
         assert response.status_code == 404
-        assert "not found" in response.json()["detail"].lower()
+        assert "not found" in response.json()["error"]["message"].lower()
 
     def test_delete_conversation_calls_repository_with_user_id(
         self, client, mock_conversation_repo, sample_conversation, mock_user

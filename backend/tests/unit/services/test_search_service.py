@@ -1,7 +1,6 @@
 """Tests for SearchService."""
 
 import pytest
-from unittest.mock import AsyncMock, Mock
 
 from src.services.search_service import SearchService
 from src.repositories.search_repository import SearchResult

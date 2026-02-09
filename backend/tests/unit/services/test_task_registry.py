@@ -1,8 +1,7 @@
 """Tests for TaskRegistry service."""
 
-import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock
 
 from src.services.task_registry import TaskRegistry
 

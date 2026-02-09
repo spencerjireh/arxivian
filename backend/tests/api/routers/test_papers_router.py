@@ -12,13 +12,11 @@ class TestPapersAuthentication:
 
         assert response.status_code == 200
 
-    def test_get_paper_unauthenticated_allowed(self, unauthenticated_client, mock_paper_repo):
-        """Test that unauthenticated get requests are allowed."""
-        mock_paper_repo.get_by_arxiv_id.return_value = None
-
+    def test_get_paper_unauthenticated_requires_auth(self, unauthenticated_client):
+        """Test that unauthenticated detail requests return 401."""
         response = unauthenticated_client.get("/api/v1/papers/2301.00001")
 
-        assert response.status_code == 404
+        assert response.status_code == 401
 
 
 class TestListPapersEndpoint:
@@ -143,7 +141,7 @@ class TestGetPaperEndpoint:
         response = client.get("/api/v1/papers/nonexistent")
 
         assert response.status_code == 404
-        assert "not found" in response.json()["detail"].lower()
+        assert "not found" in response.json()["error"]["message"].lower()
 
     def test_get_paper_includes_raw_text(self, client, mock_paper_repo, sample_paper):
         """Test that raw_text is included in single paper response."""
