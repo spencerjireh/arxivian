@@ -45,6 +45,20 @@ export default function Sidebar() {
         </div>
       </div>
 
+      {isChatRoute && (
+        <div className="px-3 pt-3">
+          <Button
+            variant="primary"
+            size="sm"
+            className="w-full"
+            onClick={() => navigate('/chat')}
+            leftIcon={<Plus className="w-4 h-4" strokeWidth={2} />}
+          >
+            New conversation
+          </Button>
+        </div>
+      )}
+
       <nav className="px-3 py-3 space-y-0.5">
         {navItems.map(({ path, label, icon: Icon }) => {
           const isActive = path === '/chat'
@@ -93,10 +107,6 @@ function SidebarConversations() {
   const { data, isLoading, error } = useConversations(offset, limit)
   const deleteConversation = useDeleteConversation()
 
-  const handleNewConversation = () => {
-    navigate('/chat')
-  }
-
   const handleNavigate = (id: string) => {
     navigate(`/chat/${id}`)
   }
@@ -116,18 +126,6 @@ function SidebarConversations() {
 
   return (
     <>
-      <div className="px-3 pb-3">
-        <Button
-          variant="primary"
-          size="sm"
-          className="w-full"
-          onClick={handleNewConversation}
-          leftIcon={<Plus className="w-4 h-4" strokeWidth={2} />}
-        >
-          New conversation
-        </Button>
-      </div>
-
       <div className="flex-1 overflow-y-auto px-3">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
