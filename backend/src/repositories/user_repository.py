@@ -188,6 +188,33 @@ class UserRepository:
         log.debug("query result", count=len(users))
         return users
 
+    async def update_tier(self, user: User, tier: str) -> User:
+        """
+        Update user's tier.
+
+        Caller is responsible for committing the transaction.
+
+        Args:
+            user: The user to update
+            tier: New tier value
+
+        Returns:
+            Updated user
+        """
+        now = datetime.now(timezone.utc)
+        await self.session.execute(
+            update(User)
+            .where(User.id == user.id)
+            .values(
+                tier=tier,
+                updated_at=now,
+            )
+        )
+        await self.session.flush()
+        await self.session.refresh(user)
+        log.debug("user tier updated", clerk_id=user.clerk_id, tier=tier)
+        return user
+
     async def update_preferences(self, user: User, preferences: dict) -> User:
         """
         Update user's preferences.

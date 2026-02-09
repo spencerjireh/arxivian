@@ -49,11 +49,15 @@ async def validation_exception_handler(
     """Handle Pydantic validation errors from request parsing."""
     log.warning("validation error", errors=exc.errors())
 
+    # exc.errors() may contain non-serializable objects (e.g. ValueError in ctx),
+    # so strip the ctx key which can hold raw exception instances.
+    errors = [{k: v for k, v in e.items() if k != "ctx"} for e in exc.errors()]
+
     error_response = ErrorResponse(
         error=ErrorDetail(
             code="VALIDATION_ERROR",
             message="Request validation failed",
-            details={"errors": exc.errors()},
+            details={"errors": errors},
         ),
         request_id=get_request_id(),
         timestamp=datetime.now(timezone.utc),
@@ -120,11 +124,10 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
 
 def register_exception_handlers(app: FastAPI) -> None:
     """Register all exception handlers with FastAPI application."""
-    # ty: ignore[invalid-argument-type] - Starlette stub doesn't match runtime behavior
-    app.add_exception_handler(BaseAPIException, base_exception_handler)  # ty: ignore[invalid-argument-type]
-    app.add_exception_handler(RequestValidationError, validation_exception_handler)  # ty: ignore[invalid-argument-type]
-    app.add_exception_handler(PydanticValidationError, validation_exception_handler)  # ty: ignore[invalid-argument-type]
-    app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)  # ty: ignore[invalid-argument-type]
-    app.add_exception_handler(Exception, generic_exception_handler)  # ty: ignore[invalid-argument-type]
+    app.add_exception_handler(BaseAPIException, base_exception_handler)
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(PydanticValidationError, validation_exception_handler)
+    app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
+    app.add_exception_handler(Exception, generic_exception_handler)
 
     log.info("exception handlers registered")

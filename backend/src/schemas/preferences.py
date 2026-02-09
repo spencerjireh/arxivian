@@ -32,6 +32,14 @@ class UserPreferences(BaseModel):
         default_factory=NotificationSettings, description="Notification preferences"
     )
 
+    @classmethod
+    def from_raw(cls, prefs: dict) -> "UserPreferences":
+        """Construct from a raw preferences dict (e.g. from database JSONB)."""
+        return cls(
+            arxiv_searches=[ArxivSearchConfig(**s) for s in prefs.get("arxiv_searches", [])],
+            notification_settings=prefs.get("notification_settings", {}),
+        )
+
 
 class UpdateArxivSearchesRequest(BaseModel):
     """Request to update arXiv searches."""

@@ -1,9 +1,9 @@
 """API routes for user preferences management."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from src.dependencies import CurrentUserRequired, DbSession, UserRepoDep, TierPolicyDep
-from src.exceptions import ForbiddenError
+from src.exceptions import ConflictError, ForbiddenError
 from src.schemas.preferences import (
     ArxivSearchConfig,
     UpdateArxivSearchesRequest,
@@ -23,12 +23,7 @@ async def get_preferences(
     """Get the current user's preferences."""
     preferences = current_user.preferences or {}
 
-    return UserPreferences(
-        arxiv_searches=[
-            ArxivSearchConfig(**search) for search in preferences.get("arxiv_searches", [])
-        ],
-        notification_settings=preferences.get("notification_settings", {}),
-    )
+    return UserPreferences.from_raw(preferences)
 
 
 @router.put("/arxiv-searches", response_model=UserPreferences)
@@ -67,10 +62,7 @@ async def update_arxiv_searches(
         search_count=len(request.arxiv_searches),
     )
 
-    return UserPreferences(
-        arxiv_searches=request.arxiv_searches,
-        notification_settings=current_prefs.get("notification_settings", {}),
-    )
+    return UserPreferences.from_raw(current_prefs)
 
 
 @router.post("/arxiv-searches", response_model=UserPreferences)
@@ -100,10 +92,7 @@ async def add_arxiv_search(
 
     # Enforce unique names (case-insensitive)
     if any(s.get("name", "").lower() == search.name.lower() for s in arxiv_searches):
-        raise HTTPException(
-            status_code=409,
-            detail=f"A search with the name '{search.name}' already exists",
-        )
+        raise ConflictError(f"A search with the name '{search.name}' already exists")
 
     arxiv_searches.append(search.model_dump())
     current_prefs["arxiv_searches"] = arxiv_searches
@@ -118,10 +107,7 @@ async def add_arxiv_search(
         search_name=search.name,
     )
 
-    return UserPreferences(
-        arxiv_searches=[ArxivSearchConfig(**s) for s in arxiv_searches],
-        notification_settings=current_prefs.get("notification_settings", {}),
-    )
+    return UserPreferences.from_raw(current_prefs)
 
 
 @router.delete("/arxiv-searches/{search_name}", response_model=UserPreferences)
@@ -154,7 +140,4 @@ async def delete_arxiv_search(
         search_name=search_name,
     )
 
-    return UserPreferences(
-        arxiv_searches=[ArxivSearchConfig(**s) for s in arxiv_searches],
-        notification_settings=current_prefs.get("notification_settings", {}),
-    )
+    return UserPreferences.from_raw(current_prefs)

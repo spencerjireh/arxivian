@@ -8,7 +8,6 @@ from src.routers import (
     ops,
     papers,
     feedback,
-    tasks,
     preferences,
     users,
 )
@@ -21,7 +20,6 @@ __all__ = [
     "ops",
     "papers",
     "feedback",
-    "tasks",
     "preferences",
     "users",
 ]

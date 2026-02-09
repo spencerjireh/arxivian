@@ -2,14 +2,15 @@
 
 from typing import Optional, Literal
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 
 from src.schemas.papers import (
     PaperResponse,
     PaperListResponse,
     PaperListItem,
 )
-from src.dependencies import PaperRepoDep
+from src.dependencies import PaperRepoDep, CurrentUserRequired
+from src.exceptions import ResourceNotFoundError
 
 router = APIRouter()
 
@@ -49,9 +50,10 @@ async def list_papers(
 async def get_paper_by_arxiv_id(
     arxiv_id: str,
     paper_repo: PaperRepoDep,
+    _user: CurrentUserRequired,
 ) -> PaperResponse:
     """Get a single paper by arXiv ID."""
     paper = await paper_repo.get_by_arxiv_id(arxiv_id)
     if not paper:
-        raise HTTPException(status_code=404, detail=f"Paper with arXiv ID '{arxiv_id}' not found")
+        raise ResourceNotFoundError("Paper", arxiv_id)
     return PaperResponse.model_validate(paper, from_attributes=True)

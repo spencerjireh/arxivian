@@ -154,6 +154,9 @@ class IngestService:
         with tempfile.TemporaryDirectory() as temp_dir:
             pdf_path = os.path.join(temp_dir, f"{arxiv_id}.pdf")
 
+            if not paper_meta.pdf_url:
+                raise PDFProcessingError(arxiv_id=arxiv_id, stage="download", message="No PDF URL")
+
             try:
                 await self.arxiv_client.download_pdf(pdf_url=paper_meta.pdf_url, save_path=pdf_path)
                 log.debug("pdf downloaded", arxiv_id=arxiv_id)

@@ -234,7 +234,7 @@ async def enforce_chat_limit(
     else:
         # Authenticated: DB-based
         usage_repo = UsageCounterRepository(db)
-        count = await usage_repo.get_today_query_count(user.id)
+        count = await usage_repo.get_today_query_count(str(user.id))
 
     if count > policy.daily_chats:
         raise UsageLimitExceededError(current=count, limit=policy.daily_chats)

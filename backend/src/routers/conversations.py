@@ -1,6 +1,6 @@
 """Conversations management router for chat history."""
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 
 from src.schemas.conversation import (
     ConversationListItem,
@@ -11,6 +11,7 @@ from src.schemas.conversation import (
     CancelStreamResponse,
 )
 from src.dependencies import ConversationRepoDep, DbSession, CurrentUserRequired
+from src.exceptions import ResourceNotFoundError
 from src.services.task_registry import task_registry
 
 router = APIRouter()
@@ -40,7 +41,7 @@ async def list_conversations(
     conversations, total = await conversation_repo.get_all(
         offset=offset,
         limit=limit,
-        user_id=current_user.id,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
+        user_id=current_user.id,
     )
 
     items = []
@@ -54,10 +55,10 @@ async def list_conversations(
 
         items.append(
             ConversationListItem(
-                session_id=conv.session_id,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
+                session_id=conv.session_id,
                 turn_count=len(conv.turns),
-                created_at=conv.created_at,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
-                updated_at=conv.updated_at,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
+                created_at=conv.created_at,
+                updated_at=conv.updated_at,
                 last_query=last_query,
             )
         )
@@ -90,11 +91,9 @@ async def get_conversation(
     Raises:
         HTTPException: 404 if conversation not found or not owned by user
     """
-    conv = await conversation_repo.get_with_turns(session_id, user_id=current_user.id)  # ty: ignore[invalid-argument-type]  # SQLAlchemy
+    conv = await conversation_repo.get_with_turns(session_id, user_id=current_user.id)
     if not conv:
-        raise HTTPException(
-            status_code=404, detail=f"Conversation with session_id '{session_id}' not found"
-        )
+        raise ResourceNotFoundError("Conversation", session_id)
 
     turns = [
         ConversationTurnResponse(
@@ -114,9 +113,9 @@ async def get_conversation(
     ]
 
     return ConversationDetailResponse(
-        session_id=conv.session_id,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
-        created_at=conv.created_at,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
-        updated_at=conv.updated_at,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
+        session_id=conv.session_id,
+        created_at=conv.created_at,
+        updated_at=conv.updated_at,
         turns=turns,
     )
 
@@ -150,14 +149,12 @@ async def delete_conversation(
     turn_count = await conversation_repo.get_turn_count(session_id)
 
     # Check if conversation exists and is owned by user
-    conv = await conversation_repo.get_by_session_id(session_id, user_id=current_user.id)  # ty: ignore[invalid-argument-type]  # SQLAlchemy
+    conv = await conversation_repo.get_by_session_id(session_id, user_id=current_user.id)
     if not conv:
-        raise HTTPException(
-            status_code=404, detail=f"Conversation with session_id '{session_id}' not found"
-        )
+        raise ResourceNotFoundError("Conversation", session_id)
 
     # Delete the conversation
-    await conversation_repo.delete(session_id, user_id=current_user.id)  # ty: ignore[invalid-argument-type]  # SQLAlchemy
+    await conversation_repo.delete(session_id, user_id=current_user.id)
 
     return DeleteConversationResponse(
         session_id=session_id,

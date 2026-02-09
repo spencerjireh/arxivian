@@ -2,9 +2,13 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter
+from celery.result import AsyncResult
+from fastapi import APIRouter, Query
 
+from src.celery_app import celery_app
 from src.schemas.ops import (
+    BulkIngestRequest,
+    BulkIngestResponse,
     CleanupResponse,
     OrphanedPaper,
     UpdateTierRequest,
@@ -12,14 +16,37 @@ from src.schemas.ops import (
 )
 from src.schemas.papers import DeletePaperResponse
 from src.schemas.preferences import UpdateArxivSearchesRequest, UserPreferences
-from src.dependencies import PaperRepoDep, ChunkRepoDep, DbSession, ApiKeyCheck, UserRepoDep
-from src.exceptions import ResourceNotFoundError
-from src.tiers import SYSTEM_USER_CLERK_ID, UserTier
+from src.schemas.tasks import (
+    RevokeTaskResponse,
+    TaskListItem,
+    TaskListResponse,
+    TaskStatusResponse,
+)
+from src.dependencies import (
+    PaperRepoDep,
+    ChunkRepoDep,
+    DbSession,
+    ApiKeyCheck,
+    UserRepoDep,
+    TaskExecRepoDep,
+)
+from src.exceptions import ForbiddenError, ResourceNotFoundError
+from src.tasks.ingest_tasks import ingest_papers_task
+from src.tiers import SYSTEM_USER_CLERK_ID, UserTier, get_system_user_id
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
 
 router = APIRouter(prefix="/ops", tags=["Ops"])
+
+_STATUS_MAP = {
+    "PENDING": "pending",
+    "STARTED": "started",
+    "SUCCESS": "success",
+    "FAILURE": "failure",
+    "RETRY": "retry",
+    "REVOKED": "revoked",
+}
 
 
 @router.post("/cleanup", response_model=CleanupResponse)
@@ -80,16 +107,10 @@ async def update_user_tier(
 
     # Prevent modifying system user
     if user.clerk_id == SYSTEM_USER_CLERK_ID:
-        from src.exceptions import ForbiddenError
-
         raise ForbiddenError("Cannot modify system user tier")
 
-    from sqlalchemy import update as sa_update
-    from src.models.user import User
-
-    await db.execute(sa_update(User).where(User.id == user_id).values(tier=tier.value))
+    user = await user_repo.update_tier(user, tier.value)
     await db.commit()
-    await db.refresh(user)
 
     log.info("user_tier_updated", user_id=str(user_id), tier=tier.value)
 
@@ -98,6 +119,21 @@ async def update_user_tier(
         tier=user.tier,
         email=user.email,
     )
+
+
+@router.get("/system/arxiv-searches", response_model=UserPreferences)
+async def get_system_searches(
+    user_repo: UserRepoDep,
+    _api_key: ApiKeyCheck,
+) -> UserPreferences:
+    """Read current system user arXiv search configuration."""
+    system_user = await user_repo.get_by_clerk_id(SYSTEM_USER_CLERK_ID)
+    if system_user is None:
+        raise ResourceNotFoundError("User", "system")
+
+    prefs = system_user.preferences or {}
+
+    return UserPreferences.from_raw(prefs)
 
 
 @router.put("/system/arxiv-searches", response_model=UserPreferences)
@@ -123,10 +159,140 @@ async def update_system_searches(
         search_count=len(request.arxiv_searches),
     )
 
-    return UserPreferences(
-        arxiv_searches=request.arxiv_searches,
-        notification_settings=current_prefs.get("notification_settings", {}),
+    return UserPreferences.from_raw(current_prefs)
+
+
+@router.post("/ingest", response_model=BulkIngestResponse)
+async def bulk_ingest(
+    request: BulkIngestRequest,
+    task_repo: TaskExecRepoDep,
+    db: DbSession,
+    _api_key: ApiKeyCheck,
+) -> BulkIngestResponse:
+    """Queue bulk ingestion of papers via arXiv IDs and/or search query."""
+    system_user_id = get_system_user_id()
+    task_ids: list[str] = []
+
+    # Queue task for specific arXiv IDs
+    if request.arxiv_ids:
+        query = " OR ".join(f"id:{aid}" for aid in request.arxiv_ids)
+        task = ingest_papers_task.delay(
+            query=query,
+            max_results=len(request.arxiv_ids),
+            force_reprocess=request.force_reprocess,
+        )
+        await task_repo.create(
+            celery_task_id=task.id,
+            user_id=system_user_id,
+            task_type="ingest",
+            parameters={"arxiv_ids": request.arxiv_ids, "force_reprocess": request.force_reprocess},
+        )
+        task_ids.append(task.id)
+
+    # Queue task for search query
+    if request.search_query:
+        task = ingest_papers_task.delay(
+            query=request.search_query,
+            max_results=request.max_results,
+            categories=request.categories,
+            force_reprocess=request.force_reprocess,
+        )
+        await task_repo.create(
+            celery_task_id=task.id,
+            user_id=system_user_id,
+            task_type="ingest",
+            parameters={
+                "search_query": request.search_query,
+                "max_results": request.max_results,
+                "categories": request.categories,
+                "force_reprocess": request.force_reprocess,
+            },
+        )
+        task_ids.append(task.id)
+
+    await db.commit()
+
+    log.info("bulk_ingest_queued", tasks_queued=len(task_ids), task_ids=task_ids)
+
+    return BulkIngestResponse(tasks_queued=len(task_ids), task_ids=task_ids)
+
+
+@router.get("/tasks", response_model=TaskListResponse)
+async def list_tasks(
+    task_repo: TaskExecRepoDep,
+    _api_key: ApiKeyCheck,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+) -> TaskListResponse:
+    """List all task executions (no user filter)."""
+    tasks, total = await task_repo.list_all(limit=limit, offset=offset)
+
+    return TaskListResponse(
+        tasks=[TaskListItem.model_validate(t, from_attributes=True) for t in tasks],
+        total=total,
+        limit=limit,
+        offset=offset,
     )
+
+
+@router.get("/tasks/{task_id}", response_model=TaskStatusResponse)
+async def get_task_status(
+    task_id: str,
+    task_repo: TaskExecRepoDep,
+    _api_key: ApiKeyCheck,
+    include_result: bool = False,
+) -> TaskStatusResponse:
+    """Get task status by Celery task ID (no ownership check)."""
+    task_exec = await task_repo.get_by_celery_task_id(task_id)
+    if task_exec is None:
+        raise ResourceNotFoundError("Task", task_id)
+
+    result = AsyncResult(task_id, app=celery_app)
+    status = _STATUS_MAP.get(result.status, task_exec.status)
+
+    response = TaskStatusResponse(
+        task_id=task_id,
+        status=status,
+        ready=result.ready(),
+        result=None,
+        error=task_exec.error_message,
+        task_type=task_exec.task_type,
+        created_at=task_exec.created_at,
+    )
+
+    if include_result and result.ready() and result.successful():
+        try:
+            response.result = result.result
+        except Exception:
+            log.debug("failed_to_deserialize_task_result", task_id=task_id)
+
+    if result.failed():
+        try:
+            response.error = str(result.result)
+        except Exception:
+            log.debug("failed_to_deserialize_task_error", task_id=task_id)
+            response.error = response.error or "Unknown error"
+
+    return response
+
+
+@router.delete("/tasks/{task_id}", response_model=RevokeTaskResponse)
+async def revoke_task(
+    task_id: str,
+    task_repo: TaskExecRepoDep,
+    _api_key: ApiKeyCheck,
+    terminate: bool = False,
+) -> RevokeTaskResponse:
+    """Revoke a pending or running task (no ownership check)."""
+    task_exec = await task_repo.get_by_celery_task_id(task_id)
+    if task_exec is None:
+        raise ResourceNotFoundError("Task", task_id)
+
+    log.info("task_revoke_requested", task_id=task_id, terminate=terminate)
+
+    celery_app.control.revoke(task_id, terminate=terminate)
+
+    return RevokeTaskResponse(task_id=task_id, revoked=True, terminated=terminate)
 
 
 @router.delete("/papers/{arxiv_id}", response_model=DeletePaperResponse)
@@ -150,6 +316,6 @@ async def delete_paper(
 
     return DeletePaperResponse(
         arxiv_id=arxiv_id,
-        title=title,  # ty: ignore[invalid-argument-type]  # SQLAlchemy
+        title=title,
         chunks_deleted=chunk_count,
     )

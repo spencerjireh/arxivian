@@ -106,6 +106,18 @@ class ResourceNotFoundError(NotFoundError):
 
 
 # ============================================================================
+# Conflict Errors (409)
+# ============================================================================
+
+
+class ConflictError(BaseAPIException):
+    """Raised when a resource already exists."""
+
+    def __init__(self, message: str):
+        super().__init__(message, status_code=409, error_code="CONFLICT")
+
+
+# ============================================================================
 # Business Logic Errors (422)
 # ============================================================================
 
