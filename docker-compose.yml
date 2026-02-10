@@ -227,6 +227,23 @@ services:
     profiles:
       - test
 
+  # Eval Runner (real LLM, mocked services)
+  eval-runner:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+      - /app/.venv
+    working_dir: /app
+    networks:
+      - arxivian-network
+    profiles:
+      - eval
+
   # Frontend Test Runner
   frontend-test-runner:
     build:

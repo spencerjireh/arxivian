@@ -105,6 +105,19 @@ test-clean:
     docker compose --profile test rm -fsv test-db test-runner frontend-test-runner 2>/dev/null
 
 # =============================================================================
+# Evaluation
+# =============================================================================
+
+# Run LLM-backed evals (requires API keys in backend/.env)
+eval *args:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    trap 'docker compose --profile eval down 2>/dev/null' EXIT
+    docker compose --profile eval build eval-runner
+    docker compose --profile eval run --rm eval-runner \
+        sh -c "uv sync --frozen --extra dev --extra eval && uv run pytest tests/evals -m eval -v --tb=short {{args}}"
+
+# =============================================================================
 # Code Quality
 # =============================================================================
 
