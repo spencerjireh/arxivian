@@ -11,12 +11,20 @@ Arxivian -- full-stack agentic RAG system for analyzing arXiv papers. FastAPI + 
 All development runs in Docker via `just`. Run `just --list` for full list.
 
 ```bash
+just setup              # First-time: create .env files from examples
 just dev                # Build and start with hot reload
 just down               # Stop services
-just logs               # View all logs
 just test               # All tests (spins up test containers)
-just test tests/integration/test_file.py::test_func   # Single test
+just test tests/unit/test_file.py::test_func   # Single test
 just test -k "pattern"  # Pattern match
+just lint               # Ruff linter
+just format             # Ruff formatter
+just fix                # Auto-fix lint and format issues
+just check              # Lint + typecheck
+just eval               # Run LLM-backed evals (requires API keys)
+just migrate            # Run Alembic migrations
+just shell-backend      # Shell in backend container
+just clean              # Stop, remove volumes + local images
 just lint-frontend      # ESLint via docker
 just test-frontend      # Vitest via docker
 ```
@@ -29,7 +37,7 @@ uv run ty check src/          # Type check
 uv run alembic upgrade head   # Run migrations
 ```
 
-Test markers: `@pytest.mark.unit`, `@pytest.mark.api`, `@pytest.mark.integration`, `@pytest.mark.e2e`. Test dirs: `tests/unit/`, `tests/api/`, `tests/integration/`, `tests/e2e/`. Integration tests use a dedicated test DB (port 5433), config in `.env.test`.
+Test markers: `@pytest.mark.unit`, `@pytest.mark.api`, `@pytest.mark.integration`, `@pytest.mark.e2e`, `@pytest.mark.eval`. Test dirs mirror markers. Pytest runs with `asyncio_mode = "auto"` (session-scoped loop). Coverage threshold: `fail_under = 80`. Integration tests use a dedicated test DB (port 5433), config in `.env.test`.
 
 ## Architecture
 
@@ -37,33 +45,29 @@ Test markers: `@pytest.mark.unit`, `@pytest.mark.api`, `@pytest.mark.integration
 
 Layered: `routers/` -> `services/` -> `repositories/` -> `models/` (async SQLAlchemy). Also: `schemas/` (Pydantic), `clients/` (OpenAI, arXiv, Jina, Langfuse), `middleware/`, `factories/`.
 
-**Agent service** (`services/agent_service/`): LangGraph workflow with nodes: guardrail -> router -> executor -> grading -> generation. Tools: retrieve, arxiv_search, ingest, summarize_paper, list_papers, explore_citations.
+**Agent service** (`services/agent_service/`): LangGraph workflow with nodes: guardrail -> router -> executor -> grading -> generation. Tools (in `tools/`): retrieve, arxiv_search, ingest, summarize_paper, list_papers, explore_citations. SSE streaming with custom event types (STATUS, CONTENT, SOURCES, METADATA, DONE).
 
-**Celery tasks** (`tasks/`): Redis broker, worker + beat containers. Files: `ingest_tasks.py`, `cleanup_tasks.py`, `scheduled_tasks.py` (includes report generation), `signals.py`, `tracing.py` (Langfuse singleton for workers). Flower at port 5555.
+**Celery tasks** (`tasks/`): Redis broker, RedBeat scheduler. Files: `ingest_tasks.py`, `cleanup_tasks.py`, `scheduled_tasks.py`, `signals.py`, `tracing.py`. Flower at port 5555.
 
 **Key patterns:**
-- Dependency injection via `Depends()` with type aliases in `dependencies.py`
+- Dependency injection via `Depends()` with `Annotated` type aliases in `dependencies.py`
 - Custom exceptions in `exceptions.py` with HTTP status mapping
-- Structured logging via `utils/logger.py` with request ID correlation
-- Clerk JWT auth for users; API key auth for ops endpoints
+- Structured logging via structlog + `get_logger(__name__)` with request ID correlation
+- Clerk JWT auth for users; API key auth (`X-Api-Key`) for ops endpoints
 - Hybrid search: pgvector + full-text with Reciprocal Rank Fusion
 - LLM calls via LiteLLM with model prefix routing (e.g. `openai/gpt-4o-mini`)
 
 ### Frontend (`/frontend/src/`)
 
-React 19 + TypeScript + Vite. Zustand stores (chat, settings, sidebar). SSE streaming via `@microsoft/fetch-event-source`. React Router v7 with protected routes. Clerk auth. Tailwind CSS v4.
+React 19 + TypeScript + Vite. Zustand stores (chat, settings, sidebar, user). SSE streaming via `@microsoft/fetch-event-source`. React Router v7 with protected routes. Clerk auth. Tailwind CSS v4. Markdown rendering with KaTeX math support.
 
 ### Database
 
-PostgreSQL 16 + pgvector. Tables: papers, chunks, conversations, conversation_turns, users, agent_executions, task_executions, usage_counters, reports. Migrations via Alembic (`backend/alembic/`).
+PostgreSQL 16 + pgvector. Migrations via Alembic (`backend/alembic/`). Tables: papers, chunks, conversations, conversation_turns, users, agent_executions, task_executions, usage_counters, reports.
 
 ### Infrastructure
 
-Redis (6379), Langfuse (3001), Flower (5555), Test DB (5433). Docker profiles: `dev`, `prod`, `test`.
-
-### CI/CD
-
-GitHub Actions (`.github/workflows/ci.yml`): ruff, ty, unit/API tests (backend); eslint, tsc, vitest (frontend). Pre-commit hooks: trailing whitespace, detect-secrets, ruff, eslint.
+Docker profiles: `dev`, `prod`, `test`, `eval`. Redis, Langfuse (self-hosted), Flower. See `docker-compose.yml` for service details.
 
 ## Code Style
 
