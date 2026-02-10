@@ -14,6 +14,8 @@ engine = create_async_engine(
     settings.postgres_url,
     echo=settings.debug,
     future=True,
+    pool_pre_ping=True,
+    pool_recycle=1800,
 )
 
 # Session factory
@@ -29,6 +31,10 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         try:
             yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
         finally:
             await session.close()
 

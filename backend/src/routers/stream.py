@@ -87,7 +87,7 @@ async def stream(
         # Register the current task for cancellation support
         current_task = asyncio.current_task()
         if current_task is not None:
-            task_registry.register(task_id, current_task)
+            task_registry.register(task_id, current_task, user_id=str(user_id))
 
         try:
             async with asyncio.timeout(timeout_seconds):

@@ -48,7 +48,7 @@ class AgentExecutionRepository:
             error_message=error_message,
         )
         self.session.add(execution)
-        await self.session.commit()
+        await self.session.flush()
         await self.session.refresh(execution)
 
         log.debug(
@@ -133,7 +133,7 @@ class AgentExecutionRepository:
         if error_message is not None:
             execution.error_message = error_message
 
-        await self.session.commit()
+        await self.session.flush()
         await self.session.refresh(execution)
 
         log.debug(
@@ -179,7 +179,7 @@ class AgentExecutionRepository:
 
         if execution:
             await self.session.delete(execution)
-            await self.session.commit()
+            await self.session.flush()
             log.info("execution deleted", execution_id=str(execution_id))
             return True
 
@@ -211,7 +211,7 @@ class AgentExecutionRepository:
             deleted_count += 1
 
         if deleted_count > 0:
-            await self.session.commit()
+            await self.session.flush()
             log.info(
                 "old executions cleaned up",
                 session_id=session_id,

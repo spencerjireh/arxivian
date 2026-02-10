@@ -15,7 +15,7 @@ class TestAuthServiceVerifyToken:
     @pytest.fixture
     def auth_service(self):
         """Create AuthService instance for testing."""
-        return AuthService()
+        return AuthService(allowed_domain="test-clerk.clerk.accounts.dev")
 
     @pytest.mark.asyncio
     async def test_verify_token_missing_header_raises_error(self, auth_service):
@@ -206,13 +206,11 @@ class TestAuthServiceJWKSClient:
     @pytest.fixture
     def auth_service(self):
         """Create AuthService instance for testing."""
-        return AuthService()
+        return AuthService(allowed_domain="test-clerk.clerk.accounts.dev")
 
     @pytest.mark.asyncio
-    async def test_verify_token_jwks_http_error_raises_invalid_token(self, auth_service):
-        """Verify InvalidTokenError on JWKS HTTP errors."""
-        import httpx
-
+    async def test_verify_token_jwks_network_error_raises_invalid_token(self, auth_service):
+        """Verify InvalidTokenError on JWKS network errors."""
         valid_payload = {
             "sub": "user_123",
             "iss": "https://test-clerk.clerk.accounts.dev",
@@ -224,7 +222,7 @@ class TestAuthServiceJWKSClient:
             mock_decode.return_value = valid_payload
 
             mock_jwks_instance = MagicMock()
-            mock_jwks_instance.get_signing_key_from_jwt.side_effect = httpx.HTTPError(
+            mock_jwks_instance.get_signing_key_from_jwt.side_effect = Exception(
                 "JWKS endpoint unavailable"
             )
             mock_jwks_class.return_value = mock_jwks_instance
@@ -232,7 +230,7 @@ class TestAuthServiceJWKSClient:
             with pytest.raises(InvalidTokenError) as exc_info:
                 await auth_service.verify_token("Bearer valid.token")
 
-            assert "Unable to verify token" in str(exc_info.value)
+            assert "Token verification failed" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_verify_token_jwt_invalid_error_raises_invalid_token(
@@ -263,3 +261,66 @@ class TestAuthServiceJWKSClient:
                 await auth_service.verify_token("Bearer invalid.token")
 
             assert "Token validation failed" in str(exc_info.value)
+
+    def test_jwks_client_cache_bounded(self):
+        """Verify JWKS client cache does not grow unbounded in dev mode."""
+        auth_service = AuthService(allowed_domain="")
+
+        for i in range(15):
+            auth_service._get_jwks_client(f"domain-{i}.clerk.accounts.dev")
+
+        assert len(auth_service._jwks_clients) <= AuthService._MAX_JWKS_CLIENTS
+
+
+class TestAuthServiceIssuerDomainValidation:
+    """Tests for JWKS issuer domain validation."""
+
+    @pytest.mark.asyncio
+    async def test_mismatched_issuer_domain_raises_error(self, valid_jwt_payload):
+        """Verify InvalidTokenError when issuer domain doesn't match allowed_domain."""
+        auth_service = AuthService(allowed_domain="my-app.clerk.accounts.dev")
+
+        # Token has iss: https://test-clerk.clerk.accounts.dev (from valid_jwt_payload)
+        with patch.object(pyjwt, "decode") as mock_decode:
+            mock_decode.return_value = valid_jwt_payload
+
+            with pytest.raises(InvalidTokenError) as exc_info:
+                await auth_service.verify_token("Bearer some.valid.token")
+
+            assert "Token issuer not trusted" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_attacker_controlled_issuer_rejected(self, valid_jwt_payload):
+        """Verify attacker-controlled issuer domain is rejected."""
+        auth_service = AuthService(allowed_domain="my-app.clerk.accounts.dev")
+
+        evil_payload = {**valid_jwt_payload, "iss": "https://evil.com"}
+
+        with patch.object(pyjwt, "decode") as mock_decode:
+            mock_decode.return_value = evil_payload
+
+            with pytest.raises(InvalidTokenError) as exc_info:
+                await auth_service.verify_token("Bearer attacker.token")
+
+            assert "Token issuer not trusted" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_empty_allowed_domain_skips_validation(self, valid_jwt_payload):
+        """Verify empty allowed_domain skips issuer validation (dev mode)."""
+        auth_service = AuthService(allowed_domain="")
+
+        mock_signing_key = MagicMock()
+        mock_signing_key.key = "mock-key"
+
+        with patch.object(pyjwt, "decode") as mock_decode, \
+             patch("src.services.auth_service.PyJWKClient") as mock_jwks_class:
+
+            mock_decode.side_effect = [valid_jwt_payload, valid_jwt_payload]
+
+            mock_jwks_instance = MagicMock()
+            mock_jwks_instance.get_signing_key_from_jwt.return_value = mock_signing_key
+            mock_jwks_class.return_value = mock_jwks_instance
+
+            result = await auth_service.verify_token("Bearer valid.token")
+
+            assert result.clerk_id == "user_2abc123def456"

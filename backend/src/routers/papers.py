@@ -18,6 +18,7 @@ router = APIRouter()
 @router.get("/papers", response_model=PaperListResponse)
 async def list_papers(
     paper_repo: PaperRepoDep,
+    _user: CurrentUserRequired,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     processed_only: Optional[bool] = None,

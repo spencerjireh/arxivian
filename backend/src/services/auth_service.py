@@ -2,11 +2,9 @@
 
 from dataclasses import dataclass
 from typing import Optional
-import httpx
 import jwt
 from jwt import PyJWKClient
 
-from src.config import get_settings
 from src.exceptions import InvalidTokenError, MissingTokenError
 from src.utils.logger import get_logger
 
@@ -30,38 +28,20 @@ class AuthService:
     # Clerk JWKS URL pattern
     JWKS_URL_TEMPLATE = "https://{clerk_domain}/.well-known/jwks.json"
 
-    def __init__(self):
-        self._jwks_client: Optional[PyJWKClient] = None
-        self._clerk_domain: Optional[str] = None
+    def __init__(self, allowed_domain: str = "") -> None:
+        self._allowed_domain = allowed_domain
+        self._jwks_clients: dict[str, PyJWKClient] = {}
 
-    def _get_jwks_client(self) -> PyJWKClient:
-        """Get or create JWKS client lazily."""
-        if self._jwks_client is None:
-            settings = get_settings()
-            if not settings.clerk_secret_key:
-                raise InvalidTokenError("Clerk authentication not configured")
+    _MAX_JWKS_CLIENTS = 10
 
-            # Extract Clerk domain from secret key (sk_test_xxx or sk_live_xxx)
-            # The domain is in the format: clerk.xxx.xxx.dev or xxx.clerk.accounts.dev
-            # For Clerk, we use their standard JWKS endpoint
-            self._clerk_domain = self._extract_clerk_domain(settings.clerk_secret_key)
-            jwks_url = self.JWKS_URL_TEMPLATE.format(clerk_domain=self._clerk_domain)
-
-            self._jwks_client = PyJWKClient(jwks_url)
-
-        return self._jwks_client
-
-    def _extract_clerk_domain(self, secret_key: str) -> str:
-        """
-        Extract Clerk frontend API domain from the secret key.
-
-        Note: The actual JWKS URL is derived from the token's issuer claim
-        during verification, so this returns a placeholder.
-        """
-        # The JWKS URL is derived from the token's issuer claim during verification
-        # This placeholder is not used since we extract the domain from the token itself
-        _ = secret_key  # Acknowledge the parameter
-        return "clerk.com"
+    def _get_jwks_client(self, clerk_domain: str) -> PyJWKClient:
+        """Get or create a cached PyJWKClient for the given Clerk domain."""
+        if clerk_domain not in self._jwks_clients:
+            if len(self._jwks_clients) >= self._MAX_JWKS_CLIENTS:
+                self._jwks_clients.clear()
+            jwks_url = self.JWKS_URL_TEMPLATE.format(clerk_domain=clerk_domain)
+            self._jwks_clients[clerk_domain] = PyJWKClient(jwks_url)
+        return self._jwks_clients[clerk_domain]
 
     async def verify_token(self, authorization_header: Optional[str]) -> AuthenticatedUser:
         """
@@ -98,10 +78,12 @@ class AuthService:
 
             # Extract domain from issuer for JWKS lookup
             clerk_domain = issuer.replace("https://", "")
-            jwks_url = self.JWKS_URL_TEMPLATE.format(clerk_domain=clerk_domain)
 
-            # Create JWKS client for this domain
-            jwks_client = PyJWKClient(jwks_url)
+            if self._allowed_domain and clerk_domain != self._allowed_domain:
+                raise InvalidTokenError("Token issuer not trusted")
+
+            # Get cached JWKS client for this domain
+            jwks_client = self._get_jwks_client(clerk_domain)
 
             # Get the signing key
             signing_key = jwks_client.get_signing_key_from_jwt(token)
@@ -148,12 +130,11 @@ class AuthService:
         except jwt.ExpiredSignatureError:
             log.warning("token expired")
             raise InvalidTokenError("Token has expired")
+        except InvalidTokenError:
+            raise
         except jwt.InvalidTokenError as e:
             log.warning("token invalid", error=str(e))
             raise InvalidTokenError(f"Token validation failed: {str(e)}")
-        except httpx.HTTPError as e:
-            log.error("jwks fetch failed", error=str(e))
-            raise InvalidTokenError("Unable to verify token")
         except Exception as e:
             log.error("token verification failed", error=str(e), error_type=type(e).__name__)
             raise InvalidTokenError("Token verification failed")
@@ -167,5 +148,8 @@ def get_auth_service() -> AuthService:
     """Get singleton auth service instance."""
     global _auth_service
     if _auth_service is None:
-        _auth_service = AuthService()
+        from src.config import get_settings
+
+        settings = get_settings()
+        _auth_service = AuthService(allowed_domain=settings.clerk_domain)
     return _auth_service

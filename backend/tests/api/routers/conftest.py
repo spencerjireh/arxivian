@@ -147,6 +147,7 @@ def mock_settings():
     settings.jina_api_key = "test-jina-key"
     settings.langfuse_enabled = False
     settings.agent_timeout_seconds = 180
+    settings.cors_origins = ""
     settings.debug = False
     settings.log_level = "INFO"
     settings.get_allowed_models_list = Mock(
@@ -154,6 +155,7 @@ def mock_settings():
     )
     settings.is_model_allowed = Mock(return_value=True)
     settings.api_key = "test-api-key"
+    settings.clerk_domain = "test-clerk.clerk.accounts.dev"
     return settings
 
 
@@ -331,16 +333,6 @@ def reset_task_registry():
     task_registry._tasks.clear()
     yield
     task_registry._tasks.clear()
-
-
-@pytest.fixture(autouse=True)
-def reset_idempotency_store():
-    """Reset idempotency store between tests."""
-    from src.utils.idempotency import idempotency_store
-
-    idempotency_store._store.clear()
-    yield
-    idempotency_store._store.clear()
 
 
 # Sample data fixtures

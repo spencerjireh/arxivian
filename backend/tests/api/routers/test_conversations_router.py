@@ -203,13 +203,13 @@ class TestDeleteConversationEndpoint:
 class TestCancelStreamEndpoint:
     """Tests for POST /api/v1/conversations/{session_id}/cancel endpoint."""
 
-    def test_cancel_stream_success(self, client):
+    def test_cancel_stream_success(self, client, mock_user):
         """Test successful stream cancellation."""
         from src.services.task_registry import task_registry
 
-        # Register a mock task
+        # Register a mock task with the same user_id used by the authenticated client
         mock_task = Mock()
-        task_registry.register("test-session-123", mock_task)
+        task_registry.register("test-session-123", mock_task, user_id=str(mock_user.id))
 
         response = client.post("/api/v1/conversations/test-session-123/cancel")
 
@@ -228,3 +228,17 @@ class TestCancelStreamEndpoint:
         assert data["session_id"] == "nonexistent"
         assert data["cancelled"] is False
         assert "No active stream" in data["message"]
+
+    def test_cancel_stream_wrong_user_returns_not_cancelled(self, client, mock_user):
+        """Test that cancel returns cancelled=False when user_id does not match."""
+        from src.services.task_registry import task_registry
+
+        mock_task = Mock()
+        task_registry.register("test-session-123", mock_task, user_id="other-user-id")
+
+        response = client.post("/api/v1/conversations/test-session-123/cancel")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["cancelled"] is False
+        mock_task.cancel.assert_not_called()

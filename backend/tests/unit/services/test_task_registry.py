@@ -17,7 +17,20 @@ class TestTaskRegistryRegister:
         registry.register("task-1", mock_task)
 
         assert "task-1" in registry._tasks
-        assert registry._tasks["task-1"] is mock_task
+        task, user_id = registry._tasks["task-1"]
+        assert task is mock_task
+        assert user_id is None
+
+    def test_register_with_user_id(self):
+        """Verify user_id is stored alongside task."""
+        registry = TaskRegistry()
+        mock_task = Mock(spec=asyncio.Task)
+
+        registry.register("task-1", mock_task, user_id="user-abc")
+
+        task, user_id = registry._tasks["task-1"]
+        assert task is mock_task
+        assert user_id == "user-abc"
 
     def test_register_updates_active_count(self):
         """Verify active_count increments after registration."""
@@ -38,8 +51,8 @@ class TestTaskRegistryRegister:
         registry.register("task-2", task2)
 
         assert registry.active_count == 2
-        assert registry._tasks["task-1"] is task1
-        assert registry._tasks["task-2"] is task2
+        assert registry._tasks["task-1"][0] is task1
+        assert registry._tasks["task-2"][0] is task2
 
     def test_register_overwrites_existing_task(self):
         """Verify registering with same ID overwrites previous task."""
@@ -51,7 +64,7 @@ class TestTaskRegistryRegister:
         registry.register("task-1", task2)
 
         assert registry.active_count == 1
-        assert registry._tasks["task-1"] is task2
+        assert registry._tasks["task-1"][0] is task2
 
 
 class TestTaskRegistryUnregister:
@@ -133,6 +146,50 @@ class TestTaskRegistryCancel:
 
         # Task should still be in registry (caller should unregister)
         assert "task-1" in registry._tasks
+
+    def test_cancel_with_matching_user_id_succeeds(self):
+        """Verify cancel succeeds when user_id matches the registered owner."""
+        registry = TaskRegistry()
+        mock_task = Mock(spec=asyncio.Task)
+        registry.register("task-1", mock_task, user_id="user-abc")
+
+        result = registry.cancel("task-1", user_id="user-abc")
+
+        assert result is True
+        mock_task.cancel.assert_called_once()
+
+    def test_cancel_with_wrong_user_id_returns_false(self):
+        """Verify cancel is rejected when user_id does not match the owner."""
+        registry = TaskRegistry()
+        mock_task = Mock(spec=asyncio.Task)
+        registry.register("task-1", mock_task, user_id="user-abc")
+
+        result = registry.cancel("task-1", user_id="user-xyz")
+
+        assert result is False
+        mock_task.cancel.assert_not_called()
+
+    def test_cancel_with_no_user_id_skips_ownership_check(self):
+        """Verify cancel with user_id=None succeeds regardless of owner."""
+        registry = TaskRegistry()
+        mock_task = Mock(spec=asyncio.Task)
+        registry.register("task-1", mock_task, user_id="user-abc")
+
+        result = registry.cancel("task-1", user_id=None)
+
+        assert result is True
+        mock_task.cancel.assert_called_once()
+
+    def test_cancel_owner_none_allows_any_user(self):
+        """Verify cancel succeeds when task has no owner, even if user_id is provided."""
+        registry = TaskRegistry()
+        mock_task = Mock(spec=asyncio.Task)
+        registry.register("task-1", mock_task)  # no user_id
+
+        result = registry.cancel("task-1", user_id="user-abc")
+
+        assert result is True
+        mock_task.cancel.assert_called_once()
 
 
 class TestTaskRegistryIsActive:

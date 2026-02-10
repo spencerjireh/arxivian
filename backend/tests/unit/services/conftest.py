@@ -4,6 +4,16 @@ import pytest
 from unittest.mock import AsyncMock, Mock
 from datetime import datetime, timezone
 
+import src.services.auth_service as _auth_mod
+
+
+@pytest.fixture(autouse=True)
+def _reset_auth_service_singleton():
+    """Reset AuthService singleton between tests."""
+    _auth_mod._auth_service = None
+    yield
+    _auth_mod._auth_service = None
+
 
 @pytest.fixture
 def mock_search_repository():

@@ -26,7 +26,6 @@ from src.schemas.tasks import (
 from src.dependencies import (
     PaperRepoDep,
     ChunkRepoDep,
-    DbSession,
     ApiKeyCheck,
     UserRepoDep,
     TaskExecRepoDep,
@@ -53,7 +52,6 @@ _STATUS_MAP = {
 @router.post("/cleanup", response_model=CleanupResponse)
 async def cleanup_orphaned_records(
     paper_repo: PaperRepoDep,
-    db: DbSession,
     _api_key: ApiKeyCheck,
 ) -> CleanupResponse:
     """Clean up orphaned database records (processed papers with no chunks)."""
@@ -75,8 +73,6 @@ async def cleanup_orphaned_records(
         await paper_repo.delete(str(paper.id))
         log.debug("deleted orphaned paper", arxiv_id=arxiv_id)
 
-    await db.commit()
-
     log.info(
         "orphaned record cleanup complete",
         found=len(orphaned),
@@ -94,7 +90,6 @@ async def cleanup_orphaned_records(
 async def update_user_tier(
     user_id: UUID,
     request: UpdateTierRequest,
-    db: DbSession,
     user_repo: UserRepoDep,
     _api_key: ApiKeyCheck,
 ) -> UpdateTierResponse:
@@ -111,7 +106,6 @@ async def update_user_tier(
         raise ForbiddenError("Cannot modify system user tier")
 
     user = await user_repo.update_tier(user, tier.value)
-    await db.commit()
 
     log.info("user_tier_updated", user_id=str(user_id), tier=tier.value)
 
@@ -140,7 +134,6 @@ async def get_system_searches(
 @router.put("/system/arxiv-searches", response_model=SystemSearchesResponse)
 async def update_system_searches(
     request: UpdateSystemSearchesRequest,
-    db: DbSession,
     user_repo: UserRepoDep,
     _api_key: ApiKeyCheck,
 ) -> SystemSearchesResponse:
@@ -153,7 +146,6 @@ async def update_system_searches(
     current_prefs["arxiv_searches"] = [s.model_dump() for s in request.arxiv_searches]
 
     await user_repo.update_preferences(system_user, current_prefs)
-    await db.commit()
 
     log.info(
         "system_searches_updated",
@@ -167,7 +159,6 @@ async def update_system_searches(
 async def bulk_ingest(
     request: BulkIngestRequest,
     task_repo: TaskExecRepoDep,
-    db: DbSession,
     _api_key: ApiKeyCheck,
 ) -> BulkIngestResponse:
     """Queue bulk ingestion of papers via arXiv IDs and/or search query."""
@@ -210,8 +201,6 @@ async def bulk_ingest(
             },
         )
         task_ids.append(task.id)
-
-    await db.commit()
 
     log.info("bulk_ingest_queued", tasks_queued=len(task_ids), task_ids=task_ids)
 
@@ -301,7 +290,6 @@ async def delete_paper(
     arxiv_id: str,
     paper_repo: PaperRepoDep,
     chunk_repo: ChunkRepoDep,
-    db: DbSession,
     _api_key: ApiKeyCheck,
 ) -> DeletePaperResponse:
     """Delete a paper and its chunks. Protected by API key."""
@@ -313,7 +301,6 @@ async def delete_paper(
     title = paper.title
 
     await paper_repo.delete_by_arxiv_id(arxiv_id)
-    await db.commit()
 
     return DeletePaperResponse(
         arxiv_id=arxiv_id,

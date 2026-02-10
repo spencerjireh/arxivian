@@ -180,7 +180,7 @@ async def cancel_stream(
     Returns:
         CancelStreamResponse indicating whether a stream was cancelled
     """
-    cancelled = task_registry.cancel(session_id)
+    cancelled = task_registry.cancel(session_id, user_id=str(current_user.id))
 
     if cancelled:
         return CancelStreamResponse(

@@ -38,7 +38,7 @@ class ConversationRepository:
         if not conv:
             conv = Conversation(session_id=session_id, user_id=user_id)
             self.session.add(conv)
-            await self.session.commit()
+            await self.session.flush()
             await self.session.refresh(conv)
             log.debug("conversation created", session_id=session_id, user_id=str(user_id))
         else:
@@ -136,7 +136,7 @@ class ConversationRepository:
                     model=turn.model,
                 )
                 self.session.add(ct)
-                await self.session.commit()
+                await self.session.flush()
                 await self.session.refresh(ct)
 
                 log.debug("turn saved", session_id=session_id, turn_number=turn_number)
@@ -173,7 +173,7 @@ class ConversationRepository:
 
         if conv:
             await self.session.delete(conv)
-            await self.session.commit()
+            await self.session.flush()
             log.info("conversation deleted", session_id=session_id)
             return True
 

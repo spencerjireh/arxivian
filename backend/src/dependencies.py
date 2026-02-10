@@ -150,7 +150,6 @@ async def _sync_user(authorization: str, db: AsyncSession) -> User:
         last_name=auth_user.last_name,
         profile_image_url=auth_user.profile_image_url,
     )
-    await db.commit()
     return user
 
 

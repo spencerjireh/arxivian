@@ -1,7 +1,7 @@
 """Registry for tracking active streaming tasks."""
 
 import asyncio
-from typing import Dict, Optional
+from typing import Optional
 
 from src.utils.logger import get_logger
 
@@ -18,17 +18,20 @@ class TaskRegistry:
 
     def __init__(self) -> None:
         """Initialize the task registry."""
-        self._tasks: Dict[str, "asyncio.Task[None]"] = {}
+        self._tasks: dict[str, tuple["asyncio.Task[None]", Optional[str]]] = {}
 
-    def register(self, task_id: str, task: "asyncio.Task[None]") -> None:
+    def register(
+        self, task_id: str, task: "asyncio.Task[None]", user_id: Optional[str] = None
+    ) -> None:
         """
         Register a task with the given ID.
 
         Args:
             task_id: Unique identifier for the task (typically session_id)
             task: The asyncio task to register
+            user_id: Optional owner user ID for ownership verification on cancel
         """
-        self._tasks[task_id] = task
+        self._tasks[task_id] = (task, user_id)
         log.debug("task registered", task_id=task_id, active_tasks=len(self._tasks))
 
     def unregister(self, task_id: str) -> None:
@@ -42,23 +45,30 @@ class TaskRegistry:
             del self._tasks[task_id]
             log.debug("task unregistered", task_id=task_id, active_tasks=len(self._tasks))
 
-    def cancel(self, task_id: str) -> bool:
+    def cancel(self, task_id: str, user_id: Optional[str] = None) -> bool:
         """
         Cancel a task by ID.
 
         Args:
             task_id: The task ID to cancel
+            user_id: If provided, only cancel if this matches the registered owner
 
         Returns:
             True if a task was found and cancelled, False otherwise
         """
-        task = self._tasks.get(task_id)
-        if task is not None:
-            task.cancel()
-            log.info("task cancelled", task_id=task_id)
-            return True
-        log.debug("task not found for cancellation", task_id=task_id)
-        return False
+        entry = self._tasks.get(task_id)
+        if entry is None:
+            log.debug("task not found for cancellation", task_id=task_id)
+            return False
+
+        task, owner_id = entry
+        if user_id is not None and owner_id is not None and user_id != owner_id:
+            log.warning("cancel rejected: user_id mismatch", task_id=task_id)
+            return False
+
+        task.cancel()
+        log.info("task cancelled", task_id=task_id)
+        return True
 
     def is_active(self, task_id: str) -> bool:
         """
@@ -70,8 +80,11 @@ class TaskRegistry:
         Returns:
             True if the task is registered and not done
         """
-        task = self._tasks.get(task_id)
-        return task is not None and not task.done()
+        entry = self._tasks.get(task_id)
+        if entry is None:
+            return False
+        task, _ = entry
+        return not task.done()
 
     def get(self, task_id: str) -> Optional["asyncio.Task[None]"]:
         """
@@ -83,7 +96,11 @@ class TaskRegistry:
         Returns:
             The task if found, None otherwise
         """
-        return self._tasks.get(task_id)
+        entry = self._tasks.get(task_id)
+        if entry is None:
+            return None
+        task, _ = entry
+        return task
 
     @property
     def active_count(self) -> int:

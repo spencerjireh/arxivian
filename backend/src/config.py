@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     # Redis (separate DB from Celery)
     redis_url: str = "redis://redis:6379/2"
 
+    # CORS
+    cors_origins: str = ""  # comma-separated allowed origins; empty = allow all (dev)
+
     # App
     debug: bool = False
     log_level: str = "INFO"
@@ -60,6 +63,7 @@ class Settings(BaseSettings):
 
     # Clerk Authentication
     clerk_secret_key: str = ""
+    clerk_domain: str = ""  # e.g. "your-app.clerk.accounts.dev"; empty = skip validation
 
     # Celery/Redis
     celery_broker_url: str = "redis://redis:6379/0"

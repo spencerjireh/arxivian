@@ -4,13 +4,11 @@
 class TestPapersAuthentication:
     """Tests for papers endpoint authentication."""
 
-    def test_list_papers_unauthenticated_allowed(self, unauthenticated_client, mock_paper_repo):
-        """Test that unauthenticated list requests are allowed."""
-        mock_paper_repo.get_all.return_value = ([], 0)
-
+    def test_list_papers_unauthenticated_returns_401(self, unauthenticated_client):
+        """Test that unauthenticated list requests return 401."""
         response = unauthenticated_client.get("/api/v1/papers")
 
-        assert response.status_code == 200
+        assert response.status_code == 401
 
     def test_get_paper_unauthenticated_requires_auth(self, unauthenticated_client):
         """Test that unauthenticated detail requests return 401."""

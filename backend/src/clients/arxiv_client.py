@@ -95,7 +95,7 @@ class ArxivClient:
         Raises:
             ArxivAPIError: If search fails after all retries
         """
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             return await loop.run_in_executor(None, self._execute_search_sync, search)
         except Exception as e:

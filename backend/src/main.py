@@ -19,7 +19,7 @@ from src.routers import (
 )
 
 # Import middleware
-from src.middleware import logging_middleware, transaction_middleware, register_exception_handlers
+from src.middleware import logging_middleware, register_exception_handlers
 from src.utils.logger import configure_logging, get_logger
 
 settings = get_settings()
@@ -88,19 +88,17 @@ app = FastAPI(
 register_exception_handlers(app)
 
 # CORS middleware (must be first in middleware stack)
+_cors_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
-    allow_credentials=True,
+    allow_origins=_cors_origins or ["*"],
+    allow_credentials=bool(_cors_origins),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Request logging middleware (function-based, works with streaming)
 app.middleware("http")(logging_middleware)
-
-# Database transaction middleware (function-based, works with streaming)
-app.middleware("http")(transaction_middleware)
 
 # Register routers
 app.include_router(health.router, prefix="/api/v1", tags=["Health"])
