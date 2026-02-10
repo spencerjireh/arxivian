@@ -20,8 +20,6 @@ class BaseTool(ABC):
     name: str
     description: str
 
-    # Result type registry - where to store results in state metadata
-    result_key: ClassVar[str | None] = None
     extends_chunks: ClassVar[bool] = False
 
     # Capability flags - declares required dependencies for registration

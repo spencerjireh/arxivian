@@ -16,16 +16,19 @@ class TestExecutorNode:
         return registry
 
     @pytest.fixture
-    def mock_context(self, mock_tool_registry):
+    def mock_exec_context(self, mock_tool_registry):
         ctx = Mock()
         ctx.tool_registry = mock_tool_registry
-        # Mock tool with result_key - use Mock() directly for get() return
+        # Mock tool without extends_chunks (non-retrieve)
         mock_tool = Mock()
-        mock_tool.result_key = "list_papers_results"
         mock_tool.extends_chunks = False
         # Override get to return a regular Mock, not an async one
         ctx.tool_registry.get = Mock(return_value=mock_tool)
         return ctx
+
+    @pytest.fixture
+    def exec_config(self, mock_exec_context):
+        return {"configurable": {"context": mock_exec_context}}
 
     @pytest.fixture
     def base_state(self):
@@ -36,6 +39,7 @@ class TestExecutorNode:
                 reasoning="Testing",
             ),
             "tool_history": [],
+            "tool_outputs": [],
             "metadata": {},
         }
 
@@ -44,15 +48,15 @@ class TestExecutorNode:
         "src.services.agent_service.nodes.executor.adispatch_custom_event", new_callable=AsyncMock
     )
     async def test_successful_execution_records_tool_history(
-        self, mock_event, mock_context, base_state
+        self, mock_event, mock_exec_context, exec_config, base_state
     ):
         from src.services.agent_service.nodes.executor import executor_node
 
-        mock_context.tool_registry.execute.return_value = ToolResult(
+        mock_exec_context.tool_registry.execute.return_value = ToolResult(
             success=True, data={"total_count": 5, "papers": []}, tool_name=LIST_PAPERS
         )
 
-        result = await executor_node(base_state, mock_context)
+        result = await executor_node(base_state, exec_config)
 
         assert len(result["tool_history"]) == 1
         assert result["tool_history"][0].tool_name == LIST_PAPERS
@@ -63,14 +67,61 @@ class TestExecutorNode:
     @patch(
         "src.services.agent_service.nodes.executor.adispatch_custom_event", new_callable=AsyncMock
     )
-    async def test_failed_execution_records_error(self, mock_event, mock_context, base_state):
+    async def test_tool_outputs_captured_for_non_retrieve_tools(
+        self, mock_event, mock_exec_context, exec_config, base_state
+    ):
+        """Non-retrieve tool outputs are captured in tool_outputs for generation."""
         from src.services.agent_service.nodes.executor import executor_node
 
-        mock_context.tool_registry.execute.return_value = ToolResult(
+        mock_exec_context.tool_registry.execute.return_value = ToolResult(
+            success=True, data={"total_count": 5, "papers": []}, tool_name=LIST_PAPERS
+        )
+
+        result = await executor_node(base_state, exec_config)
+
+        assert len(result["tool_outputs"]) == 1
+        assert result["tool_outputs"][0]["tool_name"] == LIST_PAPERS
+        assert result["tool_outputs"][0]["data"]["total_count"] == 5
+
+    @pytest.mark.asyncio
+    @patch(
+        "src.services.agent_service.nodes.executor.adispatch_custom_event", new_callable=AsyncMock
+    )
+    async def test_tool_outputs_accumulate_across_iterations(
+        self, mock_event, mock_exec_context, exec_config, base_state
+    ):
+        """Tool outputs from previous iterations are preserved, not deduplicated."""
+        from src.services.agent_service.nodes.executor import executor_node
+
+        mock_exec_context.tool_registry.execute.return_value = ToolResult(
+            success=True, data={"total_count": 3, "papers": ["new"]}, tool_name=LIST_PAPERS
+        )
+
+        # Simulate prior iteration having already produced a list_papers output
+        base_state["tool_outputs"] = [
+            {"tool_name": LIST_PAPERS, "data": {"total_count": 5, "papers": ["old"]}}
+        ]
+
+        result = await executor_node(base_state, exec_config)
+
+        assert len(result["tool_outputs"]) == 2
+        assert result["tool_outputs"][0]["data"]["total_count"] == 5
+        assert result["tool_outputs"][1]["data"]["total_count"] == 3
+
+    @pytest.mark.asyncio
+    @patch(
+        "src.services.agent_service.nodes.executor.adispatch_custom_event", new_callable=AsyncMock
+    )
+    async def test_failed_execution_records_error(
+        self, mock_event, mock_exec_context, exec_config, base_state
+    ):
+        from src.services.agent_service.nodes.executor import executor_node
+
+        mock_exec_context.tool_registry.execute.return_value = ToolResult(
             success=False, error="API error", tool_name=LIST_PAPERS
         )
 
-        result = await executor_node(base_state, mock_context)
+        result = await executor_node(base_state, exec_config)
 
         assert len(result["tool_history"]) == 1
         assert result["tool_history"][0].success is False
@@ -82,13 +133,13 @@ class TestExecutorNode:
         "src.services.agent_service.nodes.executor.adispatch_custom_event", new_callable=AsyncMock
     )
     async def test_exception_during_execution_records_failure(
-        self, mock_event, mock_context, base_state
+        self, mock_event, mock_exec_context, exec_config, base_state
     ):
         from src.services.agent_service.nodes.executor import executor_node
 
-        mock_context.tool_registry.execute.side_effect = RuntimeError("Connection timeout")
+        mock_exec_context.tool_registry.execute.side_effect = RuntimeError("Connection timeout")
 
-        result = await executor_node(base_state, mock_context)
+        result = await executor_node(base_state, exec_config)
 
         assert len(result["tool_history"]) == 1
         assert result["tool_history"][0].success is False
@@ -99,9 +150,10 @@ class TestExecutorNode:
     @patch(
         "src.services.agent_service.nodes.executor.adispatch_custom_event", new_callable=AsyncMock
     )
-    async def test_parallel_execution_mixed_results(self, mock_event, mock_context):
+    async def test_parallel_execution_mixed_results(self, mock_event, mock_exec_context):
         from src.services.agent_service.nodes.executor import executor_node
 
+        exec_config = {"configurable": {"context": mock_exec_context}}
         state = {
             "router_decision": RouterDecision(
                 action="execute_tools",
@@ -112,16 +164,17 @@ class TestExecutorNode:
                 reasoning="Testing parallel",
             ),
             "tool_history": [],
+            "tool_outputs": [],
             "metadata": {},
         }
 
         # First call succeeds, second raises exception
-        mock_context.tool_registry.execute.side_effect = [
+        mock_exec_context.tool_registry.execute.side_effect = [
             ToolResult(success=True, data={}, tool_name=ARXIV_SEARCH),
             RuntimeError("Database error"),
         ]
 
-        result = await executor_node(state, mock_context)
+        result = await executor_node(state, exec_config)
 
         assert len(result["tool_history"]) == 2
         assert result["tool_history"][0].success is True
@@ -130,12 +183,13 @@ class TestExecutorNode:
         assert set(result["last_executed_tools"]) == {ARXIV_SEARCH, LIST_PAPERS}
 
     @pytest.mark.asyncio
-    async def test_returns_empty_without_valid_decision(self, mock_context):
+    async def test_returns_empty_without_valid_decision(self, mock_exec_context):
         from src.services.agent_service.nodes.executor import executor_node
 
-        state = {"router_decision": None, "tool_history": [], "metadata": {}}
+        exec_config = {"configurable": {"context": mock_exec_context}}
+        state = {"router_decision": None, "tool_history": [], "tool_outputs": [], "metadata": {}}
 
-        result = await executor_node(state, mock_context)
+        result = await executor_node(state, exec_config)
 
         assert result == {}
 
@@ -143,22 +197,24 @@ class TestExecutorNode:
     @patch(
         "src.services.agent_service.nodes.executor.adispatch_custom_event", new_callable=AsyncMock
     )
-    async def test_extends_chunks_with_non_list_raises_type_error(self, mock_event, mock_context):
+    async def test_extends_chunks_with_non_list_raises_type_error(
+        self, mock_event, mock_exec_context
+    ):
         """Tool declaring extends_chunks=True must return a list."""
         from src.services.agent_service.nodes.executor import executor_node
         from src.services.agent_service.tools import RETRIEVE_CHUNKS
 
         # Configure mock tool to declare extends_chunks=True
         mock_tool = Mock()
-        mock_tool.result_key = None
         mock_tool.extends_chunks = True
-        mock_context.tool_registry.get = Mock(return_value=mock_tool)
+        mock_exec_context.tool_registry.get = Mock(return_value=mock_tool)
 
         # Return a dict instead of a list
-        mock_context.tool_registry.execute.return_value = ToolResult(
+        mock_exec_context.tool_registry.execute.return_value = ToolResult(
             success=True, data={"not": "a list"}, tool_name=RETRIEVE_CHUNKS
         )
 
+        exec_config = {"configurable": {"context": mock_exec_context}}
         state = {
             "router_decision": RouterDecision(
                 action="execute_tools",
@@ -168,11 +224,12 @@ class TestExecutorNode:
                 reasoning="Testing",
             ),
             "tool_history": [],
+            "tool_outputs": [],
             "metadata": {},
         }
 
         with pytest.raises(TypeError) as exc_info:
-            await executor_node(state, mock_context)
+            await executor_node(state, exec_config)
 
         assert "extends_chunks=True" in str(exc_info.value)
         assert "dict" in str(exc_info.value)
@@ -182,21 +239,21 @@ class TestExecutorNode:
     @patch(
         "src.services.agent_service.nodes.executor.adispatch_custom_event", new_callable=AsyncMock
     )
-    async def test_extends_chunks_with_list_succeeds(self, mock_event, mock_context):
+    async def test_extends_chunks_with_list_succeeds(self, mock_event, mock_exec_context):
         """Tool declaring extends_chunks=True works correctly with list data."""
         from src.services.agent_service.nodes.executor import executor_node
         from src.services.agent_service.tools import RETRIEVE_CHUNKS
 
         mock_tool = Mock()
-        mock_tool.result_key = None
         mock_tool.extends_chunks = True
-        mock_context.tool_registry.get = Mock(return_value=mock_tool)
+        mock_exec_context.tool_registry.get = Mock(return_value=mock_tool)
 
         chunks = [{"chunk_id": "1", "text": "test"}]
-        mock_context.tool_registry.execute.return_value = ToolResult(
+        mock_exec_context.tool_registry.execute.return_value = ToolResult(
             success=True, data=chunks, tool_name=RETRIEVE_CHUNKS
         )
 
+        exec_config = {"configurable": {"context": mock_exec_context}}
         state = {
             "router_decision": RouterDecision(
                 action="execute_tools",
@@ -206,10 +263,39 @@ class TestExecutorNode:
                 reasoning="Testing",
             ),
             "tool_history": [],
+            "tool_outputs": [],
             "metadata": {},
         }
 
-        result = await executor_node(state, mock_context)
+        result = await executor_node(state, exec_config)
 
         assert result["retrieved_chunks"] == chunks
         assert result["retrieval_attempts"] == 1
+
+    @pytest.mark.asyncio
+    @patch(
+        "src.services.agent_service.nodes.executor.adispatch_custom_event", new_callable=AsyncMock
+    )
+    async def test_json_parse_failure_records_error(self, mock_event, mock_exec_context):
+        """Invalid JSON in tool_args_json records a failed execution."""
+        from src.services.agent_service.nodes.executor import executor_node
+
+        exec_config = {"configurable": {"context": mock_exec_context}}
+        state = {
+            "router_decision": RouterDecision(
+                action="execute_tools",
+                tool_calls=[
+                    ToolCall(tool_name=LIST_PAPERS, tool_args_json="not valid json")
+                ],
+                reasoning="Testing",
+            ),
+            "tool_history": [],
+            "tool_outputs": [],
+            "metadata": {},
+        }
+
+        result = await executor_node(state, exec_config)
+
+        assert len(result["tool_history"]) == 1
+        assert result["tool_history"][0].success is False
+        assert "Invalid tool arguments" in result["tool_history"][0].error

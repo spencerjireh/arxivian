@@ -90,7 +90,6 @@ class TestRetrieveChunksTool:
         assert "Database error" in result.error
 
     def test_class_variables(self, tool):
-        assert tool.result_key is None
         assert tool.extends_chunks is True
         assert "search_service" in tool.required_dependencies
 
@@ -119,7 +118,6 @@ class TestIngestPapersTool:
         assert "must provide" in result.error.lower()
 
     def test_class_variables(self, tool):
-        assert tool.result_key == "ingest_papers_results"
         assert tool.extends_chunks is False
         assert "ingest_service" in tool.required_dependencies
 
@@ -160,7 +158,6 @@ class TestArxivSearchTool:
         assert "Invalid" in result.error
 
     def test_class_variables(self, tool):
-        assert tool.result_key == "arxiv_search_results"
         assert tool.extends_chunks is False
         assert "arxiv_client" in tool.required_dependencies
 
@@ -211,7 +208,6 @@ class TestExploreCitationsTool:
         assert result.data["reference_count"] == 2
 
     def test_class_variables(self, tool):
-        assert tool.result_key == "explore_citations_results"
         assert tool.extends_chunks is False
         assert "paper_repository" in tool.required_dependencies
 
@@ -269,7 +265,6 @@ class TestSummarizePaperTool:
         assert result.data["summary"] == "Summary text"
 
     def test_class_variables(self, tool):
-        assert tool.result_key == "summarize_paper_results"
         assert tool.extends_chunks is False
         assert "paper_repository" in tool.required_dependencies
         assert "llm_client" in tool.required_dependencies

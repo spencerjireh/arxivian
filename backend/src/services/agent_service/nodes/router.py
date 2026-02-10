@@ -1,36 +1,29 @@
 """Router node for dynamic tool selection."""
 
 from __future__ import annotations
-from typing import TYPE_CHECKING
 
 from langchain_core.messages import HumanMessage
+from langchain_core.runnables import RunnableConfig
 
 from src.schemas.langgraph_state import AgentState, RouterDecision
 from src.utils.logger import get_logger
+from ..context import AgentContext
 from ..prompts import get_router_prompt
-
-if TYPE_CHECKING:
-    from ..context import AgentContext
 
 log = get_logger(__name__)
 
 
-async def router_node(state: AgentState, context: AgentContext) -> dict:
+async def router_node(state: AgentState, config: RunnableConfig) -> dict:
     """
     Router node that decides the next action.
 
     Uses LLM to dynamically select which tool to call (or generate response)
     based on the query, conversation history, and previous tool results.
-
-    Args:
-        state: Current agent state
-        context: Agent context with LLM client and tool registry
-
-    Returns:
-        Updated state with router_decision
     """
-    # Extract query from messages
-    query = state.get("original_query") or ""
+    context: AgentContext = config["configurable"]["context"]
+
+    # Use rewritten query if available, fall back to original
+    query = state.get("rewritten_query") or state.get("original_query") or ""
     if not query:
         for msg in reversed(state.get("messages", [])):
             if isinstance(msg, HumanMessage):
@@ -101,7 +94,8 @@ async def router_node(state: AgentState, context: AgentContext) -> dict:
     )
 
     # Add reasoning step to metadata
-    reasoning_steps = state.get("metadata", {}).get("reasoning_steps", [])
+    metadata = dict(state.get("metadata", {}))
+    reasoning_steps = list(metadata.get("reasoning_steps", []))
     tools_str = ", ".join(tc.tool_name for tc in decision.tool_calls) if decision.tool_calls else ""
     reasoning_steps.append(
         f"Router decision (iteration {iteration}): {decision.action} {tools_str}".strip()
@@ -111,8 +105,5 @@ async def router_node(state: AgentState, context: AgentContext) -> dict:
         "router_decision": decision,
         "iteration": iteration,
         "status": "running",
-        "metadata": {
-            **state.get("metadata", {}),
-            "reasoning_steps": reasoning_steps,
-        },
+        "metadata": {**metadata, "reasoning_steps": reasoning_steps},
     }

@@ -21,7 +21,6 @@ class RetrieveChunksTool(BaseTool):
         "scientific or technical topic."
     )
 
-    result_key: ClassVar[str | None] = None
     extends_chunks: ClassVar[bool] = True
     required_dependencies: ClassVar[list[str]] = ["search_service"]
 

@@ -31,7 +31,6 @@ class SummarizePaperTool(BaseTool):
         "Only works for papers in the knowledge base."
     )
 
-    result_key: ClassVar[str | None] = "summarize_paper_results"
     extends_chunks: ClassVar[bool] = False
     required_dependencies: ClassVar[list[str]] = ["paper_repository", "llm_client"]
 

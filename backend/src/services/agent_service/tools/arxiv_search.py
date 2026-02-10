@@ -21,7 +21,6 @@ class ArxivSearchTool(BaseTool):
         "or explore what's available before deciding to ingest."
     )
 
-    result_key: ClassVar[str | None] = "arxiv_search_results"
     extends_chunks: ClassVar[bool] = False
     required_dependencies: ClassVar[list[str]] = ["arxiv_client"]
 

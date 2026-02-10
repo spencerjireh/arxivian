@@ -49,18 +49,6 @@ class ConversationFormatter:
             lines.append(f"{prefix}: {content}")
         return "\n".join(lines)
 
-    def as_messages(self, history: list[ConversationMessage]) -> list[dict]:
-        """
-        Return history as LLM message format.
-
-        Args:
-            history: List of conversation messages
-
-        Returns:
-            List of message dicts with role and content
-        """
-        return [{"role": m["role"], "content": m["content"]} for m in history]
-
     def format_as_topic_context(self, history: list[ConversationMessage]) -> str:
         """
         Format history as safe topic context for guardrail.
@@ -102,6 +90,7 @@ class AgentContext:
         max_retrieval_attempts: int = 3,
         max_iterations: int = 5,
         temperature: float = 0.3,
+        max_generation_tokens: int = 2000,
         user_id: UUID | None = None,
     ):
         self.llm_client = llm_client
@@ -113,6 +102,7 @@ class AgentContext:
         self.max_retrieval_attempts = max_retrieval_attempts
         self.max_iterations = max_iterations
         self.temperature = temperature
+        self.max_generation_tokens = max_generation_tokens
 
         # Initialize tool registry with default tools if not provided
         if tool_registry:

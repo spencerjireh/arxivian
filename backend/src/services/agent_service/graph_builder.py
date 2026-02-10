@@ -11,17 +11,11 @@ Graph flow:
     out_of_scope -> END
 """
 
-from uuid import UUID
+from functools import lru_cache
 
 from langgraph.graph import StateGraph, END, START
 
 from src.schemas.langgraph_state import AgentState
-from src.clients.base_llm_client import BaseLLMClient
-from src.clients.arxiv_client import ArxivClient
-from src.services.search_service import SearchService
-from src.services.ingest_service import IngestService
-from src.repositories.paper_repository import PaperRepository
-from .context import AgentContext
 from .nodes import (
     guardrail_node,
     out_of_scope_node,
@@ -38,72 +32,24 @@ from .edges import (
 )
 
 
-def create_node_wrapper(node_func, context):
-    """Wrap async node functions with context binding."""
-
-    async def wrapper(state):
-        return await node_func(state, context)
-
-    return wrapper
-
-
-def build_agent_graph(
-    llm_client: BaseLLMClient,
-    search_service: SearchService,
-    ingest_service: IngestService | None = None,
-    arxiv_client: ArxivClient | None = None,
-    paper_repository: PaperRepository | None = None,
-    guardrail_threshold: int = 75,
-    top_k: int = 3,
-    max_retrieval_attempts: int = 3,
-    max_iterations: int = 5,
-    temperature: float = 0.3,
-    user_id: UUID | None = None,
-):
-    """
-    Build and compile the agent workflow graph with router architecture.
+@lru_cache(maxsize=1)
+def get_compiled_graph():
+    """Build and compile the agent workflow graph (cached singleton).
 
     The graph uses a dynamic router pattern that allows the LLM to decide
     which tools to call based on the query and context, rather than
-    following a static DAG.
-
-    Args:
-        llm_client: LLM client for generating responses
-        search_service: Search service for document retrieval
-        guardrail_threshold: Minimum score for query to be in scope
-        top_k: Number of relevant chunks needed for generation
-        max_retrieval_attempts: Legacy parameter (kept for compatibility)
-        max_iterations: Maximum router iterations to prevent infinite loops
-        temperature: Temperature for answer generation
-
-    Returns:
-        Compiled LangGraph workflow
+    following a static DAG. Context is passed per-request via
+    RunnableConfig["configurable"]["context"].
     """
-    # Create context with tool registry
-    context = AgentContext(
-        llm_client=llm_client,
-        search_service=search_service,
-        ingest_service=ingest_service,
-        arxiv_client=arxiv_client,
-        paper_repository=paper_repository,
-        guardrail_threshold=guardrail_threshold,
-        top_k=top_k,
-        max_retrieval_attempts=max_retrieval_attempts,
-        max_iterations=max_iterations,
-        temperature=temperature,
-        user_id=user_id,
-    )
-
-    # Create workflow
     workflow = StateGraph(AgentState)
 
-    # Add nodes (with context binding)
-    workflow.add_node("guardrail", create_node_wrapper(guardrail_node, context))
-    workflow.add_node("out_of_scope", create_node_wrapper(out_of_scope_node, context))
-    workflow.add_node("router", create_node_wrapper(router_node, context))
-    workflow.add_node("executor", create_node_wrapper(executor_node, context))
-    workflow.add_node("grade_documents", create_node_wrapper(grade_documents_node, context))
-    workflow.add_node("generate", create_node_wrapper(generate_answer_node, context))
+    # Add nodes (receive context via RunnableConfig)
+    workflow.add_node("guardrail", guardrail_node)
+    workflow.add_node("out_of_scope", out_of_scope_node)
+    workflow.add_node("router", router_node)
+    workflow.add_node("executor", executor_node)
+    workflow.add_node("grade_documents", grade_documents_node)
+    workflow.add_node("generate", generate_answer_node)
 
     # Add edges
     # START -> guardrail
@@ -143,5 +89,4 @@ def build_agent_graph(
     # generate -> END
     workflow.add_edge("generate", END)
 
-    # Compile
     return workflow.compile()

@@ -2,6 +2,7 @@
 
 from langchain_core.messages import AIMessage
 from langchain_core.callbacks import adispatch_custom_event
+from langchain_core.runnables import RunnableConfig
 
 from src.schemas.langgraph_state import AgentState
 from src.utils.logger import get_logger, truncate
@@ -11,12 +12,15 @@ from ..prompts import PromptBuilder, ANSWER_SYSTEM_PROMPT
 log = get_logger(__name__)
 
 
-async def generate_answer_node(state: AgentState, context: AgentContext) -> AgentState:
+async def generate_answer_node(state: AgentState, config: RunnableConfig) -> dict:
     """Generate final answer from relevant chunks with conversation context."""
+    context: AgentContext = config["configurable"]["context"]
+
     query = state.get("original_query") or ""
     chunks = state["relevant_chunks"][: context.top_k]
     history = state.get("conversation_history", [])
     attempts = state.get("retrieval_attempts", 1)
+    tool_outputs = state.get("tool_outputs", [])
 
     log.debug(
         "generating answer",
@@ -24,12 +28,14 @@ async def generate_answer_node(state: AgentState, context: AgentContext) -> Agen
         chunks=len(chunks),
         history_len=len(history),
         attempts=attempts,
+        tool_outputs=len(tool_outputs),
     )
 
+    # Build system prompt with retrieval context and tool outputs
     builder = (
         PromptBuilder(ANSWER_SYSTEM_PROMPT)
-        .with_conversation(context.conversation_formatter, history)
         .with_retrieval_context(chunks)
+        .with_tool_outputs(tool_outputs)
         .with_query(query)
     )
 
@@ -37,19 +43,24 @@ async def generate_answer_node(state: AgentState, context: AgentContext) -> Agen
     if attempts >= context.max_retrieval_attempts and len(chunks) < context.top_k:
         builder.with_note("Limited sources found. Acknowledge gaps if needed.")
 
-    system, user = builder.build()
+    system, user_prompt = builder.build()
 
-    log.debug("llm prompt", system_len=len(system), user_len=len(user))
+    # Build structured message turns for conversation history
+    messages: list[dict] = [{"role": "system", "content": system}]
+    max_history = context.conversation_formatter.max_turns * 2
+    for msg in history[-max_history:]:
+        content = msg["content"][:500] + ("..." if len(msg["content"]) > 500 else "")
+        messages.append({"role": msg["role"], "content": content})
+    messages.append({"role": "user", "content": user_prompt})
+
+    log.debug("llm prompt", system_len=len(system), user_len=len(user_prompt))
 
     # Stream tokens and emit as custom events
     tokens: list[str] = []
     async for token in context.llm_client.generate_stream(
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
+        messages=messages,
         temperature=context.temperature,
-        max_tokens=1000,
+        max_tokens=context.max_generation_tokens,
     ):
         tokens.append(token)
         await adispatch_custom_event("token", token)
@@ -62,7 +73,11 @@ async def generate_answer_node(state: AgentState, context: AgentContext) -> Agen
         chunks_used=len(chunks),
     )
 
-    state["messages"].append(AIMessage(content=answer))
-    state["metadata"]["reasoning_steps"].append("Generated answer with conversation context")
+    metadata = dict(state.get("metadata", {}))
+    reasoning_steps = list(metadata.get("reasoning_steps", []))
+    reasoning_steps.append("Generated answer with conversation context")
 
-    return state
+    return {
+        "messages": [AIMessage(content=answer)],
+        "metadata": {**metadata, "reasoning_steps": reasoning_steps},
+    }

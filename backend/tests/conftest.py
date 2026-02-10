@@ -1,5 +1,13 @@
 """Shared pytest fixtures."""
 
+import os
+
+# Exclude evals/ from normal test collection when deepeval is not installed.
+try:
+    import deepeval  # noqa: F401
+except ImportError:
+    collect_ignore = [os.path.join(os.path.dirname(__file__), "evals")]
+
 # Clear settings cache before any imports to prevent stale values with coverage
 from src.config import get_settings
 
@@ -46,7 +54,14 @@ def mock_context(mock_llm_client, mock_search_service, conversation_formatter):
     ctx.max_retrieval_attempts = 3
     ctx.max_iterations = 5
     ctx.temperature = 0.3
+    ctx.max_generation_tokens = 2000
     return ctx
+
+
+@pytest.fixture
+def make_config(mock_context):
+    """Create a RunnableConfig dict wrapping the mock context."""
+    return {"configurable": {"context": mock_context}}
 
 
 # Database mocking fixtures

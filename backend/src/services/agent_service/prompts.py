@@ -1,10 +1,14 @@
 """Prompt templates for agent workflow."""
 
 from __future__ import annotations
+import json
 from typing import TYPE_CHECKING
+
+from src.services.agent_service.tools import RETRIEVE_CHUNKS
 
 if TYPE_CHECKING:
     from src.schemas.conversation import ConversationMessage
+    from src.schemas.langgraph_state import ToolOutput
     from .context import ConversationFormatter
 
 
@@ -88,6 +92,16 @@ class PromptBuilder:
                 )
             context = "\n\n".join(context_parts)
             self._user_parts.append(f"Retrieved context:\n{context}")
+        return self
+
+    def with_tool_outputs(self, outputs: list[ToolOutput]) -> PromptBuilder:
+        """Add non-retrieve tool outputs to the prompt."""
+        for out in outputs:
+            if out["tool_name"] == RETRIEVE_CHUNKS:
+                continue  # Handled via relevant_chunks
+            self._user_parts.append(
+                f"[Tool: {out['tool_name']}]\n{json.dumps(out['data'], default=str)[:2000]}"
+            )
         return self
 
     def with_query(self, query: str, label: str = "Question") -> PromptBuilder:

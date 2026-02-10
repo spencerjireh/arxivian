@@ -33,7 +33,8 @@ from src.schemas.stream import (
 )
 from src.schemas.common import SourceInfo
 from src.utils.logger import get_logger
-from .graph_builder import build_agent_graph
+from .context import AgentContext
+from .graph_builder import get_compiled_graph
 
 log = get_logger(__name__)
 
@@ -81,7 +82,8 @@ class AgentService:
         temperature: float = 0.3,
         user_id: Optional[UUID] = None,
     ):
-        self.graph = build_agent_graph(
+        self.graph = get_compiled_graph()
+        self.context = AgentContext(
             llm_client=llm_client,
             search_service=search_service,
             ingest_service=ingest_service,
@@ -95,7 +97,6 @@ class AgentService:
             user_id=user_id,
         )
         self.llm_client = llm_client
-        self.search_service = search_service
         self.conversation_repo = conversation_repo
         self.conversation_window = conversation_window
         self.guardrail_threshold = guardrail_threshold
@@ -136,15 +137,18 @@ class AgentService:
 
         # Load conversation history if session provided
         history: list[ConversationMessage] = []
+        last_guardrail_score: int | None = None
         if session_id and self.conversation_repo:
             turns = await self.conversation_repo.get_history(session_id, self.conversation_window)
             for t in turns:
                 history.append({"role": "user", "content": t.user_query})
                 history.append({"role": "assistant", "content": t.agent_response})
+            if turns:
+                last_guardrail_score = turns[-1].guardrail_score
             log.debug("loaded conversation history", session_id=session_id, turns=len(turns))
 
-        # Build LangGraph config with Langfuse callback
-        config: dict = {}
+        # Build LangGraph config with context and Langfuse callback
+        config: dict = {"configurable": {"context": self.context}}
         trace_id: str | None = None
 
         if LANGFUSE_CALLBACK_AVAILABLE:
@@ -155,7 +159,7 @@ class AgentService:
                     secret_key=settings.langfuse_secret_key,
                     host=settings.langfuse_host,
                     session_id=session_id,
-                    user_id=session_id,
+                    user_id=str(self.user_id) if self.user_id else session_id,
                     metadata={
                         "query": query[:200],
                         "provider": self.llm_client.provider_name,
@@ -181,14 +185,15 @@ class AgentService:
             # Legacy fields (kept for grading)
             "retrieval_attempts": 0,
             "guardrail_result": None,
-            "routing_decision": None,
             "retrieved_chunks": [],
             "relevant_chunks": [],
             "grading_results": [],
+            "tool_outputs": [],
             "metadata": {
                 "guardrail_threshold": self.guardrail_threshold,
                 "top_k": self.top_k,
                 "reasoning_steps": [],
+                "last_guardrail_score": last_guardrail_score,
             },
             "conversation_history": history,
             "session_id": session_id,
@@ -279,7 +284,7 @@ class AgentService:
                     # Emit grading results
                     elif node_name == "grade_documents":
                         relevant = output.get("relevant_chunks", [])
-                        total = output.get("retrieved_chunks", [])
+                        total = output.get("grading_results", [])
                         yield StreamEvent(
                             event=StreamEventType.STATUS,
                             data=StatusEventData(

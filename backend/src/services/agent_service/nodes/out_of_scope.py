@@ -2,6 +2,7 @@
 
 from langchain_core.messages import AIMessage
 from langchain_core.callbacks import adispatch_custom_event
+from langchain_core.runnables import RunnableConfig
 
 from src.schemas.langgraph_state import AgentState
 from src.utils.logger import get_logger, truncate
@@ -21,8 +22,10 @@ The user's query is outside your scope. Generate a helpful response that:
 Keep response to 2-3 sentences. Be warm but direct."""
 
 
-async def out_of_scope_node(state: AgentState, context: AgentContext) -> AgentState:
+async def out_of_scope_node(state: AgentState, config: RunnableConfig) -> dict:
     """Handle out-of-scope queries with context-aware response."""
+    context: AgentContext = config["configurable"]["context"]
+
     guardrail_result = state.get("guardrail_result")
     original_query = state.get("original_query") or ""
     history = state.get("conversation_history", [])
@@ -71,5 +74,4 @@ async def out_of_scope_node(state: AgentState, context: AgentContext) -> AgentSt
         message_len=len(message),
     )
 
-    state["messages"].append(AIMessage(content=message))
-    return state
+    return {"messages": [AIMessage(content=message)]}

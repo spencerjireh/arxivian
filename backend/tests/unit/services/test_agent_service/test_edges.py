@@ -9,7 +9,6 @@ from src.schemas.langgraph_state import (
 )
 from src.services.agent_service.edges import (
     continue_after_guardrail,
-    continue_after_grading,
     route_after_router,
     route_after_executor,
     route_after_grading_new,
@@ -115,18 +114,6 @@ class TestContinueAfterGuardrail:
             "metadata": {"guardrail_threshold": 50},
         }
         assert continue_after_guardrail(state) == "continue"
-
-
-class TestContinueAfterGrading:
-    """Tests for continue_after_grading edge function (legacy)."""
-
-    def test_returns_routing_decision_when_present(self):
-        state = {"routing_decision": "rewrite"}
-        assert continue_after_grading(state) == "rewrite"
-
-    def test_returns_generate_when_routing_decision_missing(self):
-        state = {"routing_decision": None}
-        assert continue_after_grading(state) == "generate"
 
 
 class TestRouteAfterRouter:

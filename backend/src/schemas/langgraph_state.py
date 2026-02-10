@@ -1,6 +1,6 @@
 """LangGraph state and structured output models."""
 
-from typing import TypedDict, Annotated, Literal
+from typing import Any, TypedDict, Annotated, Literal
 
 from pydantic import BaseModel, Field, ConfigDict
 from langchain_core.messages import AnyMessage
@@ -69,6 +69,31 @@ class GradingResult(BaseModel):
     reasoning: str = Field(..., description="Why the chunk is relevant or not (1 sentence)")
 
 
+class InjectionScan(TypedDict):
+    """Result of prompt injection pattern scan."""
+
+    suspicious: bool
+    patterns: list[str]
+
+
+class AgentMetadata(TypedDict, total=False):
+    """Typed metadata for agent state."""
+
+    guardrail_threshold: int
+    top_k: int
+    guardrail_score: int
+    injection_scan: InjectionScan
+    reasoning_steps: list[str]
+    last_guardrail_score: int | None
+
+
+class ToolOutput(TypedDict):
+    """Output captured from a tool execution for use in generation."""
+
+    tool_name: str
+    data: Any
+
+
 class AgentState(TypedDict):
     """State passed between LangGraph nodes."""
 
@@ -100,9 +125,6 @@ class AgentState(TypedDict):
     # Guardrail results
     guardrail_result: GuardrailScoring | None
 
-    # Grading-based routing (set by grading node, read by continue_after_grading edge)
-    routing_decision: str | None
-
     # Retrieved content
     retrieved_chunks: list[dict]
     relevant_chunks: list[dict]
@@ -110,8 +132,11 @@ class AgentState(TypedDict):
     # Grading results
     grading_results: list[GradingResult]
 
+    # Tool outputs for generation
+    tool_outputs: list[ToolOutput]
+
     # Metadata
-    metadata: dict
+    metadata: AgentMetadata
 
     # Conversation memory
     conversation_history: list[ConversationMessage]

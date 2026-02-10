@@ -23,7 +23,6 @@ class IngestPapersTool(BaseTool):
         "Limited to 10 papers per call."
     )
 
-    result_key: ClassVar[str | None] = "ingest_papers_results"
     extends_chunks: ClassVar[bool] = False
     required_dependencies: ClassVar[list[str]] = ["ingest_service"]
 

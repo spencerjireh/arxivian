@@ -3,16 +3,14 @@
 from __future__ import annotations
 import asyncio
 import json
-from typing import TYPE_CHECKING
 
 from langchain_core.callbacks.manager import adispatch_custom_event
+from langchain_core.runnables import RunnableConfig
 
-from src.schemas.langgraph_state import AgentState, ToolExecution, ToolCall
+from src.schemas.langgraph_state import AgentState, ToolExecution, ToolCall, ToolOutput
 from src.services.agent_service.tools import ToolResult
 from src.utils.logger import get_logger
-
-if TYPE_CHECKING:
-    from ..context import AgentContext
+from ..context import AgentContext
 
 log = get_logger(__name__)
 
@@ -30,20 +28,16 @@ def _summarize_result(result: ToolResult) -> str:
     return ""
 
 
-async def executor_node(state: AgentState, context: AgentContext) -> dict:
+async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
     """
     Executor node that runs tools selected by the router.
 
     Executes tools in parallel and records results in tool_history.
-    Also stores retrieved chunks for later grading/generation.
-
-    Args:
-        state: Current agent state
-        context: Agent context with tool registry
-
-    Returns:
-        Updated state with tool execution results
+    Also stores retrieved chunks for later grading/generation and
+    captures non-retrieve tool outputs for generation context.
     """
+    context: AgentContext = config["configurable"]["context"]
+
     decision = state.get("router_decision")
 
     if not decision or decision.action != "execute_tools" or not decision.tool_calls:
@@ -56,8 +50,18 @@ async def executor_node(state: AgentState, context: AgentContext) -> dict:
         if tc.tool_args_json:
             try:
                 tool_args = json.loads(tc.tool_args_json)
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
                 log.warning("failed to parse tool_args_json", raw=tc.tool_args_json[:100])
+                # Return a failed result for unparseable args
+                return (
+                    tc.tool_name,
+                    {},
+                    ToolResult(
+                        success=False,
+                        error=f"Invalid tool arguments: {e}",
+                        tool_name=tc.tool_name,
+                    ),
+                )
 
         log.info("executor running tool", tool_name=tc.tool_name, args=str(tool_args)[:200])
 
@@ -92,6 +96,7 @@ async def executor_node(state: AgentState, context: AgentContext) -> dict:
     tool_history = list(state.get("tool_history", []))
     last_executed_tools: list[str] = []
     retrieved_chunks: list[dict] = []
+    tool_outputs: list[ToolOutput] = []
     metadata = dict(state.get("metadata", {}))
 
     for idx, item in enumerate(results):
@@ -136,13 +141,15 @@ async def executor_node(state: AgentState, context: AgentContext) -> dict:
                             f"{type(result.data).__name__}, expected list"
                         )
                     retrieved_chunks.extend(result.data)
-                elif tool.result_key:
-                    metadata[tool.result_key] = result.data
+                else:
+                    # Capture non-retrieve tool output for generation
+                    tool_outputs.append({"tool_name": tool_name, "data": result.data})
 
     updates: dict = {
         "tool_history": tool_history,
         "last_executed_tools": last_executed_tools,
         "metadata": metadata,
+        "tool_outputs": [*state.get("tool_outputs", []), *tool_outputs],
     }
 
     if retrieved_chunks:

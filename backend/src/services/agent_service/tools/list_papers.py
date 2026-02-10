@@ -21,7 +21,6 @@ class ListPapersTool(BaseTool):
         "Returns metadata only - use retrieve_chunks for content search."
     )
 
-    result_key: ClassVar[str | None] = "list_papers_results"
     extends_chunks: ClassVar[bool] = False
     required_dependencies: ClassVar[list[str]] = ["ingest_service"]
 

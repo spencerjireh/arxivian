@@ -21,7 +21,6 @@ class ExploreCitationsTool(BaseTool):
         "Only works for papers that have been ingested and processed."
     )
 
-    result_key: ClassVar[str | None] = "explore_citations_results"
     extends_chunks: ClassVar[bool] = False
     required_dependencies: ClassVar[list[str]] = ["paper_repository"]
 

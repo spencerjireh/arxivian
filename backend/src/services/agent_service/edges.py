@@ -19,12 +19,6 @@ def continue_after_guardrail(state: AgentState) -> str:
         return "out_of_scope"
 
 
-def continue_after_grading(state: AgentState) -> str:
-    """Route based on grading results (legacy)."""
-    decision = state.get("routing_decision")
-    return decision if decision else "generate"
-
-
 def route_after_router(state: AgentState) -> str:
     """
     Route based on router decision.
