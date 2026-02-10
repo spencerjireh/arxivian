@@ -206,6 +206,7 @@ services:
       - arxivian-network
     profiles:
       - test
+      - inteval
 
   # Test Runner
   test-runner:
@@ -243,6 +244,29 @@ services:
       - arxivian-network
     profiles:
       - eval
+
+  # Integration Eval Runner (real LLM + real DB + real services)
+  inteval-runner:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    env_file:
+      - ./backend/.env
+    environment:
+      - POSTGRES_URL=postgresql+asyncpg://test_user:test_pass@test-db:5432/arxiv_rag_test
+      - LANGFUSE_ENABLED=false
+    depends_on:
+      test-db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/.venv
+    working_dir: /app
+    networks:
+      - arxivian-network
+    profiles:
+      - inteval
 
   # Frontend Test Runner
   frontend-test-runner:

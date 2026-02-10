@@ -23,10 +23,12 @@ from src.services.agent_service.tools import (
 
 
 def pytest_collection_modifyitems(items: list) -> None:
-    """Auto-apply eval marker to all tests in this directory."""
+    """Auto-apply eval marker to all tests in this directory (except integration/)."""
     evals_dir = os.path.dirname(__file__)
+    integration_dir = os.path.join(evals_dir, "integration")
     for item in items:
-        if str(item.fspath).startswith(evals_dir):
+        fspath = str(item.fspath)
+        if fspath.startswith(evals_dir) and not fspath.startswith(integration_dir):
             item.add_marker(pytest.mark.eval)
 
 

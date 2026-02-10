@@ -28,11 +28,11 @@ up-d:
 
 # Stop all services
 down:
-    docker compose --profile dev --profile test down
+    docker compose --profile dev --profile test --profile inteval down
 
 # Stop all services and remove volumes
 down-volumes:
-    docker compose --profile dev --profile test down -v
+    docker compose --profile dev --profile test --profile inteval down -v
 
 # View logs from all services
 logs:
@@ -48,7 +48,7 @@ restart:
 
 # Check status of all services
 ps:
-    docker compose --profile dev --profile test ps
+    docker compose --profile dev --profile test --profile inteval ps
 
 # Execute command in backend container (usage: just exec-backend "ls -la")
 exec-backend cmd:
@@ -80,7 +80,7 @@ migrate:
 
 # Clean up: stop containers, remove volumes, and remove locally built images
 clean:
-    docker compose --profile dev --profile test down -v --rmi local
+    docker compose --profile dev --profile test --profile inteval down -v --rmi local
 
 # Full reset: clean everything and rebuild
 reset: clean setup build up-d
@@ -116,6 +116,28 @@ eval *args:
     docker compose --profile eval build eval-runner
     docker compose --profile eval run --rm eval-runner \
         sh -c "uv sync --frozen --extra dev --extra eval && uv run pytest tests/evals -m eval -v --tb=short {{args}}"
+
+# =============================================================================
+# Integration Evaluation (real LLM + real DB + real services)
+# =============================================================================
+
+# Seed DB for integration evals (migrations + paper ingest). Idempotent.
+inteval-seed:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    docker compose --profile inteval build inteval-runner
+    docker compose --profile inteval up -d test-db
+    docker compose --profile inteval run --rm inteval-runner \
+        sh -c "uv sync --frozen --extra dev --extra eval && uv run alembic upgrade head && uv run python -m tests.evals.integration.seed"
+
+# Run integration evals (requires inteval-seed first). Use `just down` to stop test-db.
+inteval *args:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    docker compose --profile inteval build inteval-runner
+    docker compose --profile inteval up -d test-db
+    docker compose --profile inteval run --rm inteval-runner \
+        sh -c "uv sync --frozen --extra dev --extra eval && uv run alembic upgrade head && uv run pytest tests/evals/integration -m inteval -v --tb=short {{args}}"
 
 # =============================================================================
 # Code Quality

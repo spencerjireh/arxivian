@@ -202,6 +202,7 @@ class AgentService:
         # Track state for final metadata
         final_state: dict = {}
         sources_emitted = False
+        content_tokens_emitted = 0
 
         try:
             async for event in self.graph.astream_events(
@@ -320,6 +321,7 @@ class AgentService:
                 elif kind == "on_custom_event" and event.get("name") == "token":
                     token = event.get("data")
                     if token and isinstance(token, str):
+                        content_tokens_emitted += 1
                         yield StreamEvent(
                             event=StreamEventType.CONTENT,
                             data=ContentEventData(token=token),
@@ -358,6 +360,19 @@ class AgentService:
             if isinstance(last_msg, AIMessage):
                 content = last_msg.content
                 answer = content if isinstance(content, str) else str(content)
+
+        # Fallback: emit answer as single CONTENT event if no tokens streamed
+        # (on_custom_event may not propagate in all event loop contexts)
+        if content_tokens_emitted == 0 and answer:
+            log.warning(
+                "content_token_fallback_triggered",
+                answer_len=len(answer),
+                session_id=session_id,
+            )
+            yield StreamEvent(
+                event=StreamEventType.CONTENT,
+                data=ContentEventData(token=answer),
+            )
 
         # Build sources for persistence
         relevant_chunks = final_state.get("relevant_chunks", [])[: self.top_k]

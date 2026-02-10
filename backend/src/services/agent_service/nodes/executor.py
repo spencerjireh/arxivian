@@ -68,6 +68,7 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
         await adispatch_custom_event(
             "tool_start",
             {"tool_name": tc.tool_name, "args": tool_args},
+            config=config,
         )
 
         result = await context.tool_registry.execute(tc.tool_name, **tool_args)
@@ -82,6 +83,7 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
         await adispatch_custom_event(
             "tool_end",
             {"tool_name": tc.tool_name, "success": result.success},
+            config=config,
         )
 
         return tc.tool_name, tool_args, result

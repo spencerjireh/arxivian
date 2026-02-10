@@ -63,7 +63,7 @@ async def generate_answer_node(state: AgentState, config: RunnableConfig) -> dic
         max_tokens=context.max_generation_tokens,
     ):
         tokens.append(token)
-        await adispatch_custom_event("token", token)
+        await adispatch_custom_event("token", token, config=config)
     answer = "".join(tokens)
 
     log.info(

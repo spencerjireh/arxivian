@@ -62,11 +62,11 @@ async def out_of_scope_node(state: AgentState, config: RunnableConfig) -> dict:
             max_tokens=300,
         ):
             tokens.append(token)
-            await adispatch_custom_event("token", token)
+            await adispatch_custom_event("token", token, config=config)
         message = "".join(tokens)
     else:
         message = "I specialize in academic research papers from arXiv. How can I help with that?"
-        await adispatch_custom_event("token", message)
+        await adispatch_custom_event("token", message, config=config)
 
     log.info(
         "out of scope response generated",
