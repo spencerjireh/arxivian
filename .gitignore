@@ -439,6 +439,9 @@ faiss_index/
 # Jupyter
 .ipynb_checkpoints/
 
+# deepeval
+.deepeval/
+
 # pytest
 .pytest_cache/
 .coverage
