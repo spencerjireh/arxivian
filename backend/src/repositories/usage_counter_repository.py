@@ -1,5 +1,7 @@
 """Repository for daily usage counter operations."""
 
+from uuid import UUID
+
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,7 +17,7 @@ class UsageCounterRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_today_query_count(self, user_id: str) -> int:
+    async def get_today_query_count(self, user_id: str | UUID) -> int:
         """Get today's query count for a user. Returns 0 if no row exists."""
         result = await self.session.execute(
             select(UsageCounter.query_count).where(
@@ -26,7 +28,7 @@ class UsageCounterRepository:
         row = result.scalar_one_or_none()
         return row if row is not None else 0
 
-    async def increment_query_count(self, user_id: str) -> int:
+    async def increment_query_count(self, user_id: str | UUID) -> int:
         """Atomically increment today's query count via UPSERT.
 
         Creates the row if it doesn't exist. Returns the new count.

@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from src.config import get_settings
-from src.schemas.stream import StreamRequest, StreamEventType, ErrorEventData, StreamEvent
+from src.schemas.stream import StreamRequest, ErrorEventData
 from src.dependencies import (
     DbSession,
     CurrentUserRequired,
@@ -27,11 +27,8 @@ log = get_logger(__name__)
 
 def _format_sse_error(error: str, code: str) -> str:
     """Format an error as an SSE event."""
-    error_event = StreamEvent(
-        event=StreamEventType.ERROR,
-        data=ErrorEventData(error=error, code=code),
-    )
-    return f"event: error\ndata: {json.dumps(error_event.data.model_dump())}\n\n"
+    error_data = ErrorEventData(error=error, code=code)
+    return f"event: error\ndata: {json.dumps(error_data.model_dump())}\n\n"
 
 
 @router.post("/stream")
