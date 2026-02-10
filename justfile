@@ -130,7 +130,7 @@ fix:
 
 # Run frontend linting
 lint-frontend:
-    docker compose --profile dev exec frontend npm run lint
+    docker compose --profile dev run --rm --no-deps frontend npm run lint
 
 # Run frontend tests (usage: just test-frontend, just test-frontend -- --reporter=verbose)
 test-frontend *args:
