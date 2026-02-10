@@ -7,39 +7,10 @@ circular.  We assert boolean classification directly.
 from __future__ import annotations
 
 import pytest
-from langchain_core.messages import HumanMessage
 
-from src.schemas.langgraph_state import AgentState
 from .fixtures.guardrail_scenarios import GUARDRAIL_SCENARIOS, GuardrailScenario
+from .helpers import build_initial_state
 from src.services.agent_service.nodes.guardrail import guardrail_node
-
-
-def _build_guardrail_state(scenario: GuardrailScenario) -> AgentState:
-    return {
-        "messages": [HumanMessage(content=scenario.query)],
-        "original_query": None,
-        "rewritten_query": None,
-        "status": "running",
-        "iteration": 0,
-        "max_iterations": 5,
-        "router_decision": None,
-        "tool_history": [],
-        "last_executed_tools": [],
-        "pause_reason": None,
-        "retrieval_attempts": 0,
-        "guardrail_result": None,
-        "retrieved_chunks": [],
-        "relevant_chunks": [],
-        "grading_results": [],
-        "tool_outputs": [],
-        "metadata": {
-            "guardrail_threshold": 75,
-            "top_k": 3,
-            "reasoning_steps": [],
-        },
-        "conversation_history": scenario.conversation_history,
-        "session_id": None,
-    }
 
 
 @pytest.mark.parametrize(
@@ -52,7 +23,10 @@ async def test_guardrail_classification(
     eval_config: dict,
 ) -> None:
     """Guardrail should correctly classify in-scope vs out-of-scope queries."""
-    state = _build_guardrail_state(scenario)
+    state = build_initial_state(
+        query=scenario.query,
+        conversation_history=scenario.conversation_history,
+    )
     result = await guardrail_node(state, eval_config)
 
     guardrail = result["guardrail_result"]

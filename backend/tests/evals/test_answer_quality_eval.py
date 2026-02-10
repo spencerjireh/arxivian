@@ -8,7 +8,7 @@ Runs graph.ainvoke() and scores the final answer with DeepEval metrics:
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from deepeval import assert_test
@@ -50,24 +50,19 @@ def _make_tool_execute(scenario: AnswerQualityScenario) -> AsyncMock:
 )
 async def test_answer_quality(
     scenario: AnswerQualityScenario,
-    eval_context,
+    eval_config: dict,
     compiled_graph,
 ) -> None:
     """Full graph run should produce relevant, faithful answers."""
+    ctx = eval_config["configurable"]["context"]
     state = build_initial_state(
         query=scenario.query,
         conversation_history=scenario.conversation_history,
+        max_iterations=ctx.max_iterations,
     )
-    config = {"configurable": {"context": eval_context}}
 
-    # Patch tool execution to return canned data
-    original_execute = eval_context.tool_registry.execute
-    eval_context.tool_registry.execute = _make_tool_execute(scenario)
-
-    try:
-        final_state = await compiled_graph.ainvoke(state, config)
-    finally:
-        eval_context.tool_registry.execute = original_execute
+    with patch.object(ctx.tool_registry, "execute", side_effect=_make_tool_execute(scenario)):
+        final_state = await compiled_graph.ainvoke(state, eval_config)
 
     actual_output = extract_answer(final_state)
     retrieval_context = extract_retrieval_context(final_state)

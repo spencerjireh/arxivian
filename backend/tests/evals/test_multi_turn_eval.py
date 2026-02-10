@@ -6,7 +6,7 @@ Scores the final answer with a custom GEval metric for coherence.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from deepeval import assert_test
@@ -33,24 +33,6 @@ def _make_turn_execute(turn: Turn) -> AsyncMock:
     return AsyncMock(side_effect=_execute)
 
 
-coherence_metric = GEval(
-    name="Multi-turn Coherence",
-    criteria=(
-        "Evaluate whether the assistant's response is coherent with the "
-        "conversation history. It should: "
-        "1) Reference or build on information from prior turns when relevant, "
-        "2) Not contradict earlier statements, "
-        "3) Maintain topical continuity or smoothly transition topics, "
-        "4) Provide a substantive answer to the current query."
-    ),
-    evaluation_params=[
-        LLMTestCaseParams.INPUT,
-        LLMTestCaseParams.ACTUAL_OUTPUT,
-    ],
-    threshold=0.3,
-)
-
-
 @pytest.mark.parametrize(
     "scenario",
     MULTI_TURN_SCENARIOS,
@@ -58,27 +40,23 @@ coherence_metric = GEval(
 )
 async def test_multi_turn_coherence(
     scenario: MultiTurnScenario,
-    eval_context,
+    eval_config: dict,
     compiled_graph,
 ) -> None:
     """Sequential graph runs should produce coherent multi-turn conversations."""
+    ctx = eval_config["configurable"]["context"]
     conversation_history: list[dict] = []
     answers: list[str] = []
-    original_execute = eval_context.tool_registry.execute
 
     for i, turn in enumerate(scenario.turns):
         state = build_initial_state(
             query=turn.query,
             conversation_history=conversation_history,
+            max_iterations=ctx.max_iterations,
         )
-        config = {"configurable": {"context": eval_context}}
 
-        eval_context.tool_registry.execute = _make_turn_execute(turn)
-
-        try:
-            final_state = await compiled_graph.ainvoke(state, config)
-        finally:
-            eval_context.tool_registry.execute = original_execute
+        with patch.object(ctx.tool_registry, "execute", side_effect=_make_turn_execute(turn)):
+            final_state = await compiled_graph.ainvoke(state, eval_config)
 
         answer = extract_answer(final_state)
         assert answer, f"[{scenario.id}] Turn {i} produced empty answer"
@@ -98,6 +76,23 @@ async def test_multi_turn_coherence(
     test_case = LLMTestCase(
         input=full_input,
         actual_output=answers[-1],
+    )
+
+    coherence_metric = GEval(
+        name="Multi-turn Coherence",
+        criteria=(
+            "Evaluate whether the assistant's response is coherent with the "
+            "conversation history. It should: "
+            "1) Reference or build on information from prior turns when relevant, "
+            "2) Not contradict earlier statements, "
+            "3) Maintain topical continuity or smoothly transition topics, "
+            "4) Provide a substantive answer to the current query."
+        ),
+        evaluation_params=[
+            LLMTestCaseParams.INPUT,
+            LLMTestCaseParams.ACTUAL_OUTPUT,
+        ],
+        threshold=0.3,
     )
 
     assert_test(test_case, [coherence_metric])

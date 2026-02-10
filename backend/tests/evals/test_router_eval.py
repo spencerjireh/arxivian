@@ -10,40 +10,11 @@ import pytest
 from deepeval import assert_test
 from deepeval.metrics import ToolCorrectnessMetric
 from deepeval.test_case import LLMTestCase, ToolCall
-from langchain_core.messages import HumanMessage
 
-from src.schemas.langgraph_state import AgentState
 from src.services.agent_service.nodes.router import router_node
 
 from .fixtures.router_scenarios import ROUTER_SCENARIOS, RouterScenario
-
-
-def _build_router_state(scenario: RouterScenario) -> AgentState:
-    return {
-        "messages": [HumanMessage(content=scenario.query)],
-        "original_query": scenario.query,
-        "rewritten_query": None,
-        "status": "running",
-        "iteration": 0,
-        "max_iterations": 5,
-        "router_decision": None,
-        "tool_history": scenario.tool_history,
-        "last_executed_tools": [],
-        "pause_reason": None,
-        "retrieval_attempts": 0,
-        "guardrail_result": None,
-        "retrieved_chunks": scenario.available_chunks,
-        "relevant_chunks": [],
-        "grading_results": [],
-        "tool_outputs": [],
-        "metadata": {
-            "guardrail_threshold": 75,
-            "top_k": 3,
-            "reasoning_steps": [],
-        },
-        "conversation_history": scenario.conversation_history,
-        "session_id": None,
-    }
+from .helpers import build_initial_state
 
 
 @pytest.mark.parametrize(
@@ -56,7 +27,13 @@ async def test_router_tool_selection(
     eval_config: dict,
 ) -> None:
     """Router should select the correct tools for each query type."""
-    state = _build_router_state(scenario)
+    state = build_initial_state(
+        query=scenario.query,
+        original_query=scenario.query,
+        conversation_history=scenario.conversation_history,
+        tool_history=scenario.tool_history,
+        retrieved_chunks=scenario.available_chunks,
+    )
     result = await router_node(state, eval_config)
 
     decision = result["router_decision"]
