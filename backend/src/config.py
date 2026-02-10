@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     postgres_url: str = "postgresql+asyncpg://user:password@localhost:5432/arxiv_rag"
 
     # LLM Configuration (LiteLLM-format model strings: "provider/model")
-    default_llm_model: str = "openai/gpt-5-nano"
-    allowed_llm_models: str = "openai/gpt-5-nano,openai/gpt-4o-mini"
+    default_llm_model: str = "nvidia_nim/openai/gpt-oss-120b"
+    allowed_llm_models: str = "nvidia_nim/openai/gpt-oss-120b,openai/gpt-4o-mini"
 
     # Provider API Keys
     openai_api_key: str = ""

@@ -30,7 +30,7 @@ class LiteLLMClient(BaseLLMClient):
     Supports any provider that LiteLLM handles via model prefix routing.
     """
 
-    def __init__(self, model: str = "openai/gpt-5-nano", timeout: float = 60.0):
+    def __init__(self, model: str = "nvidia_nim/openai/gpt-oss-120b", timeout: float = 60.0):
         self._model = model
         self.default_timeout = timeout
 

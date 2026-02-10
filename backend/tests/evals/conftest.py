@@ -43,7 +43,7 @@ def _configure_litellm() -> None:
 
 @pytest.fixture(scope="session")
 def real_llm_client() -> LiteLLMClient:
-    model = os.environ.get("EVAL_LLM_MODEL", "openai/gpt-5-nano")
+    model = os.environ.get("EVAL_LLM_MODEL", "nvidia_nim/openai/gpt-oss-120b")
     return LiteLLMClient(model=model, timeout=120.0)
 
 
@@ -111,7 +111,7 @@ def eval_context(
         top_k=1,  # accept a single relevant chunk to avoid rewrite loops
         max_retrieval_attempts=1,
         max_iterations=2,  # limit graph loops (each makes several slow LLM calls)
-        temperature=1,  # gpt-5-nano only supports temperature=1
+        temperature=1,  # reasoning models only support temperature=1
         max_generation_tokens=16000,  # reasoning models use tokens for CoT
     )
 
