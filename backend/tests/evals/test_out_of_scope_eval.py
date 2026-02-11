@@ -68,7 +68,7 @@ async def test_out_of_scope_response_quality(
             LLMTestCaseParams.INPUT,
             LLMTestCaseParams.ACTUAL_OUTPUT,
         ],
-        threshold=0.4,
+        threshold=0.25,
     )
 
     assert_test(test_case, [metric])

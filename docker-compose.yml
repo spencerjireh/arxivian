@@ -239,7 +239,7 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      - DEEPEVAL_PER_ATTEMPT_TIMEOUT_SECONDS_OVERRIDE=180
+      - DEEPEVAL_PER_ATTEMPT_TIMEOUT_SECONDS_OVERRIDE=300
     volumes:
       - ./backend:/app
       - /app/.venv

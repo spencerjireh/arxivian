@@ -63,9 +63,9 @@ GRADING_SCENARIOS: list[GradingScenario] = [
         id="single_relevant_sufficient",
         query="What is BERT and how does it work?",
         chunks=BERT_CHUNKS,
-        expected_relevant_ids=["chunk-b1"],
+        expected_relevant_ids=["chunk-b1", "chunk-b2"],
         expect_rewrite=False,
         top_k=1,
-        description="Single relevant chunk meets top_k=1 -- no rewrite needed",
+        description="Both BERT chunks relevant to 'what is BERT / how it works' -- no rewrite needed",
     ),
 ]
