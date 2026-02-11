@@ -122,18 +122,22 @@ eval *args:
 # =============================================================================
 
 # Seed DB for integration evals (migrations + paper ingest). Idempotent.
+# Data persists in test_postgres_data volume; only re-seed after `just clean`.
 inteval-seed:
     #!/usr/bin/env bash
     set -uo pipefail
+    trap 'docker compose --profile inteval down 2>/dev/null' EXIT
     docker compose --profile inteval build inteval-runner
     docker compose --profile inteval up -d test-db
     docker compose --profile inteval run --rm inteval-runner \
         sh -c "uv sync --frozen --extra dev --extra eval && uv run alembic upgrade head && uv run python -m tests.evals.integration.seed"
 
-# Run integration evals (requires inteval-seed first). Use `just down` to stop test-db.
+# Run integration evals (requires inteval-seed first).
+# Data persists in test_postgres_data volume; only re-seed after `just clean`.
 inteval *args:
     #!/usr/bin/env bash
     set -uo pipefail
+    trap 'docker compose --profile inteval down 2>/dev/null' EXIT
     docker compose --profile inteval build inteval-runner
     docker compose --profile inteval up -d test-db
     docker compose --profile inteval run --rm inteval-runner \

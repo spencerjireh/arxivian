@@ -167,6 +167,18 @@ class TestRouteAfterRouter:
         }
         assert route_after_router(state) == "generate"
 
+    def test_routes_to_execute_when_action_is_generate_but_tool_calls_present(self):
+        state = {
+            "router_decision": RouterDecision(
+                action="generate",
+                tool_calls=[ToolCall(tool_name=RETRIEVE_CHUNKS, tool_args_json="{}")],
+                reasoning="Model said generate but included tool calls",
+            ),
+            "retrieved_chunks": [],
+            "relevant_chunks": [],
+        }
+        assert route_after_router(state) == "execute"
+
     def test_routes_to_generate_when_router_decision_missing(self):
         state = {
             "router_decision": None,

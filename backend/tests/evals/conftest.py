@@ -20,6 +20,7 @@ from src.services.agent_service.tools import (
     ExploreCitationsTool,
     SummarizePaperTool,
 )
+from .helpers import ServiceMockBuilder, ServiceMocks
 
 
 def pytest_collection_modifyitems(items: list) -> None:
@@ -61,23 +62,28 @@ def compiled_graph():
 
 
 @pytest.fixture
-def mock_search_service() -> AsyncMock:
-    return AsyncMock()
+def service_mocks() -> ServiceMocks:
+    return ServiceMockBuilder().build()
 
 
 @pytest.fixture
-def mock_ingest_service() -> AsyncMock:
-    return AsyncMock()
+def mock_search_service(service_mocks: ServiceMocks) -> AsyncMock:
+    return service_mocks.search_service
 
 
 @pytest.fixture
-def mock_arxiv_client() -> AsyncMock:
-    return AsyncMock()
+def mock_ingest_service(service_mocks: ServiceMocks) -> AsyncMock:
+    return service_mocks.ingest_service
 
 
 @pytest.fixture
-def mock_paper_repository() -> AsyncMock:
-    return AsyncMock()
+def mock_arxiv_client(service_mocks: ServiceMocks) -> AsyncMock:
+    return service_mocks.arxiv_client
+
+
+@pytest.fixture
+def mock_paper_repository(service_mocks: ServiceMocks) -> AsyncMock:
+    return service_mocks.paper_repository
 
 
 @pytest.fixture

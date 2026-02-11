@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from unittest.mock import AsyncMock
 
 from langchain_core.messages import HumanMessage
 
 from src.schemas.langgraph_state import AgentState
 from src.services.agent_service.tools import ToolResult
+from .fixtures.canned_data import (
+    ARXIV_SEARCH_RESULTS,
+    CITATION_RESULTS,
+    LIST_PAPERS_RESULTS,
+    SUMMARIZE_PAPER_RESULT,
+)
 
 
 def build_initial_state(
@@ -80,3 +87,61 @@ def make_retrieve_mock(canned_chunks: list[dict]) -> AsyncMock:
 def make_tool_result(tool_name: str, data: object, success: bool = True) -> ToolResult:
     """Create a ToolResult with canned data."""
     return ToolResult(success=success, data=data, tool_name=tool_name)
+
+
+@dataclass
+class ServiceMocks:
+    """Holds all mocked external services with pre-configured return values."""
+
+    search_service: AsyncMock = field(default_factory=AsyncMock)
+    ingest_service: AsyncMock = field(default_factory=AsyncMock)
+    arxiv_client: AsyncMock = field(default_factory=AsyncMock)
+    paper_repository: AsyncMock = field(default_factory=AsyncMock)
+
+
+class ServiceMockBuilder:
+    """Fluent builder for ServiceMocks with sensible defaults."""
+
+    def __init__(self) -> None:
+        self._search_results: list[dict] = []
+        self._list_papers_result: dict = LIST_PAPERS_RESULTS
+        self._arxiv_results: dict = ARXIV_SEARCH_RESULTS
+        self._citation_results: dict = CITATION_RESULTS
+        self._summarize_result: dict = SUMMARIZE_PAPER_RESULT
+
+    def with_search_results(self, chunks: list[dict]) -> ServiceMockBuilder:
+        self._search_results = chunks
+        return self
+
+    def with_list_papers(self, result: dict) -> ServiceMockBuilder:
+        self._list_papers_result = result
+        return self
+
+    def with_arxiv_results(self, result: dict) -> ServiceMockBuilder:
+        self._arxiv_results = result
+        return self
+
+    def with_citations(self, result: dict) -> ServiceMockBuilder:
+        self._citation_results = result
+        return self
+
+    def build(self) -> ServiceMocks:
+        search_service = AsyncMock()
+        search_service.hybrid_search = AsyncMock(return_value=self._search_results)
+
+        ingest_service = AsyncMock()
+        ingest_service.list_papers = AsyncMock(return_value=self._list_papers_result)
+
+        arxiv_client = AsyncMock()
+        arxiv_client.search = AsyncMock(return_value=self._arxiv_results)
+
+        paper_repository = AsyncMock()
+        paper_repository.get_citations = AsyncMock(return_value=self._citation_results)
+        paper_repository.get_paper_summary = AsyncMock(return_value=self._summarize_result)
+
+        return ServiceMocks(
+            search_service=search_service,
+            ingest_service=ingest_service,
+            arxiv_client=arxiv_client,
+            paper_repository=paper_repository,
+        )

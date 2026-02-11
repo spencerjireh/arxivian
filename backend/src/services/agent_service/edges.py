@@ -33,7 +33,7 @@ def route_after_router(state: AgentState) -> str:
     if not decision:
         return "generate"
 
-    if decision.action == "execute_tools" and decision.tool_calls:
+    if decision.tool_calls:
         return "execute"
 
     # Action is "generate" - check if we need to grade first

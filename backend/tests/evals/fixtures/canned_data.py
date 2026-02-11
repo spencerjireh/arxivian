@@ -83,6 +83,20 @@ BERT_CHUNKS = [
         authors="J. Devlin, M. Chang, K. Lee, K. Toutanova",
         section_name="Introduction",
     ),
+    make_chunk(
+        chunk_id="chunk-b2",
+        chunk_text=(
+            "BERT's pre-training uses two objectives: masked language modeling (MLM) "
+            "and next sentence prediction (NSP). In MLM, 15% of input tokens are "
+            "randomly selected; of those, 80% are replaced with [MASK], 10% with a "
+            "random token, and 10% are left unchanged. The model is trained to predict "
+            "the original tokens using cross-entropy loss over the full vocabulary."
+        ),
+        arxiv_id="1810.04805",
+        title="BERT: Pre-training of Deep Bidirectional Transformers",
+        authors="J. Devlin, M. Chang, K. Lee, K. Toutanova",
+        section_name="Pre-training Objectives",
+    ),
 ]
 
 IRRELEVANT_CHUNKS = [
@@ -151,4 +165,15 @@ CITATION_RESULTS = {
     "cited_by": [
         {"arxiv_id": "1810.04805", "title": "BERT: Pre-training of Deep Bidirectional Transformers"},
     ],
+}
+
+SUMMARIZE_PAPER_RESULT = {
+    "arxiv_id": "1706.03762",
+    "title": "Attention Is All You Need",
+    "summary": (
+        "This paper introduces the Transformer, a model architecture eschewing "
+        "recurrence and instead relying entirely on an attention mechanism to draw "
+        "global dependencies between input and output. The Transformer achieves "
+        "state-of-the-art results on English-German and English-French translation."
+    ),
 }

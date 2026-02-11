@@ -40,7 +40,7 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
 
     decision = state.get("router_decision")
 
-    if not decision or decision.action != "execute_tools" or not decision.tool_calls:
+    if not decision or not decision.tool_calls:
         log.warning("executor called without valid tool decision")
         return {}
 

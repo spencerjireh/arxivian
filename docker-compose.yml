@@ -197,6 +197,8 @@ services:
       - ./backend/.env.test
     ports:
       - "${TEST_DB_PORT:-5433}:5432"
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-test_user} -d ${POSTGRES_DB:-arxiv_rag_test}"]
       interval: 5s
@@ -236,6 +238,8 @@ services:
       target: development
     env_file:
       - ./backend/.env
+    environment:
+      - DEEPEVAL_PER_ATTEMPT_TIMEOUT_SECONDS_OVERRIDE=180
     volumes:
       - ./backend:/app
       - /app/.venv
@@ -285,6 +289,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  test_postgres_data:
     driver: local
   langfuse_postgres_data:
     driver: local
