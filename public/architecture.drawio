@@ -1,0 +1,240 @@
+<mxfile host="app.diagrams.net" agent="Claude" version="26.0.0">
+  <diagram name="Architecture" id="architecture">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="800" math="0" shadow="0" background="#ffffff">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ==================== FRONTEND ==================== -->
+        <mxCell id="fe_group" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cccccc;dashed=1;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="20" width="310" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="fe_label" value="FRONTEND" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=9;fontColor=#999999;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="490" y="25" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="fe1" value="React 19 + Vite" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="500" y="50" width="120" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="fe2" value="Zustand" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="500" y="95" width="55" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="fe3" value="Clerk Auth" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="565" y="95" width="75" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="fe4" value="Tailwind v4" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="650" y="50" width="80" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="fe5" value="SSE Stream" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="650" y="95" width="80" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: Frontend -> Backend -->
+        <mxCell id="a1" value="HTTP / SSE" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#666666;strokeWidth=2;fontSize=10;fontColor=#666666;" edge="1" source="fe_group" target="be_group" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== BACKEND ==================== -->
+        <mxCell id="be_group" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cccccc;dashed=1;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="420" y="200" width="430" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="be_label" value="BACKEND" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=9;fontColor=#999999;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="430" y="205" width="60" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="be1" value="FastAPI&lt;br&gt;Routers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="440" y="230" width="100" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="be2" value="Agent Service&lt;br&gt;&lt;font style=&quot;font-size:9px;font-style:italic;&quot;&gt;LangGraph&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="555" y="230" width="120" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="be3" value="Ingest &amp;&lt;br&gt;Search" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="690" y="230" width="90" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="be4" value="Repositories" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="440" y="290" width="100" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="be5" value="Clerk JWT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="555" y="290" width="80" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="be6" value="structlog" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="650" y="290" width="70" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="be7" value="Pydantic v2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="735" y="290" width="80" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== CELERY ==================== -->
+        <mxCell id="cel_group" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cccccc;dashed=1;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="200" width="310" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="cel_label" value="ASYNC WORKERS" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=9;fontColor=#999999;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="205" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="cel1" value="Celery&lt;br&gt;Workers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="230" width="100" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="cel2" value="Celery Beat&lt;br&gt;&lt;font style=&quot;font-size:9px;font-style:italic;&quot;&gt;Scheduler&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="185" y="230" width="100" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="cel3" value="Ingestion" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="70" y="290" width="75" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="cel4" value="Cleanup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="155" y="290" width="70" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="cel5" value="Flower" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="240" y="290" width="70" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: Backend <-> Celery -->
+        <mxCell id="a2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#666666;strokeWidth=1.5;" edge="1" source="be_group" target="cel_group" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== DATA LAYER ==================== -->
+
+        <!-- PostgreSQL -->
+        <mxCell id="pg_group" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cccccc;dashed=1;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="510" width="250" height="135" as="geometry" />
+        </mxCell>
+        <mxCell id="pg_label" value="DATA STORE" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=9;fontColor=#999999;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="90" y="515" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pg1" value="PostgreSQL 16" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=8;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="540" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="pg2" value="pgvector&lt;br&gt;&lt;font style=&quot;font-size:9px;&quot;&gt;HNSW index&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="100" y="600" width="80" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="pg3" value="GIN / FTS&lt;br&gt;&lt;font style=&quot;font-size:9px;&quot;&gt;tsvector&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="195" y="600" width="80" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="pg4" value="Alembic" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="230" y="550" width="70" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Redis (positioned to the far left, below Celery, avoiding PostgreSQL box) -->
+        <mxCell id="redis" value="Redis" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=8;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="160" y="390" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="redis_desc" value="Celery broker" style="text;html=1;align=center;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=9;fontColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="162" y="440" width="80" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: Backend -> PostgreSQL -->
+        <mxCell id="a3" value="async SQLAlchemy" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;strokeWidth=1.5;fontSize=9;fontColor=#9673a6;" edge="1" source="be_group" target="pg_group" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="420" y="480" />
+              <mxPoint x="205" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Arrow: Celery -> Redis (short drop, no crossing) -->
+        <mxCell id="a4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b85450;strokeWidth=1.5;" edge="1" source="cel_group" target="redis" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: Celery -> PostgreSQL (routes along far left edge) -->
+        <mxCell id="a4b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;strokeWidth=1;dashed=1;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="cel_group" target="pg_group" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="30" y="340" />
+              <mxPoint x="30" y="577" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ==================== EXTERNAL SERVICES ==================== -->
+
+        <!-- LiteLLM / LLM Providers -->
+        <mxCell id="llm_group" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cccccc;dashed=1;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="430" width="280" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="llm_label" value="LLM PROVIDERS" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=9;fontColor=#999999;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="490" y="435" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="llm1" value="LiteLLM&lt;br&gt;&lt;font style=&quot;font-size:9px;font-style:italic;&quot;&gt;Unified routing&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="500" y="460" width="120" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="llm2" value="OpenAI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="640" y="460" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="llm3" value="NVIDIA NIM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="640" y="500" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="llm_prefix" value="openai/gpt-4o&#xa;nvidia_nim/..." style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=9;fontColor=#999999;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="500" y="510" width="100" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: Backend -> LiteLLM -->
+        <mxCell id="a5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#d6b656;strokeWidth=1.5;" edge="1" source="be_group" target="llm_group" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- External APIs -->
+        <mxCell id="ext_group" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cccccc;dashed=1;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="820" y="430" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="ext_label" value="EXTERNAL APIs" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=9;fontColor=#999999;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="830" y="435" width="90" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ext1" value="arXiv API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="460" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ext2" value="Jina v3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="935" y="460" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ext3" value="Clerk" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="505" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ext_jina_desc" value="Embeddings (1024d)" style="text;html=1;align=center;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=8;fontColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="920" y="490" width="110" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: Backend -> External APIs -->
+        <mxCell id="a6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#6c8ebf;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" source="be_group" target="ext_group" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="870" y="270" />
+              <mxPoint x="870" y="410" />
+              <mxPoint x="920" y="410" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ==================== OBSERVABILITY ==================== -->
+        <mxCell id="obs_group" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cccccc;dashed=1;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="610" width="280" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="obs_label" value="OBSERVABILITY" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=9;fontColor=#999999;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="490" y="615" width="90" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="obs1" value="Langfuse&lt;br&gt;&lt;font style=&quot;font-size:9px;font-style:italic;&quot;&gt;Self-hosted&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="500" y="640" width="110" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="obs2" value="Traces" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="625" y="640" width="55" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="obs3" value="Scores" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="690" y="640" width="55" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="obs4" value="Feedback" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="625" y="675" width="120" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: LiteLLM -> Langfuse -->
+        <mxCell id="a7" value="callbacks" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=1.5;fontSize=9;fontColor=#82b366;" edge="1" source="llm_group" target="obs_group" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- RRF label between pgvector and GIN -->
+        <mxCell id="rrf" value="RRF" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=10;fontColor=#9673a6;fontStyle=3;" vertex="1" parent="1">
+          <mxGeometry x="183" y="610" width="30" height="20" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
