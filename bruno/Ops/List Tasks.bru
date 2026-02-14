@@ -1,0 +1,21 @@
+meta {
+  name: List Tasks
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/api/v1/ops/tasks
+  body: none
+  auth: none
+}
+
+headers {
+  X-Api-Key: {{api_key}}
+}
+
+docs {
+  List all background Celery tasks. Returns task IDs, statuses, and metadata.
+
+  Requires API key authentication.
+}

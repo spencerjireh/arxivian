@@ -1,0 +1,38 @@
+meta {
+  name: Bulk Ingest Papers
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/v1/ops/ingest
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Api-Key: {{api_key}}
+}
+
+body:json {
+  {
+    "search_query": "transformer architecture",
+    "max_results": 5,
+    "categories": ["cs.AI", "cs.LG"],
+    "force_reprocess": false
+  }
+}
+
+docs {
+  Bulk ingest papers from arXiv. Provide either a list of specific arXiv IDs or a search query.
+
+  Body fields:
+  - arxiv_ids (optional): List of arXiv IDs to ingest
+  - search_query (optional): arXiv search query (one of arxiv_ids or search_query required)
+  - max_results (optional, default 10): Maximum papers for search query (1-50)
+  - categories (optional): arXiv category filters (e.g. "cs.AI", "cs.LG")
+  - force_reprocess (optional, default false): Re-process already ingested papers
+
+  Requires API key authentication.
+}

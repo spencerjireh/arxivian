@@ -1,0 +1,17 @@
+meta {
+  name: Get Current User
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/api/v1/users/me
+  body: none
+  auth: none
+}
+
+docs {
+  Get the currently authenticated user's profile. Returns user details including tier, usage counters, and account metadata.
+
+  Requires Clerk JWT authentication via the Authorization header.
+}

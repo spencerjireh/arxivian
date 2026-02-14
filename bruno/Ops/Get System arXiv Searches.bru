@@ -1,0 +1,21 @@
+meta {
+  name: Get System arXiv Searches
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{base_url}}/api/v1/ops/system/arxiv-searches
+  body: none
+  auth: none
+}
+
+headers {
+  X-Api-Key: {{api_key}}
+}
+
+docs {
+  Get all configured system-level arXiv search queries used for scheduled ingestion runs. Returns the list of search configurations with names, queries, categories, and enabled status.
+
+  Requires API key authentication.
+}

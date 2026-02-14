@@ -1,0 +1,32 @@
+meta {
+  name: Update User Tier
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{base_url}}/api/v1/ops/users/:user_id/tier
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Api-Key: {{api_key}}
+}
+
+params:path {
+  user_id: your-user-id-here
+}
+
+body:json {
+  {
+    "tier": "pro"
+  }
+}
+
+docs {
+  Update a user's subscription tier. The tier value is validated against the UserTier enum.
+
+  Requires API key authentication.
+}

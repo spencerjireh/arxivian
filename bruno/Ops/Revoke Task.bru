@@ -1,0 +1,25 @@
+meta {
+  name: Revoke Task
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{base_url}}/api/v1/ops/tasks/:task_id
+  body: none
+  auth: none
+}
+
+headers {
+  X-Api-Key: {{api_key}}
+}
+
+params:path {
+  task_id: your-task-id-here
+}
+
+docs {
+  Revoke a pending or running background task. The task will be terminated if currently executing.
+
+  Requires API key authentication.
+}

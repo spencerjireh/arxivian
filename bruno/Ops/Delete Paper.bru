@@ -1,0 +1,25 @@
+meta {
+  name: Delete Paper
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{base_url}}/api/v1/ops/papers/:arxiv_id
+  body: none
+  auth: none
+}
+
+headers {
+  X-Api-Key: {{api_key}}
+}
+
+params:path {
+  arxiv_id: 2301.12345
+}
+
+docs {
+  Delete a paper and all its associated chunks by arXiv ID. This is a destructive operation and cannot be undone.
+
+  Requires API key authentication.
+}

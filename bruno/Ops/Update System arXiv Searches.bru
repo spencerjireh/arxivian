@@ -1,0 +1,50 @@
+meta {
+  name: Update System arXiv Searches
+  type: http
+  seq: 9
+}
+
+put {
+  url: {{base_url}}/api/v1/ops/system/arxiv-searches
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Api-Key: {{api_key}}
+}
+
+body:json {
+  {
+    "arxiv_searches": [
+      {
+        "name": "AI Research",
+        "query": "large language models",
+        "categories": ["cs.AI", "cs.CL"],
+        "max_results": 10,
+        "enabled": true
+      },
+      {
+        "name": "ML Theory",
+        "query": "neural network optimization",
+        "categories": ["cs.LG", "stat.ML"],
+        "max_results": 5,
+        "enabled": true
+      }
+    ]
+  }
+}
+
+docs {
+  Replace all system-level arXiv search configurations. This is a full replacement -- all existing searches are overwritten.
+
+  Each search config includes:
+  - name: Display name (max 100 chars)
+  - query: arXiv search query (1-500 chars)
+  - categories (optional): arXiv category filters
+  - max_results (optional, default 10): Papers per run (1-50)
+  - enabled (optional, default true): Whether search runs on schedule
+
+  Requires API key authentication.
+}

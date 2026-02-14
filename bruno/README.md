@@ -37,46 +37,40 @@ Download the installer from [https://www.usebruno.com/downloads](https://www.use
 4. Select the `bruno/` folder
 5. Bruno will automatically load all API requests
 
-Alternatively, you can also use:
-- File > Open Collection
-- Or just drag and drop the `bruno/` folder into Bruno
-
 ## Collection Structure
-
-The Bruno collection is organized into the following folders:
 
 ```
 bruno/
 ├── bruno.json                 # Collection metadata
 ├── environments/
-│   └── local.bru             # Local environment (localhost:8000)
-├── Ask/                      # Streaming agent endpoints with SSE (with conversation support)
+│   └── local.bru             # Local environment (base_url, api_key)
+├── Ask/                      # Streaming agent endpoints with SSE
 ├── Conversations/            # Conversation management (list, get, delete, cancel)
 ├── Feedback/                 # User feedback submission
 ├── Health/                   # Health check endpoint
-├── Ingest/                   # Paper ingestion endpoints
-├── Ops/                      # Ops operations (cleanup)
-├── Papers/                   # Paper management endpoints (CRUD)
-├── Preferences/              # User preferences and saved arXiv searches
-├── Reports/                  # User ingestion reports (list, get)
+├── Ops/                      # Operations (ingest, tasks, cleanup, system config)
+├── Papers/                   # Paper listing and lookup
 ├── Root/                     # Root API information endpoint
 ├── Search/                   # Search endpoints (hybrid, vector, fulltext)
-└── Tasks/                    # Background task management
+└── Users/                    # User profile endpoints
 ```
 
-Total: **33 API requests** covering all endpoints
+Total: **29 API requests** across 9 folders
 
 ## Environment Configuration
 
 The collection includes a `local` environment with the following variables:
 
-- `base_url`: `http://localhost:8000`
+| Variable | Default | Used by |
+|----------|---------|---------|
+| `base_url` | `http://localhost:8000` | All requests |
+| `api_key` | `your-api-key-here` | Ops endpoints (`X-Api-Key` header) |
 
 ### Using Environments
 
 1. In Bruno, look for the environment dropdown (usually top-right)
 2. Select "local" environment
-3. All requests will automatically use `http://localhost:8000`
+3. All requests will automatically use the configured variables
 
 ### Adding More Environments
 
@@ -88,6 +82,7 @@ To add additional environments (e.g., production, staging):
 ```
 vars {
   base_url: https://your-production-url.com
+  api_key: your-production-api-key
 }
 ```
 
@@ -97,75 +92,61 @@ vars {
 
 ### Health
 
-- **Health Check**: GET `/api/v1/health` - Check API health status
+- **Health Check**: GET `/api/v1/health` -- Check API health status
 
 ### Search
 
-- **Hybrid Search**: POST `/api/v1/search` - Vector + full-text + RRF fusion
-- **Vector Search**: POST `/api/v1/search` - Pure semantic search
-- **Full-Text Search**: POST `/api/v1/search` - Pure keyword search
-- **Search with Filters**: POST `/api/v1/search` - Search with category and date filters
-
-### Ingest
-
-- **Ingest Papers (Basic)**: POST `/api/v1/ingest` - Basic arXiv ingestion
-- **Ingest Papers (Advanced)**: POST `/api/v1/ingest` - With categories and date filters
-- **Ingest Papers (Force Reprocess)**: POST `/api/v1/ingest` - Re-process existing papers
+- **Hybrid Search**: POST `/api/v1/search` -- Vector + full-text + RRF fusion
+- **Vector Search**: POST `/api/v1/search` -- Pure semantic search
+- **Full-Text Search**: POST `/api/v1/search` -- Pure keyword search
+- **Search with Filters**: POST `/api/v1/search` -- Search with category and date filters
 
 ### Ask (Streaming with SSE)
 
-- **Ask Agent (Basic)**: POST `/api/v1/stream` - Stream with default settings via SSE
-- **Ask Agent (OpenAI)**: POST `/api/v1/stream` - Use OpenAI provider (gpt-4o-mini)
-- **Ask Agent (Z.AI)**: POST `/api/v1/stream` - Use Z.AI provider (glm-4.6) (legacy)
-- **Ask Agent (Advanced Parameters)**: POST `/api/v1/stream` - Custom parameters with streaming
-- **Ask Agent (Conversation Continuity)**: POST `/api/v1/stream` - Multi-turn conversation with streaming
+- **Ask Agent (Basic)**: POST `/api/v1/stream` -- Stream with default settings via SSE
+- **Ask Agent (OpenAI)**: POST `/api/v1/stream` -- Use OpenAI provider (gpt-4o-mini)
+- **Ask Agent (Z.AI)**: POST `/api/v1/stream` -- Use Z.AI provider (glm-4.6)
+- **Ask Agent (Advanced Parameters)**: POST `/api/v1/stream` -- Custom parameters with streaming
+- **Ask Agent (Conversation Continuity)**: POST `/api/v1/stream` -- Multi-turn conversation with streaming
 
 All Ask Agent endpoints use Server-Sent Events (SSE) to stream responses in real-time. You will see status updates, content tokens, sources, and metadata as separate events.
 
 ### Papers
 
-- **List Papers**: GET `/api/v1/papers` - Paginated list with filters
-- **Get Paper by arXiv ID**: GET `/api/v1/papers/:arxiv_id` - Single paper details
-- **Delete Paper**: DELETE `/api/v1/papers/:arxiv_id` - Delete paper and chunks
-- **List Papers with Filters**: GET `/api/v1/papers` - Example with filters applied
+- **List Papers**: GET `/api/v1/papers` -- Paginated list with filters
+- **Get Paper by arXiv ID**: GET `/api/v1/papers/:arxiv_id` -- Single paper details
+- **List Papers with Filters**: GET `/api/v1/papers` -- Example with filters applied
 
 ### Conversations
 
-- **List Conversations**: GET `/api/v1/conversations` - Paginated list of conversations
-- **Get Conversation**: GET `/api/v1/conversations/:session_id` - Full conversation with all turns
-- **Delete Conversation**: DELETE `/api/v1/conversations/:session_id` - Delete conversation and turns
-- **Cancel Stream**: POST `/api/v1/conversations/:session_id/cancel` - Cancel active stream
+- **List Conversations**: GET `/api/v1/conversations` -- Paginated list of conversations
+- **Get Conversation**: GET `/api/v1/conversations/:session_id` -- Full conversation with all turns
+- **Delete Conversation**: DELETE `/api/v1/conversations/:session_id` -- Delete conversation and turns
+- **Cancel Stream**: POST `/api/v1/conversations/:session_id/cancel` -- Cancel active stream
 
-### Ops
+### Users
 
-- **Cleanup Orphaned Records**: POST `/api/v1/ops/cleanup` - Remove orphaned papers
+- **Get Current User**: GET `/api/v1/users/me` -- Get authenticated user profile
 
-### Reports
+### Ops (requires `X-Api-Key` header)
 
-- **List Reports**: GET `/api/v1/reports/` - Paginated list of user's ingestion reports
-- **Get Report**: GET `/api/v1/reports/:report_id` - Get a specific report by UUID
+- **Cleanup Orphaned Records**: POST `/api/v1/ops/cleanup` -- Remove orphaned papers
+- **Bulk Ingest Papers**: POST `/api/v1/ops/ingest` -- Ingest papers by ID or search query
+- **List Tasks**: GET `/api/v1/ops/tasks` -- List background Celery tasks
+- **Get Task Status**: GET `/api/v1/ops/tasks/:task_id` -- Poll task completion status
+- **Revoke Task**: DELETE `/api/v1/ops/tasks/:task_id` -- Revoke a pending or running task
+- **Delete Paper**: DELETE `/api/v1/ops/papers/:arxiv_id` -- Delete paper and chunks
+- **Update User Tier**: PATCH `/api/v1/ops/users/:user_id/tier` -- Change a user's tier
+- **Get System arXiv Searches**: GET `/api/v1/ops/system/arxiv-searches` -- Get scheduled search configs
+- **Update System arXiv Searches**: PUT `/api/v1/ops/system/arxiv-searches` -- Replace all search configs
 
 ### Feedback
 
-- **Submit Feedback**: POST `/api/v1/feedback` - Submit user feedback to Langfuse
-
-### Preferences
-
-- **Get Preferences**: GET `/api/v1/preferences` - Get user preferences
-- **Update arXiv Searches**: PUT `/api/v1/preferences/arxiv-searches` - Replace all saved searches
-- **Add arXiv Search**: POST `/api/v1/preferences/arxiv-searches` - Add a new saved search
-- **Delete arXiv Search**: DELETE `/api/v1/preferences/arxiv-searches/:search_name` - Remove a saved search
-
-### Tasks
-
-- **List Tasks**: GET `/api/v1/tasks/` - List background tasks for the user
-- **Queue Async Ingestion**: POST `/api/v1/tasks/ingest/async` - Queue ingestion as background task
-- **Get Task Status**: GET `/api/v1/tasks/:task_id` - Poll task completion status
-- **Revoke Task**: DELETE `/api/v1/tasks/:task_id` - Revoke a pending or running task
+- **Submit Feedback**: POST `/api/v1/feedback` -- Submit user feedback to Langfuse
 
 ### Root
 
-- **API Information**: GET `/` - API version and feature information
+- **API Information**: GET `/` -- API version and feature information
 
 ## Usage Tips
 
@@ -175,9 +156,6 @@ Before using Bruno, ensure your API server is running:
 
 ```bash
 # Using Docker (recommended)
-just up
-
-# Or start services manually
 just dev
 ```
 
@@ -203,23 +181,16 @@ To test multi-turn conversations with the Ask Agent:
 
 The agent will remember context from previous turns in the conversation.
 
-### Viewing Request Documentation
+### Ops Endpoints
 
-Each request in Bruno includes documentation explaining:
-- What the endpoint does
-- Available parameters
-- Example use cases
-- Response format
-
-Click on any request and look for the "Docs" tab to view this information.
+All Ops endpoints require the `X-Api-Key` header for authentication. Set the `api_key` variable in your environment to your actual API key before using these requests.
 
 ### Path Parameters
 
 For requests with path parameters (e.g., `/api/v1/papers/:arxiv_id`):
 
 1. Open the request in Bruno
-2. Replace `:arxiv_id` in the URL with an actual arXiv ID (e.g., `2301.12345`)
-3. Or use the "Params" tab to fill in path parameters
+2. Replace the placeholder in the URL or use the "Params" tab to fill in path parameters
 
 ### Query Parameters
 
@@ -236,8 +207,6 @@ In addition to Bruno, you can also use the interactive FastAPI documentation:
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 
-These provide an alternative way to explore and test the API endpoints.
-
 ## Troubleshooting
 
 ### Bruno won't open the collection
@@ -248,7 +217,7 @@ These provide an alternative way to explore and test the API endpoints.
 
 ### Requests are failing
 
-- Ensure the API server is running (`just up` or `just dev`)
+- Ensure the API server is running (`just dev`)
 - Check that you're using the correct environment (local)
 - Verify the `base_url` is set to `http://localhost:8000`
 
@@ -256,8 +225,13 @@ These provide an alternative way to explore and test the API endpoints.
 
 - Ensure you're using Bruno version from November 2025 or later
 - Check that your Bruno installation is up to date: `brew upgrade bruno` (macOS)
-- If streaming still doesn't work, try the FastAPI docs at `http://localhost:8000/docs` which has built-in SSE support
+- If streaming still doesn't work, try the FastAPI docs at `http://localhost:8000/docs`
 - Alternative: Use curl for testing SSE: `curl -N http://localhost:8000/api/v1/stream -H "Content-Type: application/json" -d '{"query":"test"}'`
+
+### Ops requests returning 401/403
+
+- Verify the `api_key` environment variable is set to a valid API key
+- Check that the "local" environment is selected in Bruno
 
 ### Environment variables not working
 
@@ -270,8 +244,9 @@ When adding new API endpoints:
 
 1. Create a new `.bru` file in the appropriate folder
 2. Follow the existing naming and structure conventions
-3. Include comprehensive documentation in the `docs` section
-4. Update this README if adding new folders or major features
+3. Include documentation in the `docs` section
+4. For ops endpoints, include the `X-Api-Key: {{api_key}}` header
+5. Update this README if adding new folders or major features
 
 ## Resources
 
