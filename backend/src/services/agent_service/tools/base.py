@@ -17,8 +17,8 @@ class ToolResult(BaseModel):
 class BaseTool(ABC):
     """Abstract base class for agent tools."""
 
-    name: str
-    description: str
+    name: ClassVar[str]
+    description: ClassVar[str]
 
     extends_chunks: ClassVar[bool] = False
 

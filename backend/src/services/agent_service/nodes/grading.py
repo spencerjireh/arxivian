@@ -42,10 +42,26 @@ async def grade_documents_node(state: AgentState, config: RunnableConfig) -> dic
         return result
 
     grading_tasks = [grade_single_chunk(chunk) for chunk in chunks]
-    grading_results = await asyncio.gather(*grading_tasks)
+    raw_results = await asyncio.gather(*grading_tasks, return_exceptions=True)
+
+    # Filter out failed gradings (treat as not-relevant)
+    grading_results: list[GradingResult] = []
+    successful_chunks: list[dict] = []
+    for chunk, result in zip(chunks, raw_results):
+        if isinstance(result, BaseException):
+            log.warning(
+                "grading_chunk_failed",
+                chunk_id=chunk.get("chunk_id"),
+                error=str(result),
+            )
+            continue
+        grading_results.append(result)
+        successful_chunks.append(chunk)
 
     # Filter relevant chunks
-    relevant_chunks = [chunk for chunk, grade in zip(chunks, grading_results) if grade.is_relevant]
+    relevant_chunks = [
+        chunk for chunk, grade in zip(successful_chunks, grading_results) if grade.is_relevant
+    ]
 
     relevant_count = len(relevant_chunks)
     total_count = len(chunks)
@@ -65,7 +81,7 @@ async def grade_documents_node(state: AgentState, config: RunnableConfig) -> dic
         feedback = "\n".join(
             f"- {chunk['arxiv_id']}: "
             f"{'RELEVANT' if g.is_relevant else 'NOT RELEVANT'} - {g.reasoning}"
-            for chunk, g in zip(chunks[:3], grading_results[:3])
+            for chunk, g in zip(successful_chunks[:3], grading_results[:3])
         )
         rewritten_query = (
             await context.llm_client.generate_completion(

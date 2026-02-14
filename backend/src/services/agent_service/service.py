@@ -97,14 +97,8 @@ class AgentService:
             temperature=temperature,
             user_id=user_id,
         )
-        self.llm_client = llm_client
         self.conversation_repo = conversation_repo
         self.conversation_window = conversation_window
-        self.guardrail_threshold = guardrail_threshold
-        self.top_k = top_k
-        self.max_retrieval_attempts = max_retrieval_attempts
-        self.max_iterations = max_iterations
-        self.temperature = temperature
         self.user_id = user_id
 
     async def ask_stream(
@@ -138,8 +132,8 @@ class AgentService:
             query=query[:200],
             session_id=session_id,
             thread_id=thread_id,
-            provider=self.llm_client.provider_name,
-            model=self.llm_client.model,
+            provider=self.context.llm_client.provider_name,
+            model=self.context.llm_client.model,
         )
 
         # Load conversation history if session provided
@@ -169,8 +163,8 @@ class AgentService:
                     user_id=str(self.user_id) if self.user_id else session_id,
                     metadata={
                         "query": query[:200],
-                        "provider": self.llm_client.provider_name,
-                        "model": self.llm_client.model,
+                        "provider": self.context.llm_client.provider_name,
+                        "model": self.context.llm_client.model,
                     },
                 )
                 trace_id = callback.trace_id
@@ -185,7 +179,7 @@ class AgentService:
             # Router architecture fields
             "status": "running",
             "iteration": 0,
-            "max_iterations": self.max_iterations,
+            "max_iterations": self.context.max_iterations,
             "router_decision": None,
             "tool_history": [],
             "pause_reason": None,
@@ -197,8 +191,8 @@ class AgentService:
             "grading_results": [],
             "tool_outputs": [],
             "metadata": {
-                "guardrail_threshold": self.guardrail_threshold,
-                "top_k": self.top_k,
+                "guardrail_threshold": self.context.guardrail_threshold,
+                "top_k": self.context.top_k,
                 "reasoning_steps": [],
                 "last_guardrail_score": last_guardrail_score,
             },
@@ -240,7 +234,7 @@ class AgentService:
                     # Emit detailed status after guardrail
                     if node_name == "guardrail" and output.get("guardrail_result"):
                         result = output["guardrail_result"]
-                        is_in_scope = result.score >= self.guardrail_threshold
+                        is_in_scope = result.score >= self.context.guardrail_threshold
                         yield StreamEvent(
                             event=StreamEventType.STATUS,
                             data=StatusEventData(
@@ -248,7 +242,7 @@ class AgentService:
                                 message=f"Query {'is in scope' if is_in_scope else 'is out of scope'}",
                                 details={
                                     "score": result.score,
-                                    "threshold": self.guardrail_threshold,
+                                    "threshold": self.context.guardrail_threshold,
                                     "reasoning": result.reasoning,
                                 },
                             ),
@@ -316,7 +310,7 @@ class AgentService:
                                     published_date=chunk.get("published_date"),
                                     was_graded_relevant=True,
                                 )
-                                for chunk in relevant[: self.top_k]
+                                for chunk in relevant[: self.context.top_k]
                             ]
                             yield StreamEvent(
                                 event=StreamEventType.SOURCES,
@@ -382,7 +376,7 @@ class AgentService:
             )
 
         # Build sources for persistence
-        relevant_chunks = final_state.get("relevant_chunks", [])[: self.top_k]
+        relevant_chunks = final_state.get("relevant_chunks", [])[: self.context.top_k]
         sources_dicts = [
             {
                 "arxiv_id": chunk["arxiv_id"],
@@ -407,8 +401,8 @@ class AgentService:
                 TurnData(
                     user_query=query,
                     agent_response=answer,
-                    provider=self.llm_client.provider_name,
-                    model=self.llm_client.model,
+                    provider=self.context.llm_client.provider_name,
+                    model=self.context.llm_client.model,
                     guardrail_score=guardrail_score,
                     retrieval_attempts=final_state.get("retrieval_attempts", 0),
                     rewritten_query=final_state.get("rewritten_query"),
@@ -467,8 +461,8 @@ class AgentService:
                 retrieval_attempts=final_state.get("retrieval_attempts", 0),
                 rewritten_query=final_state.get("rewritten_query"),
                 guardrail_score=guardrail_score,
-                provider=self.llm_client.provider_name,
-                model=self.llm_client.model,
+                provider=self.context.llm_client.provider_name,
+                model=self.context.llm_client.model,
                 session_id=session_id,
                 turn_number=turn_number,
                 reasoning_steps=final_state.get("metadata", {}).get("reasoning_steps", []),

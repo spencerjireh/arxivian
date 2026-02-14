@@ -58,13 +58,13 @@ class RetrieveChunksTool(BaseTool):
             return ToolResult(success=False, error="Query cannot be empty", tool_name=self.name)
 
         effective_top_k = top_k if top_k is not None else self.default_top_k
-        top_k = max(1, min(effective_top_k, MAX_TOP_K))
-        log.debug("retrieve_chunks executing", query=query[:100], top_k=top_k)
+        clamped_top_k = max(1, min(effective_top_k, MAX_TOP_K))
+        log.debug("retrieve_chunks executing", query=query[:100], top_k=clamped_top_k)
 
         try:
             results = await self.search_service.hybrid_search(
                 query=query,
-                top_k=top_k,
+                top_k=clamped_top_k,
                 mode="hybrid",
             )
 
