@@ -11,9 +11,9 @@ Graph flow:
     out_of_scope -> END
 """
 
-from functools import lru_cache
-
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import StateGraph, END, START
+from langgraph.graph.state import CompiledStateGraph
 
 from src.schemas.langgraph_state import AgentState
 from .nodes import (
@@ -32,9 +32,11 @@ from .edges import (
 )
 
 
-@lru_cache(maxsize=1)
-def get_compiled_graph():
-    """Build and compile the agent workflow graph (cached singleton).
+def build_graph(checkpointer: BaseCheckpointSaver | None = None) -> CompiledStateGraph:
+    """Build and compile the agent workflow graph.
+
+    Called once during application lifespan startup. The compiled graph
+    is stored on app.state and injected into AgentService via DI.
 
     The graph uses a dynamic router pattern that allows the LLM to decide
     which tools to call based on the query and context, rather than
@@ -89,4 +91,4 @@ def get_compiled_graph():
     # generate -> END
     workflow.add_edge("generate", END)
 
-    return workflow.compile()
+    return workflow.compile(checkpointer=checkpointer)

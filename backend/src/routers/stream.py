@@ -16,6 +16,7 @@ from src.dependencies import (
     TierPolicyDep,
     ChatGuard,
     UsageCounterRepoDep,
+    AgentGraphDep,
 )
 from src.factories.service_factories import get_agent_service
 from src.services.task_registry import task_registry
@@ -39,6 +40,7 @@ async def stream(
     current_user: CurrentUserRequired,
     policy: TierPolicyDep,
     usage_repo: UsageCounterRepoDep,
+    graph: AgentGraphDep,
     _limit: ChatGuard,
 ) -> StreamingResponse:
     """
@@ -102,6 +104,7 @@ async def stream(
                     user_id=user_id,
                     can_ingest=policy.can_ingest,
                     can_search_arxiv=policy.can_search_arxiv,
+                    graph=graph,
                 )
 
                 # Stream events from the agent service

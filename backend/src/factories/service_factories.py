@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 from uuid import UUID
+from langgraph.graph.state import CompiledStateGraph
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import get_settings
 from src.services.search_service import SearchService
@@ -104,6 +105,7 @@ def get_ingest_service(
 def get_agent_service(
     db_session: AsyncSession,
     user_id: UUID,
+    graph: CompiledStateGraph,
     provider: str | None = None,
     model: str | None = None,
     guardrail_threshold: int = 75,
@@ -122,6 +124,7 @@ def get_agent_service(
     Args:
         db_session: Database session
         user_id: User ID for conversation ownership
+        graph: Pre-compiled LangGraph agent graph (from app.state via DI)
         provider: LLM provider prefix (e.g. 'openai', 'nvidia_nim'). Combined with
                   model into LiteLLM format. Uses system default if both None.
         model: Model name or full LiteLLM model string. Uses default if None.
@@ -179,4 +182,5 @@ def get_agent_service(
         max_iterations=max_iterations,
         temperature=temperature,
         user_id=user_id,
+        graph=graph,
     )

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-from uuid import UUID
 
 import litellm
 import pytest
@@ -18,6 +17,7 @@ from src.config import get_settings
 from src.factories.service_factories import get_agent_service
 from src.models.user import User
 from src.services.agent_service import AgentService
+from src.services.agent_service.graph_builder import build_graph
 
 
 # ---------------------------------------------------------------------------
@@ -94,14 +94,20 @@ async def db_session(session_factory):
             raise
 
 
+@pytest.fixture(scope="session")
+def compiled_graph():
+    return build_graph()
+
+
 @pytest.fixture
-def agent_service(db_session: AsyncSession, seed_user: User) -> AgentService:
+def agent_service(db_session: AsyncSession, seed_user: User, compiled_graph) -> AgentService:
     """Production agent service wired to real DB + real LLM."""
     return get_agent_service(
         db_session,
         user_id=seed_user.id,
         temperature=0.3,
         max_iterations=5,
+        graph=compiled_graph,
     )
 
 

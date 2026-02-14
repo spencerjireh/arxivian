@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.config import get_settings
 from src.database import engine, init_db, AsyncSessionLocal
 
+from src.services.agent_service.graph_builder import build_graph
+
 # Import routers
 from src.routers import (
     health,
@@ -52,16 +54,30 @@ async def lifespan(app: FastAPI):
 
     app.state.redis = aioredis.from_url(settings.redis_url, decode_responses=True)
 
-    # Load system user ID (seeded by migration)
-    from src.tiers import init_system_user
+    # Initialize LangGraph checkpointer (must use Redis DB 0 for RediSearch)
+    from langgraph.checkpoint.redis.aio import AsyncRedisSaver
 
-    async with AsyncSessionLocal() as db:
-        await init_system_user(db)
-    log.info("system user loaded")
+    async with AsyncRedisSaver.from_conn_string(
+        settings.redis_checkpoint_url,
+        ttl={"default_ttl": 60 * 24, "refresh_on_read": False},  # 24h in minutes
+    ) as checkpointer:
+        await checkpointer.asetup()
+        log.info("redis checkpointer initialized", url=settings.redis_checkpoint_url)
 
-    yield
+        # Compile agent graph once with checkpointer (singleton for app lifetime)
+        app.state.agent_graph = build_graph(checkpointer)
+        log.info("agent graph compiled with checkpointer")
 
-    # Shutdown Redis
+        # Load system user ID (seeded by migration)
+        from src.tiers import init_system_user
+
+        async with AsyncSessionLocal() as db:
+            await init_system_user(db)
+        log.info("system user loaded")
+
+        yield
+
+    # Shutdown Redis (rate-limit client)
     await app.state.redis.aclose()
 
     # Flush any pending Langfuse events on shutdown

@@ -4,6 +4,7 @@ import hmac
 from typing import Annotated
 
 from fastapi import Depends, Header, Request
+from langgraph.graph.state import CompiledStateGraph
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -194,12 +195,25 @@ CurrentUserRequired = Annotated[User, Depends(get_current_user_required)]
 # ============================================================================
 
 
-async def get_redis(request: Request) -> Redis:
+def get_redis(request: Request) -> Redis:
     """Get async Redis client from app state."""
     return request.app.state.redis
 
 
 RedisDep = Annotated[Redis, Depends(get_redis)]
+
+
+# ============================================================================
+# Agent Graph Dependency
+# ============================================================================
+
+
+def get_agent_graph(request: Request) -> CompiledStateGraph:
+    """Get compiled LangGraph agent graph from app state."""
+    return request.app.state.agent_graph
+
+
+AgentGraphDep = Annotated[CompiledStateGraph, Depends(get_agent_graph)]
 
 
 # ============================================================================

@@ -2,11 +2,12 @@
 
 import time
 import uuid as uuid_lib
-from typing import AsyncIterator, Optional
+from typing import AsyncIterator
 from uuid import UUID
 
 from langchain_core.messages import HumanMessage, AIMessage
 
+from langgraph.graph.state import CompiledStateGraph
 from src.clients.base_llm_client import BaseLLMClient
 from src.clients.langfuse_utils import set_trace_context
 from src.config import get_settings
@@ -34,7 +35,6 @@ from src.schemas.stream import (
 from src.schemas.common import SourceInfo
 from src.utils.logger import get_logger
 from .context import AgentContext
-from .graph_builder import get_compiled_graph
 
 log = get_logger(__name__)
 
@@ -70,6 +70,7 @@ class AgentService:
         self,
         llm_client: BaseLLMClient,
         search_service: SearchService,
+        graph: CompiledStateGraph,
         ingest_service: IngestService | None = None,
         arxiv_client: ArxivClient | None = None,
         paper_repository: PaperRepository | None = None,
@@ -80,9 +81,9 @@ class AgentService:
         max_retrieval_attempts: int = 3,
         max_iterations: int = 5,
         temperature: float = 0.3,
-        user_id: Optional[UUID] = None,
+        user_id: UUID | None = None,
     ):
-        self.graph = get_compiled_graph()
+        self.graph = graph
         self.context = AgentContext(
             llm_client=llm_client,
             search_service=search_service,
@@ -127,10 +128,16 @@ class AgentService:
         if not session_id:
             session_id = str(uuid_lib.uuid4())
 
+        # Fresh thread_id per invocation: isolates checkpoint state so each request
+        # starts clean. Conversation continuity is handled by ConversationRepository,
+        # not the checkpointer. Future interrupt/resume features can reuse thread_id.
+        thread_id = str(uuid_lib.uuid4())
+
         log.info(
             "streaming query started",
             query=query[:200],
             session_id=session_id,
+            thread_id=thread_id,
             provider=self.llm_client.provider_name,
             model=self.llm_client.model,
         )
@@ -147,8 +154,8 @@ class AgentService:
                 last_guardrail_score = turns[-1].guardrail_score
             log.debug("loaded conversation history", session_id=session_id, turns=len(turns))
 
-        # Build LangGraph config with context and Langfuse callback
-        config: dict = {"configurable": {"context": self.context}}
+        # Build LangGraph config with context, thread_id, and Langfuse callback
+        config: dict = {"configurable": {"context": self.context, "thread_id": thread_id}}
         trace_id: str | None = None
 
         if LANGFUSE_CALLBACK_AVAILABLE:

@@ -43,8 +43,10 @@ class Settings(BaseSettings):
     agent_timeout_seconds: int = 180  # 3 minutes max per request
     llm_call_timeout_seconds: int = 60  # 1 minute per LLM call
 
-    # Redis (separate DB from Celery)
+    # Redis
     redis_url: str = "redis://redis:6379/2"
+    # RediSearch (used by langgraph-checkpoint-redis) only works on DB 0
+    redis_checkpoint_url: str = "redis://redis:6379/0"
 
     # CORS
     cors_origins: str = ""  # comma-separated allowed origins; empty = allow all (dev)

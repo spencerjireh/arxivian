@@ -10,7 +10,7 @@ import pytest
 
 from src.clients.litellm_client import LiteLLMClient
 from src.services.agent_service.context import AgentContext, ConversationFormatter
-from src.services.agent_service.graph_builder import get_compiled_graph
+from src.services.agent_service.graph_builder import build_graph
 from src.services.agent_service.tools import (
     ToolRegistry,
     RetrieveChunksTool,
@@ -52,8 +52,7 @@ def real_llm_client() -> LiteLLMClient:
 
 @pytest.fixture(scope="session")
 def compiled_graph():
-    get_compiled_graph.cache_clear()
-    return get_compiled_graph()
+    return build_graph()
 
 
 # ---------------------------------------------------------------------------

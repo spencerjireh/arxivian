@@ -32,6 +32,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - ./backend:/app
       - /app/.venv
@@ -69,9 +71,10 @@ services:
       - prod
       - dev
 
-  # Redis for Celery message broker
+  # Redis for Celery message broker + LangGraph checkpointing
+  # Redis 8 required: includes search module used by langgraph-checkpoint-redis
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
