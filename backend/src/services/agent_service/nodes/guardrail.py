@@ -46,9 +46,7 @@ async def guardrail_node(state: AgentState, config: RunnableConfig) -> dict:
         and not scan_result.is_suspicious
         and prior_in_scope
     ):
-        result = GuardrailScoring(
-            score=100, reasoning="conversational follow-up", is_in_scope=True
-        )
+        result = GuardrailScoring(score=100, reasoning="conversational follow-up", is_in_scope=True)
         reasoning_steps.append(f"Validated query scope (score: {result.score}/100)")
         return {
             "guardrail_result": result,

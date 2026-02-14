@@ -69,9 +69,7 @@ def get_pdf_parser() -> PDFParser:
     return PDFParser()
 
 
-def get_ingest_service(
-    db_session: AsyncSession, ingested_by: str | None = None
-) -> IngestService:
+def get_ingest_service(db_session: AsyncSession, ingested_by: str | None = None) -> IngestService:
     """
     Create IngestService with dependencies.
 

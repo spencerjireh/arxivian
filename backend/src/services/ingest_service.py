@@ -197,9 +197,7 @@ class IngestService:
         async with session.begin_nested():
             # Re-check with locking to prevent race conditions
             try:
-                existing_locked = await self.paper_repository.get_by_arxiv_id_for_update(
-                    arxiv_id
-                )
+                existing_locked = await self.paper_repository.get_by_arxiv_id_for_update(arxiv_id)
             except OperationalError:
                 # Another transaction has this paper locked - skip
                 log.info("paper being processed by another request", arxiv_id=arxiv_id)

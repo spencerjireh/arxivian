@@ -115,5 +115,10 @@ class StreamEvent(BaseModel):
 
     event: StreamEventType
     data: (
-        StatusEventData | ContentEventData | SourcesEventData | MetadataEventData | ErrorEventData | dict
+        StatusEventData
+        | ContentEventData
+        | SourcesEventData
+        | MetadataEventData
+        | ErrorEventData
+        | dict
     )

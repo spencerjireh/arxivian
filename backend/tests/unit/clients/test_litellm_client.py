@@ -38,6 +38,15 @@ def messages():
     ]
 
 
+@pytest.fixture
+def structured_response():
+    """Mock response for structured output calls."""
+    resp = MagicMock()
+    resp.choices = [MagicMock()]
+    resp.choices[0].message.content = '{"answer": "ok", "score": 1}'
+    return resp
+
+
 class TestProviderParsing:
     """Tests for provider name extraction from model string."""
 
@@ -162,18 +171,14 @@ class TestGenerateStructured:
     """Tests for structured output generation."""
 
     @pytest.mark.asyncio
-    async def test_structured_output_parses_model(self, client, messages):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = '{"answer": "42", "score": 95}'
-
+    async def test_structured_output_parses_model(self, client, messages, structured_response):
         with patch("src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock:
-            mock.return_value = mock_response
+            mock.return_value = structured_response
             result = await client.generate_structured(messages, SampleResponse)
 
         assert isinstance(result, SampleResponse)
-        assert result.answer == "42"
-        assert result.score == 95
+        assert result.answer == "ok"
+        assert result.score == 1
 
     @pytest.mark.asyncio
     async def test_structured_output_empty_content_raises(self, client, messages):
@@ -192,6 +197,53 @@ class TestGenerateStructured:
             mock.side_effect = asyncio.TimeoutError()
             with pytest.raises(LLMTimeoutError):
                 await client.generate_structured(messages, SampleResponse, timeout=1.0)
+
+
+class TestStructuredModelOverride:
+    """Tests for structured output model override."""
+
+    @pytest.mark.asyncio
+    async def test_uses_structured_model_override(self, messages, structured_response):
+        client = LiteLLMClient(
+            model="nvidia_nim/openai/gpt-oss-120b",
+            structured_output_model="openai/gpt-4o-mini",
+        )
+        with patch(
+            "src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock
+        ) as mock:
+            mock.return_value = structured_response
+            await client.generate_structured(messages, SampleResponse)
+
+        assert mock.call_args.kwargs["model"] == "openai/gpt-4o-mini"
+
+    @pytest.mark.asyncio
+    async def test_explicit_model_param_overrides_structured_model(
+        self, messages, structured_response
+    ):
+        client = LiteLLMClient(
+            model="nvidia_nim/openai/gpt-oss-120b",
+            structured_output_model="openai/gpt-4o-mini",
+        )
+        with patch(
+            "src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock
+        ) as mock:
+            mock.return_value = structured_response
+            await client.generate_structured(messages, SampleResponse, model="openai/gpt-4o")
+
+        assert mock.call_args.kwargs["model"] == "openai/gpt-4o"
+
+    @pytest.mark.asyncio
+    async def test_falls_back_to_default_model_without_override(
+        self, messages, structured_response
+    ):
+        client = LiteLLMClient(model="nvidia_nim/openai/gpt-oss-120b")
+        with patch(
+            "src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock
+        ) as mock:
+            mock.return_value = structured_response
+            await client.generate_structured(messages, SampleResponse)
+
+        assert mock.call_args.kwargs["model"] == "nvidia_nim/openai/gpt-oss-120b"
 
 
 class TestMetadata:

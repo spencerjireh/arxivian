@@ -69,9 +69,7 @@ async def grade_documents_node(state: AgentState, config: RunnableConfig) -> dic
         )
         rewritten_query = (
             await context.llm_client.generate_completion(
-                messages=[
-                    {"role": "user", "content": get_rewrite_prompt(query or "", feedback)}
-                ],
+                messages=[{"role": "user", "content": get_rewrite_prompt(query or "", feedback)}],
                 temperature=0.5,
             )
         ).strip()

@@ -1,7 +1,6 @@
 """Application configuration using Pydantic Settings."""
 
 from functools import lru_cache
-from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,11 +15,14 @@ class Settings(BaseSettings):
     # LLM Configuration (LiteLLM-format model strings: "provider/model")
     default_llm_model: str = "nvidia_nim/openai/gpt-oss-120b"
     allowed_llm_models: str = "nvidia_nim/openai/gpt-oss-120b,openai/gpt-4o-mini"
+    # Model override for structured output calls (router, guardrail, grading).
+    # None means use default_llm_model.
+    structured_output_model: str | None = None
 
     # Provider API Keys
     openai_api_key: str = ""
-    nvidia_nim_api_key: Optional[str] = None
-    nvidia_nim_api_base: Optional[str] = None
+    nvidia_nim_api_key: str | None = None
+    nvidia_nim_api_base: str | None = None
 
     # Embeddings
     jina_api_key: str = ""
@@ -59,8 +61,8 @@ class Settings(BaseSettings):
 
     # Langfuse Observability
     langfuse_enabled: bool = False
-    langfuse_public_key: Optional[str] = None
-    langfuse_secret_key: Optional[str] = None
+    langfuse_public_key: str | None = None
+    langfuse_secret_key: str | None = None
     langfuse_host: str = "http://langfuse:3000"  # Self-hosted default
 
     # Clerk Authentication
@@ -81,7 +83,7 @@ class Settings(BaseSettings):
     cleanup_retention_days: int = 90
 
     # Helper methods
-    def get_allowed_models_list(self) -> List[str]:
+    def get_allowed_models_list(self) -> list[str]:
         """Get list of all allowed LiteLLM model strings."""
         return [m.strip() for m in self.allowed_llm_models.split(",") if m.strip()]
 

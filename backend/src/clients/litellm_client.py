@@ -30,9 +30,15 @@ class LiteLLMClient(BaseLLMClient):
     Supports any provider that LiteLLM handles via model prefix routing.
     """
 
-    def __init__(self, model: str = "nvidia_nim/openai/gpt-oss-120b", timeout: float = 60.0):
+    def __init__(
+        self,
+        model: str = "nvidia_nim/openai/gpt-oss-120b",
+        timeout: float = 60.0,
+        structured_output_model: str | None = None,
+    ):
         self._model = model
         self.default_timeout = timeout
+        self._structured_output_model = structured_output_model
 
     @property
     def provider_name(self) -> str:
@@ -147,7 +153,7 @@ class LiteLLMClient(BaseLLMClient):
         model: str | None = None,
         timeout: float | None = None,
     ) -> T:
-        model_to_use = model or self._model
+        model_to_use = model or self._structured_output_model or self._model
         effective_timeout = timeout if timeout is not None else self.default_timeout
         metadata = self._build_metadata()
 
@@ -172,6 +178,8 @@ class LiteLLMClient(BaseLLMClient):
 
         parsed = response_format.model_validate_json(content)
 
-        log.debug("litellm structured response", parsed=str(parsed)[:500])
+        log.debug(
+            "litellm structured response", model=model_to_use, parsed=truncate(str(parsed), 500)
+        )
 
         return parsed

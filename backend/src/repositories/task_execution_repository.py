@@ -97,13 +97,9 @@ class TaskExecutionRepository:
         tasks = list(result.scalars().all())
         return tasks, total
 
-    async def list_all(
-        self, limit: int = 20, offset: int = 0
-    ) -> tuple[list[TaskExecution], int]:
+    async def list_all(self, limit: int = 20, offset: int = 0) -> tuple[list[TaskExecution], int]:
         """List all task executions with pagination (ops use)."""
-        count_result = await self.session.execute(
-            select(func.count()).select_from(TaskExecution)
-        )
+        count_result = await self.session.execute(select(func.count()).select_from(TaskExecution))
         total = count_result.scalar_one()
 
         result = await self.session.execute(

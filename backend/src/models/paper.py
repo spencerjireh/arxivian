@@ -10,9 +10,7 @@ class Paper(Base):
     """arXiv paper metadata and content."""
 
     __tablename__ = "papers"
-    __table_args__ = (
-        UniqueConstraint("arxiv_id", name="uq_papers_arxiv_id"),
-    )
+    __table_args__ = (UniqueConstraint("arxiv_id", name="uq_papers_arxiv_id"),)
 
     # Primary key
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
