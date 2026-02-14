@@ -15,6 +15,7 @@ describe('settingsStore', () => {
       expect(state.guardrail_threshold).toBe(DEFAULT_SETTINGS.guardrail_threshold)
       expect(state.max_retrieval_attempts).toBe(DEFAULT_SETTINGS.max_retrieval_attempts)
       expect(state.conversation_window).toBe(DEFAULT_SETTINGS.conversation_window)
+      expect(state.showAgentInternals).toBe(DEFAULT_SETTINGS.showAgentInternals)
     })
   })
 
@@ -53,6 +54,11 @@ describe('settingsStore', () => {
       useSettingsStore.getState().setConversationWindow(10)
       expect(useSettingsStore.getState().conversation_window).toBe(10)
     })
+
+    it('setShowAgentInternals updates showAgentInternals', () => {
+      useSettingsStore.getState().setShowAgentInternals(true)
+      expect(useSettingsStore.getState().showAgentInternals).toBe(true)
+    })
   })
 
   describe('resetToDefaults', () => {
@@ -60,6 +66,7 @@ describe('settingsStore', () => {
       useSettingsStore.getState().setProvider('openai')
       useSettingsStore.getState().setTemperature(0.9)
       useSettingsStore.getState().setTopK(10)
+      useSettingsStore.getState().setShowAgentInternals(true)
 
       useSettingsStore.getState().resetToDefaults()
 
@@ -67,6 +74,7 @@ describe('settingsStore', () => {
       expect(state.provider).toBe(DEFAULT_SETTINGS.provider)
       expect(state.temperature).toBe(DEFAULT_SETTINGS.temperature)
       expect(state.top_k).toBe(DEFAULT_SETTINGS.top_k)
+      expect(state.showAgentInternals).toBe(false)
     })
   })
 })

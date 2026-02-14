@@ -1,16 +1,10 @@
 import type { ThinkingStepType } from '../../types/api'
+import { STEP_CONFIG } from './constants'
 
-const STEP_TYPE_MAP: Record<string, ThinkingStepType> = {
-  guardrail: 'guardrail',
-  out_of_scope: 'out_of_scope',
-  routing: 'routing',
-  executing: 'executing',
-  grading: 'grading',
-  generation: 'generation',
-}
+const VALID_STEPS = new Set<string>(Object.keys(STEP_CONFIG))
 
 export function mapStepType(step: string): ThinkingStepType {
-  return STEP_TYPE_MAP[step] ?? 'executing'
+  return VALID_STEPS.has(step) ? (step as ThinkingStepType) : 'executing'
 }
 
 export function isCompletionMessage(step: string, message: string): boolean {

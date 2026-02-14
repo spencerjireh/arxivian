@@ -32,23 +32,6 @@ export const staggerItem: Variants = {
   animate: { opacity: 1, y: 0 },
 }
 
-export const pulseVariants: Variants = {
-  animate: {
-    scale: [1, 1.15, 1],
-    opacity: [1, 0.7, 1],
-    transition: {
-      duration: 1.5,
-      repeat: Infinity,
-      ease: 'easeInOut',
-    },
-  },
-}
-
-export const scaleInStable: Variants = {
-  initial: { scale: 0, opacity: 0 },
-  animate: { scale: 1, opacity: 1 },
-}
-
 export const cursorTransitionVariants: Variants = {
   streaming: {
     opacity: [1, 0],

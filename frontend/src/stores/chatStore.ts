@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { SourceInfo, ThinkingStep, StatusEventData } from '../types/api'
-import { STEP_ORDER } from '../lib/thinking/constants'
+import { STEP_CONFIG } from '../lib/thinking/constants'
 import { generateStepId } from '../utils/id'
 import { calculateTotalDuration } from '../utils/duration'
 import { mapStepType, isCompletionMessage } from '../lib/thinking'
@@ -87,7 +87,7 @@ export const useChatStore = create<ChatUIState>((set, get) => ({
           timestamp: now,
           startTime: now,
           endTime: isComplete ? now : undefined,
-          order: STEP_ORDER[stepType],
+          order: STEP_CONFIG[stepType].order,
         }
         return { thinkingSteps: [...state.thinkingSteps, newStep] }
       }

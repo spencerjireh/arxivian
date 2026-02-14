@@ -6,7 +6,7 @@ import type { Message } from '../../types/api'
 import SourceCard from './SourceCard'
 import MetadataPanel from './MetadataPanel'
 import MarkdownRenderer from './MarkdownRenderer'
-import ThinkingTimeline from './ThinkingTimeline'
+import StepActivityFeed from './StepActivityFeed'
 import { cursorTransitionVariants } from '../../lib/animations'
 
 interface ChatMessageProps {
@@ -68,7 +68,7 @@ export default function ChatMessage({
         <div className={clsx(isUser ? 'pr-9 text-right' : 'pl-9')}>
           {!isUser && thinkingSteps && thinkingSteps.length > 0 && (
             <div className="mb-4">
-              <ThinkingTimeline steps={thinkingSteps} isStreaming={isStreaming} />
+              <StepActivityFeed steps={thinkingSteps} isStreaming={isStreaming} />
             </div>
           )}
 
