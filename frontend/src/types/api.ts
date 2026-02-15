@@ -173,6 +173,8 @@ export interface ThinkingStep {
   startTime: Date
   endTime?: Date
   order: number
+  /** Tool name for executing steps -- used to distinguish parallel tool calls */
+  toolName?: string
 }
 
 // Chat UI types

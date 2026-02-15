@@ -14,7 +14,8 @@ if TYPE_CHECKING:
 
 # System prompt constants
 ANSWER_SYSTEM_PROMPT = """You are a research assistant specializing in academic research papers.
-Answer based ONLY on provided context. Cite sources as [arxiv_id].
+Answer based on the provided context and tool results. Cite sources as [arxiv_id].
+If tool results (e.g. search results, ingestion summaries) are provided, summarize them for the user.
 Be precise, technical, and conversational. Avoid robotic phrases."""
 
 GUARDRAIL_SYSTEM_PROMPT = """You are a query relevance validator for an academic research assistant.
@@ -40,23 +41,32 @@ Available tools:
 {tool_descriptions}
 
 Guidelines:
-1. Use retrieve_chunks when you need information from research papers
-2. Use arxiv_search to find papers on arXiv before deciding to ingest
-3. Use list_papers to browse available papers by topic/author/date
-4. Use ingest_papers to add new papers to the knowledge base
+1. Use retrieve_chunks when you need information from research papers already in the knowledge base
+2. Use arxiv_search to find papers on arXiv (returns metadata only, does NOT add to knowledge base)
+3. Use ingest_papers to download and add papers to the knowledge base (use arxiv_ids from search results)
+4. Use list_papers to browse papers already in the knowledge base
 5. Use explore_citations to find related work cited by a paper
 6. Use summarize_paper for quick paper overviews
 7. Choose "generate" when you have enough context to answer
+
+TOOL CHAINING (critical):
+- arxiv_search only returns metadata. To actually add papers, you MUST follow up with ingest_papers.
+- When the user asks to "search and ingest" or "find and add" papers:
+  1. First call arxiv_search to find papers
+  2. Then call ingest_papers with the arxiv_ids from the search results
+- After ingest_papers succeeds, use retrieve_chunks to query the ingested content
+- NEVER repeat the same tool with the same arguments. If a tool already succeeded, use its results.
 
 PARALLEL EXECUTION:
 - You may select MULTIPLE tools if they are independent
 - Example: list_papers + arxiv_search can run in parallel
 - Only parallelize when queries benefit from multiple data sources
-- Avoid redundant calls (don't call same tool twice)
 
 Decision criteria:
-- New query about papers -> retrieve_chunks or list_papers
-- Looking for papers to ingest -> arxiv_search
+- New query about papers in knowledge base -> retrieve_chunks or list_papers
+- User wants to find papers on arXiv -> arxiv_search
+- arxiv_search already succeeded -> ingest_papers (if user wants to add them) or generate
+- User wants to ingest/add/download papers -> ingest_papers
 - Multi-faceted query -> consider parallel tools
 - Follow-up with sufficient context -> generate"""
 
@@ -222,12 +232,11 @@ def get_router_prompt(
         user_parts.append(f"Conversation history:\n{conversation_context}")
 
     if tool_history:
-        history_lines = ["Previous tool calls in this turn:"]
+        history_lines = ["Previous tool calls in this turn (do NOT repeat successful calls):"]
         for exec_info in tool_history:
             status = "success" if exec_info.get("success") else "failed"
-            history_lines.append(
-                f"- {exec_info['tool_name']}: {status} - {exec_info.get('result_summary', 'no summary')}"
-            )
+            summary = exec_info.get("result_summary", "no summary")
+            history_lines.append(f"- {exec_info['tool_name']}: {status} - {summary}")
         user_parts.append("\n".join(history_lines))
 
     user_parts.append(f"Current query: {query}")

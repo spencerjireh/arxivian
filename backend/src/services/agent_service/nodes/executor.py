@@ -15,14 +15,26 @@ from ..context import AgentContext
 log = get_logger(__name__)
 
 
-def _summarize_result(result: ToolResult) -> str:
-    """Create brief summary of tool result."""
+_PAPER_SUMMARY_VERBS = {"arxiv_search": "Found", "ingest_papers": "Ingested"}
+
+
+def _summarize_result(tool_name: str, result: ToolResult) -> str:
+    """Create brief summary of tool result including actionable details for the router."""
     if result.success and result.data:
         if isinstance(result.data, list):
             return f"Retrieved {len(result.data)} items"
-        if isinstance(result.data, dict) and "total_count" in result.data:
-            return f"Found {result.data['total_count']} items"
-        return str(result.data)[:100]
+        if isinstance(result.data, dict):
+            if tool_name in _PAPER_SUMMARY_VERBS:
+                papers = result.data.get("papers", [])
+                if papers:
+                    ids = [p.get("arxiv_id") for p in papers if isinstance(p, dict)]
+                    count = result.data.get("count", result.data.get("papers_processed", len(ids)))
+                    id_list = ", ".join(str(i) for i in ids[:10] if i)
+                    verb = _PAPER_SUMMARY_VERBS[tool_name]
+                    return f"{verb} {count} papers: [{id_list}]"
+            if "total_count" in result.data:
+                return f"Found {result.data['total_count']} items"
+        return str(result.data)[:200]
     if result.error:
         return f"Error: {result.error}"
     return ""
@@ -127,7 +139,7 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
             tool_name=tool_name,
             tool_args=tool_args,
             success=result.success,
-            result_summary=_summarize_result(result),
+            result_summary=_summarize_result(tool_name, result),
             error=result.error,
         )
         tool_history.append(execution)

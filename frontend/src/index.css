@@ -167,6 +167,27 @@ input[type="range"]::-moz-range-thumb {
 
 /* Animations - kept for non-Framer Motion usage */
 
+/* Shimmer text animation -- Claude-style streaming indicator */
+.text-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-stone-400),
+    var(--color-stone-200),
+    var(--color-stone-400)
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2.5s ease-in-out infinite;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
 /* Gentle loader spin (used by Loader2 icons) */
 .animate-spin-slow {
   animation: spin 1.5s linear infinite;

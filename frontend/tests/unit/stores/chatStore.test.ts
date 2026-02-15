@@ -88,6 +88,69 @@ describe('chatStore', () => {
 
       expect(useChatStore.getState().thinkingSteps).toHaveLength(2)
     })
+
+    describe('executing steps with tool names', () => {
+      it('creates separate steps for different tools', () => {
+        useChatStore.getState().addThinkingStep({
+          step: 'executing',
+          message: 'Calling retrieve...',
+          details: { tool_name: 'retrieve' },
+        })
+        useChatStore.getState().addThinkingStep({
+          step: 'executing',
+          message: 'Calling arxiv_search...',
+          details: { tool_name: 'arxiv_search' },
+        })
+
+        const steps = useChatStore.getState().thinkingSteps
+        expect(steps).toHaveLength(2)
+        expect(steps[0].toolName).toBe('retrieve')
+        expect(steps[1].toolName).toBe('arxiv_search')
+      })
+
+      it('completes only the matching tool step', () => {
+        useChatStore.getState().addThinkingStep({
+          step: 'executing',
+          message: 'Calling retrieve...',
+          details: { tool_name: 'retrieve' },
+        })
+        useChatStore.getState().addThinkingStep({
+          step: 'executing',
+          message: 'Calling arxiv_search...',
+          details: { tool_name: 'arxiv_search' },
+        })
+        useChatStore.getState().addThinkingStep({
+          step: 'executing',
+          message: 'retrieve completed',
+          details: { tool_name: 'retrieve' },
+        })
+
+        const steps = useChatStore.getState().thinkingSteps
+        expect(steps).toHaveLength(2)
+        expect(steps.find((s) => s.toolName === 'retrieve')?.status).toBe('complete')
+        expect(steps.find((s) => s.toolName === 'arxiv_search')?.status).toBe('running')
+      })
+
+      it('skips redundant chain_start/chain_end messages', () => {
+        useChatStore.getState().addThinkingStep({
+          step: 'executing',
+          message: 'Executing tool...',
+        })
+
+        expect(useChatStore.getState().thinkingSteps).toHaveLength(0)
+      })
+
+      it('extracts tool name from message when details are absent', () => {
+        useChatStore.getState().addThinkingStep({
+          step: 'executing',
+          message: 'Calling summarize_paper...',
+        })
+
+        const steps = useChatStore.getState().thinkingSteps
+        expect(steps).toHaveLength(1)
+        expect(steps[0].toolName).toBe('summarize_paper')
+      })
+    })
   })
 
   describe('getThinkingSteps', () => {

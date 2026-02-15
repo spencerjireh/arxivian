@@ -3,7 +3,43 @@ import type { SourceInfo, ThinkingStep, StatusEventData } from '../types/api'
 import { STEP_CONFIG } from '../lib/thinking/constants'
 import { generateStepId } from '../utils/id'
 import { calculateTotalDuration } from '../utils/duration'
-import { mapStepType, isCompletionMessage } from '../lib/thinking'
+import { mapStepType, isCompletionMessage, isSkippableMessage, extractToolName } from '../lib/thinking'
+
+function buildNewStep(
+  stepType: ThinkingStep['step'],
+  data: StatusEventData,
+  isComplete: boolean,
+  now: Date,
+  toolName?: string,
+): ThinkingStep {
+  return {
+    id: generateStepId(),
+    step: stepType,
+    message: data.message,
+    details: data.details,
+    status: isComplete ? 'complete' : 'running',
+    timestamp: now,
+    startTime: now,
+    endTime: isComplete ? now : undefined,
+    order: STEP_CONFIG[stepType].order,
+    toolName,
+  }
+}
+
+function applyStepUpdate(
+  existing: ThinkingStep,
+  data: StatusEventData,
+  isComplete: boolean,
+  now: Date,
+): ThinkingStep {
+  return {
+    ...existing,
+    message: data.message,
+    details: data.details,
+    status: isComplete ? 'complete' : 'running',
+    endTime: isComplete ? now : undefined,
+  }
+}
 
 interface ChatUIState {
   isStreaming: boolean
@@ -56,40 +92,35 @@ export const useChatStore = create<ChatUIState>((set, get) => ({
 
   addThinkingStep: (data: StatusEventData) => {
     const stepType = mapStepType(data.step)
-    const isComplete = isCompletionMessage(data.step, data.message)
+
+    // Skip redundant chain_start/chain_end messages for executing steps
+    if (isSkippableMessage(data.step, data.message)) return
+
+    const isComplete = isCompletionMessage(stepType, data.message)
+    const toolName = (data.details?.tool_name as string | undefined) ?? extractToolName(data.message)
     const now = new Date()
 
     set((state) => {
-      // Check if we already have a running step of the same type
-      const existingIndex = state.thinkingSteps.findIndex(
-        (s) => s.step === stepType && s.status === 'running'
-      )
+      const findPredicate = (s: ThinkingStep) =>
+        stepType === 'executing' && toolName
+          ? s.step === 'executing' && s.status === 'running' && s.toolName === toolName
+          : s.step === stepType && s.status === 'running'
+
+      const existingIndex = state.thinkingSteps.findIndex(findPredicate)
 
       if (existingIndex !== -1) {
-        // Update existing step
         const updatedSteps = [...state.thinkingSteps]
-        updatedSteps[existingIndex] = {
-          ...updatedSteps[existingIndex],
-          message: data.message,
-          details: data.details,
-          status: isComplete ? 'complete' : 'running',
-          endTime: isComplete ? now : undefined,
-        }
+        updatedSteps[existingIndex] = applyStepUpdate(
+          updatedSteps[existingIndex], data, isComplete, now,
+        )
         return { thinkingSteps: updatedSteps }
-      } else {
-        // Add new step with timing info
-        const newStep: ThinkingStep = {
-          id: generateStepId(),
-          step: stepType,
-          message: data.message,
-          details: data.details,
-          status: isComplete ? 'complete' : 'running',
-          timestamp: now,
-          startTime: now,
-          endTime: isComplete ? now : undefined,
-          order: STEP_CONFIG[stepType].order,
-        }
-        return { thinkingSteps: [...state.thinkingSteps, newStep] }
+      }
+
+      return {
+        thinkingSteps: [
+          ...state.thinkingSteps,
+          buildNewStep(stepType, data, isComplete, now, toolName),
+        ],
       }
     })
   },

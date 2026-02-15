@@ -52,10 +52,12 @@ NODE_MESSAGES = {
     "guardrail": "Validating query relevance...",
     "out_of_scope": "Generating out-of-scope response...",
     "router": "Deciding next action...",
-    "executor": "Executing tool...",
     "grade_documents": "Grading document relevance...",
     "generate": "Generating answer...",
 }
+
+# Nodes whose chain_start/chain_end events are redundant with custom events
+_SKIP_CHAIN_EVENTS = {"executor"}
 
 
 class AgentService:
@@ -211,9 +213,11 @@ class AgentService:
             ):
                 kind = event["event"]
 
-                # Node start - emit status event
+                # Node start - emit status event (skip nodes covered by custom events)
                 if kind == "on_chain_start" and event["name"] in NODE_TO_STEP:
                     node_name = event["name"]
+                    if node_name in _SKIP_CHAIN_EVENTS:
+                        continue
                     step = NODE_TO_STEP[node_name]
                     message = NODE_MESSAGES.get(node_name, f"Processing {node_name}...")
 
@@ -265,23 +269,15 @@ class AgentService:
                             ),
                         )
 
-                    # Emit executor tool details
-                    elif node_name == "executor" and output.get("tool_history"):
-                        tool_history = output["tool_history"]
-                        if tool_history:
-                            last_exec = tool_history[-1]
-                            yield StreamEvent(
-                                event=StreamEventType.STATUS,
-                                data=StatusEventData(
-                                    step="executing",
-                                    message=f"Executed {last_exec.tool_name}",
-                                    details={
-                                        "tool": last_exec.tool_name,
-                                        "success": last_exec.success,
-                                        "result": last_exec.result_summary,
-                                    },
-                                ),
-                            )
+                    # Emit generation completion
+                    elif node_name == "generate":
+                        yield StreamEvent(
+                            event=StreamEventType.STATUS,
+                            data=StatusEventData(
+                                step="generation",
+                                message="Generation complete",
+                            ),
+                        )
 
                     # Emit grading results
                     elif node_name == "grade_documents":
@@ -342,12 +338,13 @@ class AgentService:
 
                 elif kind == "on_custom_event" and event.get("name") == "tool_end":
                     data = event.get("data", {})
+                    tool = data.get("tool_name", "tool")
                     status = "completed" if data.get("success") else "failed"
                     yield StreamEvent(
                         event=StreamEventType.STATUS,
                         data=StatusEventData(
                             step="executing",
-                            message=f"Tool {status}",
+                            message=f"{tool} {status}",
                             details=data,
                         ),
                     )
