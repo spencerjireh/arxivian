@@ -54,6 +54,7 @@ class ConversationTurn(Base):
     rewritten_query = Column(Text, nullable=True)
     sources = Column(JSONB, nullable=True)
     reasoning_steps = Column(JSONB, nullable=True)
+    thinking_steps = Column(JSONB, nullable=True)
     provider = Column(String(50), nullable=False)
     model = Column(String(100), nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())

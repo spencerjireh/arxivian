@@ -12,6 +12,24 @@ log = get_logger(__name__)
 AGENT_MAX_RESULTS = 10
 
 
+def _format_ingest_summary(data: dict) -> str:
+    """Format ingestion results into compact prompt text."""
+    papers = data.get("papers", [])
+    chunks_total = data.get("chunks_created", 0)
+    lines = [f"Ingested {len(papers)} papers ({chunks_total} chunks total):"]
+    for i, p in enumerate(papers, 1):
+        title = p.get("title", "Untitled")
+        arxiv_id = p.get("arxiv_id", "?")
+        chunks = p.get("chunks", 0)
+        lines.append(f'{i}. "{title}" [{arxiv_id}] - {chunks} chunks')
+    errors = data.get("errors", [])
+    if errors:
+        lines.append(f"Errors ({len(errors)}):")
+        for e in errors:
+            lines.append(f"  - [{e.get('arxiv_id', '?')}] {e.get('error', 'unknown')}")
+    return "\n".join(lines)
+
+
 class IngestPapersTool(BaseTool):
     """Tool for ingesting research papers from arXiv."""
 
@@ -162,6 +180,7 @@ class IngestPapersTool(BaseTool):
             return ToolResult(
                 success=response.status == "completed",
                 data=summary,
+                prompt_text=_format_ingest_summary(summary),
                 error=f"{len(response.errors)} papers failed" if response.errors else None,
                 tool_name=self.name,
             )

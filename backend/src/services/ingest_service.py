@@ -220,6 +220,7 @@ class IngestService:
                 "pdf_url": paper_meta.pdf_url,
                 "raw_text": parsed.raw_text,
                 "sections": parsed.sections,
+                "references": parsed.references or None,
                 "pdf_processed": True,
                 "parser_used": "pypdf",
             }

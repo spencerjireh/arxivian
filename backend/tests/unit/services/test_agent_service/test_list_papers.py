@@ -35,6 +35,19 @@ class TestParseDate:
             parse_date("Jan 15, 2024", "end_date")
         assert "end_date" in str(exc_info.value)
 
+    def test_mm_dd_defaults_to_current_year(self):
+        from datetime import datetime
+
+        result = parse_date("02-14", "start_date")
+        assert result is not None
+        assert result.year == datetime.now().year
+        assert result.month == 2
+        assert result.day == 14
+
+    def test_short_non_date_still_raises(self):
+        with pytest.raises(ValueError):
+            parse_date("2-14", "start_date")
+
 
 class TestListPapersTool:
     """Tests for ListPapersTool."""

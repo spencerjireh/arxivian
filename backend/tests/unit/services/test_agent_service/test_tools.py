@@ -134,6 +134,18 @@ class TestArxivSearchTool:
         return ArxivSearchTool(arxiv_client=mock_arxiv_client)
 
     @pytest.mark.asyncio
+    async def test_empty_query_returns_error(self, tool):
+        result = await tool.execute(query="")
+        assert result.success is False
+        assert "required" in result.error.lower()
+
+    @pytest.mark.asyncio
+    async def test_whitespace_query_returns_error(self, tool):
+        result = await tool.execute(query="   ")
+        assert result.success is False
+        assert "required" in result.error.lower()
+
+    @pytest.mark.asyncio
     async def test_max_results_clamped_to_10(self, tool, mock_arxiv_client):
         mock_arxiv_client.search_papers.return_value = []
 
@@ -156,6 +168,29 @@ class TestArxivSearchTool:
         result = await tool.execute(query="test", start_date="invalid")
         assert result.success is False
         assert "Invalid" in result.error
+
+    @pytest.mark.asyncio
+    async def test_zero_results_with_date_filter_includes_message(self, tool, mock_arxiv_client):
+        mock_arxiv_client.search_papers.return_value = []
+
+        result = await tool.execute(
+            query="machine learning", start_date="2026-02-14", end_date="2026-02-14"
+        )
+
+        assert result.success is True
+        assert result.data["count"] == 0
+        assert "message" in result.data
+        assert "no papers matched" in result.data["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_zero_results_without_date_filter_no_message(self, tool, mock_arxiv_client):
+        mock_arxiv_client.search_papers.return_value = []
+
+        result = await tool.execute(query="machine learning")
+
+        assert result.success is True
+        assert result.data["count"] == 0
+        assert "message" not in result.data
 
     def test_class_variables(self, tool):
         assert tool.extends_chunks is False
@@ -268,6 +303,195 @@ class TestSummarizePaperTool:
         assert tool.extends_chunks is False
         assert "paper_repository" in tool.required_dependencies
         assert "llm_client" in tool.required_dependencies
+
+
+class TestArxivSearchPromptText:
+    """Tests for arxiv_search prompt text formatting."""
+
+    def test_formats_papers_with_all_fields(self):
+        from src.services.agent_service.tools.arxiv_search import _format_search_results
+
+        data = {
+            "count": 2,
+            "papers": [
+                {
+                    "arxiv_id": "2602.12259",
+                    "title": "Think like a Scientist",
+                    "authors": ["J. Yang", "O. Venkatachalam", "A. Smith", "B. Jones"],
+                    "abstract": "A " * 100,  # 200 chars
+                    "categories": ["cs.AI", "cs.LG"],
+                    "published_date": "2026-02-12T00:00:00",
+                    "pdf_url": "https://arxiv.org/pdf/2602.12259",
+                },
+                {
+                    "arxiv_id": "2602.11111",
+                    "title": "Short Paper",
+                    "authors": ["Solo Author"],
+                    "abstract": "Brief.",
+                    "categories": ["cs.CL"],
+                    "published_date": "2026-02-10T00:00:00",
+                },
+            ],
+        }
+        result = _format_search_results(data)
+
+        assert result.startswith("Found 2 papers:")
+        assert '"Think like a Scientist" by J. Yang, O. Venkatachalam, A. Smith et al.' in result
+        assert "ID: 2602.12259" in result
+        assert "Feb 12, 2026" in result
+        assert "cs.AI, cs.LG" in result
+        # Abstract truncated to 150 chars
+        assert "..." in result
+        # pdf_url should NOT appear
+        assert "pdf" not in result.lower()
+        # Second paper
+        assert '"Short Paper" by Solo Author' in result
+        assert "Brief." in result
+
+    def test_no_papers_returns_message(self):
+        from src.services.agent_service.tools.arxiv_search import _format_search_results
+
+        assert _format_search_results({"count": 0, "papers": []}) == "No papers found."
+
+    def test_no_papers_with_message_returns_that_message(self):
+        from src.services.agent_service.tools.arxiv_search import _format_search_results
+
+        data = {
+            "count": 0,
+            "papers": [],
+            "message": "No papers matched the given date range.",
+        }
+        assert _format_search_results(data) == "No papers matched the given date range."
+
+    def test_missing_fields_handled_gracefully(self):
+        from src.services.agent_service.tools.arxiv_search import _format_search_results
+
+        result = _format_search_results({"count": 1, "papers": [{"title": "Minimal"}]})
+        assert '"Minimal" by Unknown' in result
+
+
+class TestListPapersPromptText:
+    """Tests for list_papers prompt text formatting."""
+
+    def test_formats_knowledge_base_papers(self):
+        from src.services.agent_service.tools.list_papers import _format_list_results
+
+        data = {
+            "total_count": 25,
+            "returned": 2,
+            "papers": [
+                {
+                    "arxiv_id": "1706.03762",
+                    "title": "Attention Is All You Need",
+                    "authors": ["A. Vaswani", "N. Shazeer"],
+                    "abstract": "The dominant sequence models...",
+                    "categories": ["cs.CL"],
+                    "published_date": "2017-06-12T00:00:00",
+                },
+                {
+                    "arxiv_id": "1810.04805",
+                    "title": "BERT",
+                    "authors": ["J. Devlin"],
+                    "abstract": "We introduce BERT.",
+                    "categories": ["cs.CL"],
+                    "published_date": "2018-10-11T00:00:00",
+                },
+            ],
+        }
+        result = _format_list_results(data)
+
+        assert result.startswith("Knowledge base: 25 papers (showing 2):")
+        assert "Attention Is All You Need" in result
+        assert "BERT" in result
+
+    def test_empty_knowledge_base(self):
+        from src.services.agent_service.tools.list_papers import _format_list_results
+
+        assert (
+            _format_list_results({"total_count": 0, "returned": 0, "papers": []})
+            == "No papers in knowledge base."
+        )
+
+
+class TestIngestPromptText:
+    """Tests for ingest prompt text formatting."""
+
+    def test_formats_ingestion_summary(self):
+        from src.services.agent_service.tools.ingest import _format_ingest_summary
+
+        data = {
+            "status": "completed",
+            "papers_fetched": 2,
+            "papers_processed": 2,
+            "chunks_created": 30,
+            "duration_seconds": 5.12,
+            "papers": [
+                {"arxiv_id": "1706.03762", "title": "Attention Is All You Need", "chunks": 15},
+                {"arxiv_id": "1810.04805", "title": "BERT", "chunks": 15},
+            ],
+            "errors": [],
+        }
+        result = _format_ingest_summary(data)
+
+        assert "Ingested 2 papers (30 chunks total):" in result
+        assert '"Attention Is All You Need" [1706.03762] - 15 chunks' in result
+        assert '"BERT" [1810.04805] - 15 chunks' in result
+        assert "Errors" not in result
+
+    def test_formats_with_errors(self):
+        from src.services.agent_service.tools.ingest import _format_ingest_summary
+
+        data = {
+            "status": "completed",
+            "papers_fetched": 2,
+            "papers_processed": 1,
+            "chunks_created": 15,
+            "duration_seconds": 3.0,
+            "papers": [
+                {"arxiv_id": "1706.03762", "title": "Attention Is All You Need", "chunks": 15},
+            ],
+            "errors": [{"arxiv_id": "9999.99999", "error": "PDF download failed"}],
+        }
+        result = _format_ingest_summary(data)
+
+        assert "Errors (1):" in result
+        assert "[9999.99999] PDF download failed" in result
+
+
+class TestExploreCitationsPromptText:
+    """Tests for explore_citations prompt text formatting."""
+
+    def test_formats_references(self):
+        from src.services.agent_service.tools.explore_citations import _format_citations
+
+        data = {
+            "arxiv_id": "1706.03762",
+            "title": "Attention Is All You Need",
+            "reference_count": 2,
+            "references": [
+                "Neural Machine Translation by Jointly Learning to Align and Translate",
+                "Sequence to Sequence Learning with Neural Networks",
+            ],
+        }
+        result = _format_citations(data)
+
+        assert 'References from "Attention Is All You Need" [1706.03762] (2 citations):' in result
+        assert "1. Neural Machine Translation" in result
+        assert "2. Sequence to Sequence Learning" in result
+
+    def test_no_references(self):
+        from src.services.agent_service.tools.explore_citations import _format_citations
+
+        data = {
+            "arxiv_id": "1706.03762",
+            "title": "Attention Is All You Need",
+            "reference_count": 0,
+            "references": [],
+        }
+        result = _format_citations(data)
+
+        assert "(0 citations):" in result
+        assert "No references available." in result
 
 
 class TestToolRegistry:

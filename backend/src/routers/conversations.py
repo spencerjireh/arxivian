@@ -107,6 +107,7 @@ async def get_conversation(
             rewritten_query=turn.rewritten_query,
             sources=turn.sources,
             reasoning_steps=turn.reasoning_steps,
+            thinking_steps=turn.thinking_steps,
             created_at=turn.created_at,
         )
         for turn in sorted(conv.turns, key=lambda t: t.turn_number)

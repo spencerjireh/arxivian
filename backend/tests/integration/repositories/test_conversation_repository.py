@@ -225,6 +225,67 @@ class TestConversationRepositoryTurns:
         assert count == 0
 
 
+class TestConversationRepositoryThinkingSteps:
+    """Test thinking_steps persistence."""
+
+    @pytest.mark.asyncio
+    async def test_save_turn_with_thinking_steps(self, db_session):
+        """Verify thinking_steps roundtrip through save and retrieval."""
+        repo = ConversationRepository(session=db_session)
+
+        session_id = f"session-{uuid.uuid4().hex[:8]}"
+        steps = [
+            {
+                "step": "guardrail",
+                "message": "Query is in scope",
+                "details": {"score": 85, "threshold": 50},
+                "tool_name": None,
+                "started_at": "2026-02-15T10:00:00+00:00",
+                "completed_at": "2026-02-15T10:00:01+00:00",
+            },
+            {
+                "step": "executing",
+                "message": "retrieve completed",
+                "details": {"tool_name": "retrieve", "success": True},
+                "tool_name": "retrieve",
+                "started_at": "2026-02-15T10:00:02+00:00",
+                "completed_at": "2026-02-15T10:00:03+00:00",
+            },
+        ]
+        turn = TurnData(
+            user_query="What is ML?",
+            agent_response="Machine learning is...",
+            provider="openai",
+            model="gpt-4o-mini",
+            thinking_steps=steps,
+        )
+
+        saved = await repo.save_turn(session_id, turn)
+
+        assert saved.thinking_steps is not None
+        assert len(saved.thinking_steps) == 2
+        assert saved.thinking_steps[0]["step"] == "guardrail"
+        assert saved.thinking_steps[0]["details"]["score"] == 85
+        assert saved.thinking_steps[1]["tool_name"] == "retrieve"
+
+    @pytest.mark.asyncio
+    async def test_save_turn_without_thinking_steps(self, db_session):
+        """Verify None default for backward compat."""
+        repo = ConversationRepository(session=db_session)
+
+        session_id = f"session-{uuid.uuid4().hex[:8]}"
+        turn = TurnData(
+            user_query="What is ML?",
+            agent_response="Machine learning is...",
+            provider="openai",
+            model="gpt-4o-mini",
+        )
+
+        saved = await repo.save_turn(session_id, turn)
+
+        assert saved.thinking_steps is None
+
+
 class TestConversationRepositoryPagination:
     """Test conversation list pagination."""
 

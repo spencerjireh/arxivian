@@ -91,6 +91,7 @@ class SummarizePaperTool(BaseTool):
                     "title": paper.title,
                     "summary": summary,
                 },
+                prompt_text=f'Summary of "{paper.title}" [{paper.arxiv_id}]:\n{summary}',
                 tool_name=self.name,
             )
         except Exception as e:

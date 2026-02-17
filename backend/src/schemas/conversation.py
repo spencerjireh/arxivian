@@ -2,7 +2,9 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Literal, TypedDict
+from typing import Literal
+
+from typing_extensions import TypedDict
 
 from pydantic import BaseModel, Field
 
@@ -12,6 +14,17 @@ class ConversationMessage(TypedDict):
 
     role: Literal["user", "assistant"]
     content: str
+
+
+class ThinkingStepDict(TypedDict):
+    """Shape of a single persisted thinking step (stored as JSONB)."""
+
+    step: str
+    message: str
+    details: dict | None
+    tool_name: str | None
+    started_at: str
+    completed_at: str
 
 
 @dataclass
@@ -27,6 +40,7 @@ class TurnData:
     rewritten_query: str | None = None
     sources: list[dict] | None = None
     reasoning_steps: list[str] | None = None
+    thinking_steps: list[ThinkingStepDict] | None = None
 
 
 # API Response Schemas
@@ -45,6 +59,7 @@ class ConversationTurnResponse(BaseModel):
     rewritten_query: str | None = None
     sources: list[dict] | None = None
     reasoning_steps: list[str] | None = None
+    thinking_steps: list[ThinkingStepDict] | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

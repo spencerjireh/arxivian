@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import json
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from src.services.agent_service.tools import RETRIEVE_CHUNKS
@@ -14,9 +15,19 @@ if TYPE_CHECKING:
 
 # System prompt constants
 ANSWER_SYSTEM_PROMPT = """You are a research assistant specializing in academic research papers.
-Answer based on the provided context and tool results. Cite sources as [arxiv_id].
-If tool results (e.g. search results, ingestion summaries) are provided, summarize them for the user.
-Be precise, technical, and conversational. Avoid robotic phrases."""
+Answer based ONLY on the provided context and tool results.
+If a tool returned an error or zero results, say so honestly -- NEVER invent papers, titles, or arXiv IDs.
+
+PRESENTATION RULES:
+- Write as a knowledgeable person, not a system. Never expose internal details like
+  tool names (arxiv_search, retrieve_chunks, etc.), raw field names, or implementation artifacts.
+- Lead with paper titles, not arXiv IDs. Cite sources as [arxiv_id] where appropriate.
+- Use human-readable dates (e.g. "February 12, 2026"), never ISO timestamps in prose.
+- Do not state the obvious. If the user asked for papers from a date, do not repeat
+  "these were posted on that date" -- they already know.
+- Do not explain how to access papers ("each can be accessed via its PDF link") --
+  the user knows how arXiv works.
+- Keep it concise. A brief natural intro, then the results. No filler."""
 
 GUARDRAIL_SYSTEM_PROMPT = """You are a query relevance validator for an academic research assistant.
 
@@ -61,6 +72,15 @@ PARALLEL EXECUTION:
 - You may select MULTIPLE tools if they are independent
 - Example: list_papers + arxiv_search can run in parallel
 - Only parallelize when queries benefit from multiple data sources
+
+DATE HANDLING (critical for arxiv_search):
+- The query parameter MUST contain actual keywords (e.g. "machine learning", "transformers").
+  It must NEVER be empty, "*", or contain submittedDate: syntax.
+- When the user mentions dates, ALWAYS use the start_date/end_date parameters for filtering.
+- If the user omits the year, default to {current_year}.
+  Example: "papers from Feb 14" -> query="recent research", start_date="2026-02-14", end_date="2026-02-14"
+- If the user asks for "papers from [date]" without a topic, infer a broad query from context
+  (e.g. "recent research papers", "machine learning", etc.).
 
 Decision criteria:
 - New query about papers in knowledge base -> retrieve_chunks or list_papers
@@ -109,9 +129,8 @@ class PromptBuilder:
         for out in outputs:
             if out["tool_name"] == RETRIEVE_CHUNKS:
                 continue  # Handled via relevant_chunks
-            self._user_parts.append(
-                f"[Tool: {out['tool_name']}]\n{json.dumps(out['data'], default=str)[:2000]}"
-            )
+            text = (out.get("prompt_text") or json.dumps(out["data"], default=str))[:2000]
+            self._user_parts.append(f"[Tool: {out['tool_name']}]\n{text}")
         return self
 
     def with_query(self, query: str, label: str = "Question") -> PromptBuilder:
@@ -223,7 +242,10 @@ def get_router_prompt(
         tool_desc_lines.append(f"- {schema['name']}: {schema['description']}")
     tool_descriptions = "\n".join(tool_desc_lines)
 
-    system_prompt = ROUTER_SYSTEM_PROMPT.format(tool_descriptions=tool_descriptions)
+    system_prompt = ROUTER_SYSTEM_PROMPT.format(
+        tool_descriptions=tool_descriptions,
+        current_year=datetime.now().year,
+    )
 
     # Build user prompt
     user_parts = []

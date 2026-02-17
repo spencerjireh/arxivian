@@ -12,6 +12,11 @@ class ToolResult(BaseModel):
     data: Any = Field(default=None, description="Result data from the tool")
     error: str | None = Field(default=None, description="Error message if execution failed")
     tool_name: str = Field(..., description="Name of the tool that was executed")
+    prompt_text: str | None = Field(
+        default=None,
+        description="Compact, LLM-friendly text representation of the result. "
+        "Set by tools that produce verbose output. Falls back to JSON if absent.",
+    )
 
 
 class BaseTool(ABC):

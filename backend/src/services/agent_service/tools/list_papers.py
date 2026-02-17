@@ -6,9 +6,21 @@ from src.services.ingest_service import IngestService
 from src.utils.logger import get_logger
 
 from .base import BaseTool, ToolResult
-from .utils import parse_date
+from .utils import format_paper_for_prompt, parse_date
 
 log = get_logger(__name__)
+
+
+def _format_list_results(data: dict) -> str:
+    """Format list_papers results into compact prompt text."""
+    papers = data.get("papers", [])
+    total = data.get("total_count", len(papers))
+    if not papers:
+        return "No papers in knowledge base."
+    lines = [f"Knowledge base: {total} papers (showing {len(papers)}):"]
+    for i, p in enumerate(papers, 1):
+        lines.append(format_paper_for_prompt(p, i))
+    return "\n".join(lines)
 
 
 class ListPapersTool(BaseTool):
@@ -91,9 +103,11 @@ class ListPapersTool(BaseTool):
             )
 
             log.debug("list_papers completed", total=total, returned=len(papers))
+            data = {"total_count": total, "returned": len(papers), "papers": papers}
             return ToolResult(
                 success=True,
-                data={"total_count": total, "returned": len(papers), "papers": papers},
+                data=data,
+                prompt_text=_format_list_results(data),
                 tool_name=self.name,
             )
         except Exception as e:

@@ -60,6 +60,17 @@ export interface ErrorEventData {
   code?: string
 }
 
+// Persisted thinking step shape (from backend JSONB)
+
+export interface PersistedThinkingStep {
+  step: string
+  message: string
+  details?: Record<string, unknown> | null
+  tool_name?: string | null
+  started_at: string
+  completed_at: string
+}
+
 // Conversation types
 
 export interface ConversationTurnResponse {
@@ -73,6 +84,7 @@ export interface ConversationTurnResponse {
   rewritten_query?: string
   sources?: Record<string, unknown>[]
   reasoning_steps?: string[]
+  thinking_steps?: PersistedThinkingStep[] | null
   created_at: string
 }
 

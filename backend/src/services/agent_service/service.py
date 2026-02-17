@@ -2,6 +2,7 @@
 
 import time
 import uuid as uuid_lib
+from datetime import datetime, timezone
 from typing import AsyncIterator
 from uuid import UUID
 
@@ -23,7 +24,7 @@ from src.services.search_service import SearchService
 from src.services.ingest_service import IngestService
 from src.repositories.conversation_repository import ConversationRepository
 from src.repositories.paper_repository import PaperRepository
-from src.schemas.conversation import ConversationMessage, TurnData
+from src.schemas.conversation import ConversationMessage, ThinkingStepDict, TurnData
 from src.schemas.stream import (
     StreamEvent,
     StreamEventType,
@@ -56,8 +57,46 @@ NODE_MESSAGES = {
     "generate": "Generating answer...",
 }
 
-# Nodes whose chain_start/chain_end events are redundant with custom events
-_SKIP_CHAIN_EVENTS = {"executor"}
+# Nodes whose on_chain_start is suppressed (they emit their own start events)
+_SKIP_CHAIN_START = {"executor"}
+
+
+class _StepTracker:
+    """Tracks start/end times for workflow steps to build ThinkingStepDicts."""
+
+    def __init__(self) -> None:
+        self.steps: list[ThinkingStepDict] = []
+        self._starts: dict[str, float] = {}
+
+    @staticmethod
+    def _key(step: str, details: dict | None) -> str:
+        if step == "executing" and details and details.get("tool_name"):
+            return f"executing:{details['tool_name']}"
+        return step
+
+    def start(self, step: str, details: dict | None = None) -> None:
+        """Record the start time for a workflow step."""
+        self._starts[self._key(step, details)] = time.time()
+
+    def end(self, step: str, message: str, details: dict | None) -> None:
+        """Record completion of a workflow step, pairing with its start time."""
+        key = self._key(step, details)
+        started = self._starts.pop(key, None)
+        if started is None:
+            return
+        now = time.time()
+        self.steps.append({
+            "step": step,
+            "message": message,
+            "details": details,
+            "tool_name": (details or {}).get("tool_name"),
+            "started_at": datetime.fromtimestamp(
+                started, tz=timezone.utc
+            ).isoformat(),
+            "completed_at": datetime.fromtimestamp(
+                now, tz=timezone.utc
+            ).isoformat(),
+        })
 
 
 class AgentService:
@@ -206,6 +245,7 @@ class AgentService:
         final_state: dict = {}
         sources_emitted = False
         content_tokens_emitted = 0
+        tracker = _StepTracker()
 
         try:
             async for event in self.graph.astream_events(
@@ -216,7 +256,7 @@ class AgentService:
                 # Node start - emit status event (skip nodes covered by custom events)
                 if kind == "on_chain_start" and event["name"] in NODE_TO_STEP:
                     node_name = event["name"]
-                    if node_name in _SKIP_CHAIN_EVENTS:
+                    if node_name in _SKIP_CHAIN_START:
                         continue
                     step = NODE_TO_STEP[node_name]
                     message = NODE_MESSAGES.get(node_name, f"Processing {node_name}...")
@@ -225,6 +265,7 @@ class AgentService:
                         event=StreamEventType.STATUS,
                         data=StatusEventData(step=step, message=message),
                     )
+                    tracker.start(step)
 
                 # Node end - extract state updates and emit detailed status
                 elif kind == "on_chain_end" and event["name"] in NODE_TO_STEP:
@@ -239,35 +280,88 @@ class AgentService:
                     if node_name == "guardrail" and output.get("guardrail_result"):
                         result = output["guardrail_result"]
                         is_in_scope = result.score >= self.context.guardrail_threshold
+                        guardrail_details = {
+                            "score": result.score,
+                            "threshold": self.context.guardrail_threshold,
+                            "reasoning": result.reasoning,
+                        }
+                        guardrail_msg = (
+                            f"Query {'is in scope' if is_in_scope else 'is out of scope'}"
+                        )
                         yield StreamEvent(
                             event=StreamEventType.STATUS,
                             data=StatusEventData(
                                 step="guardrail",
-                                message=f"Query {'is in scope' if is_in_scope else 'is out of scope'}",
-                                details={
-                                    "score": result.score,
-                                    "threshold": self.context.guardrail_threshold,
-                                    "reasoning": result.reasoning,
-                                },
+                                message=guardrail_msg,
+                                details=guardrail_details,
                             ),
                         )
+                        tracker.end("guardrail", guardrail_msg, guardrail_details)
 
                     # Emit router decision details
                     elif node_name == "router" and output.get("router_decision"):
                         decision = output["router_decision"]
+                        routing_details = {
+                            "action": decision.action,
+                            "tools": [tc.tool_name for tc in decision.tool_calls],
+                            "iteration": output.get("iteration", 0),
+                            "reasoning": decision.reasoning,
+                        }
+                        routing_msg = f"Decided to {decision.action}"
                         yield StreamEvent(
                             event=StreamEventType.STATUS,
                             data=StatusEventData(
                                 step="routing",
-                                message=f"Decided to {decision.action}",
-                                details={
-                                    "action": decision.action,
-                                    "tools": [tc.tool_name for tc in decision.tool_calls],
-                                    "iteration": output.get("iteration", 0),
-                                    "reasoning": decision.reasoning,
-                                },
+                                message=routing_msg,
+                                details=routing_details,
                             ),
                         )
+                        tracker.end("routing", routing_msg, routing_details)
+
+                        # Emit tool_start for each planned tool (chain-level
+                        # fallback -- custom events from asyncio.gather in
+                        # the executor may not propagate through astream_events)
+                        for tc in decision.tool_calls:
+                            tool_details = {"tool_name": tc.tool_name}
+                            tool_msg = f"Calling {tc.tool_name}..."
+                            yield StreamEvent(
+                                event=StreamEventType.STATUS,
+                                data=StatusEventData(
+                                    step="executing",
+                                    message=tool_msg,
+                                    details=tool_details,
+                                ),
+                            )
+                            tracker.start("executing", tool_details)
+
+                    # Emit tool completion from executor chain_end
+                    # (chain-level fallback for custom events that may not
+                    # propagate from asyncio.gather)
+                    elif node_name == "executor":
+                        last_tools = output.get("last_executed_tools", [])
+                        tool_history = output.get("tool_history", [])
+                        recent = tool_history[-len(last_tools):] if last_tools else []
+                        for exec_record in recent:
+                            ok = exec_record.success
+                            status = "completed" if ok else "failed"
+                            tool_end_msg = f"{exec_record.tool_name} {status}"
+                            tool_details = {
+                                "tool_name": exec_record.tool_name,
+                                "success": ok,
+                            }
+                            yield StreamEvent(
+                                event=StreamEventType.STATUS,
+                                data=StatusEventData(
+                                    step="executing",
+                                    message=tool_end_msg,
+                                    details=tool_details,
+                                ),
+                            )
+                            tracker.end("executing", tool_end_msg, tool_details)
+
+                    # Emit out-of-scope completion
+                    elif node_name == "out_of_scope":
+                        tracker.end("out_of_scope", "Out of scope", None)
 
                     # Emit generation completion
                     elif node_name == "generate":
@@ -278,19 +372,26 @@ class AgentService:
                                 message="Generation complete",
                             ),
                         )
+                        tracker.end("generation", "Generation complete", None)
 
                     # Emit grading results
                     elif node_name == "grade_documents":
                         relevant = output.get("relevant_chunks", [])
                         total = output.get("grading_results", [])
+                        grading_details = {
+                            "relevant": len(relevant),
+                            "total": len(total),
+                        }
+                        grading_msg = f"Found {len(relevant)} relevant documents"
                         yield StreamEvent(
                             event=StreamEventType.STATUS,
                             data=StatusEventData(
                                 step="grading",
-                                message=f"Found {len(relevant)} relevant documents",
-                                details={"relevant": len(relevant), "total": len(total)},
+                                message=grading_msg,
+                                details=grading_details,
                             ),
                         )
+                        tracker.end("grading", grading_msg, grading_details)
 
                         # Emit sources after grading (before generation)
                         if not sources_emitted and relevant:
@@ -324,30 +425,7 @@ class AgentService:
                             data=ContentEventData(token=token),
                         )
 
-                # Handle tool events from executor
-                elif kind == "on_custom_event" and event.get("name") == "tool_start":
-                    data = event.get("data", {})
-                    yield StreamEvent(
-                        event=StreamEventType.STATUS,
-                        data=StatusEventData(
-                            step="executing",
-                            message=f"Calling {data.get('tool_name', 'tool')}...",
-                            details=data,
-                        ),
-                    )
-
-                elif kind == "on_custom_event" and event.get("name") == "tool_end":
-                    data = event.get("data", {})
-                    tool = data.get("tool_name", "tool")
-                    status = "completed" if data.get("success") else "failed"
-                    yield StreamEvent(
-                        event=StreamEventType.STATUS,
-                        data=StatusEventData(
-                            step="executing",
-                            message=f"{tool} {status}",
-                            details=data,
-                        ),
-                    )
+                # Tool start/end events are emitted at chain level (router/executor on_chain_end).
         finally:
             set_trace_context(None)  # Clear trace context
 
@@ -405,6 +483,7 @@ class AgentService:
                     rewritten_query=final_state.get("rewritten_query"),
                     sources=sources_dicts if sources_dicts else None,
                     reasoning_steps=final_state.get("metadata", {}).get("reasoning_steps"),
+                    thinking_steps=tracker.steps or None,
                 ),
                 user_id=self.user_id,
             )

@@ -87,6 +87,47 @@ class TestExecutorNode:
     @patch(
         "src.services.agent_service.nodes.executor.adispatch_custom_event", new_callable=AsyncMock
     )
+    async def test_prompt_text_propagated_from_tool_result(
+        self, mock_event, mock_exec_context, exec_config, base_state
+    ):
+        """prompt_text from ToolResult is propagated to tool output."""
+        from src.services.agent_service.nodes.executor import executor_node
+
+        mock_exec_context.tool_registry.execute.return_value = ToolResult(
+            success=True,
+            data={"total_count": 5, "papers": []},
+            prompt_text="Formatted output text",
+            tool_name=LIST_PAPERS,
+        )
+
+        result = await executor_node(base_state, exec_config)
+
+        assert len(result["tool_outputs"]) == 1
+        assert result["tool_outputs"][0]["prompt_text"] == "Formatted output text"
+
+    @pytest.mark.asyncio
+    @patch(
+        "src.services.agent_service.nodes.executor.adispatch_custom_event", new_callable=AsyncMock
+    )
+    async def test_prompt_text_absent_when_tool_result_has_none(
+        self, mock_event, mock_exec_context, exec_config, base_state
+    ):
+        """prompt_text is NOT added to tool output when ToolResult.prompt_text is None."""
+        from src.services.agent_service.nodes.executor import executor_node
+
+        mock_exec_context.tool_registry.execute.return_value = ToolResult(
+            success=True, data={"total_count": 5, "papers": []}, tool_name=LIST_PAPERS
+        )
+
+        result = await executor_node(base_state, exec_config)
+
+        assert len(result["tool_outputs"]) == 1
+        assert "prompt_text" not in result["tool_outputs"][0]
+
+    @pytest.mark.asyncio
+    @patch(
+        "src.services.agent_service.nodes.executor.adispatch_custom_event", new_callable=AsyncMock
+    )
     async def test_tool_outputs_accumulate_across_iterations(
         self, mock_event, mock_exec_context, exec_config, base_state
     ):

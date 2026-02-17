@@ -35,8 +35,8 @@ export default function StepActivityFeed({
   }, [steps, showAgentInternals])
 
   const totalDuration = useMemo(() => calculateTotalDuration(steps), [steps])
-  const completedSteps = useMemo(
-    () => isStreaming ? visibleSteps.filter((s) => s.status !== 'running') : [],
+  const streamingSteps = useMemo(
+    () => isStreaming ? visibleSteps : [],
     [visibleSteps, isStreaming]
   )
 
@@ -44,6 +44,7 @@ export default function StepActivityFeed({
 
   const stepList = (
     <motion.div
+      key={showHiddenSteps ? 'with-internals' : 'without-internals'}
       variants={shouldReduceMotion ? {} : staggerContainer}
       initial="initial"
       animate="animate"
@@ -70,13 +71,13 @@ export default function StepActivityFeed({
             Reasoning...
           </p>
 
-          {completedSteps.length > 0 && (
+          {streamingSteps.length > 0 && (
             <motion.div
               variants={shouldReduceMotion ? {} : staggerContainer}
               initial="initial"
               animate="animate"
             >
-              {completedSteps.map((step) => (
+              {streamingSteps.map((step) => (
                 <StepFeedItem key={step.id} step={step} isStreaming={isStreaming} />
               ))}
             </motion.div>

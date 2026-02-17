@@ -1,6 +1,6 @@
 """LangGraph state and structured output models."""
 
-from typing import Any, TypedDict, Annotated, Literal
+from typing import Any, Required, TypedDict, Annotated, Literal
 
 from pydantic import BaseModel, Field, ConfigDict
 from langchain_core.messages import AnyMessage
@@ -87,11 +87,12 @@ class AgentMetadata(TypedDict, total=False):
     last_guardrail_score: int | None
 
 
-class ToolOutput(TypedDict):
+class ToolOutput(TypedDict, total=False):
     """Output captured from a tool execution for use in generation."""
 
-    tool_name: str
-    data: Any
+    tool_name: Required[str]
+    data: Required[Any]
+    prompt_text: str  # Compact text for generation prompt; falls back to JSON if absent
 
 
 class AgentState(TypedDict):

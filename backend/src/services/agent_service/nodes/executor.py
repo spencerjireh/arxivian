@@ -128,6 +128,7 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
                     error=str(item),
                 )
             )
+            tool_outputs.append({"tool_name": tc.tool_name, "data": {"error": str(item)}})
             last_executed_tools.append(tc.tool_name)
             continue
 
@@ -144,7 +145,9 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
         )
         tool_history.append(execution)
 
-        # Use tool's class variables to determine where to store results
+        # Use tool's class variables to determine where to store results.
+        # Three cases: success+data -> store output, failure -> surface error,
+        # success+no-data -> intentionally ignored (nothing to capture).
         if result.success and result.data:
             tool = context.tool_registry.get(tool_name)
             if tool:
@@ -156,8 +159,12 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
                         )
                     retrieved_chunks.extend(result.data)
                 else:
-                    # Capture non-retrieve tool output for generation
-                    tool_outputs.append({"tool_name": tool_name, "data": result.data})
+                    output: ToolOutput = {"tool_name": tool_name, "data": result.data}
+                    if result.prompt_text is not None:
+                        output["prompt_text"] = result.prompt_text
+                    tool_outputs.append(output)
+        elif not result.success:
+            tool_outputs.append({"tool_name": tool_name, "data": {"error": result.error}})
 
     updates: dict = {
         "tool_history": tool_history,

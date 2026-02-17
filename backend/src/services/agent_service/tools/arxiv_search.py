@@ -6,9 +6,20 @@ from src.clients.arxiv_client import ArxivClient
 from src.utils.logger import get_logger
 
 from .base import BaseTool, ToolResult
-from .utils import parse_date
+from .utils import format_paper_for_prompt, parse_date
 
 log = get_logger(__name__)
+
+
+def _format_search_results(data: dict) -> str:
+    """Format arxiv search results into compact prompt text."""
+    papers = data.get("papers", [])
+    if not papers:
+        return data.get("message", "") or "No papers found."
+    lines = [f"Found {len(papers)} papers:"]
+    for i, p in enumerate(papers, 1):
+        lines.append(format_paper_for_prompt(p, i))
+    return "\n".join(lines)
 
 
 class ArxivSearchTool(BaseTool):
@@ -34,7 +45,11 @@ class ArxivSearchTool(BaseTool):
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "Search query for arXiv (e.g., 'transformer attention mechanism')",
+                    "description": (
+                        "Search query for arXiv (e.g., 'transformer attention mechanism'). "
+                        "Use plain keywords -- do NOT include raw arXiv API syntax like "
+                        "'submittedDate:' here. Use start_date/end_date parameters for dates."
+                    ),
                 },
                 "max_results": {
                     "type": "integer",
@@ -67,6 +82,14 @@ class ArxivSearchTool(BaseTool):
         end_date: str | None = None,
         **kwargs,
     ) -> ToolResult:
+        if not query or not query.strip():
+            return ToolResult(
+                success=False,
+                error="Query is required. Provide keywords (e.g. 'machine learning'). "
+                "Use start_date/end_date parameters for date filtering.",
+                tool_name=self.name,
+            )
+
         max_results = min(max(1, max_results), 10)
         log.debug("arxiv_search", query=query, max_results=max_results, categories=categories)
 
@@ -99,9 +122,16 @@ class ArxivSearchTool(BaseTool):
             ]
 
             log.debug("arxiv_search completed", count=len(results))
+            data: dict = {"count": len(results), "papers": results}
+            if not results and (start_date or end_date):
+                data["message"] = (
+                    "No papers matched the given date range. "
+                    "Try broadening the date window or adjusting your query."
+                )
             return ToolResult(
                 success=True,
-                data={"count": len(results), "papers": results},
+                data=data,
+                prompt_text=_format_search_results(data),
                 tool_name=self.name,
             )
         except Exception as e:

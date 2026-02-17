@@ -132,6 +132,7 @@ class ConversationRepository:
                     rewritten_query=turn.rewritten_query,
                     sources=turn.sources,
                     reasoning_steps=turn.reasoning_steps,
+                    thinking_steps=turn.thinking_steps,
                     provider=turn.provider,
                     model=turn.model,
                 )

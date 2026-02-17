@@ -11,6 +11,20 @@ from .utils import safe_list_from_jsonb
 log = get_logger(__name__)
 
 
+def _format_citations(data: dict) -> str:
+    """Format citation results into compact prompt text."""
+    title = data.get("title", "Unknown")
+    arxiv_id = data.get("arxiv_id", "?")
+    refs = data.get("references", [])
+    header = f'References from "{title}" [{arxiv_id}] ({len(refs)} citations):'
+    if not refs:
+        return f"{header}\nNo references available."
+    lines = [header]
+    for i, ref in enumerate(refs, 1):
+        lines.append(f"{i}. {ref}")
+    return "\n".join(lines)
+
+
 class ExploreCitationsTool(BaseTool):
     """Tool for exploring citations/references from ingested papers."""
 
@@ -63,14 +77,16 @@ class ExploreCitationsTool(BaseTool):
             references = safe_list_from_jsonb(paper.references)
 
             log.debug("explore_citations completed", arxiv_id=arxiv_id, count=len(references))
+            data = {
+                "arxiv_id": paper.arxiv_id,
+                "title": paper.title,
+                "reference_count": len(references),
+                "references": references,
+            }
             return ToolResult(
                 success=True,
-                data={
-                    "arxiv_id": paper.arxiv_id,
-                    "title": paper.title,
-                    "reference_count": len(references),
-                    "references": references,
-                },
+                data=data,
+                prompt_text=_format_citations(data),
                 tool_name=self.name,
             )
         except Exception as e:

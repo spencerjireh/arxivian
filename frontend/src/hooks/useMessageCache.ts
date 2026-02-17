@@ -1,7 +1,8 @@
 import { useCallback, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useChatStore } from '../stores/chatStore'
-import type { Message } from '../types/api'
+import { hydrateThinkingSteps } from '../lib/thinking/hydrate'
+import type { Message, PersistedThinkingStep } from '../types/api'
 
 export const chatKeys = {
   messages: (sessionId: string | null) => ['chat', 'messages', sessionId] as const,
@@ -65,6 +66,7 @@ export function useMessageCache(sessionId: string | null) {
         rewritten_query?: string | null
         sources?: Record<string, unknown>[] | null
         reasoning_steps?: string[] | null
+        thinking_steps?: PersistedThinkingStep[] | null
         created_at: string
       }>
     ) => {
@@ -91,6 +93,7 @@ export function useMessageCache(sessionId: string | null) {
             turn_number: turn.turn_number,
             reasoning_steps: turn.reasoning_steps ?? [],
           },
+          thinkingSteps: hydrateThinkingSteps(turn.thinking_steps),
           createdAt: new Date(turn.created_at),
         },
       ])
