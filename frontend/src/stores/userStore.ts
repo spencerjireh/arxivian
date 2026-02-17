@@ -21,7 +21,7 @@ export const useUserStore = create<UserState>()((set) => ({
   fetchMe: async () => {
     set({ loading: true, error: null })
     try {
-      const data = await apiGet<MeResponse>('/v1/users/me')
+      const data = await apiGet<MeResponse>('/users/me')
       set({ me: data, loading: false })
     } catch {
       set({ loading: false, error: 'Failed to load user info' })
