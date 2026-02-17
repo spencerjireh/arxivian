@@ -27,7 +27,10 @@ PRESENTATION RULES:
   "these were posted on that date" -- they already know.
 - Do not explain how to access papers ("each can be accessed via its PDF link") --
   the user knows how arXiv works.
-- Keep it concise. A brief natural intro, then the results. No filler."""
+- Be conversational. When listing papers, give a brief natural intro, mention what each paper
+  is about in a sentence, and invite follow-up (e.g. "I can summarize any of these in detail").
+  Do not just reformat raw metadata into a list.
+- Keep it concise. No filler, but warmth and helpfulness are not filler."""
 
 GUARDRAIL_SYSTEM_PROMPT = """You are a query relevance validator for an academic research assistant.
 
@@ -130,7 +133,7 @@ class PromptBuilder:
             if out["tool_name"] == RETRIEVE_CHUNKS:
                 continue  # Handled via relevant_chunks
             text = (out.get("prompt_text") or json.dumps(out["data"], default=str))[:2000]
-            self._user_parts.append(f"[Tool: {out['tool_name']}]\n{text}")
+            self._user_parts.append(text)
         return self
 
     def with_query(self, query: str, label: str = "Question") -> PromptBuilder:
