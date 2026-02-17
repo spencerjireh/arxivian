@@ -30,6 +30,7 @@ export function useChat(sessionId: string | null) {
   const navigate = useNavigate()
   const abortControllerRef = useRef<AbortController | null>(null)
   const streamingMessageIdRef = useRef<string | null>(null)
+  const hasAddedGeneratingStep = useRef(false)
 
   const { messages, setMessages, loadFromHistory, clearMessages } = useMessageCache(sessionId)
 
@@ -40,6 +41,8 @@ export function useChat(sessionId: string | null) {
   const setSources = useChatStore((s) => s.setSources)
   const setError = useChatStore((s) => s.setError)
   const addThinkingStep = useChatStore((s) => s.addThinkingStep)
+  const addGeneratingStep = useChatStore((s) => s.addGeneratingStep)
+  const completeGeneratingStep = useChatStore((s) => s.completeGeneratingStep)
   const getThinkingSteps = useChatStore((s) => s.getThinkingSteps)
   const resetStreamingState = useChatStore((s) => s.resetStreamingState)
 
@@ -72,7 +75,9 @@ export function useChat(sessionId: string | null) {
     (id: string, updates: Partial<Message>) => {
       setMessages((prev) =>
         prev.map((msg) =>
-          msg.id === id && msg.isStreaming ? { ...msg, ...updates, isStreaming: true } : msg
+          msg.id === id && msg.isStreaming
+            ? { ...msg, ...updates, isStreaming: updates.isStreaming ?? true }
+            : msg
         )
       )
     },
@@ -87,9 +92,11 @@ export function useChat(sessionId: string | null) {
       metadata: MetadataEventData,
       thinkingSteps: ThinkingStep[]
     ) => {
+      const now = new Date()
       const finalizedSteps = thinkingSteps.map((step) => ({
         ...step,
         status: 'complete' as const,
+        endTime: step.endTime ?? now,
       }))
 
       const assistantMessage: Message = {
@@ -151,6 +158,7 @@ export function useChat(sessionId: string | null) {
 
       addUserMessage(query)
       resetStreamingState()
+      hasAddedGeneratingStep.current = false
       setStreaming(true)
       setError(null)
 
@@ -178,6 +186,10 @@ export function useChat(sessionId: string | null) {
               }
             },
             onContent: (data) => {
+              if (!hasAddedGeneratingStep.current) {
+                addGeneratingStep()
+                hasAddedGeneratingStep.current = true
+              }
               accumulatedContent += data.token
               appendStreamingContent(data.token)
               if (streamingMessageIdRef.current) {
@@ -196,6 +208,7 @@ export function useChat(sessionId: string | null) {
               }
             },
             onMetadata: (data) => {
+              completeGeneratingStep()
               const finalThinkingSteps = getThinkingSteps()
               finalizeAssistantMessage(
                 streamingMessageIdRef.current,
@@ -209,7 +222,10 @@ export function useChat(sessionId: string | null) {
             },
             onError: (data) => {
               if (streamingMessageIdRef.current) {
-                setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageIdRef.current))
+                updateStreamingMessage(streamingMessageIdRef.current, {
+                  isStreaming: false,
+                  error: data.error,
+                })
                 streamingMessageIdRef.current = null
               }
               resetStreamingState()
@@ -232,12 +248,15 @@ export function useChat(sessionId: string | null) {
           setStreaming(false)
           return
         }
+        const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
         if (streamingMessageIdRef.current) {
-          setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageIdRef.current))
+          updateStreamingMessage(streamingMessageIdRef.current, {
+            isStreaming: false,
+            error: errorMessage,
+          })
           streamingMessageIdRef.current = null
         }
         resetStreamingState()
-        const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
         setError(errorMessage)
         setStreaming(false)
       } finally {
@@ -258,6 +277,8 @@ export function useChat(sessionId: string | null) {
       appendStreamingContent,
       setSources,
       addThinkingStep,
+      addGeneratingStep,
+      completeGeneratingStep,
       getThinkingSteps,
       finalizeAssistantMessage,
       setMessages,

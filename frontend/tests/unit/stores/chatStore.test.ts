@@ -52,19 +52,22 @@ describe('chatStore', () => {
   })
 
   describe('addThinkingStep', () => {
-    it('adds a new thinking step', () => {
+    it('adds a new internal step for guardrail events', () => {
       const data: StatusEventData = { step: 'guardrail', message: 'Checking scope' }
       useChatStore.getState().addThinkingStep(data)
 
       const steps = useChatStore.getState().thinkingSteps
       expect(steps).toHaveLength(1)
-      expect(steps[0].step).toBe('guardrail')
+      expect(steps[0].isInternal).toBe(true)
+      if (steps[0].isInternal) {
+        expect(steps[0].kind).toBe('guardrail')
+      }
       expect(steps[0].message).toBe('Checking scope')
       expect(steps[0].status).toBe('running')
       expect(steps[0].id).toMatch(/^step-/)
     })
 
-    it('updates an existing running step of the same type', () => {
+    it('deduplicates running internal steps of the same kind', () => {
       useChatStore.getState().addThinkingStep({ step: 'guardrail', message: 'Checking...' })
       useChatStore.getState().addThinkingStep({ step: 'guardrail', message: 'Still checking...' })
 
@@ -73,7 +76,7 @@ describe('chatStore', () => {
       expect(steps[0].message).toBe('Still checking...')
     })
 
-    it('marks step as complete on completion message', () => {
+    it('marks internal step as complete on completion message', () => {
       useChatStore.getState().addThinkingStep({ step: 'guardrail', message: 'Checking...' })
       useChatStore.getState().addThinkingStep({ step: 'guardrail', message: 'Query is in scope' })
 
@@ -82,74 +85,121 @@ describe('chatStore', () => {
       expect(steps[0].endTime).toBeInstanceOf(Date)
     })
 
-    it('adds a separate step for a different type', () => {
+    it('adds separate steps for different internal step kinds', () => {
       useChatStore.getState().addThinkingStep({ step: 'guardrail', message: 'Checking...' })
       useChatStore.getState().addThinkingStep({ step: 'routing', message: 'Deciding route...' })
 
       expect(useChatStore.getState().thinkingSteps).toHaveLength(2)
     })
 
-    describe('executing steps with tool names', () => {
-      it('creates separate steps for different tools', () => {
+    describe('tool start/end events', () => {
+      it('creates an ActivityStep on tool start', () => {
         useChatStore.getState().addThinkingStep({
           step: 'executing',
-          message: 'Calling retrieve...',
-          details: { tool_name: 'retrieve' },
-        })
-        useChatStore.getState().addThinkingStep({
-          step: 'executing',
-          message: 'Calling arxiv_search...',
-          details: { tool_name: 'arxiv_search' },
-        })
-
-        const steps = useChatStore.getState().thinkingSteps
-        expect(steps).toHaveLength(2)
-        expect(steps[0].toolName).toBe('retrieve')
-        expect(steps[1].toolName).toBe('arxiv_search')
-      })
-
-      it('completes only the matching tool step', () => {
-        useChatStore.getState().addThinkingStep({
-          step: 'executing',
-          message: 'Calling retrieve...',
-          details: { tool_name: 'retrieve' },
-        })
-        useChatStore.getState().addThinkingStep({
-          step: 'executing',
-          message: 'Calling arxiv_search...',
-          details: { tool_name: 'arxiv_search' },
-        })
-        useChatStore.getState().addThinkingStep({
-          step: 'executing',
-          message: 'retrieve completed',
-          details: { tool_name: 'retrieve' },
-        })
-
-        const steps = useChatStore.getState().thinkingSteps
-        expect(steps).toHaveLength(2)
-        expect(steps.find((s) => s.toolName === 'retrieve')?.status).toBe('complete')
-        expect(steps.find((s) => s.toolName === 'arxiv_search')?.status).toBe('running')
-      })
-
-      it('skips redundant chain_start/chain_end messages', () => {
-        useChatStore.getState().addThinkingStep({
-          step: 'executing',
-          message: 'Executing tool...',
-        })
-
-        expect(useChatStore.getState().thinkingSteps).toHaveLength(0)
-      })
-
-      it('extracts tool name from message when details are absent', () => {
-        useChatStore.getState().addThinkingStep({
-          step: 'executing',
-          message: 'Calling summarize_paper...',
+          message: 'Calling retrieve_chunks...',
+          details: { tool_name: 'retrieve_chunks' },
         })
 
         const steps = useChatStore.getState().thinkingSteps
         expect(steps).toHaveLength(1)
-        expect(steps[0].toolName).toBe('summarize_paper')
+        expect(steps[0].isInternal).toBe(false)
+        if (!steps[0].isInternal) {
+          expect(steps[0].toolName).toBe('retrieve_chunks')
+          expect(steps[0].kind).toBe('retrieve')
+        }
+        expect(steps[0].status).toBe('running')
       })
+
+      it('creates separate ActivitySteps for different tools', () => {
+        useChatStore.getState().addThinkingStep({
+          step: 'executing',
+          message: 'Calling retrieve_chunks...',
+          details: { tool_name: 'retrieve_chunks' },
+        })
+        useChatStore.getState().addThinkingStep({
+          step: 'executing',
+          message: 'Calling arxiv_search...',
+          details: { tool_name: 'arxiv_search' },
+        })
+
+        const steps = useChatStore.getState().thinkingSteps
+        expect(steps).toHaveLength(2)
+      })
+
+      it('completes matching tool step on tool end', () => {
+        useChatStore.getState().addThinkingStep({
+          step: 'executing',
+          message: 'Calling retrieve_chunks...',
+          details: { tool_name: 'retrieve_chunks' },
+        })
+        useChatStore.getState().addThinkingStep({
+          step: 'executing',
+          message: 'Calling arxiv_search...',
+          details: { tool_name: 'arxiv_search' },
+        })
+        useChatStore.getState().addThinkingStep({
+          step: 'executing',
+          message: 'retrieve_chunks completed',
+          details: { tool_name: 'retrieve_chunks', success: true },
+        })
+
+        const steps = useChatStore.getState().thinkingSteps
+        expect(steps).toHaveLength(2)
+        const retrieve = steps.find((s) => !s.isInternal && s.toolName === 'retrieve_chunks')
+        const search = steps.find((s) => !s.isInternal && s.toolName === 'arxiv_search')
+        expect(retrieve?.status).toBe('complete')
+        expect(search?.status).toBe('running')
+      })
+    })
+
+    describe('retry detection', () => {
+      it('appends a refining step on retry event', () => {
+        useChatStore.getState().addThinkingStep({
+          step: 'grading',
+          message: 'Retrying with different query',
+          details: { iteration: 2 },
+        })
+
+        const steps = useChatStore.getState().thinkingSteps
+        expect(steps).toHaveLength(1)
+        expect(steps[0].isInternal).toBe(false)
+        if (!steps[0].isInternal) {
+          expect(steps[0].kind).toBe('refining')
+        }
+        expect(steps[0].status).toBe('complete')
+      })
+    })
+  })
+
+  describe('addGeneratingStep', () => {
+    it('adds a generating ActivityStep', () => {
+      useChatStore.getState().addGeneratingStep()
+
+      const steps = useChatStore.getState().thinkingSteps
+      expect(steps).toHaveLength(1)
+      expect(steps[0].isInternal).toBe(false)
+      if (!steps[0].isInternal) {
+        expect(steps[0].kind).toBe('generating')
+      }
+      expect(steps[0].status).toBe('running')
+    })
+
+    it('does not duplicate generating step', () => {
+      useChatStore.getState().addGeneratingStep()
+      useChatStore.getState().addGeneratingStep()
+
+      expect(useChatStore.getState().thinkingSteps).toHaveLength(1)
+    })
+  })
+
+  describe('completeGeneratingStep', () => {
+    it('marks generating step as complete', () => {
+      useChatStore.getState().addGeneratingStep()
+      useChatStore.getState().completeGeneratingStep()
+
+      const steps = useChatStore.getState().thinkingSteps
+      expect(steps[0].status).toBe('complete')
+      expect(steps[0].endTime).toBeInstanceOf(Date)
     })
   })
 

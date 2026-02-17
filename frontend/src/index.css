@@ -167,27 +167,6 @@ input[type="range"]::-moz-range-thumb {
 
 /* Animations - kept for non-Framer Motion usage */
 
-/* Shimmer text animation -- Claude-style streaming indicator */
-.text-shimmer {
-  background: linear-gradient(
-    90deg,
-    var(--color-stone-400),
-    var(--color-stone-200),
-    var(--color-stone-400)
-  );
-  background-size: 200% 100%;
-  animation: shimmer 2.5s ease-in-out infinite;
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-}
-
-@keyframes shimmer {
-  0% { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
-}
-
 /* Gentle loader spin (used by Loader2 icons) */
 .animate-spin-slow {
   animation: spin 1.5s linear infinite;
@@ -341,4 +320,32 @@ input[type="range"]::-moz-range-thumb {
 .katex-error {
   color: var(--color-error) !important;
   font-style: italic;
+}
+
+/* Thinking divider -- miniature academic divider between reasoning and response */
+.thinking-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 0.75rem 0;
+}
+
+.thinking-divider-line {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(40%, 200px);
+  height: 1px;
+  background-color: var(--color-stone-200);
+}
+
+.thinking-divider-diamond {
+  position: relative;
+  z-index: 1;
+  width: 5px;
+  height: 5px;
+  transform: rotate(45deg);
+  border: 1px solid var(--color-stone-300);
+  background-color: var(--color-cream);
 }

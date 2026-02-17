@@ -1,12 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { User, Sparkles } from 'lucide-react'
+import { AlertCircle, Lightbulb, User, Sparkles } from 'lucide-react'
 import clsx from 'clsx'
 import type { Message } from '../../types/api'
 import SourceCard from './SourceCard'
-import MetadataPanel from './MetadataPanel'
 import MarkdownRenderer from './MarkdownRenderer'
-import StepActivityFeed from './StepActivityFeed'
+import ThinkingTimeline from './ThinkingTimeline'
 import { cursorTransitionVariants } from '../../lib/animations'
 
 interface ChatMessageProps {
@@ -23,6 +22,8 @@ export default function ChatMessage({
   const content = message.content
   const shouldReduceMotion = useReducedMotion()
   const thinkingSteps = message.thinkingSteps
+
+  const hasToolActivity = !isUser && thinkingSteps?.some((s) => !s.isInternal && s.kind !== 'generating')
 
   const [cursorPhase, setCursorPhase] = useState<'streaming' | 'complete'>('streaming')
   const prevIsStreaming = useRef(isStreaming)
@@ -68,7 +69,14 @@ export default function ChatMessage({
         <div className={clsx(isUser ? 'pr-9 text-right' : 'pl-9')}>
           {!isUser && thinkingSteps && thinkingSteps.length > 0 && (
             <div className="mb-4">
-              <StepActivityFeed steps={thinkingSteps} isStreaming={isStreaming} />
+              <ThinkingTimeline steps={thinkingSteps} isStreaming={isStreaming} metadata={message.metadata} />
+            </div>
+          )}
+
+          {!isUser && !isStreaming && thinkingSteps && thinkingSteps.length > 0 && content && (
+            <div className="thinking-divider">
+              <div className="thinking-divider-line" />
+              <div className="thinking-divider-diamond" />
             </div>
           )}
 
@@ -93,22 +101,30 @@ export default function ChatMessage({
             )}
           </div>
 
+          {!isUser && message.error && (
+            <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>{message.error}</span>
+            </div>
+          )}
+
           {!isUser && message.sources && message.sources.length > 0 && (
             <div className="mt-6 pt-6 border-t border-stone-100">
               <h4 className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-3">
                 Sources
               </h4>
               <div className="space-y-2">
-                {message.sources.map((source) => (
-                  <SourceCard key={source.arxiv_id} source={source} />
+                {message.sources.map((source, index) => (
+                  <SourceCard key={`${source.arxiv_id}-${index}`} source={source} />
                 ))}
               </div>
             </div>
           )}
 
-          {!isUser && message.metadata && (
-            <div className="mt-4 pt-4 border-t border-stone-100">
-              <MetadataPanel metadata={message.metadata} />
+          {!isUser && !isStreaming && !message.sources && !hasToolActivity && content && !message.error && (
+            <div className="mt-4 flex items-center gap-2 text-xs text-stone-400">
+              <Lightbulb className="w-3.5 h-3.5" strokeWidth={1.5} />
+              <span>Answered from general knowledge</span>
             </div>
           )}
         </div>

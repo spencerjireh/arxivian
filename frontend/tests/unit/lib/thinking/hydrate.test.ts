@@ -13,8 +13,8 @@ const SAMPLE_STEPS: PersistedThinkingStep[] = [
   {
     step: 'executing',
     message: 'retrieve completed',
-    details: { tool_name: 'retrieve', success: true },
-    tool_name: 'retrieve',
+    details: { tool_name: 'retrieve_chunks', success: true },
+    tool_name: 'retrieve_chunks',
     started_at: '2026-02-15T10:00:02+00:00',
     completed_at: '2026-02-15T10:00:03+00:00',
   },
@@ -55,26 +55,36 @@ describe('hydrateThinkingSteps', () => {
     const guardrail = result[0]
     expect(guardrail.startTime).toEqual(new Date('2026-02-15T10:00:00+00:00'))
     expect(guardrail.endTime).toEqual(new Date('2026-02-15T10:00:01+00:00'))
-    expect(guardrail.timestamp).toEqual(guardrail.startTime)
   })
 
-  it('derives correct order from STEP_CONFIG', () => {
+  it('classifies internal steps correctly', () => {
     const result = hydrateThinkingSteps(SAMPLE_STEPS)!
 
-    expect(result[0].order).toBe(0) // guardrail
-    expect(result[1].order).toBe(3) // executing
-    expect(result[2].order).toBe(5) // generation
+    // guardrail -> InternalStep
+    expect(result[0].isInternal).toBe(true)
+    if (result[0].isInternal) {
+      expect(result[0].kind).toBe('guardrail')
+    }
+
+    // generation -> InternalStep
+    expect(result[2].isInternal).toBe(true)
+    if (result[2].isInternal) {
+      expect(result[2].kind).toBe('generation')
+    }
   })
 
-  it('preserves toolName for executing steps', () => {
+  it('classifies executing steps with tool_name as ActivityStep', () => {
     const result = hydrateThinkingSteps(SAMPLE_STEPS)!
 
-    expect(result[1].toolName).toBe('retrieve')
-    expect(result[0].toolName).toBeUndefined()
-    expect(result[2].toolName).toBeUndefined()
+    // executing with tool_name -> ActivityStep
+    expect(result[1].isInternal).toBe(false)
+    if (!result[1].isInternal) {
+      expect(result[1].kind).toBe('retrieve')
+      expect(result[1].toolName).toBe('retrieve_chunks')
+    }
   })
 
-  it('falls back to executing for unknown step types', () => {
+  it('falls back to internal executing for unknown step types', () => {
     const unknown: PersistedThinkingStep[] = [
       {
         step: 'unknown_step',
@@ -89,8 +99,10 @@ describe('hydrateThinkingSteps', () => {
     const result = hydrateThinkingSteps(unknown)!
 
     expect(result).toHaveLength(1)
-    expect(result[0].step).toBe('executing')
-    expect(result[0].order).toBe(3) // executing order
+    expect(result[0].isInternal).toBe(true)
+    if (result[0].isInternal) {
+      expect(result[0].kind).toBe('executing')
+    }
   })
 
   it('assigns unique ids to each step', () => {

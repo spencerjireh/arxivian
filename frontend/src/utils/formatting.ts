@@ -11,6 +11,13 @@ export function formatDetailKey(key: string): string {
     .trim()
 }
 
+/** Convert snake_case tool name to sentence-case label (e.g. "retrieve_chunks" -> "Retrieve chunks") */
+export function humanizeToolName(toolName: string): string {
+  return toolName
+    .replace(/_/g, ' ')
+    .replace(/^./, (c) => c.toUpperCase())
+}
+
 export function formatDetailValue(
   key: string,
   value: unknown,

@@ -16,8 +16,8 @@ export interface SettingsState {
   max_retrieval_attempts: number
   conversation_window: number
 
-  // Display
-  showAgentInternals: boolean
+  // Display Preferences
+  showInternalSteps: boolean
 
   // Actions
   setProvider: (provider?: LLMProvider) => void
@@ -27,7 +27,7 @@ export interface SettingsState {
   setGuardrailThreshold: (threshold: number) => void
   setMaxRetrievalAttempts: (attempts: number) => void
   setConversationWindow: (window: number) => void
-  setShowAgentInternals: (show: boolean) => void
+  setShowInternalSteps: (show: boolean) => void
   resetToDefaults: () => void
 }
 
@@ -40,7 +40,7 @@ export const DEFAULT_SETTINGS = {
   guardrail_threshold: 75,
   max_retrieval_attempts: 3,
   conversation_window: 5,
-  showAgentInternals: false,
+  showInternalSteps: false,
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -55,7 +55,7 @@ export const useSettingsStore = create<SettingsState>()(
       setGuardrailThreshold: (threshold) => set({ guardrail_threshold: threshold }),
       setMaxRetrievalAttempts: (attempts) => set({ max_retrieval_attempts: attempts }),
       setConversationWindow: (window) => set({ conversation_window: window }),
-      setShowAgentInternals: (show) => set({ showAgentInternals: show }),
+      setShowInternalSteps: (show) => set({ showInternalSteps: show }),
       resetToDefaults: () => set(DEFAULT_SETTINGS),
     }),
     {

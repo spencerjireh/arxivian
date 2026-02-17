@@ -1,45 +1,23 @@
 import { create } from 'zustand'
-import type { SourceInfo, ThinkingStep, StatusEventData } from '../types/api'
-import { STEP_CONFIG } from '../lib/thinking/constants'
+import type {
+  SourceInfo,
+  ThinkingStep,
+  StatusEventData,
+  ActivityStep,
+} from '../types/api'
 import { generateStepId } from '../utils/id'
 import { calculateTotalDuration } from '../utils/duration'
-import { mapStepType, isCompletionMessage, isSkippableMessage, extractToolName } from '../lib/thinking'
-
-function buildNewStep(
-  stepType: ThinkingStep['step'],
-  data: StatusEventData,
-  isComplete: boolean,
-  now: Date,
-  toolName?: string,
-): ThinkingStep {
-  return {
-    id: generateStepId(),
-    step: stepType,
-    message: data.message,
-    details: data.details,
-    status: isComplete ? 'complete' : 'running',
-    timestamp: now,
-    startTime: now,
-    endTime: isComplete ? now : undefined,
-    order: STEP_CONFIG[stepType].order,
-    toolName,
-  }
-}
-
-function applyStepUpdate(
-  existing: ThinkingStep,
-  data: StatusEventData,
-  isComplete: boolean,
-  now: Date,
-): ThinkingStep {
-  return {
-    ...existing,
-    message: data.message,
-    details: data.details,
-    status: isComplete ? 'complete' : 'running',
-    endTime: isComplete ? now : undefined,
-  }
-}
+import {
+  isToolStartEvent,
+  isToolEndEvent,
+  isRetryEvent,
+  createActivityStep,
+  createInternalStep,
+  createRefiningStep,
+  buildToolEndMessage,
+  isInternalStepName,
+  isInternalCompletion,
+} from '../lib/thinking'
 
 interface ChatUIState {
   isStreaming: boolean
@@ -57,6 +35,8 @@ interface ChatUIState {
   setError: (error: string | null) => void
 
   addThinkingStep: (data: StatusEventData) => void
+  addGeneratingStep: () => void
+  completeGeneratingStep: () => void
   getThinkingSteps: () => ThinkingStep[]
   getTotalDuration: () => number
 
@@ -91,37 +71,109 @@ export const useChatStore = create<ChatUIState>((set, get) => ({
   setError: (error) => set({ error }),
 
   addThinkingStep: (data: StatusEventData) => {
-    const stepType = mapStepType(data.step)
-
-    // Skip redundant chain_start/chain_end messages for executing steps
-    if (isSkippableMessage(data.step, data.message)) return
-
-    const isComplete = isCompletionMessage(stepType, data.message)
-    const toolName = (data.details?.tool_name as string | undefined) ?? extractToolName(data.message)
     const now = new Date()
 
     set((state) => {
-      const findPredicate = (s: ThinkingStep) =>
-        stepType === 'executing' && toolName
-          ? s.step === 'executing' && s.status === 'running' && s.toolName === toolName
-          : s.step === stepType && s.status === 'running'
+      // tool_start -> always append a new ActivityStep
+      if (isToolStartEvent(data)) {
+        const newStep = createActivityStep(data)
+        return { thinkingSteps: [...state.thinkingSteps, newStep] }
+      }
 
-      const existingIndex = state.thinkingSteps.findIndex(findPredicate)
-
-      if (existingIndex !== -1) {
+      // tool_end -> find last running ActivityStep with matching toolName, update it
+      if (isToolEndEvent(data)) {
+        const toolName = (data.details?.tool_name as string) ?? ''
+        const success = (data.details?.success as boolean) ?? true
+        const resultSummary = data.details?.result_summary as string | undefined
         const updatedSteps = [...state.thinkingSteps]
-        updatedSteps[existingIndex] = applyStepUpdate(
-          updatedSteps[existingIndex], data, isComplete, now,
-        )
+
+        for (let i = updatedSteps.length - 1; i >= 0; i--) {
+          const step = updatedSteps[i]
+          if (!step.isInternal && step.status === 'running' && step.toolName === toolName) {
+            updatedSteps[i] = {
+              ...step,
+              message: buildToolEndMessage(toolName, success, resultSummary),
+              status: success ? 'complete' : 'error',
+              endTime: now,
+            }
+            break
+          }
+        }
+
         return { thinkingSteps: updatedSteps }
       }
 
-      return {
-        thinkingSteps: [
-          ...state.thinkingSteps,
-          buildNewStep(stepType, data, isComplete, now, toolName),
-        ],
+      // Retry detection -> append a "refining" step (immediately complete)
+      if (isRetryEvent(data)) {
+        return { thinkingSteps: [...state.thinkingSteps, createRefiningStep(data)] }
       }
+
+      // Internal node events -> deduplicate by kind (update running -> complete)
+      if (isInternalStepName(data.step)) {
+        const isComplete = isInternalCompletion(data)
+        const existingIndex = state.thinkingSteps.findIndex(
+          (s) => s.isInternal && s.kind === data.step && s.status === 'running'
+        )
+
+        if (existingIndex !== -1) {
+          const updatedSteps = [...state.thinkingSteps]
+          const existing = updatedSteps[existingIndex]
+          if (existing.isInternal) {
+            updatedSteps[existingIndex] = {
+              ...existing,
+              message: data.message,
+              details: data.details,
+              status: isComplete ? 'complete' : 'running',
+              endTime: isComplete ? now : undefined,
+            }
+          }
+          return { thinkingSteps: updatedSteps }
+        }
+
+        const newStep = createInternalStep(data)
+        return {
+          thinkingSteps: [
+            ...state.thinkingSteps,
+            isComplete ? { ...newStep, status: 'complete' as const, endTime: now } : newStep,
+          ],
+        }
+      }
+
+      return state
+    })
+  },
+
+  addGeneratingStep: () => {
+    set((state) => {
+      const alreadyExists = state.thinkingSteps.some(
+        (s) => !s.isInternal && s.kind === 'generating'
+      )
+      if (alreadyExists) return state
+
+      const step: ActivityStep = {
+        id: generateStepId(),
+        kind: 'generating',
+        toolName: '',
+        label: 'Generating answer',
+        message: 'Generating answer...',
+        status: 'running',
+        startTime: new Date(),
+        isInternal: false,
+      }
+      return { thinkingSteps: [...state.thinkingSteps, step] }
+    })
+  },
+
+  completeGeneratingStep: () => {
+    const now = new Date()
+    set((state) => {
+      const updatedSteps = state.thinkingSteps.map((step) => {
+        if (!step.isInternal && step.kind === 'generating' && step.status === 'running') {
+          return { ...step, status: 'complete' as const, message: 'Answer generated', endTime: now }
+        }
+        return step
+      })
+      return { thinkingSteps: updatedSteps }
     })
   },
 

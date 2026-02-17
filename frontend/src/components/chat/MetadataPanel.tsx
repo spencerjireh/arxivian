@@ -7,10 +7,11 @@ import { transitions } from '../../lib/animations'
 
 interface MetadataPanelProps {
   metadata: MetadataEventData
+  defaultExpanded?: boolean
 }
 
-export default function MetadataPanel({ metadata }: MetadataPanelProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
+export default function MetadataPanel({ metadata, defaultExpanded = false }: MetadataPanelProps) {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded)
   const shouldReduceMotion = useReducedMotion()
 
   const executionTime = (metadata.execution_time_ms / 1000).toFixed(2)

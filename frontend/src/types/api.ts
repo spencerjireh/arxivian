@@ -71,6 +71,58 @@ export interface PersistedThinkingStep {
   completed_at: string
 }
 
+// Thinking/Reasoning types for UI
+
+export type ActivityStepKind =
+  | 'retrieve'
+  | 'arxiv_search'
+  | 'ingest'
+  | 'summarize_paper'
+  | 'list_papers'
+  | 'explore_citations'
+  | 'propose_ingest'
+  | 'generating'
+  | 'refining'
+
+export type InternalStepKind =
+  | 'guardrail'
+  | 'routing'
+  | 'executing'
+  | 'grading'
+  | 'generation'
+  | 'out_of_scope'
+  | 'confirming'
+  | 'ingesting'
+
+export type ThinkingStepStatus = 'running' | 'complete' | 'error'
+
+export interface ActivityStep {
+  id: string
+  kind: ActivityStepKind
+  toolName: string
+  label: string
+  message: string
+  details?: Record<string, unknown>
+  status: ThinkingStepStatus
+  startTime: Date
+  endTime?: Date
+  isInternal: false
+}
+
+export interface InternalStep {
+  id: string
+  kind: InternalStepKind
+  label: string
+  message: string
+  details?: Record<string, unknown>
+  status: ThinkingStepStatus
+  startTime: Date
+  endTime?: Date
+  isInternal: true
+}
+
+export type ThinkingStep = ActivityStep | InternalStep
+
 // Conversation types
 
 export interface ConversationTurnResponse {
@@ -163,32 +215,6 @@ export interface MeResponse {
   can_select_model: boolean
 }
 
-// Thinking/Reasoning types for UI
-
-export type ThinkingStepType =
-  | 'guardrail'
-  | 'routing'
-  | 'executing'
-  | 'grading'
-  | 'generation'
-  | 'out_of_scope'
-
-export type ThinkingStepStatus = 'running' | 'complete' | 'error'
-
-export interface ThinkingStep {
-  id: string
-  step: ThinkingStepType
-  message: string
-  details?: Record<string, unknown>
-  status: ThinkingStepStatus
-  timestamp: Date
-  startTime: Date
-  endTime?: Date
-  order: number
-  /** Tool name for executing steps -- used to distinguish parallel tool calls */
-  toolName?: string
-}
-
 // Chat UI types
 
 export interface Message {
@@ -199,5 +225,6 @@ export interface Message {
   metadata?: MetadataEventData
   thinkingSteps?: ThinkingStep[]
   isStreaming?: boolean
+  error?: string
   createdAt: Date
 }

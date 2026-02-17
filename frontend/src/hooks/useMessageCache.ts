@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useChatStore } from '../stores/chatStore'
-import { hydrateThinkingSteps } from '../lib/thinking/hydrate'
+import { hydrateThinkingSteps } from '../lib/thinking'
 import type { Message, PersistedThinkingStep } from '../types/api'
 
 export const chatKeys = {
