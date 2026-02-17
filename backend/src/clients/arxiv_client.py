@@ -22,9 +22,10 @@ from src.exceptions import ArxivAPIError
 log = get_logger(__name__)
 _tenacity_logger = logging.getLogger(__name__)
 
-# When date filters are active, fetch extra results to filter client-side
-# (the arXiv API silently ignores submittedDate when combined with keywords).
-_DATE_FILTER_FETCH_COUNT = 30
+# Safety cap on total papers scanned during date-filtered searches.
+# The client lazily iterates results sorted by date and stops early once past
+# the target window, so this limit is rarely reached.
+_DATE_FILTER_SCAN_LIMIT = 500
 
 
 class ArxivPaper:
@@ -106,6 +107,71 @@ class ArxivClient:
         except Exception as e:
             raise ArxivAPIError(
                 message=f"arXiv search failed after retries: {str(e)}",
+                details={"query": str(search.query), "error_type": type(e).__name__},
+            )
+
+    def _execute_date_filtered_search_sync(
+        self,
+        search: arxiv.Search,
+        max_results: int,
+        start_dt: datetime | None,
+        end_dt: datetime | None,
+    ) -> list[ArxivPaper]:
+        """Lazily iterate date-sorted results, stopping once past the date window.
+
+        Uses three stop conditions:
+        1. Collected ``max_results`` matching papers.
+        2. Current paper's date is before ``start_dt`` (early termination --
+           results are sorted descending).
+        3. ``search.max_results`` acts as a library-level scan cap.
+
+        No tenacity decorator -- ``arxiv.Client`` has built-in per-page retries.
+        """
+        matched: list[ArxivPaper] = []
+        for result in self.client.results(search):
+            paper = ArxivPaper(result)
+            # Early termination: if the paper is older than the start date,
+            # all subsequent papers will be older too (descending sort).
+            if start_dt and paper.published_date is not None:
+                if paper.published_date.date() < start_dt.date():
+                    log.debug(
+                        "date filtered search early stop",
+                        paper_date=str(paper.published_date.date()),
+                        start_date=str(start_dt.date()),
+                    )
+                    break
+            if self._paper_in_date_range(paper, start_dt, end_dt):
+                matched.append(paper)
+                log.debug(
+                    "arxiv paper found",
+                    arxiv_id=paper.arxiv_id,
+                    title=paper.title[:60],
+                )
+                if len(matched) >= max_results:
+                    break
+        return matched
+
+    async def _execute_date_filtered_search(
+        self,
+        search: arxiv.Search,
+        max_results: int,
+        start_dt: datetime | None,
+        end_dt: datetime | None,
+    ) -> list[ArxivPaper]:
+        """Async wrapper for lazy date-filtered search."""
+        loop = asyncio.get_running_loop()
+        try:
+            return await loop.run_in_executor(
+                None,
+                self._execute_date_filtered_search_sync,
+                search,
+                max_results,
+                start_dt,
+                end_dt,
+            )
+        except Exception as e:
+            raise ArxivAPIError(
+                message=f"arXiv date-filtered search failed: {str(e)}",
                 details={"query": str(search.query), "error_type": type(e).__name__},
             )
 
@@ -237,16 +303,16 @@ class ArxivClient:
             if date_clause:
                 full_query = f"({full_query}) AND {date_clause}" if full_query else date_clause
 
-        # When date-filtering, sort by date and over-fetch so we have enough
-        # results after client-side filtering
         if has_date_filter:
+            # Lazy iteration: sort by date descending, scan up to the limit,
+            # stop early once past the target window.
+            fetch_count = _DATE_FILTER_SCAN_LIMIT
             sort_by = arxiv.SortCriterion.SubmittedDate
             sort_order = arxiv.SortOrder.Descending
-            fetch_count = _DATE_FILTER_FETCH_COUNT
         else:
+            fetch_count = max_results
             sort_by = arxiv.SortCriterion.Relevance
             sort_order = arxiv.SortOrder.Descending
-            fetch_count = max_results
 
         log.debug(
             "arxiv search",
@@ -263,23 +329,22 @@ class ArxivClient:
             sort_order=sort_order,
         )
 
-        raw_results = await self._execute_search(search)
-
-        results = []
-        for result in raw_results:
-            paper = ArxivPaper(result)
-            if has_date_filter and not self._paper_in_date_range(paper, start_dt, end_dt):
-                continue
-            results.append(paper)
-            log.debug("arxiv paper found", arxiv_id=paper.arxiv_id, title=paper.title[:60])
-            if len(results) >= max_results:
-                break
+        if has_date_filter:
+            results = await self._execute_date_filtered_search(
+                search, max_results, start_dt, end_dt,
+            )
+        else:
+            raw_results = await self._execute_search(search)
+            results = [ArxivPaper(r) for r in raw_results]
+            for paper in results:
+                log.debug(
+                    "arxiv paper found", arxiv_id=paper.arxiv_id, title=paper.title[:60]
+                )
 
         log.info(
             "arxiv search complete",
             query=query[:50],
             results=len(results),
-            fetched=len(raw_results),
             date_filtered=has_date_filter,
         )
         return results

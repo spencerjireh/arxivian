@@ -67,6 +67,7 @@ class PDFParser:
             # Extract text from all pages
             for page_num, page in enumerate(reader.pages, start=1):
                 page_text = page.extract_text()
+                page_text = page_text.replace("\x00", "")
                 raw_text += page_text + "\n\n"
 
                 # Simple section detection (in production, use Docling)
