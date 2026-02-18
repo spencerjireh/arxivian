@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Sparkles, BookOpen, Search, GitBranch, ArrowRight, ChevronDown, ChevronRight, User, FileText } from 'lucide-react'
+import logoIcon from '../assets/logo-icon.png'
 import clsx from 'clsx'
 import gsap from 'gsap'
 import { useGSAP } from '@gsap/react'
@@ -59,10 +60,10 @@ function ProductMock() {
         {/* Agent response */}
         <div>
           <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-stone-900">
-              <Sparkles className="w-3.5 h-3.5 text-white" strokeWidth={1.5} />
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-stone-100 border border-stone-200">
+              <img src={logoIcon} alt="" className="w-4 h-4" aria-hidden="true" />
             </div>
-            <span className="text-sm font-medium text-stone-500">Agent</span>
+            <span className="text-sm font-medium text-stone-500">Arxivian</span>
           </div>
           <div className="pl-9 space-y-4">
             <div className="text-sm text-stone-800 leading-relaxed">
@@ -116,10 +117,10 @@ function ResearchAssistantIllustration() {
       {/* Agent message */}
       <div>
         <div className="flex items-center gap-1.5 mb-1">
-          <div className="w-4 h-4 rounded bg-stone-900 flex items-center justify-center">
-            <Sparkles className="w-2.5 h-2.5 text-white" strokeWidth={1.5} />
+          <div className="w-4 h-4 rounded bg-stone-100 border border-stone-200 flex items-center justify-center">
+            <img src={logoIcon} alt="" className="w-2.5 h-2.5" aria-hidden="true" />
           </div>
-          <span className="text-[10px] font-medium text-stone-400">Agent</span>
+          <span className="text-[10px] font-medium text-stone-400">Arxivian</span>
         </div>
         <div className="pl-5 text-stone-600 leading-relaxed">
           <strong className="text-stone-800">RLHF</strong> fine-tunes language models using human preference rankings
@@ -507,10 +508,10 @@ export default function LandingPage() {
             {/* Answer */}
             <div className="p-5">
               <div className="flex items-center gap-2.5 mb-2">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-stone-900">
-                  <Sparkles className="w-3.5 h-3.5 text-white" strokeWidth={1.5} />
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-stone-100 border border-stone-200">
+                  <img src={logoIcon} alt="" className="w-4 h-4" aria-hidden="true" />
                 </div>
-                <span className="text-sm font-medium text-stone-500">Agent</span>
+                <span className="text-sm font-medium text-stone-500">Arxivian</span>
               </div>
               <div className="pl-9 text-sm text-stone-600 leading-relaxed space-y-2">
                 <p>

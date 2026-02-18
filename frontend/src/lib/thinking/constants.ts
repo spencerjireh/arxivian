@@ -3,7 +3,12 @@ import {
   BookOpen, Search, FolderInput, FileText, List, GitBranch, BookMarked,
   PenLine, RotateCcw, Shield, Route, Zap, Award, Ban, CircleCheck, Download,
 } from 'lucide-react'
+import type { Variants } from 'framer-motion'
 import type { ActivityStepKind, InternalStepKind } from '../../types/api'
+import {
+  rockVariants, bounceVariants, nudgeVariants, spinVariants,
+  scalePulseVariants, pulseVariants,
+} from '../animations'
 
 export const STEP_ICONS: Record<ActivityStepKind | InternalStepKind, LucideIcon> = {
   retrieve: BookOpen,
@@ -43,6 +48,32 @@ export const STEP_ICON_COLORS: Record<ActivityStepKind | InternalStepKind, strin
   out_of_scope: 'text-stone-400',
   confirming: 'text-stone-400',
   ingesting: 'text-stone-400',
+}
+
+export const STEP_ANIMATION_VARIANTS: Record<ActivityStepKind | InternalStepKind, Variants> = {
+  // Search/Scan -- gentle rock
+  retrieve: rockVariants,
+  arxiv_search: rockVariants,
+  explore_citations: rockVariants,
+  // Data I/O -- soft bounce
+  ingest: bounceVariants,
+  ingesting: bounceVariants,
+  propose_ingest: bounceVariants,
+  // Writing -- micro-nudge X
+  generating: nudgeVariants,
+  generation: nudgeVariants,
+  // Writing -- continuous spin
+  refining: spinVariants,
+  // Evaluation -- scale pulse
+  summarize_paper: scalePulseVariants,
+  list_papers: scalePulseVariants,
+  grading: scalePulseVariants,
+  // Control flow -- opacity pulse
+  guardrail: pulseVariants,
+  routing: pulseVariants,
+  executing: pulseVariants,
+  out_of_scope: pulseVariants,
+  confirming: pulseVariants,
 }
 
 export const TOOL_LABELS: Record<string, { label: string; pastVerb: string }> = {

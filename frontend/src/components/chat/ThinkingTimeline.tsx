@@ -8,11 +8,33 @@ import ActivityList from './ActivityList'
 import ThinkingExpandedList from './ThinkingExpandedList'
 import { AnimatedCollapse } from '../ui/AnimatedCollapse'
 import { pulseVariants, fadeIn, transitions } from '../../lib/animations'
+import { STEP_ICONS, STEP_ANIMATION_VARIANTS } from '../../lib/thinking/constants'
 
 interface ThinkingTimelineProps {
   steps: ThinkingStep[]
   isStreaming?: boolean
   metadata?: MetadataEventData
+}
+
+function StreamingHeader({ steps, reduceMotion }: { steps: ThinkingStep[]; reduceMotion: boolean | null }) {
+  const runningStep = steps.findLast((s) => s.status === 'running')
+  const Icon = runningStep ? STEP_ICONS[runningStep.kind] : Search
+  const variants = runningStep
+    ? STEP_ANIMATION_VARIANTS[runningStep.kind]
+    : pulseVariants
+
+  return (
+    <div className="flex items-center gap-2">
+      <motion.div
+        key={runningStep?.kind ?? 'default'}
+        variants={reduceMotion ? undefined : variants}
+        animate="animate"
+      >
+        <Icon className="w-4 h-4 text-amber-600" strokeWidth={1.5} />
+      </motion.div>
+      <span className="text-sm font-display italic font-normal text-amber-800">Researching...</span>
+    </div>
+  )
 }
 
 export default function ThinkingTimeline({ steps, isStreaming = false, metadata }: ThinkingTimelineProps) {
@@ -66,17 +88,9 @@ export default function ThinkingTimeline({ steps, isStreaming = false, metadata 
           transition={transitions.fast}
           style={{ contain: 'layout' }}
         >
-          <div className="flex items-center gap-2">
-            <motion.div
-              variants={shouldReduceMotion ? {} : pulseVariants}
-              animate="animate"
-            >
-              <Search className="w-4 h-4 text-amber-600" strokeWidth={1.5} />
-            </motion.div>
-            <span className="text-sm font-display italic font-normal text-amber-800">Researching...</span>
-          </div>
+          <StreamingHeader steps={steps} reduceMotion={shouldReduceMotion} />
 
-          <ActivityList steps={activitySteps} />
+          <ActivityList steps={activitySteps} isStreaming />
         </motion.div>
       ) : (
         <motion.div

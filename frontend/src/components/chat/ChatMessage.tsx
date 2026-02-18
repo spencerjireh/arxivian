@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { AlertCircle, Lightbulb, User, Sparkles } from 'lucide-react'
+import { AlertCircle, Lightbulb, User } from 'lucide-react'
+import logoIcon from '../../assets/logo-icon.png'
 import clsx from 'clsx'
 import type { Message } from '../../types/api'
 import SourceCard from './SourceCard'
@@ -43,7 +44,7 @@ export default function ChatMessage({
     prevIsStreaming.current = isStreaming
   }, [isStreaming, shouldReduceMotion])
 
-  const showCursor = isStreaming || cursorPhase === 'complete'
+  const showCursor = (isStreaming && !!content) || cursorPhase === 'complete'
 
   return (
     <div className={clsx(isUser && 'flex justify-end')}>
@@ -52,16 +53,16 @@ export default function ChatMessage({
           {isUser ? (
             <>
               <span className="text-sm font-medium text-stone-500">You</span>
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-stone-100">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-stone-100">
                 <User className="w-3.5 h-3.5 text-stone-500" strokeWidth={1.5} />
               </div>
             </>
           ) : (
             <>
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-stone-900">
-                <Sparkles className="w-3.5 h-3.5 text-white" strokeWidth={1.5} />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-stone-100">
+                <img src={logoIcon} alt="" className="w-4 h-4" aria-hidden="true" />
               </div>
-              <span className="text-sm font-medium text-stone-500">Agent</span>
+              <span className="text-sm font-medium text-stone-500">Arxivian</span>
             </>
           )}
         </div>

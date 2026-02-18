@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Loader2, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import clsx from 'clsx'
 import type { ActivityStep } from '../../types/api'
 import { getStepDuration, formatDuration } from '../../utils/duration'
-import { staggerItem, transitions } from '../../lib/animations'
-import { STEP_ICONS, STEP_ICON_COLORS } from '../../lib/thinking/constants'
+import { staggerItem, completionPopVariants, transitions } from '../../lib/animations'
+import { STEP_ICONS, STEP_ICON_COLORS, STEP_ANIMATION_VARIANTS } from '../../lib/thinking/constants'
 
 interface ActivityListProps {
   steps: ActivityStep[]
+  isStreaming?: boolean
 }
 
 function ElapsedTimer({ startTime }: { startTime: Date }) {
@@ -28,26 +29,44 @@ function ElapsedTimer({ startTime }: { startTime: Date }) {
   )
 }
 
-function StatusIcon({ step }: { step: ActivityStep }) {
+function StatusIcon({ step, reduceMotion, isStreaming }: { step: ActivityStep; reduceMotion: boolean | null; isStreaming: boolean }) {
+  const Icon = STEP_ICONS[step.kind]
+
   if (step.status === 'error') {
     return <X className="w-3.5 h-3.5 text-red-500" strokeWidth={2} />
   }
+
+  if (!Icon) return null
+
   if (step.status === 'running') {
-    const Icon = STEP_ICONS[step.kind]
-    if (Icon) {
-      return <Icon className={clsx('w-3.5 h-3.5', STEP_ICON_COLORS[step.kind])} strokeWidth={1.5} />
-    }
-    return <Loader2 className="w-3.5 h-3.5 text-amber-600 animate-spin" strokeWidth={1.5} />
+    const variants = STEP_ANIMATION_VARIANTS[step.kind]
+    return (
+      <motion.div
+        variants={reduceMotion ? undefined : variants}
+        animate="animate"
+      >
+        <Icon className={clsx('w-3.5 h-3.5', STEP_ICON_COLORS[step.kind])} strokeWidth={1.5} />
+      </motion.div>
+    )
   }
-  // complete
-  const Icon = STEP_ICONS[step.kind]
-  if (Icon) {
-    return <Icon className="w-3.5 h-3.5 text-stone-400" strokeWidth={1.5} />
+
+  // complete -- only pop when transitioning live, not on historical loads
+  if (isStreaming) {
+    return (
+      <motion.div
+        variants={reduceMotion ? undefined : completionPopVariants}
+        initial="initial"
+        animate="animate"
+      >
+        <Icon className="w-3.5 h-3.5 text-stone-400" strokeWidth={1.5} />
+      </motion.div>
+    )
   }
-  return null
+
+  return <Icon className="w-3.5 h-3.5 text-stone-400" strokeWidth={1.5} />
 }
 
-export default function ActivityList({ steps }: ActivityListProps) {
+export default function ActivityList({ steps, isStreaming = false }: ActivityListProps) {
   const shouldReduceMotion = useReducedMotion()
 
   if (steps.length === 0) return null
@@ -75,7 +94,7 @@ export default function ActivityList({ steps }: ActivityListProps) {
                   step.status === 'error' && 'bg-red-50'
                 )}
               >
-                <StatusIcon step={step} />
+                <StatusIcon step={step} reduceMotion={shouldReduceMotion} isStreaming={isStreaming} />
               </div>
 
               <span className="text-stone-600 flex-1 truncate font-display italic font-normal">

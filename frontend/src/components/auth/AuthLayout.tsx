@@ -1,4 +1,4 @@
-import { Sparkles } from 'lucide-react'
+import logoIcon from '../../assets/logo-icon.png'
 
 interface AuthLayoutProps {
   title: string
@@ -10,8 +10,8 @@ export default function AuthLayout({ title, subtitle, children }: AuthLayoutProp
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#FAFAF9] px-4">
       <div className="w-full max-w-md flex flex-col items-center">
-        <div className="w-14 h-14 rounded-2xl bg-stone-900 flex items-center justify-center mb-6">
-          <Sparkles className="w-7 h-7 text-white" strokeWidth={1.5} />
+        <div className="w-14 h-14 rounded-2xl bg-stone-100 border border-stone-200 flex items-center justify-center mb-6">
+          <img src={logoIcon} alt="" className="w-8 h-8" aria-hidden="true" />
         </div>
 
         <h1 className="font-display text-3xl font-semibold text-stone-900 tracking-tight text-center">

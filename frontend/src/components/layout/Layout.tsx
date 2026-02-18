@@ -49,7 +49,7 @@ const Layout = () => {
         <AnimatePresence mode="wait">
           <motion.div
             key={pageKey}
-            className="flex-1 flex flex-col"
+            className="flex-1 flex flex-col min-h-0"
             initial={shouldReduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={shouldReduceMotion ? undefined : { opacity: 0 }}

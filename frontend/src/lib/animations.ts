@@ -37,6 +37,51 @@ export const pulseVariants: Variants = {
   },
 }
 
+// -- Step icon running animations --
+
+export const rockVariants: Variants = {
+  animate: {
+    rotate: [-12, 12, -12],
+    transition: { duration: 1.2, repeat: Infinity, ease: 'easeInOut' },
+  },
+}
+
+export const bounceVariants: Variants = {
+  animate: {
+    y: [0, -3, 0],
+    transition: { duration: 0.8, repeat: Infinity, ease: 'easeInOut' },
+  },
+}
+
+export const nudgeVariants: Variants = {
+  animate: {
+    x: [0, 2, 0, -2, 0],
+    transition: { duration: 0.9, repeat: Infinity, ease: 'easeInOut' },
+  },
+}
+
+export const spinVariants: Variants = {
+  animate: {
+    rotate: 360,
+    transition: { duration: 2, repeat: Infinity, ease: 'linear' },
+  },
+}
+
+export const scalePulseVariants: Variants = {
+  animate: {
+    scale: [1, 0.82, 1],
+    transition: { duration: 1, repeat: Infinity, ease: 'easeInOut' },
+  },
+}
+
+export const completionPopVariants: Variants = {
+  initial: { scale: 1 },
+  animate: {
+    scale: [1, 1.2, 1],
+    transition: { duration: 0.2, ease: 'easeOut' },
+  },
+}
+
 export const cursorTransitionVariants: Variants = {
   streaming: {
     opacity: [1, 0, 1],

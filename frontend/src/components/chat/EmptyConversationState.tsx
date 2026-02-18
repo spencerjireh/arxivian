@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { Sparkles } from 'lucide-react'
+import logoIcon from '../../assets/logo-icon.png'
 import { transitions } from '../../lib/animations'
 import ChatInput from './ChatInput'
 import SuggestionChips from './SuggestionChips'
@@ -29,9 +29,9 @@ export default function EmptyConversationState({
           initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...transitions.base, delay: getStaggerDelay(0) }}
-          className="w-14 h-14 rounded-2xl bg-stone-900 flex items-center justify-center mb-6 shadow-lg opacity-0"
+          className="w-14 h-14 rounded-2xl bg-stone-100 border border-stone-200 flex items-center justify-center mb-6 opacity-0"
         >
-          <Sparkles className="w-6 h-6 text-white" strokeWidth={1.5} />
+          <img src={logoIcon} alt="" className="w-7 h-7" aria-hidden="true" />
         </motion.div>
 
         {/* Heading */}

@@ -3,6 +3,7 @@ import { useAuth } from '@clerk/clerk-react'
 import { ArrowRight } from 'lucide-react'
 import clsx from 'clsx'
 import Button from '../ui/Button'
+import logoIcon from '../../assets/logo-icon.png'
 
 export default function PublicHeader() {
   const { isSignedIn } = useAuth()
@@ -11,7 +12,8 @@ export default function PublicHeader() {
   return (
     <header className="relative sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-stone-200">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <Link to="/" className="font-display text-xl font-semibold text-stone-900 tracking-tight">
+        <Link to="/" className="flex items-center gap-2 font-display text-xl font-semibold text-stone-900 tracking-tight">
+          <img src={logoIcon} alt="" className="h-6 w-auto" aria-hidden="true" />
           Arxivian
         </Link>
         <nav className="flex items-center gap-3">
