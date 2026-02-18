@@ -298,9 +298,9 @@ export default function ChatInput({
           {/* Compound input container */}
           <div
             className={clsx(
-              'rounded-xl border transition-all duration-200',
+              'rounded-xl border transition-[background-color,border-color,box-shadow] duration-200',
               hasContent || isFocused
-                ? 'bg-white border-stone-300 shadow-sm'
+                ? 'bg-white border-amber-700/25 shadow-sm'
                 : 'bg-stone-50 border-stone-200',
             )}
           >
@@ -367,7 +367,7 @@ export default function ChatInput({
                     disabled={!hasContent}
                     {...buttonMotion}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="w-8 h-8 flex items-center justify-center bg-stone-900 text-white hover:bg-stone-800 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors"
+                    className="w-8 h-8 flex items-center justify-center bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors"
                     aria-label="Send"
                   >
                     <ArrowUp className="w-4 h-4" strokeWidth={2} />
