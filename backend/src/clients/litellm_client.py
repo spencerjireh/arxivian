@@ -6,9 +6,10 @@ global callback system configured at startup in main.py.
 """
 
 import asyncio
+import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import litellm
 from openai.types.chat import ChatCompletionMessageParam
@@ -22,6 +23,44 @@ from src.utils.logger import get_logger, truncate
 T = TypeVar("T", bound=BaseModel)
 
 log = get_logger(__name__)
+
+# Providers that support native Pydantic response_format (schema-constrained decoding).
+# All others fall back to prompt-based structured output with JSON mode.
+NATIVE_STRUCTURED_OUTPUT_PROVIDERS: frozenset[str] = frozenset({"openai", "anthropic", "google"})
+
+
+def _provider_from_model(model: str) -> str:
+    """Extract provider prefix from a LiteLLM model string."""
+    return model.split("/", 1)[0] if "/" in model else "openai"
+
+
+def _inject_schema(
+    messages: list[ChatCompletionMessageParam],
+    response_format: type[BaseModel],
+) -> list[dict[str, Any]]:
+    """Append JSON schema instructions to the system message for prompt-based structured output."""
+    schema = json.dumps(response_format.model_json_schema(), indent=2)
+    suffix = (
+        "\n\nRespond with a single valid JSON object matching this exact schema:\n"
+        f"{schema}\n"
+        "Output ONLY the JSON object. No markdown fences, no explanation."
+    )
+    patched: list[dict[str, Any]] = []
+    injected = False
+    for msg in messages:
+        if msg.get("role") == "system" and not injected:  # type: ignore[union-attr]
+            content = msg["content"]  # type: ignore[index]
+            if not isinstance(content, str):
+                raise TypeError(
+                    f"Schema injection requires string system message, got {type(content)}"
+                )
+            patched.append({**msg, "content": content + suffix})
+            injected = True
+        else:
+            patched.append(dict(msg))  # type: ignore[arg-type]
+    if not injected:
+        patched.insert(0, {"role": "system", "content": suffix.lstrip()})
+    return patched
 
 
 class LiteLLMClient(BaseLLMClient):
@@ -42,9 +81,7 @@ class LiteLLMClient(BaseLLMClient):
 
     @property
     def provider_name(self) -> str:
-        if "/" in self._model:
-            return self._model.split("/", 1)[0]
-        return "openai"
+        return _provider_from_model(self._model)
 
     @property
     def model(self) -> str:
@@ -156,21 +193,30 @@ class LiteLLMClient(BaseLLMClient):
         model_to_use = model or self._structured_output_model or self._model
         effective_timeout = timeout if timeout is not None else self.default_timeout
         metadata = self._build_metadata()
+        provider = _provider_from_model(model_to_use)
+        native = provider in NATIVE_STRUCTURED_OUTPUT_PROVIDERS
 
         log.debug(
             "litellm structured request",
             model=model_to_use,
             response_format=response_format.__name__,
+            native_structured=native,
             timeout=effective_timeout,
         )
 
+        call_kwargs: dict[str, Any] = {
+            "model": model_to_use,
+            "metadata": metadata,
+        }
+        if native:
+            call_kwargs["messages"] = messages
+            call_kwargs["response_format"] = response_format
+        else:
+            call_kwargs["messages"] = _inject_schema(messages, response_format)
+            call_kwargs["response_format"] = {"type": "json_object"}
+
         async with self._timeout(effective_timeout):
-            response = await litellm.acompletion(
-                model=model_to_use,
-                messages=messages,  # type: ignore[arg-type]
-                response_format=response_format,
-                metadata=metadata,
-            )
+            response = await litellm.acompletion(**call_kwargs)  # type: ignore[arg-type]
 
         content = response.choices[0].message.content  # type: ignore[union-attr]
         if content is None:
