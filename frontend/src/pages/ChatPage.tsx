@@ -100,14 +100,16 @@ export default function ChatPage() {
             />
           </motion.div>
         ) : (
-          <motion.div key="active" className="flex-1 flex flex-col min-h-0" {...motionProps}>
+          <motion.div key="active" className="flex-1 flex flex-col min-h-0 relative" {...motionProps}>
             <ChatMessages messages={messages} />
-            <ChatInput
-              onSend={sendMessage}
-              isStreaming={isStreaming}
-              onCancel={cancelStream}
-              variant="bottom"
-            />
+            <div className="absolute bottom-0 left-0 right-0">
+              <ChatInput
+                onSend={sendMessage}
+                isStreaming={isStreaming}
+                onCancel={cancelStream}
+                variant="bottom"
+              />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

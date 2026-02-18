@@ -16,7 +16,8 @@ export default function ChatMessages({ messages }: ChatMessagesProps) {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+      {/* pb-32: reserves space for the absolutely-positioned ChatInput (see ChatPage.tsx) */}
+      <div className="max-w-5xl mx-auto px-6 pt-8 pb-32 space-y-6">
         {messages.map((message, index) => (
           <div key={message.id}>
             <ChatMessage

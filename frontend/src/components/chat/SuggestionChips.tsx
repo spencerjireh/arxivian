@@ -46,15 +46,13 @@ export default function SuggestionChips({ onSelect }: SuggestionChipsProps) {
           whileHover={shouldReduceMotion ? undefined : { y: -2 }}
           whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
           onClick={() => onSelect(suggestion.prompt)}
-          className="group relative flex items-start gap-3 p-4 text-left bg-white/60 backdrop-blur-sm border border-stone-200/80 rounded-xl hover:bg-white hover:border-stone-300 hover:shadow-sm transition-colors duration-200 opacity-0"
+          className="group relative flex items-center gap-2.5 px-3.5 py-2.5 text-left bg-stone-50/80 border border-stone-100 rounded-lg hover:bg-stone-100/80 hover:border-stone-200 transition-all duration-200 opacity-0"
         >
-          <div className="w-9 h-9 rounded-lg bg-stone-100 flex items-center justify-center flex-shrink-0 group-hover:bg-stone-200/80 transition-colors duration-200">
-            <suggestion.icon
-              className="w-[18px] h-[18px] text-stone-500 group-hover:text-stone-700 transition-colors duration-200"
-              strokeWidth={1.5}
-            />
-          </div>
-          <span className="text-sm text-stone-600 font-medium leading-relaxed pt-1.5 group-hover:text-stone-800 transition-colors duration-200">
+          <suggestion.icon
+            className="w-4 h-4 text-stone-400 group-hover:text-amber-700 transition-colors duration-200 flex-shrink-0"
+            strokeWidth={1.5}
+          />
+          <span className="text-sm text-stone-600 font-medium group-hover:text-stone-800 transition-colors duration-200">
             {suggestion.title}
           </span>
         </motion.button>
