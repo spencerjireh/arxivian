@@ -7,6 +7,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useConversation } from '../api/conversations'
 import { useChat } from '../hooks/useChat'
 import { useChatStore } from '../stores/chatStore'
+import { useSidebarStore } from '../stores/sidebarStore'
 import ChatMessages from '../components/chat/ChatMessages'
 import ChatInput from '../components/chat/ChatInput'
 import EmptyConversationState from '../components/chat/EmptyConversationState'
@@ -19,6 +20,8 @@ export default function ChatPage() {
 
   // Use null for new chats, actual sessionId for existing ones
   const effectiveSessionId = isNewChat ? null : sessionId ?? null
+
+  const setLastSessionId = useSidebarStore((state) => state.setLastSessionId)
 
   // Subscribe to streaming state directly from store for real-time updates
   const isStreaming = useChatStore((state) => state.isStreaming)
@@ -64,6 +67,13 @@ export default function ChatPage() {
       clearMessages()
     }
   }, [isNewChat, clearMessages])
+
+  // Remember last-viewed conversation so "Chat" nav can return to it
+  useEffect(() => {
+    if (sessionId) {
+      setLastSessionId(sessionId)
+    }
+  }, [sessionId, setLastSessionId])
 
   // Show error as toast and clear store error
   useEffect(() => {

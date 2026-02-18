@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useChatStore } from '../stores/chatStore'
 import { hydrateThinkingSteps } from '../lib/thinking'
@@ -15,33 +15,10 @@ export function useMessageCache(sessionId: string | null) {
   // Subscribe to messages in query cache (reactive)
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: chatKeys.messages(sessionId),
-    queryFn: () => {
-      // When creating a new query for a session, check if there's data in the null cache
-      // This handles the race condition when navigating from new chat to session
-      if (sessionId !== null) {
-        const nullCacheMessages = queryClient.getQueryData<Message[]>(chatKeys.messages(null))
-        if (nullCacheMessages && nullCacheMessages.length > 0) {
-          queryClient.setQueryData(chatKeys.messages(sessionId), nullCacheMessages)
-          return nullCacheMessages
-        }
-      }
-      return []
-    },
+    queryFn: () => [],
     staleTime: Infinity,
     gcTime: Infinity,
   })
-
-  // Ensure cache continuity when sessionId changes from null to actual ID
-  useEffect(() => {
-    if (sessionId !== null) {
-      const sessionCache = queryClient.getQueryData<Message[]>(chatKeys.messages(sessionId))
-      const nullCache = queryClient.getQueryData<Message[]>(chatKeys.messages(null))
-
-      if ((!sessionCache || sessionCache.length === 0) && nullCache && nullCache.length > 0) {
-        queryClient.setQueryData(chatKeys.messages(sessionId), nullCache)
-      }
-    }
-  }, [sessionId, queryClient])
 
   const setMessages = useCallback(
     (updater: Message[] | ((prev: Message[]) => Message[])) => {

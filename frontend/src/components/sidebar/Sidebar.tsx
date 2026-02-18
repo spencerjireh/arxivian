@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { Plus, PanelLeftClose, Loader2, MessageSquare, BookOpen, Settings, ChevronUp, ChevronDown } from 'lucide-react'
 import clsx from 'clsx'
@@ -10,6 +10,7 @@ import Button from '../ui/Button'
 import ErrorBoundary from '../ui/ErrorBoundary'
 import SectionErrorFallback from '../ui/SectionErrorFallback'
 import { getUserMessage } from '../../lib/errors'
+import logoIcon from '../../assets/logo-icon.png'
 
 const navItems = [
   { path: '/chat', label: 'Chat', icon: MessageSquare },
@@ -21,19 +22,21 @@ export default function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
   const close = useSidebarStore((state) => state.close)
-
-  const isChatRoute = location.pathname.startsWith('/chat')
+  const lastSessionId = useSidebarStore((state) => state.lastSessionId)
 
   return (
     <div className="w-72 h-screen bg-stone-50 border-r border-stone-200 flex flex-col">
       <div className="px-4 py-5 border-b border-stone-200">
         <div className="flex items-center justify-between">
-          <h1 className="font-display text-xl font-semibold text-stone-900 tracking-tight">
-            Arxivian
-            <span className="ml-2 text-[10px] font-mono font-normal uppercase tracking-wider text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded">
-              Beta
-            </span>
-          </h1>
+          <div className="flex items-center gap-2">
+            <img src={logoIcon} alt="" className="h-6 w-auto" aria-hidden="true" />
+            <h1 className="font-display text-xl font-semibold text-stone-900 tracking-tight">
+              Arxivian
+              <span className="ml-2 text-[10px] font-mono font-normal uppercase tracking-wider text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded">
+                Beta
+              </span>
+            </h1>
+          </div>
           <Button
             variant="ghost"
             size="sm"
@@ -45,50 +48,44 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {isChatRoute && (
-        <div className="px-3 pt-3">
-          <Button
-            variant="primary"
-            size="sm"
-            className="w-full"
-            onClick={() => navigate('/chat')}
-            leftIcon={<Plus className="w-4 h-4" strokeWidth={2} />}
-          >
-            New conversation
-          </Button>
-        </div>
-      )}
-
       <nav className="px-3 py-3 space-y-0.5">
+        <Button
+          variant="primary"
+          size="md"
+          className="w-full"
+          onClick={() => navigate('/chat')}
+          leftIcon={<Plus className="w-4 h-4" strokeWidth={2} />}
+        >
+          New conversation
+        </Button>
         {navItems.map(({ path, label, icon: Icon }) => {
           const isActive = path === '/chat'
             ? location.pathname.startsWith('/chat')
             : location.pathname === path
+          const target = path === '/chat' && lastSessionId
+            ? `/chat/${lastSessionId}`
+            : path
           return (
-            <button
+            <Button
               key={path}
-              onClick={() => navigate(path)}
+              variant="ghost"
+              size="md"
               className={clsx(
-                'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors duration-150',
-                isActive
-                  ? 'bg-stone-100 text-stone-900 font-medium'
-                  : 'text-stone-600 hover:bg-stone-100'
+                'w-full justify-start',
+                isActive && 'bg-stone-100 text-stone-900 font-medium'
               )}
+              onClick={() => navigate(target)}
+              leftIcon={<Icon className="w-4 h-4" strokeWidth={1.5} />}
             >
-              <Icon className="w-4 h-4 shrink-0" strokeWidth={1.5} />
               {label}
-            </button>
+            </Button>
           )
         })}
       </nav>
 
-      {isChatRoute ? (
-        <ErrorBoundary fallback={(props) => <SectionErrorFallback {...props} />}>
-          <SidebarConversations />
-        </ErrorBoundary>
-      ) : (
-        <div className="flex-1" />
-      )}
+      <ErrorBoundary fallback={(props) => <SectionErrorFallback {...props} />}>
+        <SidebarConversations />
+      </ErrorBoundary>
 
       <div className="px-2 py-3 border-t border-stone-200">
         <UserMenu />
@@ -100,12 +97,22 @@ export default function Sidebar() {
 function SidebarConversations() {
   const navigate = useNavigate()
   const { sessionId } = useParams()
+  const lastSessionId = useSidebarStore((state) => state.lastSessionId)
+  const setLastSessionId = useSidebarStore((state) => state.setLastSessionId)
 
   const [offset, setOffset] = useState(0)
   const limit = 30
 
   const { data, isLoading, error } = useConversations(offset, limit)
   const deleteConversation = useDeleteConversation()
+
+  // Clear stale lastSessionId if it's not in the loaded conversation list
+  useEffect(() => {
+    if (lastSessionId && data?.conversations) {
+      const exists = data.conversations.some((c) => c.session_id === lastSessionId)
+      if (!exists) setLastSessionId(null)
+    }
+  }, [data?.conversations, lastSessionId, setLastSessionId])
 
   const handleNavigate = (id: string) => {
     navigate(`/chat/${id}`)
@@ -114,6 +121,9 @@ function SidebarConversations() {
   const handleDelete = (id: string) => {
     deleteConversation.mutate(id, {
       onSuccess: () => {
+        if (id === lastSessionId) {
+          setLastSessionId(null)
+        }
         if (id === sessionId) {
           navigate('/chat')
         }

@@ -117,8 +117,8 @@ export function useChat(sessionId: string | null) {
           msg.id === placeholderId ? assistantMessage : msg
         )
 
-        queryClient.setQueryData(chatKeys.messages(null), updatedMessages)
         queryClient.setQueryData(chatKeys.messages(metadata.session_id), updatedMessages)
+        queryClient.setQueryData(chatKeys.messages(null), [])
         queryClient.invalidateQueries({ queryKey: conversationKeys.lists() })
 
         navigate(`/chat/${metadata.session_id}`, { replace: true })
