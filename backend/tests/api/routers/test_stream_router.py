@@ -522,3 +522,113 @@ class TestStreamErrorHandling:
 
         # Should still end with done event
         assert events[-1]["event"] == "done"
+
+
+class TestStreamSettingsGuard:
+    """Tests for the enforce_settings_guard dependency on /stream."""
+
+    @pytest.fixture
+    def _setup_overrides(self, mock_db_session, mock_settings, mock_user):
+        """Apply common dependency overrides for settings guard tests.
+
+        Yields the FastAPI app so individual tests can adjust tier policy
+        before making requests. Cleans up overrides on teardown.
+        """
+        from src.main import app
+        from src.database import get_db
+        from src.config import get_settings
+        from src.dependencies import (
+            get_current_user_required,
+            get_tier_policy,
+            enforce_chat_limit,
+            get_redis,
+            get_usage_counter_repository,
+        )
+        from src.tiers import get_policy
+
+        mock_usage_repo = AsyncMock()
+        mock_usage_repo.increment_query_count = AsyncMock()
+
+        app.dependency_overrides[get_db] = lambda: mock_db_session
+        app.dependency_overrides[get_settings] = lambda: mock_settings
+        app.dependency_overrides[get_current_user_required] = lambda: mock_user
+        app.dependency_overrides[get_tier_policy] = lambda: get_policy(mock_user)
+        app.dependency_overrides[enforce_chat_limit] = lambda: None
+        app.dependency_overrides[get_redis] = lambda: AsyncMock()
+        app.dependency_overrides[get_usage_counter_repository] = lambda: mock_usage_repo
+
+        yield app
+
+        app.dependency_overrides.clear()
+
+    @staticmethod
+    def _mock_get_agent_service(**kwargs):
+        service = Mock()
+
+        async def mock_stream(query, session_id=None):
+            yield StreamEvent(event=StreamEventType.DONE, data={})
+
+        service.ask_stream = mock_stream
+        return service
+
+    def test_free_user_non_default_temperature_returns_403(self, _setup_overrides):
+        """Free-tier user sending a non-default setting is rejected with 403."""
+        app = _setup_overrides
+
+        from fastapi.testclient import TestClient
+
+        with TestClient(app, raise_server_exceptions=False) as client:
+            response = client.post(
+                "/api/v1/stream",
+                json={"query": "test", "temperature": 0.7},
+            )
+
+        assert response.status_code == 403
+        assert "temperature" in response.json()["error"]["message"].lower()
+
+    def test_free_user_defaults_only_passes(self, _setup_overrides):
+        """Free-tier user sending only defaults gets a 200 SSE stream."""
+        app = _setup_overrides
+
+        with patch(
+            "src.routers.stream.get_agent_service", self._mock_get_agent_service
+        ):
+            from fastapi.testclient import TestClient
+
+            with TestClient(app, raise_server_exceptions=False) as client:
+                response = client.post(
+                    "/api/v1/stream",
+                    json={"query": "test"},
+                )
+
+        assert response.status_code == 200
+        events = parse_sse_events(response.text)
+        assert any(e.get("event") == "done" for e in events)
+
+    def test_pro_user_custom_settings_passes(
+        self, _setup_overrides, mock_user, mock_settings
+    ):
+        """Pro-tier user can send non-default settings and get a 200 stream."""
+        from src.dependencies import get_tier_policy
+        from src.tiers import TIER_POLICIES, UserTier
+
+        app = _setup_overrides
+        mock_user.tier = "pro"
+        app.dependency_overrides[get_tier_policy] = lambda: TIER_POLICIES[UserTier.PRO]
+
+        with patch(
+            "src.routers.stream.get_agent_service", self._mock_get_agent_service
+        ), patch(
+            "src.routers.stream.get_settings", return_value=mock_settings
+        ):
+            from fastapi.testclient import TestClient
+
+            with TestClient(app, raise_server_exceptions=False) as client:
+                response = client.post(
+                    "/api/v1/stream",
+                    json={"query": "test", "temperature": 0.7, "top_k": 5},
+                )
+
+        assert response.status_code == 200
+        events = parse_sse_events(response.text)
+        assert any(e.get("event") == "done" for e in events)

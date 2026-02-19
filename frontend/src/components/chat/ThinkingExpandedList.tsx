@@ -8,6 +8,7 @@ import { formatDetailKey, formatDetailValue } from '../../utils/formatting'
 import { AnimatedCollapse } from '../ui/AnimatedCollapse'
 import { transitions } from '../../lib/animations'
 import { useSettingsStore } from '../../stores/settingsStore'
+import { useUserStore } from '../../stores/userStore'
 import { STEP_ICONS, STEP_ICON_COLORS } from '../../lib/thinking/constants'
 import Modal from '../ui/Modal'
 import MetadataPanel from './MetadataPanel'
@@ -36,6 +37,7 @@ export default function ThinkingExpandedList({ steps, totalDuration, metadata }:
   const [isModalOpen, setIsModalOpen] = useState(false)
   const shouldReduceMotion = useReducedMotion()
   const globalShowInternal = useSettingsStore((s) => s.showInternalSteps)
+  const canViewExecutionDetails = useUserStore((s) => s.me?.can_view_execution_details ?? false)
 
   const showInternal = localShowInternal ?? globalShowInternal
 
@@ -46,7 +48,7 @@ export default function ThinkingExpandedList({ steps, totalDuration, metadata }:
       <div className="flex items-center justify-between pb-2 border-b border-stone-100">
         <span className="text-xs font-display text-stone-400">Step details</span>
         <div className="flex items-center gap-3">
-          {metadata && (
+          {canViewExecutionDetails && metadata && (
             <button
               onClick={() => setIsModalOpen(true)}
               className="flex items-center gap-1.5 text-xs text-stone-400 hover:text-stone-600 transition-colors duration-150"
@@ -69,7 +71,7 @@ export default function ThinkingExpandedList({ steps, totalDuration, metadata }:
         </div>
       </div>
 
-      {metadata && (
+      {canViewExecutionDetails && metadata && (
         <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Execution Details">
           <MetadataPanel metadata={metadata} defaultExpanded />
         </Modal>

@@ -26,13 +26,15 @@ class UserTier(StrEnum):
 @dataclass(frozen=True, slots=True)
 class TierPolicy:
     daily_chats: int | None  # None = unlimited
+    daily_ingests: int | None  # None = unlimited
     can_ingest: bool
     can_search_arxiv: bool
-    can_select_model: bool
+    can_adjust_settings: bool
+    can_view_execution_details: bool
 
     def resolve_model(self, requested: str | None, settings: Settings) -> str:
         """Return the model to use, enforcing tier restrictions."""
-        if not self.can_select_model or not requested:
+        if not self.can_adjust_settings or not requested:
             return settings.default_llm_model
         if not settings.is_model_allowed(requested):
             from src.exceptions import InvalidModelError
@@ -44,15 +46,19 @@ class TierPolicy:
 TIER_POLICIES: dict[str, TierPolicy] = {
     UserTier.FREE: TierPolicy(
         daily_chats=20,
+        daily_ingests=10,
         can_ingest=True,
         can_search_arxiv=True,
-        can_select_model=False,
+        can_adjust_settings=False,
+        can_view_execution_details=False,
     ),
     UserTier.PRO: TierPolicy(
         daily_chats=None,
+        daily_ingests=None,
         can_ingest=True,
         can_search_arxiv=True,
-        can_select_model=True,
+        can_adjust_settings=True,
+        can_view_execution_details=True,
     ),
 }
 

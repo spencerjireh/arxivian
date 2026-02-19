@@ -1,7 +1,14 @@
 """Factory functions for business logic services."""
 
+from __future__ import annotations
+
 from functools import lru_cache
+from typing import TYPE_CHECKING
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from src.repositories.usage_counter_repository import UsageCounterRepository
+
 from langgraph.graph.state import CompiledStateGraph
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import get_settings
@@ -115,6 +122,8 @@ def get_agent_service(
     max_iterations: int = 5,
     can_ingest: bool = True,
     can_search_arxiv: bool = True,
+    daily_ingests: int | None = None,
+    usage_counter_repo: UsageCounterRepository | None = None,
 ) -> AgentService:
     """
     Create agent service with specified LLM model.
@@ -135,6 +144,8 @@ def get_agent_service(
         max_iterations: Maximum router iterations for tool execution
         can_ingest: Whether the ingest tool is available (tier-gated)
         can_search_arxiv: Whether the arxiv_search tool is available (tier-gated)
+        daily_ingests: Daily ingest cap from tier policy (None = unlimited)
+        usage_counter_repo: Repository for tracking ingest usage
 
     Returns:
         AgentService instance
@@ -181,4 +192,6 @@ def get_agent_service(
         temperature=temperature,
         user_id=user_id,
         graph=graph,
+        daily_ingests=daily_ingests,
+        usage_counter_repo=usage_counter_repo,
     )

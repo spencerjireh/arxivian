@@ -17,7 +17,8 @@ const tiers = [
     description: 'Get started with core research tools.',
     features: [
       '20 conversations per day',
-      'Default model',
+      '10 paper ingests per day',
+      'Default settings',
       'Paper library',
       'Hybrid search',
     ],
@@ -29,7 +30,9 @@ const tiers = [
     description: 'Full access for power researchers.',
     features: [
       'Unlimited conversations',
-      'Choose your model',
+      'Unlimited paper ingests',
+      'Custom model & settings',
+      'Execution details',
       'Paper library',
       'Hybrid search',
       'Priority support',
@@ -40,7 +43,9 @@ const tiers = [
 
 const comparisonRows = [
   { feature: 'Daily conversations', free: '20', pro: 'Unlimited' },
-  { feature: 'Model selection', free: 'Default model', pro: 'Choose your model' },
+  { feature: 'Daily paper ingests', free: '10', pro: 'Unlimited' },
+  { feature: 'Settings', free: 'Default settings', pro: 'Custom model & settings' },
+  { feature: 'Execution details', free: 'Hidden', pro: 'Full access' },
 ] as const
 
 export default function PricingPage() {

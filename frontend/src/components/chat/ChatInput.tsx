@@ -72,7 +72,7 @@ export default function ChatInput({
     return () => document.removeEventListener('keydown', handleEscape)
   }, [showAdvanced])
 
-  const canSelectModel = useUserStore((s) => s.me?.can_select_model ?? false)
+  const canAdjustSettings = useUserStore((s) => s.me?.can_adjust_settings ?? false)
 
   const {
     provider,
@@ -159,7 +159,7 @@ export default function ChatInput({
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
-                      {canSelectModel && (
+                      {canAdjustSettings && (
                         <>
                           <div>
                             <label className="block text-xs text-stone-500 mb-1.5">
@@ -329,16 +329,18 @@ export default function ChatInput({
             {/* Bottom toolbar */}
             <div className="flex items-center justify-between px-2.5 pb-2.5">
               <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="icon"
-                  size="sm"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  className={clsx(showAdvanced && 'bg-stone-200 text-stone-700')}
-                  aria-label="Advanced settings"
-                >
-                  <Settings2 className="w-4 h-4" strokeWidth={1.5} />
-                </Button>
+                {canAdjustSettings && (
+                  <Button
+                    type="button"
+                    variant="icon"
+                    size="sm"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    className={clsx(showAdvanced && 'bg-stone-200 text-stone-700')}
+                    aria-label="Advanced settings"
+                  >
+                    <Settings2 className="w-4 h-4" strokeWidth={1.5} />
+                  </Button>
+                )}
                 {lineCount > 1 && (isFocused || query) && (
                   <span className="text-xs text-stone-400 pointer-events-none">
                     {lineCount} lines

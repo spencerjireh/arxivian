@@ -1,11 +1,17 @@
 """Ingest papers tool for arXiv paper ingestion."""
 
-from typing import ClassVar
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, ClassVar
+from uuid import UUID
 
 from src.services.ingest_service import IngestService
 from src.schemas.ingest import IngestRequest
 from src.utils.logger import get_logger
 from .base import BaseTool, ToolResult
+
+if TYPE_CHECKING:
+    from src.repositories.usage_counter_repository import UsageCounterRepository
 
 log = get_logger(__name__)
 
@@ -44,14 +50,34 @@ class IngestPapersTool(BaseTool):
     extends_chunks: ClassVar[bool] = False
     required_dependencies: ClassVar[list[str]] = ["ingest_service"]
 
-    def __init__(self, ingest_service: IngestService):
+    def __init__(
+        self,
+        ingest_service: IngestService,
+        daily_ingests: int | None = None,
+        usage_counter_repo: UsageCounterRepository | None = None,
+        user_id: UUID | None = None,
+    ):
         """
         Initialize ingest tool.
 
         Args:
             ingest_service: Service for paper ingestion pipeline
+            daily_ingests: Daily ingest cap (None = unlimited)
+            usage_counter_repo: Repository for tracking ingest usage
+            user_id: Current user ID for usage tracking
         """
         self.ingest_service = ingest_service
+        self.daily_ingests = daily_ingests
+        self.usage_counter_repo = usage_counter_repo
+        self.user_id = user_id
+
+    @property
+    def _quota_enabled(self) -> bool:
+        return (
+            self.daily_ingests is not None
+            and self.usage_counter_repo is not None
+            and self.user_id is not None
+        )
 
     @property
     def parameters_schema(self) -> dict:
@@ -138,6 +164,34 @@ class IngestPapersTool(BaseTool):
 
         max_results = min(max_results, AGENT_MAX_RESULTS)
 
+        # Enforce daily ingest quota (after clamping so the comparison is fair).
+        # NOTE: small TOCTOU window -- concurrent requests may slightly overshoot
+        # the cap. Acceptable for free-tier soft limits; revisit if hard enforcement
+        # is needed.
+        if self._quota_enabled:
+            count = await self.usage_counter_repo.get_today_ingest_count(self.user_id)
+            if count >= self.daily_ingests:
+                return ToolResult(
+                    success=False,
+                    prompt_text=(
+                        f"Daily ingest limit reached ({count}/{self.daily_ingests}). "
+                        "The user's free-tier quota resets at midnight UTC. "
+                        "Suggest upgrading to Pro for unlimited ingestion."
+                    ),
+                    tool_name=self.name,
+                )
+            remaining = self.daily_ingests - count
+            if max_results > remaining:
+                return ToolResult(
+                    success=False,
+                    prompt_text=(
+                        f"Requested {max_results} papers but only {remaining} ingests remain today "
+                        f"({count}/{self.daily_ingests} used). "
+                        f"Retry with max_results <= {remaining}, or suggest upgrading to Pro."
+                    ),
+                    tool_name=self.name,
+                )
+
         log.debug(
             "ingest_papers executing",
             mode="query" if query else "ids",
@@ -176,6 +230,12 @@ class IngestPapersTool(BaseTool):
             }
 
             log.debug("ingest_papers completed", papers=response.papers_processed)
+
+            # Track ingest usage
+            if self._quota_enabled and response.papers_processed > 0:
+                await self.usage_counter_repo.increment_ingest_count(
+                    self.user_id, response.papers_processed
+                )
 
             return ToolResult(
                 success=response.status == "completed",

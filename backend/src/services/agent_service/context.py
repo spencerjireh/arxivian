@@ -1,5 +1,8 @@
 """Context object passed to all LangGraph nodes."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from src.clients.base_llm_client import BaseLLMClient
@@ -73,6 +76,10 @@ class ConversationFormatter:
         return "\n".join(parts)
 
 
+if TYPE_CHECKING:
+    from src.repositories.usage_counter_repository import UsageCounterRepository
+
+
 class AgentContext:
     """Context object passed to all LangGraph nodes."""
 
@@ -92,6 +99,8 @@ class AgentContext:
         temperature: float = 0.3,
         max_generation_tokens: int = 2000,
         user_id: UUID | None = None,
+        daily_ingests: int | None = None,
+        usage_counter_repo: UsageCounterRepository | None = None,
     ):
         self.llm_client = llm_client
         self.search_service = search_service
@@ -114,7 +123,12 @@ class AgentContext:
                 RetrieveChunksTool(search_service=search_service, default_top_k=top_k * 2)
             )
             if ingest_service:
-                self.tool_registry.register(IngestPapersTool(ingest_service=ingest_service))
+                self.tool_registry.register(IngestPapersTool(
+                    ingest_service=ingest_service,
+                    daily_ingests=daily_ingests,
+                    usage_counter_repo=usage_counter_repo,
+                    user_id=user_id,
+                ))
                 self.tool_registry.register(ListPapersTool(ingest_service=ingest_service))
             if arxiv_client:
                 self.tool_registry.register(ArxivSearchTool(arxiv_client=arxiv_client))

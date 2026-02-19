@@ -1,10 +1,15 @@
 """Agent service with LangGraph workflow."""
 
+from __future__ import annotations
+
 import time
 import uuid as uuid_lib
 from datetime import datetime, timezone
-from typing import AsyncIterator
+from typing import TYPE_CHECKING, AsyncIterator
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from src.repositories.usage_counter_repository import UsageCounterRepository
 
 from langchain_core.messages import HumanMessage, AIMessage
 
@@ -123,6 +128,8 @@ class AgentService:
         max_iterations: int = 5,
         temperature: float = 0.3,
         user_id: UUID | None = None,
+        daily_ingests: int | None = None,
+        usage_counter_repo: UsageCounterRepository | None = None,
     ):
         self.graph = graph
         self.context = AgentContext(
@@ -137,6 +144,8 @@ class AgentService:
             max_iterations=max_iterations,
             temperature=temperature,
             user_id=user_id,
+            daily_ingests=daily_ingests,
+            usage_counter_repo=usage_counter_repo,
         )
         self.conversation_repo = conversation_repo
         self.conversation_window = conversation_window

@@ -25,8 +25,9 @@ from src.repositories.task_execution_repository import TaskExecutionRepository
 from src.repositories.usage_counter_repository import UsageCounterRepository
 from src.models.user import User
 from src.config import Settings, get_settings
+from src.schemas.stream import StreamRequest
 from src.tiers import TierPolicy, get_policy
-from src.exceptions import InvalidApiKeyError, MissingTokenError, UsageLimitExceededError
+from src.exceptions import ForbiddenError, InvalidApiKeyError, MissingTokenError, UsageLimitExceededError
 
 from src.utils.logger import get_logger
 from src.factories.client_factories import (
@@ -232,20 +233,48 @@ TierPolicyDep = Annotated[TierPolicy, Depends(get_tier_policy)]
 async def enforce_chat_limit(
     user: CurrentUserRequired,
     policy: TierPolicyDep,
-    db: DbSession,
+    usage_repo: UsageCounterRepoDep,
 ) -> None:
     """Enforce daily chat limit. Raises 429 if exceeded."""
     if policy.daily_chats is None:
         return  # Pro -- unlimited
 
-    usage_repo = UsageCounterRepository(db)
     count = await usage_repo.get_today_query_count(str(user.id))
 
-    if count > policy.daily_chats:
+    if count >= policy.daily_chats:
         raise UsageLimitExceededError(current=count, limit=policy.daily_chats)
 
 
 ChatGuard = Annotated[None, Depends(enforce_chat_limit)]
+
+
+# Fields in StreamRequest that free-tier users cannot change from defaults.
+_GATED_SETTINGS_FIELDS = (
+    "provider", "model", "temperature", "top_k",
+    "guardrail_threshold", "max_retrieval_attempts", "conversation_window",
+    "max_iterations", "timeout_seconds",
+)
+
+
+async def enforce_settings_guard(
+    request: StreamRequest,
+    policy: TierPolicyDep,
+) -> None:
+    """Reject non-default settings for free-tier users (403)."""
+    if policy.can_adjust_settings:
+        return
+
+    for field_name in _GATED_SETTINGS_FIELDS:
+        field_info = StreamRequest.model_fields[field_name]
+        default = field_info.default
+        value = getattr(request, field_name)
+        if value != default:
+            raise ForbiddenError(
+                f"Upgrade to Pro to customize '{field_name}'. Free tier uses defaults only."
+            )
+
+
+SettingsGuard = Annotated[None, Depends(enforce_settings_guard)]
 
 
 # ============================================================================

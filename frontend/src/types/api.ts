@@ -212,7 +212,10 @@ export interface MeResponse {
   tier: 'free' | 'pro'
   daily_chat_limit: number | null  // null = unlimited
   chats_used_today: number
-  can_select_model: boolean
+  can_adjust_settings: boolean
+  daily_ingest_limit: number | null  // null = unlimited
+  ingests_used_today: number
+  can_view_execution_details: boolean
 }
 
 // Chat UI types

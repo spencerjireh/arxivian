@@ -11,13 +11,15 @@ const labelClass = 'block text-xs text-stone-500 mb-1.5'
 const checkboxClass = 'mt-0.5 accent-stone-700'
 
 export default function SettingsPage() {
+  const canAdjustSettings = useUserStore((s) => s.me?.can_adjust_settings ?? false)
+
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
         <h1 className="font-display text-2xl font-semibold text-stone-900">Settings</h1>
         <AccountSection />
         <DisplayPreferencesSection />
-        <LLMPreferencesSection />
+        {canAdjustSettings && <LLMPreferencesSection />}
       </div>
     </div>
   )
@@ -51,8 +53,6 @@ function DisplayPreferencesSection() {
 }
 
 function LLMPreferencesSection() {
-  const canSelectModel = useUserStore((s) => s.me?.can_select_model ?? false)
-
   const {
     provider,
     model,
@@ -87,33 +87,29 @@ function LLMPreferencesSection() {
       <p className="text-xs text-stone-400 mb-4">Stored in this browser only</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {canSelectModel && (
-          <>
-            <div>
-              <label className={labelClass}>Provider</label>
-              <select
-                value={provider || ''}
-                onChange={(e) => setProvider((e.target.value || undefined) as LLMProvider | undefined)}
-                className={inputClass}
-              >
-                <option value="">Default</option>
-                <option value="openai">OpenAI</option>
-                <option value="nvidia_nim">NVIDIA NIM</option>
-              </select>
-            </div>
+        <div>
+          <label className={labelClass}>Provider</label>
+          <select
+            value={provider || ''}
+            onChange={(e) => setProvider((e.target.value || undefined) as LLMProvider | undefined)}
+            className={inputClass}
+          >
+            <option value="">Default</option>
+            <option value="openai">OpenAI</option>
+            <option value="nvidia_nim">NVIDIA NIM</option>
+          </select>
+        </div>
 
-            <div>
-              <label className={labelClass}>Model</label>
-              <input
-                type="text"
-                value={model || ''}
-                onChange={(e) => setModel(e.target.value || undefined)}
-                placeholder="Default model"
-                className={inputClass}
-              />
-            </div>
-          </>
-        )}
+        <div>
+          <label className={labelClass}>Model</label>
+          <input
+            type="text"
+            value={model || ''}
+            onChange={(e) => setModel(e.target.value || undefined)}
+            placeholder="Default model"
+            className={inputClass}
+          />
+        </div>
 
         <div>
           <label className={labelClass}>

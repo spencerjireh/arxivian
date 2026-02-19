@@ -16,6 +16,7 @@ async def get_me(
 ) -> MeResponse:
     """Get current user info including tier, limits, and usage."""
     query_count = await usage_repo.get_today_query_count(user.id)
+    ingest_count = await usage_repo.get_today_ingest_count(user.id)
 
     return MeResponse(
         id=user.id,
@@ -25,5 +26,8 @@ async def get_me(
         tier=user.tier,
         daily_chat_limit=policy.daily_chats,
         chats_used_today=query_count,
-        can_select_model=policy.can_select_model,
+        can_adjust_settings=policy.can_adjust_settings,
+        daily_ingest_limit=policy.daily_ingests,
+        ingests_used_today=ingest_count,
+        can_view_execution_details=policy.can_view_execution_details,
     )

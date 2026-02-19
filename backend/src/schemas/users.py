@@ -15,4 +15,7 @@ class MeResponse(BaseModel):
     tier: str
     daily_chat_limit: int | None = None  # None = unlimited
     chats_used_today: int
-    can_select_model: bool
+    can_adjust_settings: bool
+    daily_ingest_limit: int | None = None  # None = unlimited
+    ingests_used_today: int = 0
+    can_view_execution_details: bool = False

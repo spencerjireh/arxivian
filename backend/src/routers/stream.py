@@ -15,6 +15,7 @@ from src.dependencies import (
     CurrentUserRequired,
     TierPolicyDep,
     ChatGuard,
+    SettingsGuard,
     UsageCounterRepoDep,
     AgentGraphDep,
 )
@@ -42,6 +43,7 @@ async def stream(
     usage_repo: UsageCounterRepoDep,
     graph: AgentGraphDep,
     _limit: ChatGuard,
+    _settings: SettingsGuard,
 ) -> StreamingResponse:
     """
     Stream agent response via Server-Sent Events (SSE).
@@ -105,6 +107,8 @@ async def stream(
                     can_ingest=policy.can_ingest,
                     can_search_arxiv=policy.can_search_arxiv,
                     graph=graph,
+                    daily_ingests=policy.daily_ingests,
+                    usage_counter_repo=usage_repo,
                 )
 
                 # Stream events from the agent service

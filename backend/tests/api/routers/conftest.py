@@ -2,7 +2,7 @@
 
 import pytest
 import uuid
-from contextlib import asynccontextmanager
+from contextlib import ExitStack, asynccontextmanager
 from datetime import datetime, timezone
 from typing import AsyncGenerator
 from unittest.mock import AsyncMock, Mock, patch
@@ -21,15 +21,32 @@ def mock_database_init():
     async def mock_session_factory():
         yield mock_session
 
-    with patch("src.database.init_db", new_callable=AsyncMock):
-        with patch("src.database.engine") as mock_engine:
-            mock_engine.dispose = AsyncMock()
-            with patch("src.main.AsyncSessionLocal", side_effect=mock_session_factory):
-                with patch("src.tiers.init_system_user", new_callable=AsyncMock):
-                    with patch("redis.asyncio.from_url") as mock_redis_factory:
-                        mock_redis = AsyncMock()
-                        mock_redis_factory.return_value = mock_redis
-                        yield
+    # Mock AsyncRedisSaver so the lifespan doesn't need a real Redis for the
+    # LangGraph checkpointer. The context manager yields a mock checkpointer.
+    mock_checkpointer = AsyncMock()
+
+    @asynccontextmanager
+    async def mock_redis_saver(*args, **kwargs):
+        yield mock_checkpointer
+
+    mock_graph = Mock()
+
+    with ExitStack() as stack:
+        stack.enter_context(patch("src.database.init_db", new_callable=AsyncMock))
+        mock_engine = stack.enter_context(patch("src.database.engine"))
+        mock_engine.dispose = AsyncMock()
+        stack.enter_context(
+            patch("src.main.AsyncSessionLocal", side_effect=mock_session_factory)
+        )
+        stack.enter_context(patch("src.tiers.init_system_user", new_callable=AsyncMock))
+        mock_redis_factory = stack.enter_context(patch("redis.asyncio.from_url"))
+        mock_redis_factory.return_value = AsyncMock()
+        mock_saver_cls = stack.enter_context(
+            patch("langgraph.checkpoint.redis.aio.AsyncRedisSaver")
+        )
+        mock_saver_cls.from_conn_string.side_effect = mock_redis_saver
+        stack.enter_context(patch("src.main.build_graph", return_value=mock_graph))
+        yield
 
 
 @pytest.fixture
