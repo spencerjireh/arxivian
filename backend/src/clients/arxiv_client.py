@@ -219,9 +219,7 @@ class ArxivClient:
         if "-" in raw_date:
             normalised = raw_date
         else:
-            normalised = (
-                f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:8]}"
-            )
+            normalised = f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:8]}"
         low = cls._date_to_arxiv_fmt(normalised)
         high = cls._date_to_arxiv_fmt(normalised, end_of_day=True)
         date_clause = f"submittedDate:[{low} TO {high}]"
@@ -281,13 +279,9 @@ class ArxivClient:
         # Parse date strings once for client-side filtering (must be tz-aware
         # because ArxivPaper.published_date comes from the API as UTC)
         start_dt = (
-            datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
-            if start_date else None
+            datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc) if start_date else None
         )
-        end_dt = (
-            datetime.fromisoformat(end_date).replace(tzinfo=timezone.utc)
-            if end_date else None
-        )
+        end_dt = datetime.fromisoformat(end_date).replace(tzinfo=timezone.utc) if end_date else None
 
         # Sanitize any bare submittedDate: terms the LLM put in the query
         full_query, extracted_date = self._sanitize_query(query)
@@ -331,15 +325,16 @@ class ArxivClient:
 
         if has_date_filter:
             results = await self._execute_date_filtered_search(
-                search, max_results, start_dt, end_dt,
+                search,
+                max_results,
+                start_dt,
+                end_dt,
             )
         else:
             raw_results = await self._execute_search(search)
             results = [ArxivPaper(r) for r in raw_results]
             for paper in results:
-                log.debug(
-                    "arxiv paper found", arxiv_id=paper.arxiv_id, title=paper.title[:60]
-                )
+                log.debug("arxiv paper found", arxiv_id=paper.arxiv_id, title=paper.title[:60])
 
         log.info(
             "arxiv search complete",

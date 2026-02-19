@@ -27,7 +27,12 @@ from src.models.user import User
 from src.config import Settings, get_settings
 from src.schemas.stream import StreamRequest
 from src.tiers import TierPolicy, get_policy
-from src.exceptions import ForbiddenError, InvalidApiKeyError, MissingTokenError, UsageLimitExceededError
+from src.exceptions import (
+    ForbiddenError,
+    InvalidApiKeyError,
+    MissingTokenError,
+    UsageLimitExceededError,
+)
 
 from src.utils.logger import get_logger
 from src.factories.client_factories import (
@@ -250,9 +255,15 @@ ChatGuard = Annotated[None, Depends(enforce_chat_limit)]
 
 # Fields in StreamRequest that free-tier users cannot change from defaults.
 _GATED_SETTINGS_FIELDS = (
-    "provider", "model", "temperature", "top_k",
-    "guardrail_threshold", "max_retrieval_attempts", "conversation_window",
-    "max_iterations", "timeout_seconds",
+    "provider",
+    "model",
+    "temperature",
+    "top_k",
+    "guardrail_threshold",
+    "max_retrieval_attempts",
+    "conversation_window",
+    "max_iterations",
+    "timeout_seconds",
 )
 
 

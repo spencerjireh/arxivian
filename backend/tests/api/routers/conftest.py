@@ -425,6 +425,7 @@ def sample_conversation_turn(sample_conversation):
     turn.rewritten_query = None
     turn.sources = []
     turn.reasoning_steps = []
+    turn.thinking_steps = []
     turn.created_at = datetime.now(timezone.utc)
     return turn
 

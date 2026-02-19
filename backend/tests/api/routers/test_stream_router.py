@@ -422,6 +422,7 @@ class TestStreamErrorHandling:
             get_current_user_required,
             get_tier_policy,
             enforce_chat_limit,
+            enforce_settings_guard,
             get_redis,
             get_usage_counter_repository,
         )
@@ -444,6 +445,7 @@ class TestStreamErrorHandling:
         app.dependency_overrides[get_current_user_required] = lambda: mock_user
         app.dependency_overrides[get_tier_policy] = lambda: get_policy(mock_user)
         app.dependency_overrides[enforce_chat_limit] = lambda: None
+        app.dependency_overrides[enforce_settings_guard] = lambda: None
         app.dependency_overrides[get_redis] = lambda: AsyncMock()
         app.dependency_overrides[get_usage_counter_repository] = lambda: AsyncMock()
 

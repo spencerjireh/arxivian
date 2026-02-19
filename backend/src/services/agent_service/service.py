@@ -90,18 +90,16 @@ class _StepTracker:
         if started is None:
             return
         now = time.time()
-        self.steps.append({
-            "step": step,
-            "message": message,
-            "details": details,
-            "tool_name": (details or {}).get("tool_name"),
-            "started_at": datetime.fromtimestamp(
-                started, tz=timezone.utc
-            ).isoformat(),
-            "completed_at": datetime.fromtimestamp(
-                now, tz=timezone.utc
-            ).isoformat(),
-        })
+        self.steps.append(
+            {
+                "step": step,
+                "message": message,
+                "details": details,
+                "tool_name": (details or {}).get("tool_name"),
+                "started_at": datetime.fromtimestamp(started, tz=timezone.utc).isoformat(),
+                "completed_at": datetime.fromtimestamp(now, tz=timezone.utc).isoformat(),
+            }
+        )
 
 
 class AgentService:
@@ -258,7 +256,9 @@ class AgentService:
 
         try:
             async for event in self.graph.astream_events(
-                initial_state, version="v2", config=config
+                initial_state,
+                version="v2",
+                config=config,  # type: ignore[invalid-argument-type]
             ):
                 kind = event["event"]
 
@@ -349,7 +349,7 @@ class AgentService:
                     elif node_name == "executor":
                         last_tools = output.get("last_executed_tools", [])
                         tool_history = output.get("tool_history", [])
-                        recent = tool_history[-len(last_tools):] if last_tools else []
+                        recent = tool_history[-len(last_tools) :] if last_tools else []
                         for exec_record in recent:
                             ok = exec_record.success
                             status = "completed" if ok else "failed"
