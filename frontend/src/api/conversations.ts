@@ -1,20 +1,19 @@
 // Conversation REST API + TanStack Query hooks
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useInfiniteQuery, useQueryClient, useMutation, type InfiniteData } from '@tanstack/react-query'
 import { apiGet, apiDelete } from './client'
-import { useOptimisticListMutation } from './helpers'
 import type {
   ConversationListResponse,
   ConversationDetailResponse,
   DeleteConversationResponse,
 } from '../types/api'
 
+const PAGE_SIZE = 30
+
 // Query keys
 export const conversationKeys = {
   all: ['conversations'] as const,
   lists: () => [...conversationKeys.all, 'list'] as const,
-  list: (offset: number, limit: number) =>
-    [...conversationKeys.lists(), { offset, limit }] as const,
   details: () => [...conversationKeys.all, 'detail'] as const,
   detail: (sessionId: string) => [...conversationKeys.details(), sessionId] as const,
 }
@@ -42,10 +41,15 @@ async function deleteConversation(
 }
 
 // Hooks
-export function useConversations(offset: number = 0, limit: number = 20) {
-  return useQuery({
-    queryKey: conversationKeys.list(offset, limit),
-    queryFn: () => fetchConversations(offset, limit),
+export function useInfiniteConversations() {
+  return useInfiniteQuery({
+    queryKey: conversationKeys.lists(),
+    queryFn: ({ pageParam = 0 }) => fetchConversations(pageParam, PAGE_SIZE),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => {
+      const nextOffset = lastPage.offset + lastPage.limit
+      return nextOffset < lastPage.total ? nextOffset : undefined
+    },
   })
 }
 
@@ -58,13 +62,37 @@ export function useConversation(sessionId: string | undefined) {
 }
 
 export function useDeleteConversation() {
-  return useOptimisticListMutation<ConversationListResponse, string>({
+  const queryClient = useQueryClient()
+  type Data = InfiniteData<ConversationListResponse>
+
+  return useMutation({
     mutationFn: deleteConversation,
-    listQueryKey: conversationKeys.lists(),
-    updater: (old, sessionId) => ({
-      ...old,
-      total: old.total - 1,
-      conversations: old.conversations.filter((c) => c.session_id !== sessionId),
-    }),
+    onMutate: async (sessionId: string) => {
+      await queryClient.cancelQueries({ queryKey: conversationKeys.lists() })
+
+      const previous = queryClient.getQueryData<Data>(conversationKeys.lists())
+
+      queryClient.setQueryData<Data>(conversationKeys.lists(), (old) => {
+        if (!old) return old
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            total: page.total - 1,
+            conversations: page.conversations.filter((c) => c.session_id !== sessionId),
+          })),
+        }
+      })
+
+      return { previous }
+    },
+    onError: (_err, _sessionId, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(conversationKeys.lists(), context.previous)
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: conversationKeys.lists() })
+    },
   })
 }
