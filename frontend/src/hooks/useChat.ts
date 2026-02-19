@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { streamChat, createStreamAbortController, StreamAbortError } from '../api/stream'
-import { conversationKeys } from '../api/conversations'
+import { conversationKeys, confirmIngest } from '../api/conversations'
 import { useChatStore } from '../stores/chatStore'
 import { useSettingsStore, DEFAULT_SETTINGS } from '../stores/settingsStore'
 import { useUserStore } from '../stores/userStore'
@@ -44,6 +44,9 @@ export function useChat(sessionId: string | null) {
   const addGeneratingStep = useChatStore((s) => s.addGeneratingStep)
   const completeGeneratingStep = useChatStore((s) => s.completeGeneratingStep)
   const getThinkingSteps = useChatStore((s) => s.getThinkingSteps)
+  const setIngestProposal = useChatStore((s) => s.setIngestProposal)
+  const setIsIngesting = useChatStore((s) => s.setIsIngesting)
+  const clearIngestState = useChatStore((s) => s.clearIngestState)
   const resetStreamingState = useChatStore((s) => s.resetStreamingState)
 
   const addUserMessage = useCallback(
@@ -232,6 +235,39 @@ export function useChat(sessionId: string | null) {
               setError(data.error)
               setStreaming(false)
             },
+            onConfirmIngest: (data) => {
+              setIngestProposal(data)
+              addThinkingStep({
+                step: 'confirming',
+                message: 'Waiting for confirmation...',
+                details: { papers: data.papers.length },
+              })
+              if (streamingMessageIdRef.current) {
+                const currentSteps = getThinkingSteps()
+                updateStreamingMessage(streamingMessageIdRef.current, {
+                  ingestProposal: data,
+                  thinkingSteps: currentSteps,
+                })
+              }
+            },
+            onIngestComplete: (data) => {
+              setIsIngesting(false)
+              addThinkingStep({
+                step: 'ingesting',
+                message: `Ingested ${data.papers_processed} papers`,
+                details: {
+                  papers_processed: data.papers_processed,
+                  chunks_created: data.chunks_created,
+                },
+              })
+              if (streamingMessageIdRef.current) {
+                const currentSteps = getThinkingSteps()
+                updateStreamingMessage(streamingMessageIdRef.current, {
+                  thinkingSteps: currentSteps,
+                  ingestResolved: true,
+                })
+              }
+            },
             onDone: () => {
               setStatus(null)
             },
@@ -282,6 +318,44 @@ export function useChat(sessionId: string | null) {
       getThinkingSteps,
       finalizeAssistantMessage,
       setMessages,
+      setIngestProposal,
+      setIsIngesting,
+    ]
+  )
+
+  const handleIngestConfirmation = useCallback(
+    async (approved: boolean, selectedIds: string[]) => {
+      const proposal = useChatStore.getState().ingestProposal
+      if (!proposal) return
+
+      if (approved) {
+        setIsIngesting(true)
+        addThinkingStep({
+          step: 'ingesting',
+          message: `Adding ${selectedIds.length} papers...`,
+          details: { count: selectedIds.length },
+        })
+        if (streamingMessageIdRef.current) {
+          const currentSteps = getThinkingSteps()
+          updateStreamingMessage(streamingMessageIdRef.current, {
+            thinkingSteps: currentSteps,
+          })
+        }
+      }
+
+      try {
+        await confirmIngest(proposal.session_id, approved, selectedIds)
+      } catch (err) {
+        console.error('Failed to confirm ingest:', err)
+        clearIngestState()
+      }
+    },
+    [
+      setIsIngesting,
+      addThinkingStep,
+      getThinkingSteps,
+      updateStreamingMessage,
+      clearIngestState,
     ]
   )
 
@@ -296,6 +370,7 @@ export function useChat(sessionId: string | null) {
     messages,
     sendMessage,
     cancelStream,
+    handleIngestConfirmation,
     loadFromHistory,
     clearMessages,
   }

@@ -7,17 +7,20 @@ import type { Message } from '../../types/api'
 import SourceCard from './SourceCard'
 import MarkdownRenderer from './MarkdownRenderer'
 import ThinkingTimeline from './ThinkingTimeline'
+import IngestConfirmation from './IngestConfirmation'
 import { cursorTransitionVariants } from '../../lib/animations'
 
 interface ChatMessageProps {
   message: Message
   isStreaming?: boolean
   isFirst?: boolean
+  onIngestConfirm?: (approved: boolean, selectedIds: string[]) => void
 }
 
 export default function ChatMessage({
   message,
   isStreaming,
+  onIngestConfirm,
 }: ChatMessageProps) {
   const isUser = message.role === 'user'
   const content = message.content
@@ -72,6 +75,15 @@ export default function ChatMessage({
             <div className="mb-4">
               <ThinkingTimeline steps={thinkingSteps} isStreaming={isStreaming} metadata={message.metadata} />
             </div>
+          )}
+
+          {!isUser && message.ingestProposal && onIngestConfirm && (
+            <IngestConfirmation
+              proposal={message.ingestProposal}
+              onConfirm={onIngestConfirm}
+              isResolved={message.ingestResolved}
+              isIngesting={message.isStreaming && !message.ingestResolved}
+            />
           )}
 
           {!isUser && !isStreaming && thinkingSteps && thinkingSteps.length > 0 && content && (

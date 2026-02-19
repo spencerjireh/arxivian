@@ -68,6 +68,7 @@ class ConversationTurn(Base):
     sources: Mapped[list | None] = mapped_column(JSONB)
     reasoning_steps: Mapped[list | None] = mapped_column(JSONB)
     thinking_steps: Mapped[list | None] = mapped_column(JSONB)
+    pending_confirmation: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     provider: Mapped[str] = mapped_column(String(50))
     model: Mapped[str] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(

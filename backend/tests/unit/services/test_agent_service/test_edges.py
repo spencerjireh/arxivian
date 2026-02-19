@@ -80,6 +80,17 @@ class TestRouteAfterExecutor:
         }
         assert route_after_executor(state) == "router"
 
+    def test_routes_to_confirm_when_pause_reason_set(self):
+        """When pause_reason is set (e.g. by propose_ingest), route to confirm."""
+        state = {
+            "pause_reason": "propose_ingest_confirmation",
+            "last_executed_tools": [ARXIV_SEARCH],
+            "tool_history": [
+                ToolExecution(tool_name=ARXIV_SEARCH, tool_args={}, success=True),
+            ],
+        }
+        assert route_after_executor(state) == "confirm"
+
 
 class TestContinueAfterGuardrail:
     """Tests for continue_after_guardrail edge function."""

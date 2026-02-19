@@ -26,6 +26,7 @@ class BaseTool(ABC):
     description: ClassVar[str]
 
     extends_chunks: ClassVar[bool] = False
+    sets_pause: ClassVar[bool] = False
 
     # Capability flags - declares required dependencies for registration
     required_dependencies: ClassVar[list[str]] = []

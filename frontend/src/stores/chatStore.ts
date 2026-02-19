@@ -4,6 +4,7 @@ import type {
   ThinkingStep,
   StatusEventData,
   ActivityStep,
+  ConfirmIngestEventData,
 } from '../types/api'
 import { generateStepId } from '../utils/id'
 import { calculateTotalDuration } from '../utils/duration'
@@ -26,6 +27,8 @@ interface ChatUIState {
   sources: SourceInfo[]
   error: string | null
   thinkingSteps: ThinkingStep[]
+  ingestProposal: ConfirmIngestEventData | null
+  isIngesting: boolean
 
   setStreaming: (isStreaming: boolean) => void
   setStreamingContent: (content: string) => void
@@ -40,6 +43,10 @@ interface ChatUIState {
   getThinkingSteps: () => ThinkingStep[]
   getTotalDuration: () => number
 
+  setIngestProposal: (proposal: ConfirmIngestEventData | null) => void
+  setIsIngesting: (isIngesting: boolean) => void
+  clearIngestState: () => void
+
   resetStreamingState: () => void
 }
 
@@ -50,6 +57,8 @@ const initialStreamingState = {
   sources: [] as SourceInfo[],
   error: null,
   thinkingSteps: [] as ThinkingStep[],
+  ingestProposal: null as ConfirmIngestEventData | null,
+  isIngesting: false,
 }
 
 export const useChatStore = create<ChatUIState>((set, get) => ({
@@ -180,6 +189,12 @@ export const useChatStore = create<ChatUIState>((set, get) => ({
   getThinkingSteps: () => get().thinkingSteps,
 
   getTotalDuration: () => calculateTotalDuration(get().thinkingSteps),
+
+  setIngestProposal: (proposal) => set({ ingestProposal: proposal }),
+
+  setIsIngesting: (isIngesting) => set({ isIngesting }),
+
+  clearIngestState: () => set({ ingestProposal: null, isIngesting: false }),
 
   resetStreamingState: () => set(initialStreamingState),
 }))

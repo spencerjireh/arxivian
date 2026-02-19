@@ -1,5 +1,5 @@
 import { useChatStore } from '../../../src/stores/chatStore'
-import type { StatusEventData } from '../../../src/types/api'
+import type { StatusEventData, ConfirmIngestEventData } from '../../../src/types/api'
 
 const initialState = () => ({
   isStreaming: false,
@@ -8,6 +8,8 @@ const initialState = () => ({
   sources: [],
   error: null,
   thinkingSteps: [],
+  ingestProposal: null,
+  isIngesting: false,
 })
 
 describe('chatStore', () => {
@@ -234,6 +236,73 @@ describe('chatStore', () => {
       expect(state.sources).toEqual([])
       expect(state.error).toBeNull()
       expect(state.thinkingSteps).toEqual([])
+    })
+
+    it('clears ingest state', () => {
+      const proposal: ConfirmIngestEventData = {
+        papers: [
+          {
+            arxiv_id: '2401.00001',
+            title: 'Paper One',
+            authors: ['Author A'],
+            abstract: 'Abstract one',
+          },
+        ],
+        session_id: 'sess-1',
+        thread_id: 'thread-1',
+      }
+
+      useChatStore.getState().setIngestProposal(proposal)
+      useChatStore.getState().setIsIngesting(true)
+
+      useChatStore.getState().resetStreamingState()
+
+      const state = useChatStore.getState()
+      expect(state.ingestProposal).toBeNull()
+      expect(state.isIngesting).toBe(false)
+    })
+  })
+
+  describe('ingest state', () => {
+    const mockProposal: ConfirmIngestEventData = {
+      papers: [
+        {
+          arxiv_id: '2401.00001',
+          title: 'Paper One',
+          authors: ['Author A', 'Author B'],
+          abstract: 'Abstract one',
+          published_date: '2024-01-15',
+        },
+        {
+          arxiv_id: '2401.00002',
+          title: 'Paper Two',
+          authors: ['Author C'],
+          abstract: 'Abstract two',
+        },
+      ],
+      session_id: 'sess-1',
+      thread_id: 'thread-1',
+    }
+
+    it('setIngestProposal sets the proposal', () => {
+      useChatStore.getState().setIngestProposal(mockProposal)
+      expect(useChatStore.getState().ingestProposal).toEqual(mockProposal)
+    })
+
+    it('setIsIngesting updates isIngesting', () => {
+      useChatStore.getState().setIsIngesting(true)
+      expect(useChatStore.getState().isIngesting).toBe(true)
+    })
+
+    it('clearIngestState resets both', () => {
+      useChatStore.getState().setIngestProposal(mockProposal)
+      useChatStore.getState().setIsIngesting(true)
+
+      useChatStore.getState().clearIngestState()
+
+      const state = useChatStore.getState()
+      expect(state.ingestProposal).toBeNull()
+      expect(state.isIngesting).toBe(false)
     })
   })
 })

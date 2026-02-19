@@ -41,6 +41,7 @@ class TurnData:
     sources: list[dict] | None = None
     reasoning_steps: list[str] | None = None
     thinking_steps: list[ThinkingStepDict] | None = None
+    pending_confirmation: dict | None = None
 
 
 # API Response Schemas
@@ -60,6 +61,7 @@ class ConversationTurnResponse(BaseModel):
     sources: list[dict] | None = None
     reasoning_steps: list[str] | None = None
     thinking_steps: list[ThinkingStepDict] | None = None
+    pending_confirmation: dict | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -106,3 +108,19 @@ class CancelStreamResponse(BaseModel):
     session_id: str
     cancelled: bool
     message: str
+
+
+class ConfirmIngestRequest(BaseModel):
+    """Request to confirm or decline proposed paper ingestion."""
+
+    approved: bool = Field(..., description="Whether the user approved the ingestion")
+    selected_ids: list[str] = Field(
+        default_factory=list, description="arXiv IDs the user selected for ingestion"
+    )
+
+
+class ConfirmIngestResponse(BaseModel):
+    """Acknowledgement of an ingest confirmation."""
+
+    acknowledged: bool
+    selected_count: int

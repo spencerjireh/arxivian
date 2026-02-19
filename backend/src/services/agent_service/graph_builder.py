@@ -5,7 +5,8 @@ This module builds the router-based agent graph following 12-factor agent princi
 Graph flow:
     START -> guardrail -> [out_of_scope | router]
     router -> [executor | grade | generate]
-    executor -> [grade | router]
+    executor -> [confirm | grade | router]
+    confirm_ingest -> router
     grade -> [router | generate]
     generate -> END
     out_of_scope -> END
@@ -23,6 +24,7 @@ from .nodes import (
     executor_node,
     grade_documents_node,
     generate_answer_node,
+    confirm_ingest_node,
 )
 from .edges import (
     continue_after_guardrail,
@@ -52,6 +54,7 @@ def build_graph(checkpointer: BaseCheckpointSaver | None = None) -> CompiledStat
     workflow.add_node("executor", executor_node)
     workflow.add_node("grade_documents", grade_documents_node)
     workflow.add_node("generate", generate_answer_node)
+    workflow.add_node("confirm_ingest", confirm_ingest_node)
 
     # Add edges
     # START -> guardrail
@@ -74,12 +77,15 @@ def build_graph(checkpointer: BaseCheckpointSaver | None = None) -> CompiledStat
         {"execute": "executor", "grade": "grade_documents", "generate": "generate"},
     )
 
-    # executor -> [grade | router]
+    # executor -> [confirm | grade | router]
     workflow.add_conditional_edges(
         "executor",
         route_after_executor,
-        {"grade": "grade_documents", "router": "router"},
+        {"confirm": "confirm_ingest", "grade": "grade_documents", "router": "router"},
     )
+
+    # confirm_ingest -> router (unconditional)
+    workflow.add_edge("confirm_ingest", "router")
 
     # grade -> [router | generate]
     workflow.add_conditional_edges(

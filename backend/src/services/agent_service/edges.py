@@ -51,9 +51,14 @@ def route_after_executor(state: AgentState) -> str:
     Route after tool execution.
 
     Returns:
+        - "confirm": If a tool triggered HITL pause (propose_ingest)
         - "grade": If retrieve_chunks was called in current batch, grade the results
         - "router": Otherwise, go back to router for next decision
     """
+    # HITL: if a tool set pause_reason, route to confirm_ingest
+    if state.get("pause_reason"):
+        return "confirm"
+
     last_executed = state.get("last_executed_tools", [])
 
     if not last_executed:

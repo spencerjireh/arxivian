@@ -4,8 +4,8 @@ from __future__ import annotations
 import asyncio
 import json
 
-from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.runnables import RunnableConfig
+from langgraph.config import get_stream_writer
 
 from src.schemas.langgraph_state import AgentState, ToolExecution, ToolCall, ToolOutput
 from src.services.agent_service.tools import ToolResult
@@ -15,7 +15,11 @@ from ..context import AgentContext
 log = get_logger(__name__)
 
 
-_PAPER_SUMMARY_VERBS = {"arxiv_search": "Found", "ingest_papers": "Ingested"}
+_PAPER_SUMMARY_VERBS = {
+    "arxiv_search": "Found",
+    "ingest_papers": "Ingested",
+    "propose_ingest": "Proposed",
+}
 
 
 def _summarize_result(tool_name: str, result: ToolResult) -> str:
@@ -56,6 +60,8 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
         log.warning("executor called without valid tool decision")
         return {}
 
+    writer = get_stream_writer()
+
     async def run_single_tool(tc: ToolCall) -> tuple[str, dict, ToolResult]:
         """Execute one tool and return (name, args, result)."""
         tool_args = {}
@@ -64,7 +70,6 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
                 tool_args = json.loads(tc.tool_args_json)
             except json.JSONDecodeError as e:
                 log.warning("failed to parse tool_args_json", raw=tc.tool_args_json[:100])
-                # Return a failed result for unparseable args
                 return (
                     tc.tool_name,
                     {},
@@ -77,13 +82,13 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
 
         log.info("executor running tool", tool_name=tc.tool_name, args=str(tool_args)[:200])
 
-        await adispatch_custom_event(
-            "tool_start",
-            {"tool_name": tc.tool_name, "args": tool_args},
-            config=config,
-        )
+        writer({"type": "tool_start", "tool_name": tc.tool_name, "args": tool_args})
 
-        result = await context.tool_registry.execute(tc.tool_name, **tool_args)
+        result = await context.tool_registry.execute(
+            tc.tool_name,
+            tool_outputs=state.get("tool_outputs", []),
+            **tool_args,
+        )
 
         log.info(
             "executor tool completed",
@@ -92,11 +97,7 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
             error=result.error,
         )
 
-        await adispatch_custom_event(
-            "tool_end",
-            {"tool_name": tc.tool_name, "success": result.success},
-            config=config,
-        )
+        writer({"type": "tool_end", "tool_name": tc.tool_name, "success": result.success})
 
         return tc.tool_name, tool_args, result
 
@@ -176,5 +177,16 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
     if retrieved_chunks:
         updates["retrieved_chunks"] = retrieved_chunks
         updates["retrieval_attempts"] = state.get("retrieval_attempts", 0) + 1
+
+    # Detect HITL-triggering tools and set pause state
+    for item in results:
+        if isinstance(item, BaseException):
+            continue
+        tool_name, _tool_args, result = item
+        tool = context.tool_registry.get(tool_name)
+        if tool and tool.sets_pause and result.success and result.data:
+            updates["pause_reason"] = f"{tool_name}_confirmation"
+            updates["pause_data"] = result.data
+            break
 
     return updates

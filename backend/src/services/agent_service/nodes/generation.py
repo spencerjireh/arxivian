@@ -1,8 +1,8 @@
 """Answer generation node."""
 
 from langchain_core.messages import AIMessage
-from langchain_core.callbacks import adispatch_custom_event
 from langchain_core.runnables import RunnableConfig
+from langgraph.config import get_stream_writer
 
 from src.schemas.langgraph_state import AgentState
 from src.utils.logger import get_logger, truncate
@@ -55,7 +55,8 @@ async def generate_answer_node(state: AgentState, config: RunnableConfig) -> dic
 
     log.debug("llm prompt", system_len=len(system), user_len=len(user_prompt))
 
-    # Stream tokens and emit as custom events
+    # Stream tokens via LangGraph stream writer
+    writer = get_stream_writer()
     tokens: list[str] = []
     async for token in context.llm_client.generate_stream(
         messages=messages,
@@ -63,7 +64,7 @@ async def generate_answer_node(state: AgentState, config: RunnableConfig) -> dic
         max_tokens=context.max_generation_tokens,
     ):
         tokens.append(token)
-        await adispatch_custom_event("token", token, config=config)
+        writer({"type": "token", "token": token})
     answer = "".join(tokens)
 
     log.info(

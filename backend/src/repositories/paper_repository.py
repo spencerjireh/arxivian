@@ -104,6 +104,15 @@ class PaperRepository:
         result = await self.session.execute(select(Paper.id).where(Paper.arxiv_id == arxiv_id))
         return result.scalar_one_or_none() is not None
 
+    async def get_existing_arxiv_ids(self, arxiv_ids: list[str]) -> set[str]:
+        """Return the subset of arxiv_ids that already exist in the database."""
+        if not arxiv_ids:
+            return set()
+        result = await self.session.execute(
+            select(Paper.arxiv_id).where(Paper.arxiv_id.in_(arxiv_ids))
+        )
+        return set(result.scalars().all())
+
     async def count(self) -> int:
         """Get total count of papers."""
         result = await self.session.execute(select(func.count()).select_from(Paper))

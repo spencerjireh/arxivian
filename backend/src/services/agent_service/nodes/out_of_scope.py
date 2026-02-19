@@ -1,8 +1,8 @@
 """Out of scope handler node."""
 
 from langchain_core.messages import AIMessage
-from langchain_core.callbacks import adispatch_custom_event
 from langchain_core.runnables import RunnableConfig
+from langgraph.config import get_stream_writer
 
 from src.schemas.langgraph_state import AgentState
 from src.utils.logger import get_logger, truncate
@@ -51,7 +51,8 @@ async def out_of_scope_node(state: AgentState, config: RunnableConfig) -> dict:
             .build()
         )
 
-        # Stream tokens and emit as custom events
+        # Stream tokens via LangGraph stream writer
+        writer = get_stream_writer()
         tokens: list[str] = []
         async for token in context.llm_client.generate_stream(
             messages=[
@@ -62,11 +63,12 @@ async def out_of_scope_node(state: AgentState, config: RunnableConfig) -> dict:
             max_tokens=300,
         ):
             tokens.append(token)
-            await adispatch_custom_event("token", token, config=config)
+            writer({"type": "token", "token": token})
         message = "".join(tokens)
     else:
+        writer = get_stream_writer()
         message = "I specialize in academic research papers from arXiv. How can I help with that?"
-        await adispatch_custom_event("token", message, config=config)
+        writer({"type": "token", "token": message})
 
     log.info(
         "out of scope response generated",

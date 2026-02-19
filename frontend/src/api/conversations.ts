@@ -1,12 +1,22 @@
 // Conversation REST API + TanStack Query hooks
 
 import { useQuery, useInfiniteQuery, useQueryClient, useMutation, type InfiniteData } from '@tanstack/react-query'
-import { apiGet, apiDelete } from './client'
+import { apiGet, apiDelete, apiPost } from './client'
 import type {
   ConversationListResponse,
   ConversationDetailResponse,
   DeleteConversationResponse,
 } from '../types/api'
+
+interface ConfirmIngestRequest {
+  approved: boolean
+  selected_ids: string[]
+}
+
+interface ConfirmIngestResponse {
+  acknowledged: boolean
+  selected_count: number
+}
 
 const PAGE_SIZE = 30
 
@@ -38,6 +48,17 @@ async function deleteConversation(
   sessionId: string
 ): Promise<DeleteConversationResponse> {
   return apiDelete<DeleteConversationResponse>(`/conversations/${sessionId}`)
+}
+
+export async function confirmIngest(
+  sessionId: string,
+  approved: boolean,
+  selectedIds: string[]
+): Promise<ConfirmIngestResponse> {
+  return apiPost<ConfirmIngestResponse>(
+    `/conversations/${sessionId}/confirm-ingest`,
+    { approved, selected_ids: selectedIds } as ConfirmIngestRequest
+  )
 }
 
 // Hooks

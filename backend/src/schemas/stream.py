@@ -63,6 +63,8 @@ class StreamEventType(str, Enum):
     METADATA = "metadata"  # Final execution metadata
     ERROR = "error"  # Error events
     DONE = "done"  # Stream complete
+    CONFIRM_INGEST = "confirm_ingest"  # HITL: propose papers for user confirmation
+    INGEST_COMPLETE = "ingest_complete"  # HITL: ingestion finished
 
 
 class StatusEventData(BaseModel):
@@ -110,6 +112,34 @@ class ErrorEventData(BaseModel):
     code: str | None = Field(default=None, description="Error code if available")
 
 
+class IngestProposalPaper(BaseModel):
+    """A single paper proposed for ingestion."""
+
+    arxiv_id: str
+    title: str
+    authors: list[str] = Field(default_factory=list)
+    abstract: str = ""
+    published_date: str | None = None
+    pdf_url: str
+
+
+class ConfirmIngestEventData(BaseModel):
+    """Data for HITL ingest confirmation request."""
+
+    papers: list[IngestProposalPaper] = Field(..., description="Papers proposed for ingestion")
+    session_id: str = Field(..., description="Session ID for confirmation endpoint")
+    thread_id: str = Field(..., description="LangGraph thread ID for checkpoint resume")
+
+
+class IngestCompleteEventData(BaseModel):
+    """Data for ingest completion notification."""
+
+    papers_processed: int = Field(..., description="Number of papers successfully ingested")
+    chunks_created: int = Field(..., description="Total chunks created across all papers")
+    duration_seconds: float = Field(..., description="Total ingestion time in seconds")
+    errors: list[str] = Field(default_factory=list, description="Per-paper error messages")
+
+
 class StreamEvent(BaseModel):
     """SSE event wrapper with event type and data."""
 
@@ -120,5 +150,7 @@ class StreamEvent(BaseModel):
         | SourcesEventData
         | MetadataEventData
         | ErrorEventData
+        | ConfirmIngestEventData
+        | IngestCompleteEventData
         | dict
     )

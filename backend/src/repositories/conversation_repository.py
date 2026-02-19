@@ -133,6 +133,7 @@ class ConversationRepository:
                     sources=turn.sources,
                     reasoning_steps=turn.reasoning_steps,
                     thinking_steps=turn.thinking_steps,
+                    pending_confirmation=turn.pending_confirmation,
                     provider=turn.provider,
                     model=turn.model,
                 )
@@ -155,6 +156,76 @@ class ConversationRepository:
         raise IntegrityError(
             "Failed to save turn after max retries", None, Exception("max retries")
         )
+
+    async def complete_pending_turn(
+        self,
+        session_id: str,
+        turn_number: int,
+        agent_response: str,
+        thinking_steps: list[dict] | None = None,
+        sources: list[dict] | None = None,
+        reasoning_steps: list[str] | None = None,
+    ) -> Optional[ConversationTurn]:
+        """
+        Complete a previously saved partial turn after HITL confirmation.
+
+        Clears pending_confirmation and updates the agent response with final content.
+        """
+        result = await self.session.execute(
+            select(Conversation).where(Conversation.session_id == session_id)
+        )
+        conv = result.scalar_one_or_none()
+        if not conv:
+            return None
+
+        result = await self.session.execute(
+            select(ConversationTurn)
+            .where(
+                ConversationTurn.conversation_id == conv.id,
+                ConversationTurn.turn_number == turn_number,
+            )
+            .with_for_update()
+        )
+        ct = result.scalar_one_or_none()
+        if not ct:
+            return None
+
+        ct.agent_response = agent_response
+        ct.pending_confirmation = None
+        if thinking_steps is not None:
+            ct.thinking_steps = thinking_steps
+        if sources is not None:
+            ct.sources = sources
+        if reasoning_steps is not None:
+            ct.reasoning_steps = reasoning_steps
+
+        await self.session.flush()
+        await self.session.refresh(ct)
+        log.debug(
+            "pending turn completed",
+            session_id=session_id,
+            turn_number=turn_number,
+        )
+        return ct
+
+    async def has_pending_confirmation(
+        self, session_id: str, user_id: Optional[UUID] = None
+    ) -> bool:
+        """Check whether the latest turn has an active pending_confirmation."""
+        conv_query = select(Conversation.id).where(Conversation.session_id == session_id)
+        if user_id is not None:
+            conv_query = conv_query.where(Conversation.user_id == user_id)
+
+        result = await self.session.execute(
+            select(ConversationTurn.pending_confirmation)
+            .where(
+                ConversationTurn.conversation_id.in_(conv_query),
+                ConversationTurn.pending_confirmation.isnot(None),
+            )
+            .order_by(ConversationTurn.turn_number.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none() is not None
 
     async def delete(self, session_id: str, user_id: Optional[UUID] = None) -> bool:
         """

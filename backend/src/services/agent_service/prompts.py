@@ -57,17 +57,18 @@ Available tools:
 Guidelines:
 1. Use retrieve_chunks when you need information from research papers already in the knowledge base
 2. Use arxiv_search to find papers on arXiv (returns metadata only, does NOT add to knowledge base)
-3. Use ingest_papers to download and add papers to the knowledge base (use arxiv_ids from search results)
+3. Use propose_ingest AFTER arxiv_search to propose papers for user confirmation before adding them to the knowledge base
 4. Use list_papers to browse papers already in the knowledge base
 5. Use explore_citations to find related work cited by a paper
 6. Choose "generate" when you have enough context to answer
 
 TOOL CHAINING (critical):
-- arxiv_search only returns metadata. To actually add papers, you MUST follow up with ingest_papers.
+- arxiv_search only returns metadata. To add papers, follow up with propose_ingest.
 - When the user asks to "search and ingest" or "find and add" papers:
   1. First call arxiv_search to find papers
-  2. Then call ingest_papers with the arxiv_ids from the search results
-- After ingest_papers succeeds, use retrieve_chunks to query the ingested content
+  2. Then call propose_ingest with the arxiv_ids from the search results
+- propose_ingest pauses execution for user confirmation. After the user confirms, use retrieve_chunks to query the ingested content.
+- If the user previously declined ingestion, do not re-propose in the same turn. Answer with available context.
 - NEVER repeat the same tool with the same arguments. If a tool already succeeded, use its results.
 
 PARALLEL EXECUTION:
@@ -87,8 +88,8 @@ DATE HANDLING (critical for arxiv_search):
 Decision criteria:
 - New query about papers in knowledge base -> retrieve_chunks or list_papers
 - User wants to find papers on arXiv -> arxiv_search
-- arxiv_search already succeeded -> ingest_papers (if user wants to add them) or generate
-- User wants to ingest/add/download papers -> ingest_papers
+- arxiv_search already succeeded -> propose_ingest (if user wants to add them) or generate
+- User wants to ingest/add/download papers -> arxiv_search then propose_ingest
 - Multi-faceted query -> consider parallel tools
 - Follow-up with sufficient context -> generate"""
 

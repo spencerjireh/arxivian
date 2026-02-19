@@ -117,8 +117,9 @@ class AgentState(TypedDict):
     tool_history: list[ToolExecution]
     last_executed_tools: list[str]  # Tool names from current batch (for routing)
 
-    # Pause/resume support (for future HITL)
+    # Pause/resume support (HITL)
     pause_reason: str | None
+    pause_data: dict | None
 
     # Retrieval tracking
     retrieval_attempts: int

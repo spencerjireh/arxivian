@@ -6,6 +6,7 @@ from .generation import generate_answer_node
 from .out_of_scope import out_of_scope_node
 from .router import router_node
 from .executor import executor_node
+from .confirm_ingest import confirm_ingest_node
 
 __all__ = [
     "guardrail_node",
@@ -14,4 +15,5 @@ __all__ = [
     "router_node",
     "executor_node",
     "grade_documents_node",
+    "confirm_ingest_node",
 ]

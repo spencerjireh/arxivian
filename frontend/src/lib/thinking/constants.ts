@@ -44,8 +44,8 @@ export const STEP_ICON_COLORS: Record<ActivityStepKind | InternalStepKind, strin
   grading: 'text-stone-400',
   generation: 'text-stone-400',
   out_of_scope: 'text-stone-400',
-  confirming: 'text-stone-400',
-  ingesting: 'text-stone-400',
+  confirming: 'text-amber-600',
+  ingesting: 'text-green-600',
 }
 
 export const STEP_ANIMATION_VARIANTS: Record<ActivityStepKind | InternalStepKind, Variants> = {

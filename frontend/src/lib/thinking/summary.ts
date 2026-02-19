@@ -8,6 +8,7 @@ const KIND_PHRASES: Record<string, { singular: string; plural: string }> = {
   list_papers: { singular: 'listed papers', plural: 'listed papers {n} times' },
   explore_citations: { singular: 'explored citations', plural: 'explored citations {n} times' },
   propose_ingest: { singular: 'proposed papers', plural: 'proposed papers {n} times' },
+  ingesting: { singular: 'ingested papers', plural: 'ingested papers {n} times' },
 }
 
 export interface CollapsedSummaryParts {

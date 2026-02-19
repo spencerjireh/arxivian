@@ -14,7 +14,7 @@ from src.schemas.conversation import ConversationMessage
 from .tools import (
     ToolRegistry,
     RetrieveChunksTool,
-    IngestPapersTool,
+    ProposeIngestTool,
     ListPapersTool,
     ArxivSearchTool,
     ExploreCitationsTool,
@@ -121,16 +121,16 @@ class AgentContext:
                 RetrieveChunksTool(search_service=search_service, default_top_k=top_k * 2)
             )
             if ingest_service:
+                self.tool_registry.register(ListPapersTool(ingest_service=ingest_service))
+            if paper_repository:
                 self.tool_registry.register(
-                    IngestPapersTool(
-                        ingest_service=ingest_service,
+                    ProposeIngestTool(
+                        paper_repository=paper_repository,
                         daily_ingests=daily_ingests,
                         usage_counter_repo=usage_counter_repo,
                         user_id=user_id,
                     )
                 )
-                self.tool_registry.register(ListPapersTool(ingest_service=ingest_service))
+                self.tool_registry.register(ExploreCitationsTool(paper_repository=paper_repository))
             if arxiv_client:
                 self.tool_registry.register(ArxivSearchTool(arxiv_client=arxiv_client))
-            if paper_repository:
-                self.tool_registry.register(ExploreCitationsTool(paper_repository=paper_repository))

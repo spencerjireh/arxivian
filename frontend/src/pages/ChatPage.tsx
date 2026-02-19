@@ -32,6 +32,7 @@ export default function ChatPage() {
     messages,
     sendMessage,
     cancelStream,
+    handleIngestConfirmation,
     loadFromHistory,
     clearMessages,
   } = useChat(effectiveSessionId)
@@ -101,7 +102,7 @@ export default function ChatPage() {
           </motion.div>
         ) : (
           <motion.div key="active" className="flex-1 flex flex-col min-h-0 relative" {...motionProps}>
-            <ChatMessages messages={messages} />
+            <ChatMessages messages={messages} onIngestConfirm={handleIngestConfirmation} />
             <div className="absolute bottom-0 left-0 right-0">
               <ChatInput
                 onSend={sendMessage}

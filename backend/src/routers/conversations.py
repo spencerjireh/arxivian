@@ -1,5 +1,7 @@
 """Conversations management router for chat history."""
 
+import json
+
 from fastapi import APIRouter, Query
 
 from src.schemas.conversation import (
@@ -9,9 +11,11 @@ from src.schemas.conversation import (
     ConversationTurnResponse,
     DeleteConversationResponse,
     CancelStreamResponse,
+    ConfirmIngestRequest,
+    ConfirmIngestResponse,
 )
-from src.dependencies import ConversationRepoDep, DbSession, CurrentUserRequired
-from src.exceptions import ResourceNotFoundError
+from src.dependencies import ConversationRepoDep, DbSession, CurrentUserRequired, RedisDep
+from src.exceptions import ConflictError, ResourceNotFoundError
 from src.services.task_registry import task_registry
 
 router = APIRouter()
@@ -108,6 +112,7 @@ async def get_conversation(
             sources=turn.sources,
             reasoning_steps=turn.reasoning_steps,
             thinking_steps=turn.thinking_steps,
+            pending_confirmation=turn.pending_confirmation,
             created_at=turn.created_at,
         )
         for turn in sorted(conv.turns, key=lambda t: t.turn_number)
@@ -195,3 +200,47 @@ async def cancel_stream(
             cancelled=False,
             message="No active stream found for this session",
         )
+
+
+@router.post(
+    "/conversations/{session_id}/confirm-ingest",
+    response_model=ConfirmIngestResponse,
+)
+async def confirm_ingest(
+    session_id: str,
+    body: ConfirmIngestRequest,
+    current_user: CurrentUserRequired,
+    redis: RedisDep,
+    conversation_repo: ConversationRepoDep,
+) -> ConfirmIngestResponse:
+    """
+    Confirm or decline a proposed paper ingestion.
+
+    Signals the waiting SSE stream via Redis pub/sub so the agent can
+    resume graph execution.
+    """
+    # Verify session ownership
+    conv = await conversation_repo.get_by_session_id(session_id, user_id=current_user.id)
+    if not conv:
+        raise ResourceNotFoundError("Conversation", session_id)
+
+    # Verify there is actually a pending confirmation on the latest turn
+    has_pending = await conversation_repo.has_pending_confirmation(
+        session_id, user_id=current_user.id
+    )
+    if not has_pending:
+        raise ConflictError("No pending ingestion confirmation for this session")
+
+    # Build payload and signal via Redis
+    channel = f"arx:hitl:{session_id}"
+    payload = {
+        "declined": not body.approved,
+        "selected_ids": body.selected_ids if body.approved else [],
+    }
+    await redis.set(channel, json.dumps(payload), ex=300)
+    await redis.publish(channel, "ok")
+
+    return ConfirmIngestResponse(
+        acknowledged=True,
+        selected_count=len(body.selected_ids) if body.approved else 0,
+    )

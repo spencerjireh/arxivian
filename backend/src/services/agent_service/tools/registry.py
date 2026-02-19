@@ -75,12 +75,16 @@ class ToolRegistry:
             raise KeyError(f"Tool '{name}' is not registered")
         return tool
 
-    async def execute(self, name: str, **kwargs) -> ToolResult:
+    async def execute(
+        self, name: str, *, tool_outputs: list | None = None, **kwargs
+    ) -> ToolResult:
         """
         Execute a tool by name.
 
         Args:
             name: Tool name
+            tool_outputs: Prior tool outputs from the current turn. Forwarded
+                only to tools that declare ``sets_pause = True``.
             **kwargs: Tool parameters
 
         Returns:
@@ -93,6 +97,9 @@ class ToolRegistry:
                 error=f"Tool '{name}' not found",
                 tool_name=name,
             )
+
+        if tool.sets_pause and tool_outputs is not None:
+            kwargs["tool_outputs"] = tool_outputs
 
         try:
             return await tool.execute(**kwargs)

@@ -18,6 +18,7 @@ from src.dependencies import (
     SettingsGuard,
     UsageCounterRepoDep,
     AgentGraphDep,
+    RedisDep,
 )
 from src.factories.service_factories import get_agent_service
 from src.services.task_registry import task_registry
@@ -42,6 +43,7 @@ async def stream(
     policy: TierPolicyDep,
     usage_repo: UsageCounterRepoDep,
     graph: AgentGraphDep,
+    redis: RedisDep,
     _limit: ChatGuard,
     _settings: SettingsGuard,
 ) -> StreamingResponse:
@@ -107,6 +109,7 @@ async def stream(
                     can_ingest=policy.can_ingest,
                     can_search_arxiv=policy.can_search_arxiv,
                     graph=graph,
+                    redis=redis,
                     daily_ingests=policy.daily_ingests,
                     usage_counter_repo=usage_repo,
                 )

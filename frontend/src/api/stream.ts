@@ -10,6 +10,8 @@ import type {
   SourcesEventData,
   MetadataEventData,
   ErrorEventData,
+  ConfirmIngestEventData,
+  IngestCompleteEventData,
 } from '../types/api'
 
 export interface StreamCallbacks {
@@ -19,6 +21,8 @@ export interface StreamCallbacks {
   onMetadata?: (data: MetadataEventData) => void
   onError?: (data: ErrorEventData) => void
   onDone?: () => void
+  onConfirmIngest?: (data: ConfirmIngestEventData) => void
+  onIngestComplete?: (data: IngestCompleteEventData) => void
 }
 
 export class StreamAbortError extends Error {
@@ -83,6 +87,12 @@ export async function streamChat(
             break
           case 'error':
             callbacks.onError?.(data as ErrorEventData)
+            break
+          case 'confirm_ingest':
+            callbacks.onConfirmIngest?.(data as ConfirmIngestEventData)
+            break
+          case 'ingest_complete':
+            callbacks.onIngestComplete?.(data as IngestCompleteEventData)
             break
           case 'done':
             callbacks.onDone?.()

@@ -16,7 +16,9 @@ export interface StreamRequest {
   conversation_window?: number
 }
 
-export type StreamEventType = 'status' | 'content' | 'sources' | 'metadata' | 'error' | 'done'
+export type StreamEventType =
+  | 'status' | 'content' | 'sources' | 'metadata' | 'error' | 'done'
+  | 'confirm_ingest' | 'ingest_complete'
 
 export interface StatusEventData {
   step: string
@@ -58,6 +60,30 @@ export interface MetadataEventData {
 export interface ErrorEventData {
   error: string
   code?: string
+}
+
+// HITL ingest confirmation types
+
+export interface IngestProposalPaper {
+  arxiv_id: string
+  title: string
+  authors: string[]
+  abstract: string
+  published_date?: string
+  pdf_url?: string
+}
+
+export interface ConfirmIngestEventData {
+  papers: IngestProposalPaper[]
+  session_id: string
+  thread_id: string
+}
+
+export interface IngestCompleteEventData {
+  papers_processed: number
+  chunks_created: number
+  duration_seconds: number
+  errors: string[]
 }
 
 // Persisted thinking step shape (from backend JSONB)
@@ -136,6 +162,7 @@ export interface ConversationTurnResponse {
   sources?: Record<string, unknown>[]
   reasoning_steps?: string[]
   thinking_steps?: PersistedThinkingStep[] | null
+  pending_confirmation?: ConfirmIngestEventData | null
   created_at: string
 }
 
@@ -229,4 +256,6 @@ export interface Message {
   isStreaming?: boolean
   error?: string
   createdAt: Date
+  ingestProposal?: ConfirmIngestEventData
+  ingestResolved?: boolean
 }

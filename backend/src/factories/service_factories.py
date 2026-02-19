@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from src.repositories.usage_counter_repository import UsageCounterRepository
 
 from langgraph.graph.state import CompiledStateGraph
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import get_settings
 from src.services.search_service import SearchService
@@ -111,6 +112,7 @@ def get_agent_service(
     db_session: AsyncSession,
     user_id: UUID,
     graph: CompiledStateGraph,
+    redis: Redis | None = None,
     provider: str | None = None,
     model: str | None = None,
     guardrail_threshold: int = 75,
@@ -180,6 +182,7 @@ def get_agent_service(
     return AgentService(
         llm_client=llm_client,
         search_service=search_service,
+        redis=redis,
         ingest_service=ingest_service,
         arxiv_client=arxiv_client,
         paper_repository=paper_repository,
