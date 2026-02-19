@@ -53,7 +53,7 @@ class RetrieveChunksTool(BaseTool):
             "required": ["query"],
         }
 
-    async def execute(self, query: str, top_k: int | None = None, **kwargs) -> ToolResult:
+    async def execute(self, query: str, top_k: int | None = None, **kwargs) -> ToolResult:  # type: ignore[override]
         if not query or not query.strip():
             return ToolResult(success=False, error="Query cannot be empty", tool_name=self.name)
 

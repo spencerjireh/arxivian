@@ -43,7 +43,7 @@ def build_graph(checkpointer: BaseCheckpointSaver | None = None) -> CompiledStat
     following a static DAG. Context is passed per-request via
     RunnableConfig["configurable"]["context"].
     """
-    workflow = StateGraph(AgentState)
+    workflow = StateGraph(AgentState)  # type: ignore[invalid-argument-type]
 
     # Add nodes (receive context via RunnableConfig)
     workflow.add_node("guardrail", guardrail_node)

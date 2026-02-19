@@ -13,7 +13,6 @@ from .fixtures.canned_data import (
     ARXIV_SEARCH_RESULTS,
     CITATION_RESULTS,
     LIST_PAPERS_RESULTS,
-    SUMMARIZE_PAPER_RESULT,
 )
 
 
@@ -107,7 +106,6 @@ class ServiceMockBuilder:
         self._list_papers_result: dict = LIST_PAPERS_RESULTS
         self._arxiv_results: dict = ARXIV_SEARCH_RESULTS
         self._citation_results: dict = CITATION_RESULTS
-        self._summarize_result: dict = SUMMARIZE_PAPER_RESULT
 
     def with_search_results(self, chunks: list[dict]) -> ServiceMockBuilder:
         self._search_results = chunks
@@ -137,7 +135,6 @@ class ServiceMockBuilder:
 
         paper_repository = AsyncMock()
         paper_repository.get_citations = AsyncMock(return_value=self._citation_results)
-        paper_repository.get_paper_summary = AsyncMock(return_value=self._summarize_result)
 
         return ServiceMocks(
             search_service=search_service,

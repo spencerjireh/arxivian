@@ -85,25 +85,18 @@
           <mxGeometry x="875" y="360" width="150" height="30" as="geometry" />
         </mxCell>
 
-        <mxCell id="t4" value="summarize_paper" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontStyle=0;" vertex="1" parent="1">
+        <mxCell id="t4" value="list_papers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontStyle=0;" vertex="1" parent="1">
           <mxGeometry x="720" y="395" width="150" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="t4b" value="Generate structured summary" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=9;fontColor=#999999;" vertex="1" parent="1">
-          <mxGeometry x="875" y="395" width="170" height="30" as="geometry" />
+        <mxCell id="t4b" value="Browse the knowledge base" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=9;fontColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="875" y="395" width="150" height="30" as="geometry" />
         </mxCell>
 
-        <mxCell id="t5" value="list_papers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontStyle=0;" vertex="1" parent="1">
+        <mxCell id="t5" value="explore_citations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontStyle=0;" vertex="1" parent="1">
           <mxGeometry x="720" y="430" width="150" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="t5b" value="Browse the knowledge base" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=9;fontColor=#999999;" vertex="1" parent="1">
-          <mxGeometry x="875" y="430" width="150" height="30" as="geometry" />
-        </mxCell>
-
-        <mxCell id="t6" value="explore_citations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontStyle=0;" vertex="1" parent="1">
-          <mxGeometry x="720" y="465" width="150" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="t6b" value="Find citing / cited papers" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=9;fontColor=#999999;" vertex="1" parent="1">
-          <mxGeometry x="875" y="465" width="140" height="30" as="geometry" />
+        <mxCell id="t5b" value="Find citing / cited papers" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=9;fontColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="875" y="430" width="140" height="30" as="geometry" />
         </mxCell>
 
         <!-- Bracket connecting executor to tools -->
@@ -123,7 +116,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="tb3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;strokeWidth=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=1;" edge="1" source="10" target="t6" parent="1">
+        <mxCell id="tb3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;strokeWidth=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=1;" edge="1" source="10" target="t5" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="680" y="395" />

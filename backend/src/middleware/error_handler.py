@@ -124,10 +124,10 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
 
 def register_exception_handlers(app: FastAPI) -> None:
     """Register all exception handlers with FastAPI application."""
-    app.add_exception_handler(BaseAPIException, base_exception_handler)
-    app.add_exception_handler(RequestValidationError, validation_exception_handler)
-    app.add_exception_handler(PydanticValidationError, validation_exception_handler)
-    app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
-    app.add_exception_handler(Exception, generic_exception_handler)
+    app.add_exception_handler(BaseAPIException, base_exception_handler)  # type: ignore[invalid-argument-type]
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)  # type: ignore[invalid-argument-type]
+    app.add_exception_handler(PydanticValidationError, validation_exception_handler)  # type: ignore[invalid-argument-type]
+    app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)  # type: ignore[invalid-argument-type]
+    app.add_exception_handler(Exception, generic_exception_handler)  # type: ignore[invalid-argument-type]
 
     log.info("exception handlers registered")

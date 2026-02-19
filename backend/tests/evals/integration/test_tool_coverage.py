@@ -61,15 +61,3 @@ async def test_arxiv_search_tool_invoked(agent_service: AgentService):
     )
 
 
-@pytest.mark.inteval
-async def test_summarize_paper_tool_invoked(agent_service: AgentService):
-    """A summarize query should invoke the summarize tool for a seeded paper."""
-    result = await consume_stream(
-        agent_service,
-        "Summarize the paper 'Attention Is All You Need'.",
-    )
-    assert result.done_event is not None
-    answer_lower = result.answer.lower()
-    assert any(
-        term in answer_lower for term in ["transformer", "attention", "self-attention"]
-    ), f"Summary should reference transformer concepts: {result.answer[:300]}"

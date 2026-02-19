@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from src.services.agent_service.tools import RETRIEVE_CHUNKS
@@ -60,8 +60,7 @@ Guidelines:
 3. Use ingest_papers to download and add papers to the knowledge base (use arxiv_ids from search results)
 4. Use list_papers to browse papers already in the knowledge base
 5. Use explore_citations to find related work cited by a paper
-6. Use summarize_paper for quick paper overviews
-7. Choose "generate" when you have enough context to answer
+6. Choose "generate" when you have enough context to answer
 
 TOOL CHAINING (critical):
 - arxiv_search only returns metadata. To actually add papers, you MUST follow up with ingest_papers.
@@ -132,7 +131,7 @@ class PromptBuilder:
         for out in outputs:
             if out["tool_name"] == RETRIEVE_CHUNKS:
                 continue  # Handled via relevant_chunks
-            text = (out.get("prompt_text") or json.dumps(out["data"], default=str))[:2000]
+            text = (out.get("prompt_text") or json.dumps(out["data"], default=str))[:4000]
             self._user_parts.append(text)
         return self
 
@@ -247,7 +246,7 @@ def get_router_prompt(
 
     system_prompt = ROUTER_SYSTEM_PROMPT.format(
         tool_descriptions=tool_descriptions,
-        current_year=datetime.now().year,
+        current_year=datetime.now(timezone.utc).year,
     )
 
     # Build user prompt

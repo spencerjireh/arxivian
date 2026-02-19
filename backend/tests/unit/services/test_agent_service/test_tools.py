@@ -12,7 +12,6 @@ from src.services.agent_service.tools import (
     IngestPapersTool,
     ArxivSearchTool,
     ExploreCitationsTool,
-    SummarizePaperTool,
 )
 from src.services.agent_service.tools.retrieve import MAX_TOP_K
 
@@ -245,64 +244,6 @@ class TestExploreCitationsTool:
     def test_class_variables(self, tool):
         assert tool.extends_chunks is False
         assert "paper_repository" in tool.required_dependencies
-
-
-class TestSummarizePaperTool:
-    """Tests for SummarizePaperTool."""
-
-    @pytest.fixture
-    def mock_paper_repository(self):
-        return AsyncMock()
-
-    @pytest.fixture
-    def mock_llm_client(self):
-        return AsyncMock()
-
-    @pytest.fixture
-    def tool(self, mock_paper_repository, mock_llm_client):
-        return SummarizePaperTool(
-            paper_repository=mock_paper_repository, llm_client=mock_llm_client
-        )
-
-    @pytest.mark.asyncio
-    async def test_paper_not_found(self, tool, mock_paper_repository):
-        mock_paper_repository.get_by_arxiv_id.return_value = None
-
-        result = await tool.execute(arxiv_id="nonexistent")
-
-        assert result.success is False
-        assert "not found" in result.error.lower()
-
-    @pytest.mark.asyncio
-    async def test_paper_not_processed(self, tool, mock_paper_repository):
-        mock_paper = Mock()
-        mock_paper.pdf_processed = False
-        mock_paper_repository.get_by_arxiv_id.return_value = mock_paper
-
-        result = await tool.execute(arxiv_id="2301.00001")
-
-        assert result.success is False
-        assert "not been processed" in result.error.lower()
-
-    @pytest.mark.asyncio
-    async def test_successful_summary(self, tool, mock_paper_repository, mock_llm_client):
-        mock_paper = Mock()
-        mock_paper.arxiv_id = "2301.00001"
-        mock_paper.title = "Test Paper"
-        mock_paper.abstract = "This is a test abstract."
-        mock_paper.pdf_processed = True
-        mock_paper_repository.get_by_arxiv_id.return_value = mock_paper
-        mock_llm_client.generate_completion.return_value = "Summary text"
-
-        result = await tool.execute(arxiv_id="2301.00001")
-
-        assert result.success is True
-        assert result.data["summary"] == "Summary text"
-
-    def test_class_variables(self, tool):
-        assert tool.extends_chunks is False
-        assert "paper_repository" in tool.required_dependencies
-        assert "llm_client" in tool.required_dependencies
 
 
 class TestArxivSearchPromptText:

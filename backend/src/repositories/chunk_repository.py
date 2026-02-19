@@ -47,7 +47,7 @@ class ChunkRepository:
         """Delete all chunks for a paper. Caller is responsible for committing the transaction."""
         result = await self.session.execute(delete(Chunk).where(Chunk.paper_id == paper_id))
         await self.session.flush()
-        count = result.rowcount or 0
+        count = result.rowcount or 0  # type: ignore[possibly-missing-attribute]
         log.debug("chunks deleted", paper_id=paper_id, count=count)
         return count
 

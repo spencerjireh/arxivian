@@ -54,7 +54,7 @@ class ExploreCitationsTool(BaseTool):
             "required": ["arxiv_id"],
         }
 
-    async def execute(self, arxiv_id: str, **kwargs) -> ToolResult:
+    async def execute(self, arxiv_id: str, **kwargs) -> ToolResult:  # type: ignore[override]
         log.debug("explore_citations", arxiv_id=arxiv_id)
 
         try:

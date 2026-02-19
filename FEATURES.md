@@ -4,7 +4,7 @@
 
 - [x] LangGraph workflow: guardrail -> router -> executor -> grading -> generation
 - [x] Tool registry with parallel execution
-- [x] Tools: `retrieve_chunks`, `arxiv_search`, `ingest_papers`, `list_papers`, `summarize_paper`, `explore_citations`
+- [x] Tools: `retrieve_chunks`, `arxiv_search`, `ingest_papers`, `list_papers`, `explore_citations`
 - [x] Guardrail node with relevance scoring (configurable threshold)
 - [x] Document grading with retry logic
 - [x] Streaming responses via SSE

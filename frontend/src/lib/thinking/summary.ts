@@ -5,7 +5,6 @@ const KIND_PHRASES: Record<string, { singular: string; plural: string }> = {
   retrieve: { singular: 'searched 1 source', plural: 'searched {n} sources' },
   arxiv_search: { singular: 'searched arXiv', plural: 'searched arXiv {n} times' },
   ingest: { singular: 'added 1 paper', plural: 'added {n} papers' },
-  summarize_paper: { singular: 'summarized 1 paper', plural: 'summarized {n} papers' },
   list_papers: { singular: 'listed papers', plural: 'listed papers {n} times' },
   explore_citations: { singular: 'explored citations', plural: 'explored citations {n} times' },
   propose_ingest: { singular: 'proposed papers', plural: 'proposed papers {n} times' },

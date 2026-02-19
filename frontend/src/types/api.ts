@@ -77,7 +77,6 @@ export type ActivityStepKind =
   | 'retrieve'
   | 'arxiv_search'
   | 'ingest'
-  | 'summarize_paper'
   | 'list_papers'
   | 'explore_citations'
   | 'propose_ingest'

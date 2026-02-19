@@ -73,7 +73,7 @@ class ArxivSearchTool(BaseTool):
             "required": ["query"],
         }
 
-    async def execute(
+    async def execute(  # type: ignore[override]
         self,
         query: str,
         max_results: int = 5,

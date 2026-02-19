@@ -242,7 +242,7 @@ async def get_task_status(
 
     response = TaskStatusResponse(
         task_id=task_id,
-        status=status,
+        status=status,  # type: ignore[invalid-argument-type]  # dict.get returns str, not Literal
         ready=result.ready(),
         result=None,
         error=task_exec.error_message,

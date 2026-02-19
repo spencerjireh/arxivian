@@ -18,7 +18,6 @@ from src.services.agent_service.tools import (
     ListPapersTool,
     ArxivSearchTool,
     ExploreCitationsTool,
-    SummarizePaperTool,
 )
 from .helpers import ServiceMockBuilder, ServiceMocks
 
@@ -102,9 +101,6 @@ def eval_context(
     registry.register(ListPapersTool(ingest_service=mock_ingest_service))
     registry.register(ArxivSearchTool(arxiv_client=mock_arxiv_client))
     registry.register(ExploreCitationsTool(paper_repository=mock_paper_repository))
-    registry.register(
-        SummarizePaperTool(paper_repository=mock_paper_repository, llm_client=real_llm_client)
-    )
 
     return AgentContext(
         llm_client=real_llm_client,

@@ -18,8 +18,10 @@ from .tools import (
     ListPapersTool,
     ArxivSearchTool,
     ExploreCitationsTool,
-    SummarizePaperTool,
 )
+
+if TYPE_CHECKING:
+    from src.repositories.usage_counter_repository import UsageCounterRepository
 
 
 class ConversationFormatter:
@@ -76,10 +78,6 @@ class ConversationFormatter:
         return "\n".join(parts)
 
 
-if TYPE_CHECKING:
-    from src.repositories.usage_counter_repository import UsageCounterRepository
-
-
 class AgentContext:
     """Context object passed to all LangGraph nodes."""
 
@@ -97,7 +95,7 @@ class AgentContext:
         max_retrieval_attempts: int = 3,
         max_iterations: int = 5,
         temperature: float = 0.3,
-        max_generation_tokens: int = 2000,
+        max_generation_tokens: int = 4000,
         user_id: UUID | None = None,
         daily_ingests: int | None = None,
         usage_counter_repo: UsageCounterRepository | None = None,
@@ -123,17 +121,16 @@ class AgentContext:
                 RetrieveChunksTool(search_service=search_service, default_top_k=top_k * 2)
             )
             if ingest_service:
-                self.tool_registry.register(IngestPapersTool(
-                    ingest_service=ingest_service,
-                    daily_ingests=daily_ingests,
-                    usage_counter_repo=usage_counter_repo,
-                    user_id=user_id,
-                ))
+                self.tool_registry.register(
+                    IngestPapersTool(
+                        ingest_service=ingest_service,
+                        daily_ingests=daily_ingests,
+                        usage_counter_repo=usage_counter_repo,
+                        user_id=user_id,
+                    )
+                )
                 self.tool_registry.register(ListPapersTool(ingest_service=ingest_service))
             if arxiv_client:
                 self.tool_registry.register(ArxivSearchTool(arxiv_client=arxiv_client))
             if paper_repository:
                 self.tool_registry.register(ExploreCitationsTool(paper_repository=paper_repository))
-                self.tool_registry.register(
-                    SummarizePaperTool(paper_repository=paper_repository, llm_client=llm_client)
-                )

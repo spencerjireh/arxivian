@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
     # Configure LiteLLM
     import litellm
 
-    litellm.suppress_debug_info = True
+    litellm.suppress_debug_info = True  # type: ignore[invalid-assignment]
     litellm.set_verbose = False
 
     if settings.langfuse_enabled:
@@ -106,7 +106,7 @@ register_exception_handlers(app)
 # CORS middleware (must be first in middleware stack)
 _cors_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
 app.add_middleware(
-    CORSMiddleware,
+    CORSMiddleware,  # type: ignore[invalid-argument-type]
     allow_origins=_cors_origins or ["*"],
     allow_credentials=bool(_cors_origins),
     allow_methods=["*"],

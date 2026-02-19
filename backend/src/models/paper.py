@@ -1,8 +1,13 @@
 """Paper model for arXiv papers."""
 
+from __future__ import annotations
+
 import uuid
-from sqlalchemy import Column, String, Text, Boolean, TIMESTAMP, ForeignKey, UniqueConstraint, func
+from datetime import datetime
+
+from sqlalchemy import String, Text, Boolean, TIMESTAMP, ForeignKey, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 from src.database import Base
 
 
@@ -13,34 +18,42 @@ class Paper(Base):
     __table_args__ = (UniqueConstraint("arxiv_id", name="uq_papers_arxiv_id"),)
 
     # Primary key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # Audit
-    ingested_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
+    ingested_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), index=True
+    )
 
     # arXiv metadata
-    arxiv_id = Column(String(50), nullable=False, index=True)
-    title = Column(Text, nullable=False)
-    authors = Column(JSONB, nullable=False)  # List of author names
-    abstract = Column(Text, nullable=False)
-    categories = Column(JSONB, nullable=False)  # List of arXiv categories
-    published_date = Column(TIMESTAMP(timezone=True), nullable=False, index=True)
-    pdf_url = Column(Text, nullable=False)
+    arxiv_id: Mapped[str] = mapped_column(String(50), index=True)
+    title: Mapped[str] = mapped_column(Text)
+    authors: Mapped[list] = mapped_column(JSONB)
+    abstract: Mapped[str] = mapped_column(Text)
+    categories: Mapped[list] = mapped_column(JSONB)
+    published_date: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), index=True)
+    pdf_url: Mapped[str] = mapped_column(Text)
 
     # Parsed content
-    raw_text = Column(Text, nullable=True)
-    sections = Column(JSONB, nullable=True)  # List of {title, content, page_start, page_end}
-    references = Column(JSONB, nullable=True)  # List of citation strings
+    raw_text: Mapped[str | None] = mapped_column(Text)
+    sections: Mapped[list | None] = mapped_column(JSONB)
+    references: Mapped[list | None] = mapped_column(JSONB)
 
     # Processing metadata
-    pdf_processed = Column(Boolean, default=False, index=True)
-    pdf_processing_date = Column(TIMESTAMP(timezone=True), nullable=True)
-    parser_used = Column(String(50), nullable=True)
-    parser_metadata = Column(JSONB, nullable=True)
+    pdf_processed: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", index=True
+    )
+    pdf_processing_date: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
+    parser_used: Mapped[str | None] = mapped_column(String(50))
+    parser_metadata: Mapped[dict | None] = mapped_column(JSONB)
 
     # Timestamps
-    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
-    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     def __repr__(self):
         return f"<Paper(arxiv_id='{self.arxiv_id}', title='{self.title[:50]}...')>"

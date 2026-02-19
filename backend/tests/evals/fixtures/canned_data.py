@@ -167,13 +167,3 @@ CITATION_RESULTS = {
     ],
 }
 
-SUMMARIZE_PAPER_RESULT = {
-    "arxiv_id": "1706.03762",
-    "title": "Attention Is All You Need",
-    "summary": (
-        "This paper introduces the Transformer, a model architecture eschewing "
-        "recurrence and instead relying entirely on an attention mechanism to draw "
-        "global dependencies between input and output. The Transformer achieves "
-        "state-of-the-art results on English-German and English-French translation."
-    ),
-}

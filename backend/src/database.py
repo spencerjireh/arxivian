@@ -2,11 +2,14 @@
 
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 from src.config import get_settings
 
+
 # Base class for all models
-Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
+
 
 # Create async engine
 settings = get_settings()

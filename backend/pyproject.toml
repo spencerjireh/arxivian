@@ -94,6 +94,7 @@ invalid-method-override = "warn"
 invalid-argument-type = "warn"
 invalid-assignment = "warn"
 no-matching-overload = "warn"
+possibly-missing-attribute = "warn"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

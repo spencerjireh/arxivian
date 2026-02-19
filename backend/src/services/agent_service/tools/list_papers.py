@@ -73,7 +73,7 @@ class ListPapersTool(BaseTool):
             "required": [],
         }
 
-    async def execute(
+    async def execute(  # type: ignore[override]
         self,
         query: str | None = None,
         author: str | None = None,

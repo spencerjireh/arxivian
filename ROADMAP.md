@@ -235,7 +235,6 @@ Items to consider for future releases. Not prioritized.
 - [x] `ingest_papers` - agent-triggered paper ingestion from arXiv
 - [x] `list_papers` - query papers in database with filters
 - [x] `arxiv_search` - search arXiv directly without ingesting
-- [x] `summarize_paper` - generate paper summaries
 - [x] `explore_citations` - find citing/cited papers
 - [x] Parallel tool execution
 

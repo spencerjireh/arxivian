@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import {
-  BookOpen, Search, FolderInput, FileText, List, GitBranch, BookMarked,
+  BookOpen, Search, FolderInput, List, GitBranch, BookMarked,
   PenLine, RotateCcw, Shield, Route, Zap, Award, Ban, CircleCheck, Download,
 } from 'lucide-react'
 import type { Variants } from 'framer-motion'
@@ -14,7 +14,6 @@ export const STEP_ICONS: Record<ActivityStepKind | InternalStepKind, LucideIcon>
   retrieve: BookOpen,
   arxiv_search: Search,
   ingest: FolderInput,
-  summarize_paper: FileText,
   list_papers: List,
   explore_citations: GitBranch,
   propose_ingest: BookMarked,
@@ -34,7 +33,6 @@ export const STEP_ICON_COLORS: Record<ActivityStepKind | InternalStepKind, strin
   retrieve: 'text-amber-700',
   arxiv_search: 'text-amber-600',
   ingest: 'text-green-700',
-  summarize_paper: 'text-stone-600',
   list_papers: 'text-stone-500',
   explore_citations: 'text-amber-700',
   propose_ingest: 'text-green-600',
@@ -65,7 +63,6 @@ export const STEP_ANIMATION_VARIANTS: Record<ActivityStepKind | InternalStepKind
   // Writing -- continuous spin
   refining: spinVariants,
   // Evaluation -- scale pulse
-  summarize_paper: scalePulseVariants,
   list_papers: scalePulseVariants,
   grading: scalePulseVariants,
   // Control flow -- opacity pulse
@@ -80,7 +77,6 @@ export const TOOL_LABELS: Record<string, { label: string; pastVerb: string }> = 
   retrieve_chunks: { label: 'Retrieving relevant sections', pastVerb: 'Retrieved' },
   arxiv_search: { label: 'Searching arXiv', pastVerb: 'Searched arXiv' },
   ingest_papers: { label: 'Adding papers to library', pastVerb: 'Added' },
-  summarize_paper: { label: 'Summarizing paper', pastVerb: 'Summarized' },
   list_papers: { label: 'Listing papers', pastVerb: 'Listed papers' },
   explore_citations: { label: 'Exploring citations', pastVerb: 'Explored citations' },
   propose_ingest: { label: 'Proposing papers to add', pastVerb: 'Proposed' },
@@ -90,7 +86,6 @@ export const TOOL_TO_KIND: Record<string, ActivityStepKind> = {
   retrieve_chunks: 'retrieve',
   arxiv_search: 'arxiv_search',
   ingest_papers: 'ingest',
-  summarize_paper: 'summarize_paper',
   list_papers: 'list_papers',
   explore_citations: 'explore_citations',
   propose_ingest: 'propose_ingest',

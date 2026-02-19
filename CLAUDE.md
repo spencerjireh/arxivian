@@ -45,7 +45,7 @@ Test markers: `@pytest.mark.unit`, `@pytest.mark.api`, `@pytest.mark.integration
 
 Layered: `routers/` -> `services/` -> `repositories/` -> `models/` (async SQLAlchemy). Also: `schemas/` (Pydantic), `clients/` (OpenAI, arXiv, Jina, Langfuse), `middleware/`, `factories/`.
 
-**Agent service** (`services/agent_service/`): LangGraph workflow with nodes: guardrail -> router -> executor -> grading -> generation. Tools (in `tools/`): retrieve, arxiv_search, ingest, summarize_paper, list_papers, explore_citations. SSE streaming with custom event types (STATUS, CONTENT, SOURCES, METADATA, DONE).
+**Agent service** (`services/agent_service/`): LangGraph workflow with nodes: guardrail -> router -> executor -> grading -> generation. Tools (in `tools/`): retrieve, arxiv_search, ingest, list_papers, explore_citations. SSE streaming with custom event types (STATUS, CONTENT, SOURCES, METADATA, DONE).
 
 **Celery tasks** (`tasks/`): Redis broker, RedBeat scheduler. Files: `ingest_tasks.py`, `cleanup_tasks.py`, `scheduled_tasks.py`, `signals.py`, `tracing.py`. Flower at port 5555.
 

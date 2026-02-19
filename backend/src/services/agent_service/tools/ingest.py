@@ -121,7 +121,7 @@ class IngestPapersTool(BaseTool):
             "required": [],
         }
 
-    async def execute(
+    async def execute(  # type: ignore[override]
         self,
         query: str | None = None,
         arxiv_ids: list[str] | None = None,
@@ -169,6 +169,9 @@ class IngestPapersTool(BaseTool):
         # the cap. Acceptable for free-tier soft limits; revisit if hard enforcement
         # is needed.
         if self._quota_enabled:
+            assert self.usage_counter_repo is not None
+            assert self.user_id is not None
+            assert self.daily_ingests is not None
             count = await self.usage_counter_repo.get_today_ingest_count(self.user_id)
             if count >= self.daily_ingests:
                 return ToolResult(
@@ -233,6 +236,8 @@ class IngestPapersTool(BaseTool):
 
             # Track ingest usage
             if self._quota_enabled and response.papers_processed > 0:
+                assert self.usage_counter_repo is not None
+                assert self.user_id is not None
                 await self.usage_counter_repo.increment_ingest_count(
                     self.user_id, response.papers_processed
                 )
