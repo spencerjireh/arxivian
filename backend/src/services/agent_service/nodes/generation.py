@@ -41,7 +41,10 @@ async def generate_answer_node(state: AgentState, config: RunnableConfig) -> dic
 
     # Add note if limited sources found after max attempts
     if attempts >= context.max_retrieval_attempts and len(chunks) < context.top_k:
-        builder.with_note("Limited sources found. Acknowledge gaps if needed.")
+        builder.with_note(
+            "Limited sources were found in the knowledge base. "
+            "Some chunks are available but they do not fully cover the question."
+        )
 
     system, user_prompt = builder.build()
 

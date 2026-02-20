@@ -32,7 +32,9 @@ class ProposeIngestTool(BaseTool):
     name = "propose_ingest"
     description = (
         "Propose papers for ingestion into the knowledge base. "
-        "Use AFTER arxiv_search to let the user review and confirm which papers to add. "
+        "Use ONLY AFTER arxiv_search AND only when the user explicitly asked to "
+        "find, add, import, or ingest new papers. "
+        "Never propose ingestion on your own initiative. "
         "Provide the arXiv IDs from a previous arxiv_search result. "
         "Limited to 5 papers per proposal."
     )

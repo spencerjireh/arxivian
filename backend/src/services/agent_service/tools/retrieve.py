@@ -16,9 +16,9 @@ class RetrieveChunksTool(BaseTool):
 
     name = "retrieve_chunks"
     description = (
-        "Search the arXiv research paper database for relevant document chunks. "
-        "Use this when you need information from ingested academic papers on any "
-        "scientific or technical topic."
+        "Answer questions using papers already in the knowledge base. "
+        "Retrieves relevant passages from ingested arXiv papers. "
+        "This is the DEFAULT tool for any content question about research topics."
     )
 
     extends_chunks: ClassVar[bool] = True

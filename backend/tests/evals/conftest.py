@@ -14,7 +14,7 @@ from src.services.agent_service.graph_builder import build_graph
 from src.services.agent_service.tools import (
     ToolRegistry,
     RetrieveChunksTool,
-    IngestPapersTool,
+    ProposeIngestTool,
     ListPapersTool,
     ArxivSearchTool,
     ExploreCitationsTool,
@@ -97,7 +97,7 @@ def eval_context(
     registry.register(
         RetrieveChunksTool(search_service=mock_search_service, default_top_k=6)
     )
-    registry.register(IngestPapersTool(ingest_service=mock_ingest_service))
+    registry.register(ProposeIngestTool(paper_repository=mock_paper_repository))
     registry.register(ListPapersTool(ingest_service=mock_ingest_service))
     registry.register(ArxivSearchTool(arxiv_client=mock_arxiv_client))
     registry.register(ExploreCitationsTool(paper_repository=mock_paper_repository))

@@ -172,4 +172,34 @@ ROUTER_SCENARIOS: list[RouterScenario] = [
         expected_action="execute_tools",
         description="Explicit retrieval follow-up asking for more details on training",
     ),
+    # Anti-escalation: weak retrieve should generate, not escalate to arxiv_search
+    RouterScenario(
+        id="no_escalation_after_weak_retrieve",
+        query="What does the paper say about dropout regularization?",
+        tool_history=[
+            ToolExecution(
+                tool_name="retrieve_chunks",
+                tool_args={"query": "dropout regularization"},
+                success=True,
+                result_summary="Retrieved 1 item (low relevance)",
+            ),
+        ],
+        expected_tools=[],
+        expected_action="generate",
+        description=(
+            "After retrieve_chunks returned weak results, the router should generate "
+            "with available context rather than silently escalating to arxiv_search"
+        ),
+    ),
+    # Content questions default to retrieve_chunks without explicit "retrieve" language
+    RouterScenario(
+        id="content_question_defaults_retrieve",
+        query="Summarize the attention mechanism from the Transformer paper",
+        expected_tools=["retrieve_chunks"],
+        expected_action="execute_tools",
+        description=(
+            "A content question about a research topic should default to "
+            "retrieve_chunks even without explicit retrieval language"
+        ),
+    ),
 ]

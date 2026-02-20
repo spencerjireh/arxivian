@@ -135,6 +135,7 @@ class ServiceMockBuilder:
 
         paper_repository = AsyncMock()
         paper_repository.get_citations = AsyncMock(return_value=self._citation_results)
+        paper_repository.get_existing_arxiv_ids = AsyncMock(return_value=set())
 
         return ServiceMocks(
             search_service=search_service,

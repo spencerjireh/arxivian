@@ -27,9 +27,10 @@ class ArxivSearchTool(BaseTool):
 
     name = "arxiv_search"
     description = (
-        "Search arXiv for papers matching a query. Returns metadata only without "
-        "downloading or processing. Use when user wants to find papers on arXiv "
-        "or explore what's available before deciding to ingest."
+        "Discover NEW papers on arXiv that are NOT yet in the knowledge base. "
+        "Returns metadata only (titles, abstracts, dates) without downloading. "
+        "ONLY use when the user explicitly asks to find, discover, or look for "
+        "new papers on arXiv. Never use this for answering content questions."
     )
 
     extends_chunks: ClassVar[bool] = False
