@@ -245,6 +245,23 @@ class EmbeddingServiceError(ExternalServiceError):
         self.error_code = "EMBEDDING_SERVICE_ERROR"
 
 
+class EmbeddingRateLimitError(EmbeddingServiceError):
+    """Raised when embedding API returns 429 rate limit exceeded."""
+
+    def __init__(
+        self,
+        message: str = "Embedding API rate limit exceeded",
+        retry_after: Optional[float] = None,
+        details: Optional[dict[str, Any]] = None,
+    ):
+        details = details or {}
+        if retry_after is not None:
+            details["retry_after"] = retry_after
+        super().__init__(message=message, details=details)
+        self.error_code = "EMBEDDING_RATE_LIMIT"
+        self.retry_after = retry_after
+
+
 class PDFProcessingError(ExternalServiceError):
     """Raised when PDF processing fails."""
 
