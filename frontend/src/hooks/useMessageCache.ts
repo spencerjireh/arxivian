@@ -2,7 +2,12 @@ import { useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useChatStore } from '../stores/chatStore'
 import { hydrateThinkingSteps } from '../lib/thinking'
-import type { Message, PersistedThinkingStep, ConfirmIngestEventData } from '../types/api'
+import type {
+  Message,
+  PersistedThinkingStep,
+  CitationsEventData,
+  ConfirmIngestEventData,
+} from '../types/api'
 
 export const chatKeys = {
   messages: (sessionId: string | null) => ['chat', 'messages', sessionId] as const,
@@ -44,6 +49,7 @@ export function useMessageCache(sessionId: string | null) {
         sources?: Record<string, unknown>[] | null
         reasoning_steps?: string[] | null
         thinking_steps?: PersistedThinkingStep[] | null
+        citations?: Record<string, unknown> | null
         pending_confirmation?: ConfirmIngestEventData | null
         created_at: string
       }>
@@ -72,6 +78,7 @@ export function useMessageCache(sessionId: string | null) {
             reasoning_steps: turn.reasoning_steps ?? [],
           },
           thinkingSteps: hydrateThinkingSteps(turn.thinking_steps),
+          citations: (turn.citations as CitationsEventData) ?? undefined,
           ingestProposal: turn.pending_confirmation ?? undefined,
           createdAt: new Date(turn.created_at),
         },

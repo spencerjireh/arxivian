@@ -18,7 +18,7 @@ export interface StreamRequest {
 
 export type StreamEventType =
   | 'status' | 'content' | 'sources' | 'metadata' | 'error' | 'done'
-  | 'confirm_ingest' | 'ingest_complete'
+  | 'citations' | 'confirm_ingest' | 'ingest_complete'
 
 export interface StatusEventData {
   step: string
@@ -60,6 +60,15 @@ export interface MetadataEventData {
 export interface ErrorEventData {
   error: string
   code?: string
+}
+
+// Citation explorer types
+
+export interface CitationsEventData {
+  arxiv_id: string
+  title: string
+  reference_count: number
+  references: string[]
 }
 
 // HITL ingest confirmation types
@@ -162,6 +171,7 @@ export interface ConversationTurnResponse {
   sources?: Record<string, unknown>[]
   reasoning_steps?: string[]
   thinking_steps?: PersistedThinkingStep[] | null
+  citations?: Record<string, unknown> | null
   pending_confirmation?: ConfirmIngestEventData | null
   created_at: string
 }
@@ -256,6 +266,7 @@ export interface Message {
   isStreaming?: boolean
   error?: string
   createdAt: Date
+  citations?: CitationsEventData
   ingestProposal?: ConfirmIngestEventData
   ingestResolved?: boolean
 }

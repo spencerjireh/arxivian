@@ -3,7 +3,7 @@
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 from src.schemas.common import SourceInfo
 
@@ -63,7 +63,9 @@ class StreamEventType(str, Enum):
     METADATA = "metadata"  # Final execution metadata
     ERROR = "error"  # Error events
     DONE = "done"  # Stream complete
+    CITATIONS = "citations"  # Citation graph from explore_citations tool
     CONFIRM_INGEST = "confirm_ingest"  # HITL: propose papers for user confirmation
+    HITL_RESUMED = "hitl_resumed"  # HITL: user responded, active processing resumed (internal)
     INGEST_COMPLETE = "ingest_complete"  # HITL: ingestion finished
 
 
@@ -112,6 +114,28 @@ class ErrorEventData(BaseModel):
     code: str | None = Field(default=None, description="Error code if available")
 
 
+class CitationsEventData(BaseModel):
+    """Data for citation graph from explore_citations tool."""
+
+    arxiv_id: str = Field(..., description="arXiv ID of the explored paper")
+    title: str = Field(..., description="Title of the explored paper")
+    references: list[str] = Field(default_factory=list, description="Reference titles/descriptions")
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def reference_count(self) -> int:
+        """Derived from references list length to prevent mismatches."""
+        return len(self.references)
+
+
+class DoneEventData(BaseModel):
+    """Sentinel: stream is complete."""
+
+
+class HitlResumedEventData(BaseModel):
+    """Internal sentinel: active processing resumed after HITL confirmation."""
+
+
 class IngestProposalPaper(BaseModel):
     """A single paper proposed for ingestion."""
 
@@ -150,7 +174,9 @@ class StreamEvent(BaseModel):
         | SourcesEventData
         | MetadataEventData
         | ErrorEventData
+        | CitationsEventData
+        | DoneEventData
+        | HitlResumedEventData
         | ConfirmIngestEventData
         | IngestCompleteEventData
-        | dict
     )

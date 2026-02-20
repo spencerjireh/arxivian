@@ -99,6 +99,9 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
 
         writer({"type": "tool_end", "tool_name": tc.tool_name, "success": result.success})
 
+        if tc.tool_name == "explore_citations" and result.success and result.data:
+            writer({"type": "citations_data", "data": result.data})
+
         return tc.tool_name, tool_args, result
 
     # Run all tools in parallel

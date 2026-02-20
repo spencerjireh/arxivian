@@ -47,7 +47,7 @@ function ProductMock() {
           <div className="max-w-[80%]">
             <div className="flex items-center gap-2.5 mb-3 justify-end">
               <span className="text-sm font-medium text-stone-500">You</span>
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-stone-100">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-stone-100">
                 <User className="w-3.5 h-3.5 text-stone-500" strokeWidth={1.5} />
               </div>
             </div>
@@ -60,12 +60,23 @@ function ProductMock() {
         {/* Agent response */}
         <div>
           <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-stone-100 border border-stone-200">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-stone-100">
               <img src={logoIcon} alt="" className="w-4 h-4" aria-hidden="true" />
             </div>
             <span className="text-sm font-medium text-stone-500">Arxivian</span>
           </div>
           <div className="pl-9 space-y-4">
+            {/* Reasoning bar (static mock of ThinkingTimeline collapsed state) */}
+            <div className="flex items-center gap-2 border-l-2 border-stone-200 pl-3 py-1.5 text-xs text-stone-400">
+              <BookOpen className="w-3.5 h-3.5 shrink-0" strokeWidth={1.5} />
+              <span>View reasoning</span>
+              <span className="ml-auto flex items-center gap-1.5">
+                <span className="italic">Searched 1 source</span>
+                <span className="font-mono">-- 2.1s</span>
+                <ChevronRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+              </span>
+            </div>
+
             <div className="text-sm text-stone-800 leading-relaxed">
               The <strong>self-attention mechanism</strong> allows models to weigh the
               relevance of each token relative to all others in a sequence, replacing recurrence entirely.
@@ -87,6 +98,9 @@ function ProductMock() {
                       <span className="text-xs text-stone-400">96% match</span>
                     </div>
                     <p className="text-sm text-stone-700 leading-snug">Attention Is All You Need</p>
+                    <div className="w-20 h-1 bg-stone-100 rounded-full mt-1.5 overflow-hidden">
+                      <div className="h-full bg-stone-500 rounded-full" style={{ width: '96%' }} />
+                    </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-stone-300 shrink-0 mt-1" strokeWidth={1.5} />
                 </div>
@@ -117,7 +131,7 @@ function ResearchAssistantIllustration() {
       {/* Agent message */}
       <div>
         <div className="flex items-center gap-1.5 mb-1">
-          <div className="w-4 h-4 rounded bg-stone-100 border border-stone-200 flex items-center justify-center">
+          <div className="w-4 h-4 rounded bg-stone-100 flex items-center justify-center">
             <img src={logoIcon} alt="" className="w-2.5 h-2.5" aria-hidden="true" />
           </div>
           <span className="text-[10px] font-medium text-stone-400">Arxivian</span>
@@ -178,21 +192,35 @@ function SmartSearchIllustration() {
 
 function CitationExplorerIllustration() {
   return (
-    <div className="space-y-2">
-      {/* Root paper */}
-      <div className="bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 flex items-center gap-2">
-        <FileText className="w-3.5 h-3.5 text-stone-400 shrink-0" strokeWidth={1.5} />
-        <span className="text-xs text-stone-600 truncate">Attention Is All You Need</span>
+    <div className="rounded-lg border border-stone-200 bg-stone-50/80 overflow-hidden">
+      {/* Root paper header */}
+      <div className="px-3 py-2 flex items-center gap-2">
+        <div className="w-6 h-6 rounded bg-amber-50 flex items-center justify-center shrink-0">
+          <GitBranch className="w-3 h-3 text-amber-600" strokeWidth={1.5} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="text-[10px] font-mono text-stone-400">1706.03762</span>
+            <span className="text-[10px] text-stone-400">3 references</span>
+          </div>
+          <p className="text-[11px] text-stone-700 leading-snug truncate">Attention Is All You Need</p>
+        </div>
+        <ChevronDown className="w-3 h-3 text-stone-300 shrink-0" strokeWidth={1.5} />
       </div>
       {/* Citation branches */}
-      <div className="pl-4 border-l-2 border-stone-200 space-y-1.5">
-        <div className="bg-white border border-stone-100 rounded px-2.5 py-1.5 flex items-center gap-2">
-          <GitBranch className="w-3 h-3 text-stone-400 shrink-0" strokeWidth={1.5} />
-          <span className="text-[11px] text-stone-500 truncate">BERT: Pre-training of Deep...</span>
-        </div>
-        <div className="bg-white border border-stone-100 rounded px-2.5 py-1.5 flex items-center gap-2">
-          <GitBranch className="w-3 h-3 text-stone-400 shrink-0" strokeWidth={1.5} />
-          <span className="text-[11px] text-stone-500 truncate">GPT-2: Language Models are...</span>
+      <div className="px-3 pb-2.5">
+        <div className="ml-8 border-l-2 border-stone-200 pl-2.5 space-y-1">
+          {[
+            { num: 1, title: 'Neural Machine Translation by Jointly...', year: '2014' },
+            { num: 2, title: 'Sequence to Sequence Learning with...', year: '2014' },
+            { num: 3, title: 'Effective Approaches to Attention-based...', year: '2015' },
+          ].map((ref) => (
+            <div key={ref.num} className="flex items-center gap-1.5 text-[11px] text-stone-500">
+              <span className="font-mono text-stone-400 text-[10px]">{ref.num}.</span>
+              <span className="truncate">{ref.title}</span>
+              <span className="text-[10px] font-mono text-stone-300 shrink-0">{ref.year}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -492,7 +520,7 @@ export default function LandingPage() {
                 <div className="max-w-[80%]">
                   <div className="flex items-center gap-2.5 justify-end mb-2">
                     <span className="text-sm font-medium text-stone-500">You</span>
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-stone-100">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-stone-100">
                       <User className="w-3.5 h-3.5 text-stone-500" strokeWidth={1.5} />
                     </div>
                   </div>
@@ -508,7 +536,7 @@ export default function LandingPage() {
             {/* Answer */}
             <div className="p-5">
               <div className="flex items-center gap-2.5 mb-2">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-stone-100 border border-stone-200">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-stone-100">
                   <img src={logoIcon} alt="" className="w-4 h-4" aria-hidden="true" />
                 </div>
                 <span className="text-sm font-medium text-stone-500">Arxivian</span>

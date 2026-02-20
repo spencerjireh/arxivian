@@ -112,6 +112,7 @@ async def get_conversation(
             sources=turn.sources,
             reasoning_steps=turn.reasoning_steps,
             thinking_steps=turn.thinking_steps,
+            citations=turn.citations,
             pending_confirmation=turn.pending_confirmation,
             created_at=turn.created_at,
         )

@@ -103,3 +103,52 @@ class TestConfirmIngestNode:
 
         assert result["pause_reason"] is None
         assert result["pause_data"] is None
+
+    # ------------------------------------------------------------------
+    # 5. Partial failure -- some papers ingested, some errors
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    @patch("src.services.agent_service.nodes.confirm_ingest.interrupt")
+    async def test_partial_failure_prompt_text(self, mock_interrupt, base_state, config):
+        """When some papers succeed and some fail, prompt_text reflects both."""
+        from src.services.agent_service.nodes.confirm_ingest import confirm_ingest_node
+
+        mock_interrupt.return_value = {
+            "declined": False,
+            "papers_processed": 1,
+            "errors": ["2301.00002: download failed"],
+        }
+
+        result = await confirm_ingest_node(base_state, config)
+
+        entry = result["tool_outputs"][0]
+        assert "approved" in entry["prompt_text"].lower()
+        assert "1" in entry["prompt_text"]
+        assert "failed" in entry["prompt_text"].lower()
+        assert "2301.00002" in entry["prompt_text"]
+
+    # ------------------------------------------------------------------
+    # 6. Total failure -- zero papers ingested, all errors
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    @patch("src.services.agent_service.nodes.confirm_ingest.interrupt")
+    async def test_total_failure_prompt_text(self, mock_interrupt, base_state, config):
+        """When ingestion completely fails, prompt_text indicates failure."""
+        from src.services.agent_service.nodes.confirm_ingest import confirm_ingest_node
+
+        mock_interrupt.return_value = {
+            "declined": False,
+            "papers_processed": 0,
+            "errors": ["2301.00001: rate limited", "2301.00002: not found"],
+        }
+
+        result = await confirm_ingest_node(base_state, config)
+
+        entry = result["tool_outputs"][0]
+        assert "failed" in entry["prompt_text"].lower()
+        assert "2301.00001" in entry["prompt_text"]
+        assert "2301.00002" in entry["prompt_text"]
+        # Should NOT say "Successfully ingested"
+        assert "successfully" not in entry["prompt_text"].lower()

@@ -42,6 +42,9 @@ from src.schemas.stream import (
     ContentEventData,
     SourcesEventData,
     MetadataEventData,
+    CitationsEventData,
+    DoneEventData,
+    HitlResumedEventData,
     ConfirmIngestEventData,
     IngestCompleteEventData,
 )
@@ -232,6 +235,13 @@ class AgentService:
                         ),
                     )
                     tracker.end("executing", tool_end_msg, tool_details)
+
+                elif event_type == "citations_data":
+                    citations = chunk.get("data", {})
+                    yield StreamEvent(
+                        event=StreamEventType.CITATIONS,
+                        data=CitationsEventData(**citations),
+                    )
 
             elif stream_mode == "updates":
                 if not isinstance(chunk, dict):
@@ -613,7 +623,9 @@ class AgentService:
                     ),
                 )
 
-                # Save partial turn with pending_confirmation
+                # Save partial turn with pending_confirmation.
+                # Explicit commit so the confirm-ingest endpoint (separate DB session)
+                # can see the pending state.
                 if self.conversation_repo:
                     await self.conversation_repo.save_turn(
                         session_id,
@@ -621,6 +633,7 @@ class AgentService:
                             query,
                             final_state,
                             tracker,
+                            citations=None,  # deferred to complete_pending_turn
                             pending_confirmation={
                                 "papers": papers,
                                 "proposed_ids": proposed_ids,
@@ -630,9 +643,13 @@ class AgentService:
                         ),
                         user_id=self.user_id,
                     )
+                    await self.conversation_repo.commit()
 
                 # Wait for user confirmation via Redis pub/sub
                 confirmation = await self._wait_for_confirmation(session_id)
+
+                # Signal that active processing has resumed (router uses this to restart timeout)
+                yield StreamEvent(event=StreamEventType.HITL_RESUMED, data=HitlResumedEventData())
 
                 if confirmation.get("declined"):
                     # Resume graph with decline
@@ -641,15 +658,18 @@ class AgentService:
                     # Run inline ingest for selected papers
                     selected_ids = confirmation.get("selected_ids", proposed_ids)
                     papers_processed = 0
+                    ingest_errors: list[str] = []
                     async for ingest_event in self._run_inline_ingest(selected_ids):
                         if isinstance(ingest_event.data, IngestCompleteEventData):
                             papers_processed = ingest_event.data.papers_processed
+                            ingest_errors = ingest_event.data.errors
                         yield ingest_event
 
                     resume_value = {
                         "approved": True,
                         "selected_ids": selected_ids,
                         "papers_processed": papers_processed,
+                        "errors": ingest_errors,
                     }
 
                 # Resume graph with Command
@@ -681,6 +701,7 @@ class AgentService:
                         reasoning_steps=final_state.get("metadata", {}).get(
                             "reasoning_steps"
                         ),
+                        citations=self._extract_citations(final_state),
                     )
 
             elif interrupted:
@@ -776,7 +797,7 @@ class AgentService:
             ),
         )
 
-        yield StreamEvent(event=StreamEventType.DONE, data={})
+        yield StreamEvent(event=StreamEventType.DONE, data=DoneEventData())
 
     # ------------------------------------------------------------------
     # Helpers
@@ -808,6 +829,14 @@ class AgentService:
             for chunk in relevant_chunks
         ]
 
+    @staticmethod
+    def _extract_citations(final_state: dict) -> dict | None:
+        """Extract citations from explore_citations tool output, if present."""
+        for tool_output in final_state.get("tool_outputs", []):
+            if tool_output.get("tool_name") == "explore_citations" and tool_output.get("data"):
+                return tool_output["data"]
+        return None
+
     def _build_turn_data(
         self,
         query: str,
@@ -818,6 +847,9 @@ class AgentService:
         """Build TurnData from final state with optional field overrides."""
         guardrail_result = final_state.get("guardrail_result")
         sources = self._build_sources_dicts(final_state)
+        # Allow callers to override citations (e.g. None for partial HITL saves)
+        citations = overrides.pop("citations", self._extract_citations(final_state))
+
         return TurnData(
             user_query=query,
             agent_response=self._extract_answer(final_state),
@@ -829,5 +861,6 @@ class AgentService:
             sources=sources or None,
             reasoning_steps=final_state.get("metadata", {}).get("reasoning_steps"),
             thinking_steps=tracker.steps or None,
+            citations=citations,
             **overrides,
         )

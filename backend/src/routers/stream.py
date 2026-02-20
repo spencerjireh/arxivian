@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from src.config import get_settings
-from src.schemas.stream import StreamRequest, ErrorEventData
+from src.schemas.stream import StreamRequest, StreamEventType, ErrorEventData
 from src.dependencies import (
     DbSession,
     CurrentUserRequired,
@@ -93,7 +93,8 @@ async def stream(
             task_registry.register(task_id, current_task, user_id=str(user_id))
 
         try:
-            async with asyncio.timeout(timeout_seconds):
+            loop = asyncio.get_running_loop()
+            async with asyncio.timeout(timeout_seconds) as deadline:
                 # Create service with request parameters and tier-based tool gating
                 agent_service = get_agent_service(
                     db_session=db,
@@ -122,6 +123,14 @@ async def stream(
                     if await http_request.is_disconnected():
                         log.info("client disconnected", task_id=task_id)
                         break
+
+                    # HITL timeout management: pause clock while waiting for user,
+                    # restart with fresh budget when processing resumes.
+                    if event.event == StreamEventType.CONFIRM_INGEST:
+                        deadline.reschedule(float("inf"))
+                    elif event.event == StreamEventType.HITL_RESUMED:
+                        deadline.reschedule(loop.time() + timeout_seconds)
+                        continue  # internal sentinel, don't send to client
 
                     # Format as SSE
                     event_type = event.event.value

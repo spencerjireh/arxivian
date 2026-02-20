@@ -32,8 +32,17 @@ async def confirm_ingest_node(state: AgentState, config: RunnableConfig) -> dict
         log.info("confirm_ingest declined")
     else:
         n = result.get("papers_processed", 0)
-        output_entry["prompt_text"] = f"User approved. Ingested {n} papers."
-        log.info("confirm_ingest approved", papers_processed=n)
+        errors = result.get("errors", [])
+        if n > 0 and not errors:
+            output_entry["prompt_text"] = f"User approved. Successfully ingested {n} papers."
+        elif n > 0 and errors:
+            output_entry["prompt_text"] = (
+                f"User approved. Ingested {n} papers, but some failed: {'; '.join(errors)}"
+            )
+        else:
+            detail = f": {'; '.join(errors)}" if errors else ""
+            output_entry["prompt_text"] = f"User approved, but ingestion failed{detail}"
+        log.info("confirm_ingest approved", papers_processed=n, errors=len(errors))
 
     updates["tool_outputs"] = [*state.get("tool_outputs", []), output_entry]
     return updates

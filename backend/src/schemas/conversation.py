@@ -41,6 +41,7 @@ class TurnData:
     sources: list[dict] | None = None
     reasoning_steps: list[str] | None = None
     thinking_steps: list[ThinkingStepDict] | None = None
+    citations: dict | None = None
     pending_confirmation: dict | None = None
 
 
@@ -61,6 +62,7 @@ class ConversationTurnResponse(BaseModel):
     sources: list[dict] | None = None
     reasoning_steps: list[str] | None = None
     thinking_steps: list[ThinkingStepDict] | None = None
+    citations: dict | None = None
     pending_confirmation: dict | None = None
     created_at: datetime
 

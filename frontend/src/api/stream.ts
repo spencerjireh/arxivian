@@ -10,6 +10,7 @@ import type {
   SourcesEventData,
   MetadataEventData,
   ErrorEventData,
+  CitationsEventData,
   ConfirmIngestEventData,
   IngestCompleteEventData,
 } from '../types/api'
@@ -21,6 +22,7 @@ export interface StreamCallbacks {
   onMetadata?: (data: MetadataEventData) => void
   onError?: (data: ErrorEventData) => void
   onDone?: () => void
+  onCitations?: (data: CitationsEventData) => void
   onConfirmIngest?: (data: ConfirmIngestEventData) => void
   onIngestComplete?: (data: IngestCompleteEventData) => void
 }
@@ -87,6 +89,9 @@ export async function streamChat(
             break
           case 'error':
             callbacks.onError?.(data as ErrorEventData)
+            break
+          case 'citations':
+            callbacks.onCitations?.(data as CitationsEventData)
             break
           case 'confirm_ingest':
             callbacks.onConfirmIngest?.(data as ConfirmIngestEventData)

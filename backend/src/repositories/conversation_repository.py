@@ -19,6 +19,10 @@ class ConversationRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
+    async def commit(self) -> None:
+        """Flush and commit the current transaction."""
+        await self.session.commit()
+
     async def get_or_create(self, session_id: str, user_id: Optional[UUID] = None) -> Conversation:
         """
         Get existing conversation or create new one.
@@ -133,6 +137,7 @@ class ConversationRepository:
                     sources=turn.sources,
                     reasoning_steps=turn.reasoning_steps,
                     thinking_steps=turn.thinking_steps,
+                    citations=turn.citations,
                     pending_confirmation=turn.pending_confirmation,
                     provider=turn.provider,
                     model=turn.model,
@@ -165,6 +170,7 @@ class ConversationRepository:
         thinking_steps: list[dict] | None = None,
         sources: list[dict] | None = None,
         reasoning_steps: list[str] | None = None,
+        citations: dict | None = None,
     ) -> Optional[ConversationTurn]:
         """
         Complete a previously saved partial turn after HITL confirmation.
@@ -198,6 +204,8 @@ class ConversationRepository:
             ct.sources = sources
         if reasoning_steps is not None:
             ct.reasoning_steps = reasoning_steps
+        if citations is not None:
+            ct.citations = citations
 
         await self.session.flush()
         await self.session.refresh(ct)

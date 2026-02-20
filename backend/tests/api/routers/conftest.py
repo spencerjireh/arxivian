@@ -426,6 +426,8 @@ def sample_conversation_turn(sample_conversation):
     turn.sources = []
     turn.reasoning_steps = []
     turn.thinking_steps = []
+    turn.citations = None
+    turn.pending_confirmation = None
     turn.created_at = datetime.now(timezone.utc)
     return turn
 

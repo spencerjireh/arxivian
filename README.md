@@ -1,6 +1,6 @@
 <div align="center">
 
-# Arxivian
+<img src="public/logo-full.png" alt="Arxivian" width="320" />
 
 **An agentic RAG system for academic research.**
 

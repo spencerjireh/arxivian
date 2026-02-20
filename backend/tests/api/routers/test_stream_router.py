@@ -9,6 +9,7 @@ from src.schemas.stream import (
     StreamEventType,
     StatusEventData,
     ContentEventData,
+    DoneEventData,
     MetadataEventData,
 )
 
@@ -81,7 +82,7 @@ class TestStreamEndpoint:
             )
             yield StreamEvent(
                 event=StreamEventType.DONE,
-                data={},
+                data=DoneEventData(),
             )
 
         service.ask_stream = mock_ask_stream
@@ -229,7 +230,7 @@ class TestStreamEndpoint:
             mock_service = Mock()
 
             async def mock_stream(query, session_id=None):
-                yield StreamEvent(event=StreamEventType.DONE, data={})
+                yield StreamEvent(event=StreamEventType.DONE, data=DoneEventData())
 
             mock_service.ask_stream = mock_stream
             return mock_service
@@ -289,7 +290,7 @@ class TestStreamEndpoint:
             mock_service = Mock()
 
             async def mock_stream(query, session_id=None):
-                yield StreamEvent(event=StreamEventType.DONE, data={})
+                yield StreamEvent(event=StreamEventType.DONE, data=DoneEventData())
 
             mock_service.ask_stream = mock_stream
             return mock_service
@@ -435,7 +436,7 @@ class TestStreamErrorHandling:
 
             async def slow_stream(query, session_id=None):
                 await asyncio.sleep(10)  # Will timeout
-                yield StreamEvent(event=StreamEventType.DONE, data={})
+                yield StreamEvent(event=StreamEventType.DONE, data=DoneEventData())
 
             mock_service.ask_stream = slow_stream
             return mock_service
@@ -568,7 +569,7 @@ class TestStreamSettingsGuard:
         service = Mock()
 
         async def mock_stream(query, session_id=None):
-            yield StreamEvent(event=StreamEventType.DONE, data={})
+            yield StreamEvent(event=StreamEventType.DONE, data=DoneEventData())
 
         service.ask_stream = mock_stream
         return service

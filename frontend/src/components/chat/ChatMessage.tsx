@@ -3,8 +3,10 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { AlertCircle, Lightbulb, User } from 'lucide-react'
 import logoIcon from '../../assets/logo-icon.png'
 import clsx from 'clsx'
+import { useChatStore } from '../../stores/chatStore'
 import type { Message } from '../../types/api'
 import SourceCard from './SourceCard'
+import CitationTree from './CitationTree'
 import MarkdownRenderer from './MarkdownRenderer'
 import ThinkingTimeline from './ThinkingTimeline'
 import IngestConfirmation from './IngestConfirmation'
@@ -22,6 +24,8 @@ export default function ChatMessage({
   isStreaming,
   onIngestConfirm,
 }: ChatMessageProps) {
+  const hasProposal = !!message.ingestProposal
+  const storeIsIngesting = useChatStore((s) => (hasProposal ? s.isIngesting : false))
   const isUser = message.role === 'user'
   const content = message.content
   const shouldReduceMotion = useReducedMotion()
@@ -82,7 +86,7 @@ export default function ChatMessage({
               proposal={message.ingestProposal}
               onConfirm={onIngestConfirm}
               isResolved={message.ingestResolved}
-              isIngesting={message.isStreaming && !message.ingestResolved}
+              isIngesting={storeIsIngesting}
             />
           )}
 
@@ -118,6 +122,12 @@ export default function ChatMessage({
             <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
               <span>{message.error}</span>
+            </div>
+          )}
+
+          {!isUser && message.citations && (
+            <div className="mt-4">
+              <CitationTree citations={message.citations} />
             </div>
           )}
 

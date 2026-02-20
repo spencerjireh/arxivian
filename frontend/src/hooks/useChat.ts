@@ -14,6 +14,7 @@ import type {
   SourceInfo,
   MetadataEventData,
   ThinkingStep,
+  CitationsEventData,
 } from '../types/api'
 
 export { chatKeys } from './useMessageCache'
@@ -93,7 +94,8 @@ export function useChat(sessionId: string | null) {
       content: string,
       sources: SourceInfo[],
       metadata: MetadataEventData,
-      thinkingSteps: ThinkingStep[]
+      thinkingSteps: ThinkingStep[],
+      citations?: CitationsEventData,
     ) => {
       const now = new Date()
       const finalizedSteps = thinkingSteps.map((step) => ({
@@ -109,6 +111,7 @@ export function useChat(sessionId: string | null) {
         sources: sources.length > 0 ? sources : undefined,
         metadata,
         thinkingSteps: finalizedSteps.length > 0 ? finalizedSteps : undefined,
+        citations,
         isStreaming: false,
         createdAt: new Date(),
       }
@@ -173,6 +176,7 @@ export function useChat(sessionId: string | null) {
       const request = buildStreamRequest(query)
       let accumulatedContent = ''
       let accumulatedSources: SourceInfo[] = []
+      let accumulatedCitations: CitationsEventData | undefined
 
       try {
         await streamChat(
@@ -218,7 +222,8 @@ export function useChat(sessionId: string | null) {
                 accumulatedContent,
                 accumulatedSources,
                 data,
-                finalThinkingSteps
+                finalThinkingSteps,
+                accumulatedCitations,
               )
               streamingMessageIdRef.current = null
               setStreaming(false)
@@ -234,6 +239,12 @@ export function useChat(sessionId: string | null) {
               resetStreamingState()
               setError(data.error)
               setStreaming(false)
+            },
+            onCitations: (data) => {
+              accumulatedCitations = data
+              if (streamingMessageIdRef.current) {
+                updateStreamingMessage(streamingMessageIdRef.current, { citations: data })
+              }
             },
             onConfirmIngest: (data) => {
               setIngestProposal(data)
