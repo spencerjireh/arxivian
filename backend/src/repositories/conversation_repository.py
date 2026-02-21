@@ -235,6 +235,56 @@ class ConversationRepository:
         )
         return result.scalar_one_or_none() is not None
 
+    async def get_pending_turn(
+        self, session_id: str, user_id: Optional[UUID] = None
+    ) -> Optional[ConversationTurn]:
+        """Get the latest turn with an active pending_confirmation for a session."""
+        conv_query = select(Conversation.id).where(Conversation.session_id == session_id)
+        if user_id is not None:
+            conv_query = conv_query.where(Conversation.user_id == user_id)
+
+        result = await self.session.execute(
+            select(ConversationTurn)
+            .where(
+                ConversationTurn.conversation_id.in_(conv_query),
+                ConversationTurn.pending_confirmation.isnot(None),
+            )
+            .order_by(ConversationTurn.turn_number.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def clear_pending_confirmation(
+        self, session_id: str, turn_number: int
+    ) -> None:
+        """Clear the pending_confirmation flag on a turn without updating other fields."""
+        result = await self.session.execute(
+            select(Conversation).where(Conversation.session_id == session_id)
+        )
+        conv = result.scalar_one_or_none()
+        if not conv:
+            return
+
+        result = await self.session.execute(
+            select(ConversationTurn)
+            .where(
+                ConversationTurn.conversation_id == conv.id,
+                ConversationTurn.turn_number == turn_number,
+            )
+            .with_for_update()
+        )
+        ct = result.scalar_one_or_none()
+        if not ct:
+            return
+
+        ct.pending_confirmation = None
+        await self.session.flush()
+        log.debug(
+            "pending confirmation cleared",
+            session_id=session_id,
+            turn_number=turn_number,
+        )
+
     async def delete(self, session_id: str, user_id: Optional[UUID] = None) -> bool:
         """
         Delete a conversation and all its turns.

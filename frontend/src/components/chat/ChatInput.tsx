@@ -5,7 +5,6 @@ import { Settings2, X, ArrowUp, RotateCcw } from 'lucide-react'
 import type { LLMProvider } from '../../types/api'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { useUserStore } from '../../stores/userStore'
-import { useChatStore } from '../../stores/chatStore'
 import { transitions } from '../../lib/animations'
 import Button from '../ui/Button'
 
@@ -74,7 +73,6 @@ export default function ChatInput({
   }, [showAdvanced])
 
   const canAdjustSettings = useUserStore((s) => s.me?.can_adjust_settings ?? false)
-  const isAwaitingConfirmation = useChatStore((s) => s.ingestProposal !== null)
 
   const {
     provider,
@@ -96,7 +94,7 @@ export default function ChatInput({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    if (!query.trim() || isStreaming || isAwaitingConfirmation) return
+    if (!query.trim() || isStreaming) return
 
     onSend(query.trim())
     setQuery('')
@@ -315,7 +313,7 @@ export default function ChatInput({
               onBlur={() => setIsFocused(false)}
               placeholder="Ask about research papers..."
               rows={1}
-              disabled={isStreaming || isAwaitingConfirmation}
+              disabled={isStreaming}
               className={clsx(
                 'w-full px-4 pt-3 pb-1.5 text-stone-800 bg-transparent rounded-t-xl',
                 'resize-none placeholder:text-stone-400 outline-none',

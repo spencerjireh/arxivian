@@ -2,7 +2,7 @@
 
 import pytest
 import json
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 from src.schemas.stream import (
     StreamEvent,
@@ -358,11 +358,97 @@ class TestStreamValidation:
 
         app.dependency_overrides.clear()
 
-    def test_stream_missing_query(self, validation_client):
-        """Test validation error for missing query."""
+    def test_stream_empty_body_returns_422(self, validation_client):
+        """Test validation error for empty body (neither query nor resume)."""
         response = validation_client.post("/api/v1/stream", json={})
 
         assert response.status_code == 422
+
+    def test_stream_both_query_and_resume_returns_422(self, validation_client):
+        """Test validation error when both query and resume are provided."""
+        response = validation_client.post(
+            "/api/v1/stream",
+            json={
+                "query": "test",
+                "resume": {
+                    "session_id": "s1",
+                    "thread_id": "s1:0",
+                    "approved": True,
+                    "selected_ids": [],
+                },
+            },
+        )
+        assert response.status_code == 422
+
+    def test_stream_resume_only_returns_200(
+        self, mock_db_session, mock_settings, mock_user
+    ):
+        """Test that a resume-only request is accepted and routed to resume_stream."""
+        from src.main import app
+        from src.database import get_db
+        from src.config import get_settings
+        from src.dependencies import (
+            get_current_user_required,
+            get_tier_policy,
+            enforce_chat_limit,
+            get_redis,
+            get_usage_counter_repository,
+            get_conversation_repository,
+        )
+        from src.tiers import get_policy
+
+        called_resume = False
+
+        def mock_get_agent_service(**kwargs):
+            service = Mock()
+
+            async def mock_resume(session_id, thread_id, approved, selected_ids):
+                nonlocal called_resume
+                called_resume = True
+                yield StreamEvent(event=StreamEventType.DONE, data=DoneEventData())
+
+            service.resume_stream = mock_resume
+            return service
+
+        mock_conv_repo = AsyncMock()
+        mock_conv_repo.get_pending_turn = AsyncMock(return_value=MagicMock(
+            pending_confirmation={"model": "gpt-4o-mini", "temperature": 0.3}
+        ))
+
+        mock_usage_repo = AsyncMock()
+        mock_usage_repo.increment_query_count = AsyncMock()
+
+        app.dependency_overrides[get_db] = lambda: mock_db_session
+        app.dependency_overrides[get_settings] = lambda: mock_settings
+        app.dependency_overrides[get_current_user_required] = lambda: mock_user
+        app.dependency_overrides[get_tier_policy] = lambda: get_policy(mock_user)
+        app.dependency_overrides[enforce_chat_limit] = lambda: None
+        app.dependency_overrides[get_redis] = lambda: AsyncMock()
+        app.dependency_overrides[get_usage_counter_repository] = lambda: mock_usage_repo
+        app.dependency_overrides[get_conversation_repository] = lambda: mock_conv_repo
+
+        with patch(
+            "src.routers.stream.get_agent_service", mock_get_agent_service
+        ):
+            from fastapi.testclient import TestClient
+
+            with TestClient(app, raise_server_exceptions=False) as client:
+                response = client.post(
+                    "/api/v1/stream",
+                    json={
+                        "resume": {
+                            "session_id": "s1",
+                            "thread_id": "s1:0",
+                            "approved": True,
+                            "selected_ids": ["2301.00001"],
+                        },
+                    },
+                )
+
+        app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert called_resume
 
     def test_stream_invalid_top_k(self, validation_client):
         """Test validation error for invalid top_k."""

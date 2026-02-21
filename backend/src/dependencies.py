@@ -236,11 +236,15 @@ TierPolicyDep = Annotated[TierPolicy, Depends(get_tier_policy)]
 
 
 async def enforce_chat_limit(
+    request: StreamRequest,
     user: CurrentUserRequired,
     policy: TierPolicyDep,
     usage_repo: UsageCounterRepoDep,
 ) -> None:
-    """Enforce daily chat limit. Raises 429 if exceeded."""
+    """Enforce daily chat limit. Raises 429 if exceeded. Skips for resume requests."""
+    if request.resume:
+        return  # Resume doesn't count against chat limit
+
     if policy.daily_chats is None:
         return  # Pro -- unlimited
 
@@ -271,7 +275,10 @@ async def enforce_settings_guard(
     request: StreamRequest,
     policy: TierPolicyDep,
 ) -> None:
-    """Reject non-default settings for free-tier users (403)."""
+    """Reject non-default settings for free-tier users (403). Skips for resume requests."""
+    if request.resume:
+        return  # Resume uses stored settings from the original request
+
     if policy.can_adjust_settings:
         return
 

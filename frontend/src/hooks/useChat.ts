@@ -2,7 +2,8 @@ import { useCallback, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { streamChat, createStreamAbortController, StreamAbortError } from '../api/stream'
-import { conversationKeys, confirmIngest } from '../api/conversations'
+import type { StreamCallbacks } from '../api/stream'
+import { conversationKeys } from '../api/conversations'
 import { useChatStore } from '../stores/chatStore'
 import { useSettingsStore, DEFAULT_SETTINGS } from '../stores/settingsStore'
 import { useUserStore } from '../stores/userStore'
@@ -15,6 +16,7 @@ import type {
   MetadataEventData,
   ThinkingStep,
   CitationsEventData,
+  ConfirmIngestEventData,
 } from '../types/api'
 
 export { chatKeys } from './useMessageCache'
@@ -47,6 +49,7 @@ export function useChat(sessionId: string | null) {
   const getThinkingSteps = useChatStore((s) => s.getThinkingSteps)
   const setIngestProposal = useChatStore((s) => s.setIngestProposal)
   const setIsIngesting = useChatStore((s) => s.setIsIngesting)
+  const setSelectedIngestIds = useChatStore((s) => s.setSelectedIngestIds)
   const clearIngestState = useChatStore((s) => s.clearIngestState)
   const resetStreamingState = useChatStore((s) => s.resetStreamingState)
 
@@ -96,6 +99,7 @@ export function useChat(sessionId: string | null) {
       metadata: MetadataEventData,
       thinkingSteps: ThinkingStep[],
       citations?: CitationsEventData,
+      ingestProposal?: ConfirmIngestEventData,
     ) => {
       const now = new Date()
       const finalizedSteps = thinkingSteps.map((step) => ({
@@ -112,6 +116,7 @@ export function useChat(sessionId: string | null) {
         metadata,
         thinkingSteps: finalizedSteps.length > 0 ? finalizedSteps : undefined,
         citations,
+        ingestProposal,
         isStreaming: false,
         createdAt: new Date(),
       }
@@ -156,135 +161,97 @@ export function useChat(sessionId: string | null) {
     [sessionId]
   )
 
-  const sendMessage = useCallback(
-    async (query: string) => {
-      if (useChatStore.getState().isStreaming) {
-        return
-      }
-
-      addUserMessage(query)
-      resetStreamingState()
-      hasAddedGeneratingStep.current = false
-      setStreaming(true)
-      setError(null)
-
-      const streamingMessageId = addStreamingPlaceholder()
-      streamingMessageIdRef.current = streamingMessageId
-
-      abortControllerRef.current = createStreamAbortController()
-
-      const request = buildStreamRequest(query)
-      let accumulatedContent = ''
-      let accumulatedSources: SourceInfo[] = []
-      let accumulatedCitations: CitationsEventData | undefined
-
-      try {
-        await streamChat(
-          request,
-          {
-            onStatus: (data) => {
-              setStatus(data.message)
-              addThinkingStep(data)
-              const currentSteps = getThinkingSteps()
-              if (streamingMessageIdRef.current) {
-                updateStreamingMessage(streamingMessageIdRef.current, {
-                  thinkingSteps: currentSteps,
-                })
-              }
-            },
-            onContent: (data) => {
-              if (!hasAddedGeneratingStep.current) {
-                addGeneratingStep()
-                hasAddedGeneratingStep.current = true
-              }
-              accumulatedContent += data.token
-              appendStreamingContent(data.token)
-              if (streamingMessageIdRef.current) {
-                updateStreamingMessage(streamingMessageIdRef.current, {
-                  content: accumulatedContent,
-                })
-              }
-            },
-            onSources: (data) => {
-              accumulatedSources = data.sources
-              setSources(data.sources)
-              if (streamingMessageIdRef.current) {
-                updateStreamingMessage(streamingMessageIdRef.current, {
-                  sources: data.sources,
-                })
-              }
-            },
-            onMetadata: (data) => {
-              completeGeneratingStep()
-              const finalThinkingSteps = getThinkingSteps()
-              finalizeAssistantMessage(
-                streamingMessageIdRef.current,
-                accumulatedContent,
-                accumulatedSources,
-                data,
-                finalThinkingSteps,
-                accumulatedCitations,
-              )
-              streamingMessageIdRef.current = null
-              setStreaming(false)
-            },
-            onError: (data) => {
-              if (streamingMessageIdRef.current) {
-                updateStreamingMessage(streamingMessageIdRef.current, {
-                  isStreaming: false,
-                  error: data.error,
-                })
-                streamingMessageIdRef.current = null
-              }
-              resetStreamingState()
-              setError(data.error)
-              setStreaming(false)
-            },
-            onCitations: (data) => {
-              accumulatedCitations = data
-              if (streamingMessageIdRef.current) {
-                updateStreamingMessage(streamingMessageIdRef.current, { citations: data })
-              }
-            },
-            onConfirmIngest: (data) => {
-              setIngestProposal(data)
-              addThinkingStep({
-                step: 'confirming',
-                message: 'Waiting for confirmation...',
-                details: { papers: data.papers.length },
-              })
-              if (streamingMessageIdRef.current) {
-                const currentSteps = getThinkingSteps()
-                updateStreamingMessage(streamingMessageIdRef.current, {
-                  ingestProposal: data,
-                  thinkingSteps: currentSteps,
-                })
-              }
-            },
-            onIngestComplete: (data) => {
-              setIsIngesting(false)
-              addThinkingStep({
-                step: 'ingesting',
-                message: `Ingested ${data.papers_processed} papers`,
-                details: {
-                  papers_processed: data.papers_processed,
-                  chunks_created: data.chunks_created,
-                },
-              })
-              if (streamingMessageIdRef.current) {
-                const currentSteps = getThinkingSteps()
-                updateStreamingMessage(streamingMessageIdRef.current, {
-                  thinkingSteps: currentSteps,
-                  ingestResolved: true,
-                })
-              }
-            },
-            onDone: () => {
-              setStatus(null)
-            },
+  // Shared callback builder for streamChat. Callers provide overrides for
+  // onMetadata, onError, and optional extra handlers (onConfirmIngest).
+  const buildStreamCallbacks = useCallback(
+    (
+      accumulators: {
+        content: { value: string }
+        sources: { value: SourceInfo[] }
+        citations: { value: CitationsEventData | undefined }
+      },
+      overrides?: Partial<StreamCallbacks>,
+    ): StreamCallbacks => ({
+      onStatus: (data) => {
+        setStatus(data.message)
+        addThinkingStep(data)
+        if (streamingMessageIdRef.current) {
+          updateStreamingMessage(streamingMessageIdRef.current, {
+            thinkingSteps: getThinkingSteps(),
+          })
+        }
+      },
+      onContent: (data) => {
+        if (!hasAddedGeneratingStep.current) {
+          addGeneratingStep()
+          hasAddedGeneratingStep.current = true
+        }
+        accumulators.content.value += data.token
+        appendStreamingContent(data.token)
+        if (streamingMessageIdRef.current) {
+          updateStreamingMessage(streamingMessageIdRef.current, {
+            content: accumulators.content.value,
+          })
+        }
+      },
+      onSources: (data) => {
+        accumulators.sources.value = data.sources
+        setSources(data.sources)
+        if (streamingMessageIdRef.current) {
+          updateStreamingMessage(streamingMessageIdRef.current, {
+            sources: data.sources,
+          })
+        }
+      },
+      onCitations: (data) => {
+        accumulators.citations.value = data
+        if (streamingMessageIdRef.current) {
+          updateStreamingMessage(streamingMessageIdRef.current, { citations: data })
+        }
+      },
+      onIngestComplete: (data) => {
+        setIsIngesting(false)
+        addThinkingStep({
+          step: 'ingesting',
+          message: `Ingested ${data.papers_processed} papers`,
+          details: {
+            papers_processed: data.papers_processed,
+            chunks_created: data.chunks_created,
           },
-          abortControllerRef.current
-        )
+        })
+        if (streamingMessageIdRef.current) {
+          updateStreamingMessage(streamingMessageIdRef.current, {
+            thinkingSteps: getThinkingSteps(),
+            ingestResolved: true,
+          })
+        }
+      },
+      onDone: () => {
+        setStatus(null)
+      },
+      ...overrides,
+    }),
+    [
+      setStatus,
+      addThinkingStep,
+      getThinkingSteps,
+      updateStreamingMessage,
+      addGeneratingStep,
+      appendStreamingContent,
+      setSources,
+      setIsIngesting,
+    ]
+  )
+
+  // Shared stream execution with error handling and cleanup.
+  const runStream = useCallback(
+    async (
+      request: StreamRequest,
+      callbacks: StreamCallbacks,
+      onCleanupError?: () => void,
+    ) => {
+      try {
+        await streamChat(request, callbacks, abortControllerRef.current!)
       } catch (err) {
         if (err instanceof StreamAbortError) {
           if (streamingMessageIdRef.current) {
@@ -303,41 +270,122 @@ export function useChat(sessionId: string | null) {
           })
           streamingMessageIdRef.current = null
         }
+        onCleanupError?.()
         resetStreamingState()
         setError(errorMessage)
         setStreaming(false)
       } finally {
         abortControllerRef.current = null
-        // Refresh user usage counts after stream completes
         useUserStore.getState().fetchMe()
       }
+    },
+    [setMessages, resetStreamingState, setStreaming, updateStreamingMessage, setError]
+  )
+
+  const sendMessage = useCallback(
+    async (query: string) => {
+      if (useChatStore.getState().isStreaming) {
+        return
+      }
+
+      addUserMessage(query)
+      resetStreamingState()
+      hasAddedGeneratingStep.current = false
+      setStreaming(true)
+      setError(null)
+
+      const streamingMessageId = addStreamingPlaceholder()
+      streamingMessageIdRef.current = streamingMessageId
+
+      abortControllerRef.current = createStreamAbortController()
+
+      const request = buildStreamRequest(query)
+      const acc = {
+        content: { value: '' },
+        sources: { value: [] as SourceInfo[] },
+        citations: { value: undefined as CitationsEventData | undefined },
+      }
+
+      const callbacks = buildStreamCallbacks(acc, {
+        onMetadata: (data) => {
+          completeGeneratingStep()
+          const currentProposal = useChatStore.getState().ingestProposal
+          finalizeAssistantMessage(
+            streamingMessageIdRef.current,
+            acc.content.value,
+            acc.sources.value,
+            data,
+            getThinkingSteps(),
+            acc.citations.value,
+            currentProposal ?? undefined,
+          )
+          streamingMessageIdRef.current = null
+          setStreaming(false)
+        },
+        onError: (data) => {
+          if (streamingMessageIdRef.current) {
+            updateStreamingMessage(streamingMessageIdRef.current, {
+              isStreaming: false,
+              error: data.error,
+            })
+            streamingMessageIdRef.current = null
+          }
+          resetStreamingState()
+          setError(data.error)
+          setStreaming(false)
+        },
+        onConfirmIngest: (data) => {
+          setIngestProposal(data)
+          setSelectedIngestIds(new Set(data.papers.map((p) => p.arxiv_id)))
+          addThinkingStep({
+            step: 'confirming',
+            message: 'Waiting for confirmation...',
+            details: { papers: data.papers.length },
+          })
+          if (streamingMessageIdRef.current) {
+            updateStreamingMessage(streamingMessageIdRef.current, {
+              ingestProposal: data,
+              thinkingSteps: getThinkingSteps(),
+            })
+          }
+        },
+      })
+
+      await runStream(request, callbacks)
     },
     [
       addUserMessage,
       addStreamingPlaceholder,
-      updateStreamingMessage,
       buildStreamRequest,
+      buildStreamCallbacks,
+      runStream,
       resetStreamingState,
       setStreaming,
       setError,
-      setStatus,
-      appendStreamingContent,
-      setSources,
-      addThinkingStep,
-      addGeneratingStep,
+      updateStreamingMessage,
       completeGeneratingStep,
       getThinkingSteps,
       finalizeAssistantMessage,
-      setMessages,
+      addThinkingStep,
       setIngestProposal,
-      setIsIngesting,
+      setSelectedIngestIds,
     ]
   )
 
-  const handleIngestConfirmation = useCallback(
+  const sendResume = useCallback(
     async (approved: boolean, selectedIds: string[]) => {
       const proposal = useChatStore.getState().ingestProposal
       if (!proposal) return
+
+      resetStreamingState()
+      hasAddedGeneratingStep.current = false
+      setStreaming(true)
+      setError(null)
+
+      const streamingMessageId = addStreamingPlaceholder()
+      streamingMessageIdRef.current = streamingMessageId
+
+      abortControllerRef.current = createStreamAbortController()
 
       if (approved) {
         setIsIngesting(true)
@@ -347,25 +395,80 @@ export function useChat(sessionId: string | null) {
           details: { count: selectedIds.length },
         })
         if (streamingMessageIdRef.current) {
-          const currentSteps = getThinkingSteps()
           updateStreamingMessage(streamingMessageIdRef.current, {
-            thinkingSteps: currentSteps,
+            thinkingSteps: getThinkingSteps(),
           })
         }
       }
 
-      try {
-        await confirmIngest(proposal.session_id, approved, selectedIds)
-      } catch (err) {
-        console.error('Failed to confirm ingest:', err)
-        clearIngestState()
+      const request: StreamRequest = {
+        resume: {
+          session_id: proposal.session_id,
+          thread_id: proposal.thread_id,
+          approved,
+          selected_ids: selectedIds,
+        },
       }
+
+      const acc = {
+        content: { value: '' },
+        sources: { value: [] as SourceInfo[] },
+        citations: { value: undefined as CitationsEventData | undefined },
+      }
+
+      const callbacks = buildStreamCallbacks(acc, {
+        onMetadata: (data) => {
+          completeGeneratingStep()
+          finalizeAssistantMessage(
+            streamingMessageIdRef.current,
+            acc.content.value,
+            acc.sources.value,
+            data,
+            getThinkingSteps(),
+            acc.citations.value,
+          )
+          clearIngestState()
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.ingestProposal && !msg.ingestResolved
+                ? { ...msg, ingestResolved: true, ingestDeclined: !approved }
+                : msg
+            )
+          )
+          streamingMessageIdRef.current = null
+          setStreaming(false)
+        },
+        onError: (data) => {
+          if (streamingMessageIdRef.current) {
+            updateStreamingMessage(streamingMessageIdRef.current, {
+              isStreaming: false,
+              error: data.error,
+            })
+            streamingMessageIdRef.current = null
+          }
+          clearIngestState()
+          resetStreamingState()
+          setError(data.error)
+          setStreaming(false)
+        },
+      })
+
+      await runStream(request, callbacks, clearIngestState)
     },
     [
-      setIsIngesting,
+      addStreamingPlaceholder,
+      buildStreamCallbacks,
+      runStream,
+      resetStreamingState,
+      setStreaming,
+      setError,
+      updateStreamingMessage,
       addThinkingStep,
       getThinkingSteps,
-      updateStreamingMessage,
+      completeGeneratingStep,
+      finalizeAssistantMessage,
+      setMessages,
+      setIsIngesting,
       clearIngestState,
     ]
   )
@@ -381,7 +484,7 @@ export function useChat(sessionId: string | null) {
     messages,
     sendMessage,
     cancelStream,
-    handleIngestConfirmation,
+    sendResume,
     loadFromHistory,
     clearMessages,
   }

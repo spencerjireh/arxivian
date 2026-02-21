@@ -84,6 +84,18 @@ export function useMessageCache(sessionId: string | null) {
         },
       ])
       setMessages(loadedMessages)
+
+      // Restore pending HITL proposal to store if the last turn has one
+      if (turns.length > 0) {
+        const lastTurn = turns[turns.length - 1]
+        if (lastTurn.pending_confirmation) {
+          const { setIngestProposal, setSelectedIngestIds } = useChatStore.getState()
+          setIngestProposal(lastTurn.pending_confirmation)
+          setSelectedIngestIds(
+            new Set(lastTurn.pending_confirmation.papers.map((p) => p.arxiv_id))
+          )
+        }
+      }
     },
     [setMessages]
   )

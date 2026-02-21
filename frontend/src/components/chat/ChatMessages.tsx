@@ -4,10 +4,9 @@ import { useAutoScroll } from '../../hooks/useAutoScroll'
 
 interface ChatMessagesProps {
   messages: Message[]
-  onIngestConfirm?: (approved: boolean, selectedIds: string[]) => void
 }
 
-export default function ChatMessages({ messages, onIngestConfirm }: ChatMessagesProps) {
+export default function ChatMessages({ messages }: ChatMessagesProps) {
   const scrollRef = useAutoScroll(messages)
 
   // Empty state is now handled by EmptyConversationState in ChatPage
@@ -25,7 +24,6 @@ export default function ChatMessages({ messages, onIngestConfirm }: ChatMessages
               message={message}
               isStreaming={message.isStreaming}
               isFirst={index === 0}
-              onIngestConfirm={onIngestConfirm}
             />
           </div>
         ))}

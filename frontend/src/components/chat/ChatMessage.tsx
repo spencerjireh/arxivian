@@ -16,13 +16,11 @@ interface ChatMessageProps {
   message: Message
   isStreaming?: boolean
   isFirst?: boolean
-  onIngestConfirm?: (approved: boolean, selectedIds: string[]) => void
 }
 
 export default function ChatMessage({
   message,
   isStreaming,
-  onIngestConfirm,
 }: ChatMessageProps) {
   const hasProposal = !!message.ingestProposal
   const storeIsIngesting = useChatStore((s) => (hasProposal ? s.isIngesting : false))
@@ -81,12 +79,12 @@ export default function ChatMessage({
             </div>
           )}
 
-          {!isUser && message.ingestProposal && onIngestConfirm && (
+          {!isUser && message.ingestProposal && (
             <IngestConfirmation
               proposal={message.ingestProposal}
-              onConfirm={onIngestConfirm}
               isResolved={message.ingestResolved}
               isIngesting={storeIsIngesting}
+              ingestDeclined={message.ingestDeclined}
             />
           )}
 

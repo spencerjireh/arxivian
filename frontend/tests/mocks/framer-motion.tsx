@@ -30,9 +30,16 @@ function createMotionComponent(tag: ElementType) {
   )
 }
 
+const componentCache = new Map<string, ReturnType<typeof createMotionComponent>>()
+
 export const motion = new Proxy({} as Record<string, ReturnType<typeof createMotionComponent>>, {
   get(_target, prop: string) {
-    return createMotionComponent(prop as ElementType)
+    let component = componentCache.get(prop)
+    if (!component) {
+      component = createMotionComponent(prop as ElementType)
+      componentCache.set(prop, component)
+    }
+    return component
   },
 })
 

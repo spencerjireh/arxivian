@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from src.config import get_settings
-from src.schemas.stream import StreamRequest, StreamEventType, ErrorEventData
+from src.schemas.stream import StreamRequest, ErrorEventData
 from src.dependencies import (
     DbSession,
     CurrentUserRequired,
@@ -19,7 +19,9 @@ from src.dependencies import (
     UsageCounterRepoDep,
     AgentGraphDep,
     RedisDep,
+    ConversationRepoDep,
 )
+from src.exceptions import ConflictError
 from src.factories.service_factories import get_agent_service
 from src.services.task_registry import task_registry
 from src.utils.logger import get_logger
@@ -42,6 +44,7 @@ async def stream(
     current_user: CurrentUserRequired,
     policy: TierPolicyDep,
     usage_repo: UsageCounterRepoDep,
+    conversation_repo: ConversationRepoDep,
     graph: AgentGraphDep,
     redis: RedisDep,
     _limit: ChatGuard,
@@ -50,13 +53,28 @@ async def stream(
     """
     Stream agent response via Server-Sent Events (SSE).
 
-    Supports free (all tools, DB rate limit) and pro (unlimited) tiers.
+    Supports two modes:
+    - query: start a new agent interaction
+    - resume: continue a paused HITL confirmation flow
+
     Requires authentication.
     """
     settings = get_settings()
+    is_resume = request.resume is not None
 
-    # Resolve model based on tier policy
-    model = policy.resolve_model(request.model, settings)
+    # For resume requests, read stored model/temperature from the pending turn
+    if is_resume:
+        pending_turn = await conversation_repo.get_pending_turn(
+            request.resume.session_id, current_user.id
+        )
+        if not pending_turn or not pending_turn.pending_confirmation:
+            raise ConflictError("No pending confirmation for this session")
+        pending = pending_turn.pending_confirmation
+        model = policy.resolve_model(pending.get("model"), settings)
+        temperature = pending.get("temperature", 0.3)
+    else:
+        model = policy.resolve_model(request.model, settings)
+        temperature = request.temperature
 
     # Determine timeout: request override > server default
     timeout_seconds = (
@@ -66,26 +84,30 @@ async def stream(
     )
 
     # Use session_id if provided, otherwise generate a temporary task ID
-    task_id = request.session_id or str(uuid.uuid4())
+    task_id = (
+        request.resume.session_id if is_resume else request.session_id
+    ) or str(uuid.uuid4())
 
     user_id = current_user.id
 
     log.info(
         "stream request",
-        query=request.query[:100],
+        query=request.query[:100] if request.query else "[resume]",
         model=model,
-        session_id=request.session_id,
+        session_id=request.session_id if not is_resume else request.resume.session_id,
         task_id=task_id,
         timeout_seconds=timeout_seconds,
         max_iterations=request.max_iterations,
         user_id=str(user_id),
         tier=current_user.tier,
+        is_resume=is_resume,
     )
 
     async def event_generator():
-        # Increment usage counter
-        await usage_repo.increment_query_count(current_user.id)
-        await db.flush()
+        # Only increment usage counter for new queries (not resumes)
+        if not is_resume:
+            await usage_repo.increment_query_count(current_user.id)
+            await db.flush()
 
         # Register the current task for cancellation support
         current_task = asyncio.current_task()
@@ -93,8 +115,7 @@ async def stream(
             task_registry.register(task_id, current_task, user_id=str(user_id))
 
         try:
-            loop = asyncio.get_running_loop()
-            async with asyncio.timeout(timeout_seconds) as deadline:
+            async with asyncio.timeout(timeout_seconds):
                 # Create service with request parameters and tier-based tool gating
                 agent_service = get_agent_service(
                     db_session=db,
@@ -102,8 +123,8 @@ async def stream(
                     guardrail_threshold=request.guardrail_threshold,
                     top_k=request.top_k,
                     max_retrieval_attempts=request.max_retrieval_attempts,
-                    temperature=request.temperature,
-                    session_id=request.session_id,
+                    temperature=temperature,
+                    session_id=request.session_id if not is_resume else request.resume.session_id,
                     conversation_window=request.conversation_window,
                     max_iterations=request.max_iterations,
                     user_id=user_id,
@@ -115,22 +136,24 @@ async def stream(
                     usage_counter_repo=usage_repo,
                 )
 
-                # Stream events from the agent service
-                async for event in agent_service.ask_stream(
-                    request.query, session_id=request.session_id
-                ):
+                # Route to ask_stream or resume_stream
+                if is_resume:
+                    event_stream = agent_service.resume_stream(
+                        session_id=request.resume.session_id,
+                        thread_id=request.resume.thread_id,
+                        approved=request.resume.approved,
+                        selected_ids=request.resume.selected_ids,
+                    )
+                else:
+                    event_stream = agent_service.ask_stream(
+                        request.query, session_id=request.session_id
+                    )
+
+                async for event in event_stream:
                     # Check if client disconnected
                     if await http_request.is_disconnected():
                         log.info("client disconnected", task_id=task_id)
                         break
-
-                    # HITL timeout management: pause clock while waiting for user,
-                    # restart with fresh budget when processing resumes.
-                    if event.event == StreamEventType.CONFIRM_INGEST:
-                        deadline.reschedule(float("inf"))
-                    elif event.event == StreamEventType.HITL_RESUMED:
-                        deadline.reschedule(loop.time() + timeout_seconds)
-                        continue  # internal sentinel, don't send to client
 
                     # Format as SSE
                     event_type = event.event.value

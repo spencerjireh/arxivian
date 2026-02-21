@@ -29,6 +29,7 @@ interface ChatUIState {
   thinkingSteps: ThinkingStep[]
   ingestProposal: ConfirmIngestEventData | null
   isIngesting: boolean
+  selectedIngestIds: Set<string> | null
 
   setStreaming: (isStreaming: boolean) => void
   setStreamingContent: (content: string) => void
@@ -45,6 +46,7 @@ interface ChatUIState {
 
   setIngestProposal: (proposal: ConfirmIngestEventData | null) => void
   setIsIngesting: (isIngesting: boolean) => void
+  setSelectedIngestIds: (ids: Set<string>) => void
   clearIngestState: () => void
 
   resetStreamingState: () => void
@@ -59,6 +61,7 @@ const initialStreamingState = {
   thinkingSteps: [] as ThinkingStep[],
   ingestProposal: null as ConfirmIngestEventData | null,
   isIngesting: false,
+  selectedIngestIds: null as Set<string> | null,
 }
 
 export const useChatStore = create<ChatUIState>((set, get) => ({
@@ -194,7 +197,9 @@ export const useChatStore = create<ChatUIState>((set, get) => ({
 
   setIsIngesting: (isIngesting) => set({ isIngesting }),
 
-  clearIngestState: () => set({ ingestProposal: null, isIngesting: false }),
+  setSelectedIngestIds: (ids) => set({ selectedIngestIds: ids }),
+
+  clearIngestState: () => set({ ingestProposal: null, isIngesting: false, selectedIngestIds: null }),
 
   resetStreamingState: () => set(initialStreamingState),
 }))

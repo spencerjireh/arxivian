@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-import json
 import time
 import uuid as uuid_lib
 from datetime import datetime, timezone
@@ -29,6 +27,7 @@ try:
     LANGFUSE_CALLBACK_AVAILABLE = True
 except ImportError:
     LANGFUSE_CALLBACK_AVAILABLE = False
+from src.exceptions import CheckpointExpiredError
 from src.clients.arxiv_client import ArxivClient
 from src.services.search_service import SearchService
 from src.services.ingest_service import IngestService
@@ -42,9 +41,9 @@ from src.schemas.stream import (
     ContentEventData,
     SourcesEventData,
     MetadataEventData,
+    ErrorEventData,
     CitationsEventData,
     DoneEventData,
-    HitlResumedEventData,
     ConfirmIngestEventData,
     IngestCompleteEventData,
 )
@@ -53,6 +52,10 @@ from src.utils.logger import get_logger
 from .context import AgentContext
 
 log = get_logger(__name__)
+
+# Sentinel strings in LangGraph errors indicating a missing/expired checkpoint.
+# Centralized here so there is exactly one place to update if upstream messages change.
+_CHECKPOINT_ERROR_PATTERNS = ("no checkpoint found", "missing thread_id")
 
 # Map LangGraph node names to user-friendly step names
 NODE_TO_STEP = {
@@ -398,32 +401,6 @@ class AgentService:
     # HITL helpers
     # ------------------------------------------------------------------
 
-    async def _wait_for_confirmation(
-        self, session_id: str, timeout: float = 300
-    ) -> dict:
-        """Block until the user confirms/declines via Redis pub/sub, or timeout."""
-        channel = f"arx:hitl:{session_id}"
-        pubsub = self.redis.pubsub()  # type: ignore[union-attr]
-        try:
-            async with asyncio.timeout(timeout):
-                await pubsub.subscribe(channel)
-                # Race guard: check if key was set before we subscribed
-                raw = await self.redis.get(channel)  # type: ignore[union-attr]
-                if raw:
-                    return json.loads(raw)
-                async for msg in pubsub.listen():
-                    if msg["type"] == "message":
-                        raw = await self.redis.get(channel)  # type: ignore[union-attr]
-                        return json.loads(raw) if raw else {"declined": True}
-        except TimeoutError:
-            log.warning("hitl_confirmation_timeout", session_id=session_id, timeout=timeout)
-            return {"declined": True}
-        finally:
-            await pubsub.unsubscribe(channel)
-            await pubsub.aclose()
-            await self.redis.delete(channel)  # type: ignore[union-attr]
-        return {"declined": True}  # unreachable, satisfies type checker
-
     async def _run_inline_ingest(
         self, arxiv_ids: list[str]
     ) -> AsyncIterator[StreamEvent]:
@@ -528,26 +505,9 @@ class AgentService:
 
         # Build LangGraph config with context, thread_id, and Langfuse callback
         config: dict = {"configurable": {"context": self.context, "thread_id": thread_id}}
-        trace_id: str | None = None
-
-        if LANGFUSE_CALLBACK_AVAILABLE:
-            settings = get_settings()
-            if settings.langfuse_enabled:
-                callback = CallbackHandler(
-                    public_key=settings.langfuse_public_key,
-                    secret_key=settings.langfuse_secret_key,
-                    host=settings.langfuse_host,
-                    session_id=session_id,
-                    user_id=str(self.user_id) if self.user_id else session_id,
-                    metadata={
-                        "query": query[:200],
-                        "provider": self.context.llm_client.provider_name,
-                        "model": self.context.llm_client.model,
-                    },
-                )
-                trace_id = callback.trace_id
-                config["callbacks"] = [callback]
-                set_trace_context(trace_id)  # Propagate trace to LLM client
+        trace_id = self._attach_langfuse_callback(
+            config, session_id, {"query": query[:200]}
+        )
 
         # Initial state
         initial_state: dict = {
@@ -602,8 +562,8 @@ class AgentService:
                     continue
                 yield event
 
-            # Handle HITL interrupt
-            if interrupted and interrupt_data and self.redis:
+            # Handle HITL interrupt: emit proposal, save partial turn, end stream
+            if interrupted and interrupt_data:
                 papers = interrupt_data.get("papers", [])
                 proposed_ids = interrupt_data.get("proposed_ids", [])
 
@@ -623,108 +583,31 @@ class AgentService:
                     ),
                 )
 
-                # Save partial turn with pending_confirmation.
-                # Explicit commit so the confirm-ingest endpoint (separate DB session)
-                # can see the pending state.
+                # Save partial turn with pending_confirmation (includes model/temperature
+                # so the resume stream can reconstruct the agent service).
+                # Explicit commit so the resume request (separate DB session) sees it.
                 if self.conversation_repo:
-                    await self.conversation_repo.save_turn(
+                    partial_turn = await self.conversation_repo.save_turn(
                         session_id,
                         self._build_turn_data(
                             query,
                             final_state,
                             tracker,
-                            citations=None,  # deferred to complete_pending_turn
+                            agent_response="",
+                            citations=None,
                             pending_confirmation={
                                 "papers": papers,
                                 "proposed_ids": proposed_ids,
                                 "session_id": session_id,
                                 "thread_id": thread_id,
+                                "model": self.context.llm_client.model,
+                                "temperature": self.context.temperature,
                             },
                         ),
                         user_id=self.user_id,
                     )
+                    turn_number = partial_turn.turn_number
                     await self.conversation_repo.commit()
-
-                # Wait for user confirmation via Redis pub/sub
-                confirmation = await self._wait_for_confirmation(session_id)
-
-                # Signal that active processing has resumed (router uses this to restart timeout)
-                yield StreamEvent(event=StreamEventType.HITL_RESUMED, data=HitlResumedEventData())
-
-                if confirmation.get("declined"):
-                    # Resume graph with decline
-                    resume_value = {"declined": True}
-                else:
-                    # Run inline ingest for selected papers
-                    selected_ids = confirmation.get("selected_ids", proposed_ids)
-                    papers_processed = 0
-                    ingest_errors: list[str] = []
-                    async for ingest_event in self._run_inline_ingest(selected_ids):
-                        if isinstance(ingest_event.data, IngestCompleteEventData):
-                            papers_processed = ingest_event.data.papers_processed
-                            ingest_errors = ingest_event.data.errors
-                        yield ingest_event
-
-                    resume_value = {
-                        "approved": True,
-                        "selected_ids": selected_ids,
-                        "papers_processed": papers_processed,
-                        "errors": ingest_errors,
-                    }
-
-                # Resume graph with Command
-                log.info(
-                    "hitl_resuming_graph",
-                    session_id=session_id,
-                    declined=confirmation.get("declined", False),
-                )
-
-                async for event in self._consume_stream(
-                    Command(resume=resume_value),
-                    config,
-                    final_state,
-                    tracker,
-                    sources_emitted=True,
-                ):
-                    if isinstance(event, dict) and "__interrupt__" in event:
-                        continue  # Ignore nested interrupts
-                    yield event
-
-                # Complete the partial turn with final response
-                if self.conversation_repo:
-                    await self.conversation_repo.complete_pending_turn(
-                        session_id=session_id,
-                        turn_number=turn_number,
-                        agent_response=self._extract_answer(final_state),
-                        thinking_steps=tracker.steps or None,
-                        sources=self._build_sources_dicts(final_state),
-                        reasoning_steps=final_state.get("metadata", {}).get(
-                            "reasoning_steps"
-                        ),
-                        citations=self._extract_citations(final_state),
-                    )
-
-            elif interrupted:
-                # Interrupted but Redis unavailable -- save as normal turn
-                log.warning(
-                    "hitl_interrupt_without_redis",
-                    session_id=session_id,
-                    has_redis=self.redis is not None,
-                    has_interrupt_data=interrupt_data is not None,
-                )
-                if session_id and self.conversation_repo:
-                    fallback = (
-                        self._extract_answer(final_state)
-                        or "Ingestion proposal could not be completed."
-                    )
-                    turn = await self.conversation_repo.save_turn(
-                        session_id,
-                        self._build_turn_data(
-                            query, final_state, tracker, agent_response=fallback
-                        ),
-                        user_id=self.user_id,
-                    )
-                    turn_number = turn.turn_number
 
             else:
                 # Normal flow: save turn
@@ -800,8 +683,209 @@ class AgentService:
         yield StreamEvent(event=StreamEventType.DONE, data=DoneEventData())
 
     # ------------------------------------------------------------------
+    # Resume stream (second leg of two-stream HITL)
+    # ------------------------------------------------------------------
+
+    async def resume_stream(
+        self,
+        session_id: str,
+        thread_id: str,
+        approved: bool,
+        selected_ids: list[str],
+    ) -> AsyncIterator[StreamEvent]:
+        """
+        Resume a paused HITL flow after user confirmation.
+
+        This is the second stream in the two-stream HITL design. It picks up
+        from the LangGraph checkpoint saved during ask_stream, runs inline
+        ingestion if approved, resumes the graph, and saves a new turn.
+
+        Args:
+            session_id: Conversation session ID
+            thread_id: LangGraph thread ID for checkpoint resume
+            approved: Whether the user approved the ingestion
+            selected_ids: arXiv IDs the user selected (empty if declined)
+
+        Yields:
+            StreamEvent objects for ingest progress, content, sources, metadata
+        """
+        start_time = time.time()
+
+        log.info(
+            "resume_stream_started",
+            session_id=session_id,
+            thread_id=thread_id,
+            approved=approved,
+            selected_count=len(selected_ids),
+        )
+
+        # Fetch the pending turn once -- used for double-confirm guard and later cleanup.
+        pending_turn_number: int | None = None
+        if self.conversation_repo:
+            pending_turn = await self.conversation_repo.get_pending_turn(
+                session_id, self.user_id
+            )
+            if not pending_turn or not pending_turn.pending_confirmation:
+                log.warning("resume_stream_double_confirm", session_id=session_id)
+                yield StreamEvent(
+                    event=StreamEventType.ERROR,
+                    data=ErrorEventData(
+                        error="This proposal has already been processed.",
+                        code="DOUBLE_CONFIRM",
+                    ),
+                )
+                yield StreamEvent(event=StreamEventType.DONE, data=DoneEventData())
+                return
+            pending_turn_number = pending_turn.turn_number
+
+        # Build resume value
+        if approved:
+            papers_processed = 0
+            ingest_errors: list[str] = []
+            async for ingest_event in self._run_inline_ingest(selected_ids):
+                if isinstance(ingest_event.data, IngestCompleteEventData):
+                    papers_processed = ingest_event.data.papers_processed
+                    ingest_errors = ingest_event.data.errors
+                yield ingest_event
+
+            resume_value: dict = {
+                "approved": True,
+                "selected_ids": selected_ids,
+                "papers_processed": papers_processed,
+                "errors": ingest_errors,
+            }
+            synthetic_query = (
+                f"Confirmed ingestion of {len(selected_ids)} "
+                f"{'paper' if len(selected_ids) == 1 else 'papers'}"
+            )
+        else:
+            resume_value = {"declined": True}
+            synthetic_query = "Declined paper ingestion"
+
+        # Build config and resume graph from checkpoint
+        config: dict = {"configurable": {"context": self.context, "thread_id": thread_id}}
+        trace_id = self._attach_langfuse_callback(
+            config, session_id, {"resume": True, "approved": approved}
+        )
+
+        final_state: dict = {}
+        tracker = _StepTracker()
+        turn_number = 0
+
+        try:
+            async for event in self._consume_stream(
+                Command(resume=resume_value),
+                config,
+                final_state,
+                tracker,
+                sources_emitted=True,
+            ):
+                if isinstance(event, dict) and "__interrupt__" in event:
+                    continue  # Ignore nested interrupts
+                yield event
+        except (RuntimeError, ValueError) as e:
+            if not any(p in str(e).lower() for p in _CHECKPOINT_ERROR_PATTERNS):
+                raise
+            log.warning(
+                "resume_stream_checkpoint_expired",
+                session_id=session_id,
+                thread_id=thread_id,
+            )
+            if self.conversation_repo and pending_turn_number is not None:
+                await self.conversation_repo.clear_pending_confirmation(
+                    session_id, pending_turn_number
+                )
+            yield StreamEvent(
+                event=StreamEventType.ERROR,
+                data=ErrorEventData(
+                    error="The confirmation window has expired. Please try again.",
+                    code="CHECKPOINT_EXPIRED",
+                ),
+            )
+            yield StreamEvent(event=StreamEventType.DONE, data=DoneEventData())
+            return
+        finally:
+            set_trace_context(None)
+
+        # Save new turn for the resume response, then clear the original proposal turn.
+        if self.conversation_repo:
+            turn = await self.conversation_repo.save_turn(
+                session_id,
+                self._build_turn_data(synthetic_query, final_state, tracker),
+                user_id=self.user_id,
+            )
+            turn_number = turn.turn_number
+
+            if pending_turn_number is not None:
+                await self.conversation_repo.clear_pending_confirmation(
+                    session_id, pending_turn_number
+                )
+
+        execution_time = (time.time() - start_time) * 1000
+
+        log.info(
+            "resume_stream_complete",
+            session_id=session_id,
+            approved=approved,
+            turn_number=turn_number,
+            execution_time_ms=execution_time,
+        )
+
+        yield StreamEvent(
+            event=StreamEventType.METADATA,
+            data=MetadataEventData(
+                query=synthetic_query,
+                execution_time_ms=execution_time,
+                retrieval_attempts=final_state.get("retrieval_attempts", 0),
+                rewritten_query=None,
+                guardrail_score=None,
+                provider=self.context.llm_client.provider_name,
+                model=self.context.llm_client.model,
+                session_id=session_id,
+                turn_number=turn_number,
+                reasoning_steps=final_state.get("metadata", {}).get("reasoning_steps", []),
+                trace_id=trace_id,
+            ),
+        )
+
+        yield StreamEvent(event=StreamEventType.DONE, data=DoneEventData())
+
+    # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _attach_langfuse_callback(
+        self,
+        config: dict,
+        session_id: str | None,
+        extra_metadata: dict | None = None,
+    ) -> str | None:
+        """Attach a Langfuse callback to the LangGraph config if enabled.
+
+        Returns the trace_id if a callback was attached, else None.
+        """
+        if not LANGFUSE_CALLBACK_AVAILABLE:
+            return None
+        settings = get_settings()
+        if not settings.langfuse_enabled:
+            return None
+        metadata = {
+            "provider": self.context.llm_client.provider_name,
+            "model": self.context.llm_client.model,
+        }
+        if extra_metadata:
+            metadata.update(extra_metadata)
+        callback = CallbackHandler(
+            public_key=settings.langfuse_public_key,
+            secret_key=settings.langfuse_secret_key,
+            host=settings.langfuse_host,
+            session_id=session_id,
+            user_id=str(self.user_id) if self.user_id else session_id,
+            metadata=metadata,
+        )
+        config["callbacks"] = [callback]
+        set_trace_context(callback.trace_id)
+        return callback.trace_id
 
     @staticmethod
     def _extract_answer(final_state: dict) -> str:
@@ -849,10 +933,11 @@ class AgentService:
         sources = self._build_sources_dicts(final_state)
         # Allow callers to override citations (e.g. None for partial HITL saves)
         citations = overrides.pop("citations", self._extract_citations(final_state))
+        agent_response = overrides.pop("agent_response", self._extract_answer(final_state))
 
         return TurnData(
             user_query=query,
-            agent_response=self._extract_answer(final_state),
+            agent_response=agent_response,
             provider=self.context.llm_client.provider_name,
             model=self.context.llm_client.model,
             guardrail_score=guardrail_result.score if guardrail_result else None,

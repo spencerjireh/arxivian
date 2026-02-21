@@ -168,6 +168,17 @@ class ProcessingLimitError(BusinessLogicError):
         self.error_code = "PROCESSING_LIMIT_EXCEEDED"
 
 
+class CheckpointExpiredError(BusinessLogicError):
+    """Raised when a LangGraph checkpoint is missing or expired during HITL resume."""
+
+    def __init__(self, session_id: str, thread_id: str):
+        super().__init__(
+            message="The confirmation window has expired. Please try again.",
+            details={"session_id": session_id, "thread_id": thread_id},
+        )
+        self.error_code = "CHECKPOINT_EXPIRED"
+
+
 # ============================================================================
 # Usage Limit Errors (429)
 # ============================================================================

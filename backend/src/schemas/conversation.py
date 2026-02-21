@@ -112,17 +112,3 @@ class CancelStreamResponse(BaseModel):
     message: str
 
 
-class ConfirmIngestRequest(BaseModel):
-    """Request to confirm or decline proposed paper ingestion."""
-
-    approved: bool = Field(..., description="Whether the user approved the ingestion")
-    selected_ids: list[str] = Field(
-        default_factory=list, description="arXiv IDs the user selected for ingestion"
-    )
-
-
-class ConfirmIngestResponse(BaseModel):
-    """Acknowledgement of an ingest confirmation."""
-
-    acknowledged: bool
-    selected_count: int

@@ -4,8 +4,15 @@
 
 export type LLMProvider = 'openai' | 'nvidia_nim'
 
+export interface IngestConfirmation {
+  session_id: string
+  thread_id: string
+  approved: boolean
+  selected_ids: string[]
+}
+
 export interface StreamRequest {
-  query: string
+  query?: string
   provider?: LLMProvider
   model?: string
   top_k?: number
@@ -14,6 +21,7 @@ export interface StreamRequest {
   temperature?: number
   session_id?: string
   conversation_window?: number
+  resume?: IngestConfirmation
 }
 
 export type StreamEventType =
@@ -269,4 +277,5 @@ export interface Message {
   citations?: CitationsEventData
   ingestProposal?: ConfirmIngestEventData
   ingestResolved?: boolean
+  ingestDeclined?: boolean
 }

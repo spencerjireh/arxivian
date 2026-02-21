@@ -1,17 +1,28 @@
 """Streaming request and response schemas with SSE event types."""
 
 from enum import Enum
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, computed_field, model_validator
 
 from src.schemas.common import SourceInfo
+
+
+class IngestConfirmation(BaseModel):
+    """Resume payload for HITL ingest confirmation."""
+
+    session_id: str = Field(..., description="Conversation session ID")
+    thread_id: str = Field(..., description="LangGraph thread ID for checkpoint resume")
+    approved: bool = Field(..., description="Whether the user approved the ingestion")
+    selected_ids: list[str] = Field(
+        default_factory=list, description="arXiv IDs the user selected for ingestion"
+    )
 
 
 class StreamRequest(BaseModel):
     """Request for streaming agent response."""
 
-    query: str = Field(..., description="Question to ask")
+    query: str | None = Field(None, min_length=1, description="Question to ask")
 
     # LLM Provider Selection
     provider: Literal["openai", "nvidia_nim"] | None = Field(
@@ -50,6 +61,22 @@ class StreamRequest(BaseModel):
         5, ge=1, le=10, description="Number of previous turns to include in context"
     )
 
+    # HITL Resume
+    resume: IngestConfirmation | None = Field(
+        None, description="Resume a paused HITL confirmation flow"
+    )
+
+    @model_validator(mode="after")
+    def exactly_one_of_query_or_resume(self) -> Self:
+        """Ensure exactly one of query or resume is provided."""
+        if self.query is not None and self.resume is not None:
+            msg = "Provide either 'query' or 'resume', not both."
+            raise ValueError(msg)
+        if self.query is None and self.resume is None:
+            msg = "Provide either 'query' or 'resume'."
+            raise ValueError(msg)
+        return self
+
 
 # SSE Event Types
 
@@ -65,7 +92,6 @@ class StreamEventType(str, Enum):
     DONE = "done"  # Stream complete
     CITATIONS = "citations"  # Citation graph from explore_citations tool
     CONFIRM_INGEST = "confirm_ingest"  # HITL: propose papers for user confirmation
-    HITL_RESUMED = "hitl_resumed"  # HITL: user responded, active processing resumed (internal)
     INGEST_COMPLETE = "ingest_complete"  # HITL: ingestion finished
 
 
@@ -132,10 +158,6 @@ class DoneEventData(BaseModel):
     """Sentinel: stream is complete."""
 
 
-class HitlResumedEventData(BaseModel):
-    """Internal sentinel: active processing resumed after HITL confirmation."""
-
-
 class IngestProposalPaper(BaseModel):
     """A single paper proposed for ingestion."""
 
@@ -176,7 +198,6 @@ class StreamEvent(BaseModel):
         | ErrorEventData
         | CitationsEventData
         | DoneEventData
-        | HitlResumedEventData
         | ConfirmIngestEventData
         | IngestCompleteEventData
     )

@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act } from 'react'
+import { render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 
 vi.mock('@clerk/clerk-react', () => import('../../mocks/clerk'))
@@ -17,11 +18,11 @@ describe('App routes', () => {
       initialEntries: ['/nonexistent'],
     })
 
-    render(<RouterProvider router={router} />)
-
-    await waitFor(() => {
-      expect(screen.getByText('Page not found')).toBeInTheDocument()
+    await act(async () => {
+      render(<RouterProvider router={router} />)
     })
+
+    expect(screen.getByText('Page not found')).toBeInTheDocument()
   })
 
   it('renders LandingPage at /', async () => {
@@ -31,11 +32,13 @@ describe('App routes', () => {
       initialEntries: ['/'],
     })
 
-    render(<RouterProvider router={router} />)
-
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /Understand research/ })).toBeInTheDocument()
+    await act(async () => {
+      render(<RouterProvider router={router} />)
     })
+
+    expect(
+      await screen.findByRole('heading', { name: /Understand research/ }),
+    ).toBeInTheDocument()
   })
 
   it('renders PricingPage at /pricing', async () => {
@@ -45,10 +48,12 @@ describe('App routes', () => {
       initialEntries: ['/pricing'],
     })
 
-    render(<RouterProvider router={router} />)
-
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /Simple, transparent pricing/ })).toBeInTheDocument()
+    await act(async () => {
+      render(<RouterProvider router={router} />)
     })
+
+    expect(
+      await screen.findByRole('heading', { name: /Simple, transparent pricing/ }),
+    ).toBeInTheDocument()
   })
 })

@@ -1,14 +1,15 @@
-import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BookMarked, Check, Loader2 } from 'lucide-react'
+import { BookMarked, Check, Loader2, X } from 'lucide-react'
 import clsx from 'clsx'
+import { useChatStore } from '../../stores/chatStore'
 import type { ConfirmIngestEventData } from '../../types/api'
 
 interface IngestConfirmationProps {
   proposal: ConfirmIngestEventData
-  onConfirm: (approved: boolean, selectedIds: string[]) => void
+  onConfirm?: (approved: boolean, selectedIds: string[]) => void
   isResolved?: boolean
   isIngesting?: boolean
+  ingestDeclined?: boolean
 }
 
 function truncateAuthors(authors: string[], max = 3): string {
@@ -21,41 +22,40 @@ export default function IngestConfirmation({
   onConfirm,
   isResolved = false,
   isIngesting = false,
+  ingestDeclined = false,
 }: IngestConfirmationProps) {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    () => new Set(proposal.papers.map((p) => p.arxiv_id))
-  )
+  const selectedIds = useChatStore((s) => s.selectedIngestIds) ?? new Set<string>()
+  const setSelectedIngestIds = useChatStore((s) => s.setSelectedIngestIds)
 
   const isInteractive = !isResolved && !isIngesting
 
   const togglePaper = (arxivId: string) => {
     if (!isInteractive) return
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(arxivId)) {
-        next.delete(arxivId)
-      } else {
-        next.add(arxivId)
-      }
-      return next
-    })
+    const next = new Set(selectedIds)
+    if (next.has(arxivId)) {
+      next.delete(arxivId)
+    } else {
+      next.add(arxivId)
+    }
+    setSelectedIngestIds(next)
   }
 
   const toggleAll = () => {
     if (!isInteractive) return
     if (selectedIds.size === proposal.papers.length) {
-      setSelectedIds(new Set())
+      setSelectedIngestIds(new Set())
     } else {
-      setSelectedIds(new Set(proposal.papers.map((p) => p.arxiv_id)))
+      setSelectedIngestIds(new Set(proposal.papers.map((p) => p.arxiv_id)))
     }
   }
 
   const handleConfirm = () => {
-    if (selectedIds.size === 0) return
+    if (!onConfirm || selectedIds.size === 0) return
     onConfirm(true, Array.from(selectedIds))
   }
 
-  const handleSkip = () => {
+  const handleCancel = () => {
+    if (!onConfirm) return
     onConfirm(false, [])
   }
 
@@ -99,7 +99,14 @@ export default function IngestConfirmation({
           </div>
         )}
 
-        {isResolved && !isIngesting && (
+        {isResolved && !isIngesting && ingestDeclined && (
+          <div className="flex items-center gap-1.5 text-xs text-stone-500">
+            <X className="w-3.5 h-3.5" strokeWidth={2} />
+            <span>Cancelled</span>
+          </div>
+        )}
+
+        {isResolved && !isIngesting && !ingestDeclined && (
           <div className="flex items-center gap-1.5 text-xs text-green-700">
             <Check className="w-3.5 h-3.5" strokeWidth={2} />
             <span>Added to library</span>
@@ -123,34 +130,35 @@ export default function IngestConfirmation({
                 isInteractive && 'cursor-pointer hover:bg-stone-100/60',
                 !isInteractive && 'opacity-75',
               )}
-              onClick={() => togglePaper(paper.arxiv_id)}
+              onClick={isInteractive ? () => togglePaper(paper.arxiv_id) : undefined}
             >
-              {/* Checkbox */}
-              <div className="pt-0.5 shrink-0">
-                <div
-                  className={clsx(
-                    'w-4 h-4 rounded border transition-all duration-150',
-                    isSelected
-                      ? 'bg-amber-700 border-amber-700'
-                      : 'border-stone-300 bg-white',
-                    !isInteractive && 'opacity-60',
-                  )}
-                >
-                  <AnimatePresence>
-                    {isSelected && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className="flex items-center justify-center w-full h-full"
-                      >
-                        <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                      </motion.div>
+              {/* Checkbox -- hidden once resolved */}
+              {isInteractive && (
+                <div className="pt-0.5 shrink-0">
+                  <div
+                    className={clsx(
+                      'w-4 h-4 rounded border transition-all duration-150',
+                      isSelected
+                        ? 'bg-amber-700 border-amber-700'
+                        : 'border-stone-300 bg-white',
                     )}
-                  </AnimatePresence>
+                  >
+                    <AnimatePresence>
+                      {isSelected && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          exit={{ scale: 0 }}
+                          transition={{ duration: 0.15 }}
+                          className="flex items-center justify-center w-full h-full"
+                        >
+                          <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Paper details */}
               <div className="min-w-0 flex-1">
@@ -177,8 +185,8 @@ export default function IngestConfirmation({
         })}
       </div>
 
-      {/* Actions */}
-      {isInteractive && (
+      {/* Actions (only when onConfirm is provided, i.e. not in historical messages) */}
+      {isInteractive && onConfirm && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -187,13 +195,13 @@ export default function IngestConfirmation({
         >
           <button
             type="button"
-            onClick={handleSkip}
+            onClick={handleCancel}
             className={clsx(
               'px-3 py-1.5 text-sm text-stone-500 rounded-lg',
               'hover:bg-stone-200/60 hover:text-stone-700 transition-colors',
             )}
           >
-            Skip
+            Cancel
           </button>
           <button
             type="button"
