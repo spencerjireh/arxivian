@@ -55,6 +55,19 @@ def mock_context(mock_llm_client, mock_search_service, conversation_formatter):
     ctx.max_iterations = 5
     ctx.temperature = 0.3
     ctx.max_generation_tokens = 2000
+    # Mock(spec=) only exposes class-level attrs; set instance attrs explicitly
+    ctx.tool_registry = Mock()
+    ctx.tool_registry.get_all_schemas.return_value = [
+        {"name": "retrieve_chunks", "description": "Retrieve chunks from the knowledge base"},
+        {"name": "arxiv_search", "description": "Search arXiv for papers"},
+    ]
+
+    def _mock_get_tool(name: str):
+        tool = Mock()
+        tool.extends_chunks = name == "retrieve_chunks"
+        return tool
+
+    ctx.tool_registry.get = Mock(side_effect=_mock_get_tool)
     return ctx
 
 

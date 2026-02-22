@@ -90,4 +90,16 @@ GUARDRAIL_SCENARIOS: list[GuardrailScenario] = [
         expected_in_scope=True,
         description="Practical ML question with clear academic research basis",
     ),
+    GuardrailScenario(
+        id="personal_advice",
+        query="What career should I pursue in tech?",
+        expected_in_scope=False,
+        description="Personal advice request -- not academic research",
+    ),
+    GuardrailScenario(
+        id="state_of_the_art_implicit_discovery",
+        query="What is the state of the art in neural machine translation?",
+        expected_in_scope=True,
+        description="State-of-the-art question is academic research even without explicit arXiv mention",
+    ),
 ]

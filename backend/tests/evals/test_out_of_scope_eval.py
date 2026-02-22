@@ -11,7 +11,7 @@ from deepeval import assert_test
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
-from src.schemas.langgraph_state import GuardrailScoring
+from src.schemas.langgraph_state import ClassificationResult
 from src.services.agent_service.nodes.out_of_scope import out_of_scope_node
 
 from .fixtures.out_of_scope_scenarios import OUT_OF_SCOPE_SCENARIOS, OutOfScopeScenario
@@ -33,10 +33,10 @@ async def test_out_of_scope_response_quality(
         original_query=scenario.query,
         conversation_history=scenario.conversation_history,
     )
-    state["guardrail_result"] = GuardrailScoring(
-        score=scenario.guardrail_score,
+    state["classification_result"] = ClassificationResult(
+        intent="out_of_scope",
+        scope_score=scenario.guardrail_score,
         reasoning=scenario.guardrail_reasoning,
-        is_in_scope=False,
     )
 
     result = await out_of_scope_node(state, eval_config)

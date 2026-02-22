@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import AsyncMock, Mock, patch, MagicMock
 
-from src.schemas.langgraph_state import RouterDecision, ToolCall
+from src.schemas.langgraph_state import ClassificationResult, ToolCall
 from src.services.agent_service.tools import ToolResult, LIST_PAPERS, ARXIV_SEARCH
 
 
@@ -34,9 +34,10 @@ class TestExecutorNode:
     @pytest.fixture
     def base_state(self):
         return {
-            "router_decision": RouterDecision(
-                action="execute_tools",
+            "classification_result": ClassificationResult(
+                intent="execute",
                 tool_calls=[ToolCall(tool_name=LIST_PAPERS, tool_args_json='{"query": "test"}')],
+                scope_score=90,
                 reasoning="Testing",
             ),
             "tool_history": [],
@@ -189,12 +190,13 @@ class TestExecutorNode:
         mock_get_writer.return_value = MagicMock()
         exec_config = {"configurable": {"context": mock_exec_context}}
         state = {
-            "router_decision": RouterDecision(
-                action="execute_tools",
+            "classification_result": ClassificationResult(
+                intent="execute",
                 tool_calls=[
                     ToolCall(tool_name=ARXIV_SEARCH, tool_args_json="{}"),
                     ToolCall(tool_name=LIST_PAPERS, tool_args_json="{}"),
                 ],
+                scope_score=90,
                 reasoning="Testing parallel",
             ),
             "tool_history": [],
@@ -221,7 +223,12 @@ class TestExecutorNode:
         from src.services.agent_service.nodes.executor import executor_node
 
         exec_config = {"configurable": {"context": mock_exec_context}}
-        state = {"router_decision": None, "tool_history": [], "tool_outputs": [], "metadata": {}}
+        state = {
+            "classification_result": None,
+            "tool_history": [],
+            "tool_outputs": [],
+            "metadata": {},
+        }
 
         result = await executor_node(state, exec_config)
 
@@ -251,11 +258,12 @@ class TestExecutorNode:
 
         exec_config = {"configurable": {"context": mock_exec_context}}
         state = {
-            "router_decision": RouterDecision(
-                action="execute_tools",
+            "classification_result": ClassificationResult(
+                intent="execute",
                 tool_calls=[
                     ToolCall(tool_name=RETRIEVE_CHUNKS, tool_args_json='{"query": "test"}')
                 ],
+                scope_score=90,
                 reasoning="Testing",
             ),
             "tool_history": [],
@@ -291,11 +299,12 @@ class TestExecutorNode:
 
         exec_config = {"configurable": {"context": mock_exec_context}}
         state = {
-            "router_decision": RouterDecision(
-                action="execute_tools",
+            "classification_result": ClassificationResult(
+                intent="execute",
                 tool_calls=[
                     ToolCall(tool_name=RETRIEVE_CHUNKS, tool_args_json='{"query": "test"}')
                 ],
+                scope_score=90,
                 reasoning="Testing",
             ),
             "tool_history": [],
@@ -317,11 +326,12 @@ class TestExecutorNode:
         mock_get_writer.return_value = MagicMock()
         exec_config = {"configurable": {"context": mock_exec_context}}
         state = {
-            "router_decision": RouterDecision(
-                action="execute_tools",
+            "classification_result": ClassificationResult(
+                intent="execute",
                 tool_calls=[
                     ToolCall(tool_name=LIST_PAPERS, tool_args_json="not valid json")
                 ],
+                scope_score=90,
                 reasoning="Testing",
             ),
             "tool_history": [],

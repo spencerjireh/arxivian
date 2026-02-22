@@ -24,16 +24,23 @@ class RetrieveChunksTool(BaseTool):
     extends_chunks: ClassVar[bool] = True
     required_dependencies: ClassVar[list[str]] = ["search_service"]
 
-    def __init__(self, search_service: SearchService, default_top_k: int = 6):
+    def __init__(
+        self,
+        search_service: SearchService,
+        default_top_k: int = 6,
+        min_score: float = 0.5,
+    ):
         """
         Initialize retrieve tool.
 
         Args:
             search_service: Service for vector/hybrid search
             default_top_k: Default number of chunks to retrieve
+            min_score: Minimum RRF score to include a chunk (0.0-1.0)
         """
         self.search_service = search_service
         self.default_top_k = default_top_k
+        self.min_score = min_score
 
     @property
     def parameters_schema(self) -> dict:
@@ -67,6 +74,8 @@ class RetrieveChunksTool(BaseTool):
                 top_k=clamped_top_k,
                 mode="hybrid",
             )
+
+            results = [r for r in results if r.score >= self.min_score]
 
             chunks = [
                 {

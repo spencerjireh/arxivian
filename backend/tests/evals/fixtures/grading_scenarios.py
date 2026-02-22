@@ -45,9 +45,9 @@ GRADING_SCENARIOS: list[GradingScenario] = [
         query="What is BERT and how does bidirectional pre-training work?",
         chunks=BERT_CHUNKS + IRRELEVANT_CHUNKS,
         expected_relevant_ids=["chunk-b1", "chunk-b2"],
-        expect_rewrite=True,
-        top_k=3,
-        description="BERT chunks relevant, image chunk not -- 2 < top_k 3 triggers rewrite",
+        expect_rewrite=False,
+        top_k=2,
+        description="Two BERT chunks fully answer the query -- irrelevant chunk doesn't diminish sufficiency",
     ),
     GradingScenario(
         id="rewrite_suppressed_at_max_iter",

@@ -54,7 +54,7 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
     """
     context: AgentContext = config["configurable"]["context"]
 
-    decision = state.get("router_decision")
+    decision = state.get("classification_result")
 
     if not decision or not decision.tool_calls:
         log.warning("executor called without valid tool decision")

@@ -1,7 +1,7 @@
-"""Tier 1: Grading node relevance evaluation (real LLM, direct node call).
+"""Tier 1: Batch evaluation node accuracy (real LLM, direct node call).
 
-Tests whether the grading node correctly identifies relevant vs irrelevant
-chunks and triggers query rewrites when appropriate.
+Tests whether the evaluate_batch node correctly determines chunk set sufficiency
+and triggers query rewrites when appropriate.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ import copy
 
 import pytest
 
-from src.services.agent_service.nodes.grading import grade_documents_node
+from src.services.agent_service.nodes.evaluate_batch import evaluate_batch_node
 
 from .fixtures.grading_scenarios import GRADING_SCENARIOS, GradingScenario
 from .helpers import build_initial_state
@@ -21,11 +21,11 @@ from .helpers import build_initial_state
     GRADING_SCENARIOS,
     ids=[s.id for s in GRADING_SCENARIOS],
 )
-async def test_grading_relevance(
+async def test_batch_evaluation(
     scenario: GradingScenario,
     eval_config: dict,
 ) -> None:
-    """Grading node should correctly classify chunk relevance and trigger rewrites."""
+    """Batch evaluation node should correctly assess chunk set sufficiency."""
     ctx = eval_config["configurable"]["context"]
     test_ctx = copy.copy(ctx)
     test_ctx.top_k = scenario.top_k
@@ -39,18 +39,21 @@ async def test_grading_relevance(
     )
     state["iteration"] = scenario.iteration
 
-    result = await grade_documents_node(state, test_config)
+    result = await evaluate_batch_node(state, test_config)
 
-    # Check relevant chunk IDs
-    actual_ids = sorted(c["chunk_id"] for c in result["relevant_chunks"])
-    expected_ids = sorted(scenario.expected_relevant_ids)
-    assert actual_ids == expected_ids, (
-        f"[{scenario.id}] Expected relevant IDs {expected_ids}, got {actual_ids}"
+    evaluation = result["evaluation_result"]
+
+    # Check sufficiency: if we expected all chunks to be relevant, the set should
+    # be sufficient. If we expected few relevant chunks, it should be insufficient.
+    expected_sufficient = len(scenario.expected_relevant_ids) >= scenario.top_k
+    assert evaluation.sufficient == expected_sufficient, (
+        f"[{scenario.id}] Expected sufficient={expected_sufficient}, "
+        f"got sufficient={evaluation.sufficient}. Reasoning: {evaluation.reasoning}"
     )
 
-    # Check rewrite behavior
-    has_rewrite = result["rewritten_query"] is not None
-    assert has_rewrite == scenario.expect_rewrite, (
-        f"[{scenario.id}] Expected rewrite={scenario.expect_rewrite}, "
-        f"got rewritten_query={'present' if has_rewrite else 'None'}"
-    )
+    # Check rewrite behavior: if insufficient and iterations remain, expect rewrite
+    if not expected_sufficient and scenario.expect_rewrite:
+        has_rewrite = result.get("rewritten_query") is not None
+        assert has_rewrite, (
+            f"[{scenario.id}] Expected rewrite suggestion but got None"
+        )

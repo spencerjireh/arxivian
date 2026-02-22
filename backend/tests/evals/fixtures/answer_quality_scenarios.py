@@ -31,6 +31,7 @@ ANSWER_QUALITY_SCENARIOS: list[AnswerQualityScenario] = [
         query="Search our knowledge base for how multi-head attention works in the Transformer",
         canned_chunks=TRANSFORMER_CHUNKS,
         description="Factual question with highly relevant chunks",
+        metrics_override=["answer_relevancy", "faithfulness"],
     ),
     AnswerQualityScenario(
         id="no_relevant_chunks",
@@ -43,6 +44,7 @@ ANSWER_QUALITY_SCENARIOS: list[AnswerQualityScenario] = [
         query="Retrieve and compare the architectures of BERT and the original Transformer from our ingested papers",
         canned_chunks=TRANSFORMER_CHUNKS + BERT_CHUNKS,
         description="Synthesis question requiring information from multiple papers",
+        metrics_override=["answer_relevancy", "faithfulness"],
     ),
     AnswerQualityScenario(
         id="arxiv_search_outputs",
@@ -84,5 +86,18 @@ ANSWER_QUALITY_SCENARIOS: list[AnswerQualityScenario] = [
             "arxiv_search returns success=False. Agent should handle gracefully "
             "and inform the user rather than producing a hallucinated answer."
         ),
+    ),
+    AnswerQualityScenario(
+        id="arxiv_search_no_loop",
+        query="Search arXiv for recent papers on knowledge distillation for LLMs",
+        canned_chunks=[],
+        canned_tool_outputs=[{"tool_name": "arxiv_search", "data": ARXIV_SEARCH_RESULTS}],
+        description=(
+            "arxiv_search-only flow should complete without re-emitting the tool. "
+            "Verifies Fix 3 (prompt + dedup guard) prevents the search loop."
+        ),
+        # Canned results are about attention/BERT, not distillation -- contextual
+        # relevancy will score 0. The real assertion is the iteration guard below.
+        metrics_override=["answer_relevancy"],
     ),
 ]

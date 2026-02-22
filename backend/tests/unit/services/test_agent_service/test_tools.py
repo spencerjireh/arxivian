@@ -92,6 +92,71 @@ class TestRetrieveChunksTool:
         assert tool.extends_chunks is True
         assert "search_service" in tool.required_dependencies
 
+    @pytest.mark.asyncio
+    async def test_min_score_filters_low_relevance(self, mock_search_service):
+        tool = RetrieveChunksTool(
+            search_service=mock_search_service, default_top_k=6, min_score=0.5
+        )
+
+        def _mock_result(score: float) -> Mock:
+            r = Mock()
+            r.chunk_id = f"chunk-{score}"
+            r.chunk_text = "text"
+            r.arxiv_id = "2301.00001"
+            r.title = "Paper"
+            r.authors = []
+            r.section_name = "Intro"
+            r.score = score
+            r.pdf_url = "https://arxiv.org/pdf/2301.00001.pdf"
+            r.published_date = "2023-01-01"
+            return r
+
+        mock_search_service.hybrid_search.return_value = [
+            _mock_result(0.9),
+            _mock_result(0.6),
+            _mock_result(0.3),
+        ]
+
+        result = await tool.execute(query="transformers")
+
+        assert result.success is True
+        assert len(result.data) == 2
+        assert all(c["score"] >= 0.5 for c in result.data)
+
+    def test_min_score_default(self):
+        tool = RetrieveChunksTool(search_service=AsyncMock())
+        assert tool.min_score == 0.5
+
+    @pytest.mark.asyncio
+    async def test_min_score_zero_returns_all(self, mock_search_service):
+        tool = RetrieveChunksTool(
+            search_service=mock_search_service, default_top_k=6, min_score=0.0
+        )
+
+        def _mock_result(score: float) -> Mock:
+            r = Mock()
+            r.chunk_id = f"chunk-{score}"
+            r.chunk_text = "text"
+            r.arxiv_id = "2301.00001"
+            r.title = "Paper"
+            r.authors = []
+            r.section_name = "Intro"
+            r.score = score
+            r.pdf_url = "https://arxiv.org/pdf/2301.00001.pdf"
+            r.published_date = "2023-01-01"
+            return r
+
+        mock_search_service.hybrid_search.return_value = [
+            _mock_result(0.9),
+            _mock_result(0.6),
+            _mock_result(0.3),
+        ]
+
+        result = await tool.execute(query="transformers")
+
+        assert result.success is True
+        assert len(result.data) == 3
+
 
 class TestIngestPapersTool:
     """Tests for IngestPapersTool."""

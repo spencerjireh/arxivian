@@ -12,16 +12,6 @@ from src.schemas.conversation import ConversationMessage
 ExecutionStatus = Literal["running", "paused", "completed", "failed"]
 
 
-class GuardrailScoring(BaseModel):
-    """Structured output for guardrail node."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    score: int = Field(..., ge=0, le=100, description="Relevance score (0-100)")
-    reasoning: str = Field(..., description="Brief explanation of the score")
-    is_in_scope: bool = Field(..., description="Whether query is in scope for academic research")
-
-
 class ToolCall(BaseModel):
     """Single tool call specification."""
 
@@ -34,19 +24,36 @@ class ToolCall(BaseModel):
     )
 
 
-class RouterDecision(BaseModel):
-    """Structured output for router node's tool selection."""
+class ClassificationResult(BaseModel):
+    """Structured output for merged classify-and-route node."""
 
     model_config = ConfigDict(extra="forbid")
 
-    action: Literal["execute_tools", "generate"] = Field(
-        ..., description="Whether to execute tool(s) or generate a response"
+    intent: Literal["out_of_scope", "direct", "execute"] = Field(
+        ..., description="Query intent: out_of_scope, direct (answer from context), execute (call tools)"
     )
     tool_calls: list[ToolCall] = Field(
         default_factory=list,
-        description="Tools to execute (1 or more, run in parallel)",
+        description="Tools to execute (only when intent='execute')",
     )
-    reasoning: str = Field(..., description="Brief explanation of the decision")
+    scope_score: int = Field(
+        ..., ge=0, le=100, description="Academic research relevance score (0-100)"
+    )
+    reasoning: str = Field(..., description="Brief explanation of classification decision")
+
+
+class BatchEvaluation(BaseModel):
+    """Structured output for batch chunk evaluation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    sufficient: bool = Field(
+        ..., description="Whether retrieved chunks collectively answer the query"
+    )
+    reasoning: str = Field(..., description="Why the set is or is not sufficient")
+    suggested_rewrite: str | None = Field(
+        default=None, description="Rewritten query if insufficient (for retry loop)"
+    )
 
 
 class ToolExecution(BaseModel):
@@ -57,16 +64,6 @@ class ToolExecution(BaseModel):
     success: bool = Field(..., description="Whether the execution succeeded")
     result_summary: str = Field(default="", description="Brief summary of the result")
     error: str | None = Field(default=None, description="Error message if failed")
-
-
-class GradingResult(BaseModel):
-    """Structured output for document grading."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    chunk_id: str = Field(default="", description="ID of the chunk being graded")
-    is_relevant: bool = Field(..., description="Whether chunk is relevant to the query")
-    reasoning: str = Field(..., description="Why the chunk is relevant or not (1 sentence)")
 
 
 class InjectionScan(TypedDict):
@@ -110,8 +107,11 @@ class AgentState(TypedDict):
     iteration: int
     max_iterations: int
 
-    # Router decision (LLM's tool selection)
-    router_decision: RouterDecision | None
+    # Classification result (merged guardrail + router)
+    classification_result: ClassificationResult | None
+
+    # Batch evaluation result
+    evaluation_result: BatchEvaluation | None
 
     # Tool execution history
     tool_history: list[ToolExecution]
@@ -124,15 +124,9 @@ class AgentState(TypedDict):
     # Retrieval tracking
     retrieval_attempts: int
 
-    # Guardrail results
-    guardrail_result: GuardrailScoring | None
-
     # Retrieved content
     retrieved_chunks: list[dict]
     relevant_chunks: list[dict]
-
-    # Grading results
-    grading_results: list[GradingResult]
 
     # Tool outputs for generation
     tool_outputs: list[ToolOutput]

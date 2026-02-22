@@ -5,7 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from src.schemas.conversation import ConversationMessage
-from .canned_data import TRANSFORMER_CHUNKS, BERT_CHUNKS, IRRELEVANT_CHUNKS
+from .canned_data import (
+    TRANSFORMER_CHUNKS,
+    BERT_CHUNKS,
+    IRRELEVANT_CHUNKS,
+    ARXIV_SEARCH_RESULTS,
+)
 
 
 @dataclass
@@ -59,6 +64,21 @@ CITATION_SCENARIOS: list[CitationScenario] = [
         description=(
             "Query about a non-existent paper with irrelevant chunks. "
             "Answer must NOT fabricate citations to papers not in context."
+        ),
+    ),
+    CitationScenario(
+        id="cites_arxiv_search_results",
+        query="Search arXiv for papers about attention mechanisms",
+        canned_chunks=[],
+        canned_tool_outputs=[{"tool_name": "arxiv_search", "data": ARXIV_SEARCH_RESULTS}],
+        expected_arxiv_ids=["1706.03762", "1810.04805"],
+        expected_titles=[
+            "Attention Is All You Need",
+            "BERT: Pre-training of Deep Bidirectional Transformers",
+        ],
+        description=(
+            "arxiv_search results should be cited accurately "
+            "without fabricating additional papers"
         ),
     ),
 ]

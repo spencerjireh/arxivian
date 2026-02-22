@@ -1,7 +1,7 @@
 """Tier 1: Router tool selection accuracy (real LLM, direct node call).
 
-Uses DeepEval ToolCorrectnessMetric to score whether the router picks
-the right tools for each query.
+Uses DeepEval ToolCorrectnessMetric to score whether the classify-and-route
+node picks the right tools for each query.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from deepeval import assert_test
 from deepeval.metrics import ToolCorrectnessMetric
 from deepeval.test_case import LLMTestCase, ToolCall
 
-from src.services.agent_service.nodes.router import router_node
+from src.services.agent_service.nodes.classify_and_route import classify_and_route_node
 
 from .fixtures.router_scenarios import ROUTER_SCENARIOS, RouterScenario
 from .helpers import build_initial_state
@@ -26,7 +26,7 @@ async def test_router_tool_selection(
     scenario: RouterScenario,
     eval_config: dict,
 ) -> None:
-    """Router should select the correct tools for each query type."""
+    """Classify-and-route should select the correct tools for each query type."""
     state = build_initial_state(
         query=scenario.query,
         original_query=scenario.query,
@@ -34,24 +34,27 @@ async def test_router_tool_selection(
         tool_history=scenario.tool_history,
         retrieved_chunks=scenario.available_chunks,
     )
-    result = await router_node(state, eval_config)
+    result = await classify_and_route_node(state, eval_config)
 
-    decision = result["router_decision"]
+    classification = result["classification_result"]
 
-    # Check action type
-    assert decision.action == scenario.expected_action, (
-        f"[{scenario.id}] Expected action={scenario.expected_action}, "
-        f"got action={decision.action}. Reasoning: {decision.reasoning}"
+    # Map old expected_action to new intent
+    expected_intent = (
+        "execute" if scenario.expected_action == "execute_tools" else "direct"
+    )
+    assert classification.intent == expected_intent, (
+        f"[{scenario.id}] Expected intent={expected_intent}, "
+        f"got intent={classification.intent}. Reasoning: {classification.reasoning}"
     )
 
     if not scenario.expected_tools:
-        # "generate" action -- no tools expected
+        # "direct" intent -- no tools expected
         return
 
     # Build DeepEval test case for tool correctness
     actual_tools = [
         ToolCall(name=tc.tool_name)
-        for tc in decision.tool_calls
+        for tc in classification.tool_calls
     ]
     expected_tools = [
         ToolCall(name=name)
@@ -60,7 +63,7 @@ async def test_router_tool_selection(
 
     test_case = LLMTestCase(
         input=scenario.query,
-        actual_output=decision.reasoning,
+        actual_output=classification.reasoning,
         tools_called=actual_tools,
         expected_tools=expected_tools,
     )

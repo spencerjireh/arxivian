@@ -39,8 +39,9 @@ async def generate_answer_node(state: AgentState, config: RunnableConfig) -> dic
         .with_query(query)
     )
 
-    # Add note if limited sources found after max attempts
-    if attempts >= context.max_retrieval_attempts and len(chunks) < context.top_k:
+    # Add note if batch evaluation found insufficient coverage
+    batch_eval = state.get("evaluation_result")
+    if batch_eval and not batch_eval.sufficient:
         builder.with_note(
             "Limited sources were found in the knowledge base. "
             "Some chunks are available but they do not fully cover the question."

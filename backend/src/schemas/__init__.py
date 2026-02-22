@@ -10,7 +10,7 @@ from src.schemas.stream import (
     MetadataEventData,
     ErrorEventData,
 )
-from src.schemas.langgraph_state import GuardrailScoring, GradingResult, AgentState
+from src.schemas.langgraph_state import ClassificationResult, BatchEvaluation, AgentState
 from src.schemas.conversation import ConversationMessage, TurnData
 
 __all__ = [
@@ -22,8 +22,8 @@ __all__ = [
     "SourcesEventData",
     "MetadataEventData",
     "ErrorEventData",
-    "GuardrailScoring",
-    "GradingResult",
+    "ClassificationResult",
+    "BatchEvaluation",
     "AgentState",
     "ConversationMessage",
     "TurnData",

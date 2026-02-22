@@ -26,14 +26,14 @@ async def out_of_scope_node(state: AgentState, config: RunnableConfig) -> dict:
     """Handle out-of-scope queries with context-aware response."""
     context: AgentContext = config["configurable"]["context"]
 
-    guardrail_result = state.get("guardrail_result")
+    classification_result = state.get("classification_result")
     original_query = state.get("original_query") or ""
     history = state.get("conversation_history", [])
 
     injection_scan = state.get("metadata", {}).get("injection_scan", {})
     was_suspicious = injection_scan.get("suspicious", False)
 
-    score = guardrail_result.score if guardrail_result else None
+    score = classification_result.scope_score if classification_result else None
     log.info(
         "out_of_scope_response",
         query=original_query[:100],
@@ -41,13 +41,13 @@ async def out_of_scope_node(state: AgentState, config: RunnableConfig) -> dict:
         was_suspicious=was_suspicious,
     )
 
-    if guardrail_result:
+    if classification_result:
         system, user = (
             PromptBuilder(OUT_OF_SCOPE_ENHANCED_PROMPT)
             .with_conversation(context.conversation_formatter, history)
             .with_query(original_query, label="User message")
-            .with_note(f"Relevance score: {guardrail_result.score}/100")
-            .with_note(f"Reason: {guardrail_result.reasoning}")
+            .with_note(f"Relevance score: {classification_result.scope_score}/100")
+            .with_note(f"Reason: {classification_result.reasoning}")
             .build()
         )
 

@@ -4,96 +4,84 @@ from src.schemas.langgraph_state import AgentState
 from src.services.agent_service.tools import RETRIEVE_CHUNKS
 
 
-def continue_after_guardrail(state: AgentState) -> str:
-    """Route based on guardrail score."""
-    guardrail_result = state.get("guardrail_result")
-    if not guardrail_result:
-        return "out_of_scope"
-
-    score = guardrail_result.score
-    threshold = state["metadata"].get("guardrail_threshold", 75)
-
-    if score >= threshold:
-        return "continue"
-    else:
-        return "out_of_scope"
-
-
-def route_after_router(state: AgentState) -> str:
-    """
-    Route based on router decision.
+def route_after_classify(state: AgentState) -> str:
+    """Route based on classification result.
 
     Returns:
-        - "execute": Router decided to call tool(s)
-        - "grade": Router decided to generate, but we have retrieved chunks to grade
-        - "generate": Router decided to generate response
+        - "out_of_scope": Query is out of scope
+        - "execute": Classification decided to call tool(s)
+        - "evaluate": Safety net -- intent is "direct" but ungraded chunks exist
+        - "generate": Intent is "direct" and no ungraded chunks
     """
-    decision = state.get("router_decision")
+    result = state.get("classification_result")
+    if not result:
+        return "out_of_scope"
 
-    if not decision:
-        return "generate"
+    threshold = state["metadata"].get("guardrail_threshold", 75)
 
-    if decision.tool_calls:
+    # Out of scope by intent or score
+    if result.intent == "out_of_scope" or result.scope_score < threshold:
+        return "out_of_scope"
+
+    # Execute tools
+    if result.intent == "execute" and result.tool_calls:
         return "execute"
 
-    # Action is "generate" - check if we need to grade first
+    # Intent is "direct" -- safety net: if we have ungraded retrieved chunks,
+    # route to evaluate instead of skipping straight to generate
     retrieved_chunks = state.get("retrieved_chunks", [])
     relevant_chunks = state.get("relevant_chunks", [])
-
     if retrieved_chunks and not relevant_chunks:
-        return "grade"
+        return "evaluate"
 
     return "generate"
 
 
 def route_after_executor(state: AgentState) -> str:
-    """
-    Route after tool execution.
+    """Route after tool execution.
 
     Returns:
         - "confirm": If a tool triggered HITL pause (propose_ingest)
-        - "grade": If retrieve_chunks was called in current batch, grade the results
-        - "router": Otherwise, go back to router for next decision
+        - "evaluate": If retrieve_chunks was called and succeeded
+        - "classify": Otherwise, go back to classify for next decision
     """
-    # HITL: if a tool set pause_reason, route to confirm_ingest
     if state.get("pause_reason"):
         return "confirm"
 
     last_executed = state.get("last_executed_tools", [])
 
     if not last_executed:
-        return "router"
+        return "classify"
 
     # Check if retrieve_chunks was in current batch and succeeded
     if RETRIEVE_CHUNKS in last_executed:
-        # Verify it succeeded by checking the most recent execution
         for t in reversed(state.get("tool_history", [])):
             if t.tool_name == RETRIEVE_CHUNKS:
-                return "grade" if t.success else "router"
+                return "evaluate" if t.success else "classify"
 
-    return "router"
+    return "classify"
 
 
-def route_after_grading_new(state: AgentState) -> str:
-    """
-    Route after grading (new architecture).
+def route_after_eval(state: AgentState) -> str:
+    """Route after batch evaluation.
 
     Returns:
-        - "router": If we need more context (not enough relevant chunks)
-        - "generate": If we have enough relevant chunks
+        - "generate": Chunks are sufficient or max iterations reached
+        - "classify": Insufficient, rewrite and retry
     """
-    relevant_chunks = state.get("relevant_chunks", [])
-    top_k = state.get("metadata", {}).get("top_k", 3)
+    evaluation = state.get("evaluation_result")
+    if not evaluation:
+        return "generate"
+
+    if evaluation.sufficient:
+        return "generate"
+
     max_iterations = state.get("max_iterations", 5)
     iteration = state.get("iteration", 0)
 
-    # If we have enough relevant chunks, generate
-    if len(relevant_chunks) >= top_k:
-        return "generate"
-
-    # If we've hit max iterations, generate with what we have
+    # Max iterations reached -- generate with what we have
     if iteration >= max_iterations:
         return "generate"
 
-    # Otherwise, go back to router for possible query rewrite
-    return "router"
+    # Insufficient and iterations remain -- rewrite loop
+    return "classify"

@@ -99,4 +99,16 @@ async def test_answer_quality(
     else:
         metrics = [cls(threshold=0.5) for cls in metric_map.values()]
 
+    # Verify arxiv_search scenarios don't loop (check before DeepEval so
+    # a loop regression is never masked by a metric failure).
+    if any(
+        out.get("tool_name") == "arxiv_search"
+        for out in (scenario.canned_tool_outputs or [])
+    ):
+        iterations = final_state.get("iteration", 0)
+        assert iterations <= 2, (
+            f"[{scenario.id}] arxiv_search flow took {iterations} iterations "
+            f"(expected <= 2). Possible search loop regression."
+        )
+
     assert_test(test_case, metrics)

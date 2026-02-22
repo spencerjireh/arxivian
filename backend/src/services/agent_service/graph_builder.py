@@ -1,13 +1,12 @@
 """LangGraph workflow builder for agent service.
 
-This module builds the router-based agent graph following 12-factor agent principles.
+This module builds the agent graph following 12-factor agent principles.
 
 Graph flow:
-    START -> guardrail -> [out_of_scope | router]
-    router -> [executor | grade | generate]
-    executor -> [confirm | grade | router]
-    confirm_ingest -> router
-    grade -> [router | generate]
+    START -> classify_and_route -> [out_of_scope | executor | evaluate_batch | generate]
+    executor -> [confirm_ingest | evaluate_batch | classify_and_route]
+    confirm_ingest -> classify_and_route
+    evaluate_batch -> [generate | classify_and_route]
     generate -> END
     out_of_scope -> END
 """
@@ -18,19 +17,17 @@ from langgraph.graph.state import CompiledStateGraph
 
 from src.schemas.langgraph_state import AgentState
 from .nodes import (
-    guardrail_node,
+    classify_and_route_node,
     out_of_scope_node,
-    router_node,
     executor_node,
-    grade_documents_node,
+    evaluate_batch_node,
     generate_answer_node,
     confirm_ingest_node,
 )
 from .edges import (
-    continue_after_guardrail,
-    route_after_router,
+    route_after_classify,
     route_after_executor,
-    route_after_grading_new,
+    route_after_eval,
 )
 
 
@@ -47,51 +44,51 @@ def build_graph(checkpointer: BaseCheckpointSaver | None = None) -> CompiledStat
     """
     workflow = StateGraph(AgentState)  # type: ignore[invalid-argument-type]
 
-    # Add nodes (receive context via RunnableConfig)
-    workflow.add_node("guardrail", guardrail_node)
+    # Add nodes
+    workflow.add_node("classify_and_route", classify_and_route_node)
     workflow.add_node("out_of_scope", out_of_scope_node)
-    workflow.add_node("router", router_node)
     workflow.add_node("executor", executor_node)
-    workflow.add_node("grade_documents", grade_documents_node)
+    workflow.add_node("evaluate_batch", evaluate_batch_node)
     workflow.add_node("generate", generate_answer_node)
     workflow.add_node("confirm_ingest", confirm_ingest_node)
 
-    # Add edges
-    # START -> guardrail
-    workflow.add_edge(START, "guardrail")
+    # START -> classify_and_route
+    workflow.add_edge(START, "classify_and_route")
 
-    # guardrail -> [out_of_scope | router]
+    # classify_and_route -> [out_of_scope | executor | evaluate_batch | generate]
     workflow.add_conditional_edges(
-        "guardrail",
-        continue_after_guardrail,
-        {"continue": "router", "out_of_scope": "out_of_scope"},
+        "classify_and_route",
+        route_after_classify,
+        {
+            "out_of_scope": "out_of_scope",
+            "execute": "executor",
+            "evaluate": "evaluate_batch",
+            "generate": "generate",
+        },
     )
 
     # out_of_scope -> END
     workflow.add_edge("out_of_scope", END)
 
-    # router -> [executor | grade | generate]
-    workflow.add_conditional_edges(
-        "router",
-        route_after_router,
-        {"execute": "executor", "grade": "grade_documents", "generate": "generate"},
-    )
-
-    # executor -> [confirm | grade | router]
+    # executor -> [confirm_ingest | evaluate_batch | classify_and_route]
     workflow.add_conditional_edges(
         "executor",
         route_after_executor,
-        {"confirm": "confirm_ingest", "grade": "grade_documents", "router": "router"},
+        {
+            "confirm": "confirm_ingest",
+            "evaluate": "evaluate_batch",
+            "classify": "classify_and_route",
+        },
     )
 
-    # confirm_ingest -> router (unconditional)
-    workflow.add_edge("confirm_ingest", "router")
+    # confirm_ingest -> classify_and_route
+    workflow.add_edge("confirm_ingest", "classify_and_route")
 
-    # grade -> [router | generate]
+    # evaluate_batch -> [generate | classify_and_route]
     workflow.add_conditional_edges(
-        "grade_documents",
-        route_after_grading_new,
-        {"router": "router", "generate": "generate"},
+        "evaluate_batch",
+        route_after_eval,
+        {"generate": "generate", "classify": "classify_and_route"},
     )
 
     # generate -> END

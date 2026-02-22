@@ -27,7 +27,6 @@ try:
     LANGFUSE_CALLBACK_AVAILABLE = True
 except ImportError:
     LANGFUSE_CALLBACK_AVAILABLE = False
-from src.exceptions import CheckpointExpiredError
 from src.clients.arxiv_client import ArxivClient
 from src.services.search_service import SearchService
 from src.services.ingest_service import IngestService
@@ -59,20 +58,18 @@ _CHECKPOINT_ERROR_PATTERNS = ("no checkpoint found", "missing thread_id")
 
 # Map LangGraph node names to user-friendly step names
 NODE_TO_STEP = {
-    "guardrail": "guardrail",
+    "classify_and_route": "classifying",
     "out_of_scope": "out_of_scope",
-    "router": "routing",
     "executor": "executing",
-    "grade_documents": "grading",
+    "evaluate_batch": "evaluating",
     "generate": "generation",
     "confirm_ingest": "confirming",
 }
 
 NODE_MESSAGES = {
-    "guardrail": "Validating query relevance...",
+    "classify_and_route": "Classifying query...",
     "out_of_scope": "Generating out-of-scope response...",
-    "router": "Deciding next action...",
-    "grade_documents": "Grading document relevance...",
+    "evaluate_batch": "Evaluating retrieval quality...",
     "generate": "Generating answer...",
     "confirm_ingest": "Waiting for confirmation...",
 }
@@ -138,6 +135,7 @@ class AgentService:
         conversation_window: int = 5,
         guardrail_threshold: int = 75,
         top_k: int = 3,
+        min_score: float = 0.5,
         max_retrieval_attempts: int = 3,
         max_iterations: int = 5,
         temperature: float = 0.3,
@@ -157,6 +155,7 @@ class AgentService:
             paper_repository=paper_repository,
             guardrail_threshold=guardrail_threshold,
             top_k=top_k,
+            min_score=min_score,
             max_retrieval_attempts=max_retrieval_attempts,
             max_iterations=max_iterations,
             temperature=temperature,
@@ -277,45 +276,29 @@ class AgentService:
                         final_state.update(output)
 
                     # Emit detailed status per node
-                    if node_name == "guardrail" and output.get("guardrail_result"):
-                        result = output["guardrail_result"]
-                        is_in_scope = result.score >= self.context.guardrail_threshold
-                        guardrail_details = {
-                            "score": result.score,
+                    if node_name == "classify_and_route" and output.get(
+                        "classification_result"
+                    ):
+                        result = output["classification_result"]
+                        classify_details = {
+                            "score": result.scope_score,
+                            "intent": result.intent,
                             "threshold": self.context.guardrail_threshold,
                             "reasoning": result.reasoning,
                         }
-                        guardrail_msg = (
-                            f"Query {'is in scope' if is_in_scope else 'is out of scope'}"
+                        classify_msg = (
+                            f"Classified: intent={result.intent}, "
+                            f"score={result.scope_score}"
                         )
                         yield StreamEvent(
                             event=StreamEventType.STATUS,
                             data=StatusEventData(
-                                step="guardrail",
-                                message=guardrail_msg,
-                                details=guardrail_details,
+                                step="classifying",
+                                message=classify_msg,
+                                details=classify_details,
                             ),
                         )
-                        tracker.end("guardrail", guardrail_msg, guardrail_details)
-
-                    elif node_name == "router" and output.get("router_decision"):
-                        decision = output["router_decision"]
-                        routing_details = {
-                            "action": decision.action,
-                            "tools": [tc.tool_name for tc in decision.tool_calls],
-                            "iteration": output.get("iteration", 0),
-                            "reasoning": decision.reasoning,
-                        }
-                        routing_msg = f"Decided to {decision.action}"
-                        yield StreamEvent(
-                            event=StreamEventType.STATUS,
-                            data=StatusEventData(
-                                step="routing",
-                                message=routing_msg,
-                                details=routing_details,
-                            ),
-                        )
-                        tracker.end("routing", routing_msg, routing_details)
+                        tracker.end("classifying", classify_msg, classify_details)
 
                     elif node_name == "out_of_scope":
                         tracker.end("out_of_scope", "Out of scope", None)
@@ -340,25 +323,30 @@ class AgentService:
                         )
                         tracker.end("confirming", "Confirmation received", None)
 
-                    elif node_name == "grade_documents":
+                    elif node_name == "evaluate_batch":
+                        eval_result = output.get("evaluation_result")
                         relevant = output.get("relevant_chunks", [])
-                        total = output.get("grading_results", [])
-                        grading_details = {
-                            "relevant": len(relevant),
-                            "total": len(total),
+                        total_chunks = len(final_state.get("retrieved_chunks", []))
+                        eval_details = {
+                            "sufficient": eval_result.sufficient if eval_result else None,
+                            "total": total_chunks,
+                            "reasoning": eval_result.reasoning if eval_result else "",
                         }
-                        grading_msg = f"Found {len(relevant)} relevant documents"
+                        eval_msg = (
+                            f"Evaluation: "
+                            f"{'sufficient' if eval_result and eval_result.sufficient else 'insufficient'}"
+                        )
                         yield StreamEvent(
                             event=StreamEventType.STATUS,
                             data=StatusEventData(
-                                step="grading",
-                                message=grading_msg,
-                                details=grading_details,
+                                step="evaluating",
+                                message=eval_msg,
+                                details=eval_details,
                             ),
                         )
-                        tracker.end("grading", grading_msg, grading_details)
+                        tracker.end("evaluating", eval_msg, eval_details)
 
-                        # Emit sources after grading (before generation)
+                        # Emit sources after evaluation (before generation)
                         if not sources_emitted and relevant:
                             sources = [
                                 SourceInfo(
@@ -517,15 +505,14 @@ class AgentService:
             "status": "running",
             "iteration": 0,
             "max_iterations": self.context.max_iterations,
-            "router_decision": None,
+            "classification_result": None,
+            "evaluation_result": None,
             "tool_history": [],
             "pause_reason": None,
             "pause_data": None,
             "retrieval_attempts": 0,
-            "guardrail_result": None,
             "retrieved_chunks": [],
             "relevant_chunks": [],
-            "grading_results": [],
             "tool_outputs": [],
             "metadata": {
                 "guardrail_threshold": self.context.guardrail_threshold,
@@ -627,8 +614,8 @@ class AgentService:
         # Get tool history for metadata
         tool_history = final_state.get("tool_history", [])
         tools_used = [t.tool_name for t in tool_history] if tool_history else []
-        guardrail_result = final_state.get("guardrail_result")
-        guardrail_score = guardrail_result.score if guardrail_result else None
+        classification_result = final_state.get("classification_result")
+        guardrail_score = classification_result.scope_score if classification_result else None
 
         log.info(
             "streaming query complete",
@@ -929,7 +916,7 @@ class AgentService:
         **overrides,
     ) -> TurnData:
         """Build TurnData from final state with optional field overrides."""
-        guardrail_result = final_state.get("guardrail_result")
+        classification_result = final_state.get("classification_result")
         sources = self._build_sources_dicts(final_state)
         # Allow callers to override citations (e.g. None for partial HITL saves)
         citations = overrides.pop("citations", self._extract_citations(final_state))
@@ -940,7 +927,7 @@ class AgentService:
             agent_response=agent_response,
             provider=self.context.llm_client.provider_name,
             model=self.context.llm_client.model,
-            guardrail_score=guardrail_result.score if guardrail_result else None,
+            guardrail_score=classification_result.scope_score if classification_result else None,
             retrieval_attempts=final_state.get("retrieval_attempts", 0),
             rewritten_query=final_state.get("rewritten_query"),
             sources=sources or None,

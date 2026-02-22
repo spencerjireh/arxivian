@@ -306,4 +306,55 @@ ROUTER_SCENARIOS: list[RouterScenario] = [
         expected_action="generate",
         description="Asking about search results must NOT auto-propose ingestion",
     ),
+    # Dedup guard: re-emitting succeeded tool should force direct
+    RouterScenario(
+        id="dedup_forces_direct_after_arxiv_success",
+        query="Thanks, that covers what I needed. Can you restate those results more concisely?",
+        tool_history=[
+            ToolExecution(
+                tool_name="arxiv_search",
+                tool_args={"query": "knowledge distillation"},
+                success=True,
+                result_summary="Found 5 papers",
+            ),
+        ],
+        conversation_history=[
+            {"role": "user", "content": "Search arXiv for knowledge distillation papers"},
+            {"role": "assistant", "content": "I found 5 papers on knowledge distillation..."},
+        ],
+        expected_tools=[],
+        expected_action="generate",
+        description="After arxiv_search succeeded, restatement request should generate from context, not re-search",
+    ),
+    # Dedup guard preserves novel tools when chaining
+    RouterScenario(
+        id="dedup_preserves_ingest_after_search",
+        query="Great, add those papers to my library",
+        tool_history=[
+            ToolExecution(
+                tool_name="arxiv_search",
+                tool_args={"query": "knowledge distillation"},
+                success=True,
+                result_summary="Found 5 papers",
+            ),
+        ],
+        conversation_history=[
+            {"role": "user", "content": "Search arXiv for knowledge distillation papers"},
+            {"role": "assistant", "content": "I found 5 papers on knowledge distillation..."},
+        ],
+        expected_tools=["propose_ingest"],
+        expected_action="execute_tools",
+        description=(
+            "After arxiv_search succeeded, explicit ingest request should "
+            "propose_ingest (not re-search)"
+        ),
+    ),
+    # Date-aware routing
+    RouterScenario(
+        id="arxiv_search_with_date",
+        query="Find papers about transformers published in February 2026",
+        expected_tools=["arxiv_search"],
+        expected_action="execute_tools",
+        description="Query with date filter should route to arxiv_search",
+    ),
 ]

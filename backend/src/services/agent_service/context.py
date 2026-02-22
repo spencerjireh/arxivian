@@ -92,6 +92,7 @@ class AgentContext:
         conversation_formatter: ConversationFormatter | None = None,
         guardrail_threshold: int = 75,
         top_k: int = 3,
+        min_score: float = 0.5,
         max_retrieval_attempts: int = 3,
         max_iterations: int = 5,
         temperature: float = 0.3,
@@ -106,6 +107,7 @@ class AgentContext:
         self.conversation_formatter = conversation_formatter or ConversationFormatter()
         self.guardrail_threshold = guardrail_threshold
         self.top_k = top_k
+        self.min_score = min_score
         self.max_retrieval_attempts = max_retrieval_attempts
         self.max_iterations = max_iterations
         self.temperature = temperature
@@ -118,7 +120,11 @@ class AgentContext:
             self.tool_registry = ToolRegistry()
             # Register default tools
             self.tool_registry.register(
-                RetrieveChunksTool(search_service=search_service, default_top_k=top_k * 2)
+                RetrieveChunksTool(
+                    search_service=search_service,
+                    default_top_k=top_k * 2,
+                    min_score=min_score,
+                )
             )
             if ingest_service:
                 self.tool_registry.register(ListPapersTool(ingest_service=ingest_service))

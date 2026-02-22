@@ -32,9 +32,12 @@ TRANSFORMER_CHUNKS = [
     make_chunk(
         chunk_id="chunk-t1",
         chunk_text=(
-            "The Transformer architecture relies entirely on attention mechanisms, "
-            "dispensing with recurrence and convolutions entirely. The key innovation "
-            "is multi-head self-attention, which allows the model to jointly attend to "
+            "The Transformer follows an encoder-decoder architecture built entirely "
+            "on attention mechanisms, dispensing with recurrence and convolutions. "
+            "The key innovation is multi-head self-attention: the model projects "
+            "queries, keys, and values into h parallel heads, computes scaled "
+            "dot-product attention in each, concatenates the results, and applies "
+            "a final linear projection. This allows the model to jointly attend to "
             "information from different representation subspaces at different positions."
         ),
         arxiv_id="1706.03762",

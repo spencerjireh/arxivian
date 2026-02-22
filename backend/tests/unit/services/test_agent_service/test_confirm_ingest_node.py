@@ -152,3 +152,20 @@ class TestConfirmIngestNode:
         assert "2301.00002" in entry["prompt_text"]
         # Should NOT say "Successfully ingested"
         assert "successfully" not in entry["prompt_text"].lower()
+
+    # ------------------------------------------------------------------
+    # 7. Does not increment iteration (classify_and_route owns iteration)
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    @patch("src.services.agent_service.nodes.confirm_ingest.interrupt")
+    async def test_does_not_increment_iteration(self, mock_interrupt, base_state, config):
+        """confirm_ingest must NOT increment iteration; classify_and_route handles it."""
+        from src.services.agent_service.nodes.confirm_ingest import confirm_ingest_node
+
+        base_state["iteration"] = 2
+        mock_interrupt.return_value = {"declined": False, "papers_processed": 1}
+
+        result = await confirm_ingest_node(base_state, config)
+
+        assert "iteration" not in result
