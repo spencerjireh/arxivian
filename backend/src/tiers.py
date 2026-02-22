@@ -45,8 +45,8 @@ class TierPolicy:
 
 TIER_POLICIES: dict[str, TierPolicy] = {
     UserTier.FREE: TierPolicy(
-        daily_chats=20,
-        daily_ingests=10,
+        daily_chats=10,
+        daily_ingests=5,
         can_ingest=True,
         can_search_arxiv=True,
         can_adjust_settings=False,

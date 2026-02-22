@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { motion, useReducedMotion } from 'framer-motion'
 import clsx from 'clsx'
-import { Check, Infinity as InfinityIcon, Mail } from 'lucide-react'
+import { Check, Mail } from 'lucide-react'
 import { staggerContainer, staggerItem, transitions } from '../lib/animations'
 import { useUserStore } from '../stores/userStore'
 import Button from '../components/ui/Button'
@@ -16,8 +16,8 @@ const tiers = [
     period: 'forever',
     description: 'Get started with core research tools.',
     features: [
-      '20 conversations per day',
-      '10 paper ingests per day',
+      '10 conversations per day',
+      '5 paper ingests per day',
       'Default settings',
       'Paper library',
       'Hybrid search',
@@ -29,8 +29,8 @@ const tiers = [
     period: 'during beta',
     description: 'Full access for power researchers.',
     features: [
-      'Unlimited conversations',
-      'Unlimited paper ingests',
+      'Generous daily limits',
+      'High-volume ingestion',
       'Custom model & settings',
       'Execution details',
       'Paper library',
@@ -42,8 +42,8 @@ const tiers = [
 ] as const
 
 const comparisonRows = [
-  { feature: 'Daily conversations', free: '20', pro: 'Unlimited' },
-  { feature: 'Daily paper ingests', free: '10', pro: 'Unlimited' },
+  { feature: 'Daily conversations', free: '10', pro: 'Generous' },
+  { feature: 'Daily paper ingests', free: '5', pro: 'Generous' },
   { feature: 'Settings', free: 'Default settings', pro: 'Custom model & settings' },
   { feature: 'Execution details', free: 'Hidden', pro: 'Full access' },
 ] as const
@@ -197,8 +197,7 @@ export default function PricingPage() {
               >
                 <div className="text-sm text-stone-700">{row.feature}</div>
                 <div className="text-sm text-stone-500 text-center">{row.free}</div>
-                <div className="text-sm text-stone-900 text-center flex items-center justify-center gap-1">
-                  {row.pro === 'Unlimited' && <InfinityIcon className="w-3.5 h-3.5 text-stone-400" strokeWidth={1.5} />}
+                <div className="text-sm text-stone-900 text-center">
                   {row.pro}
                 </div>
               </div>

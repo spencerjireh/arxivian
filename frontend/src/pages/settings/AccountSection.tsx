@@ -81,7 +81,7 @@ export default function AccountSection() {
           <div>
             <p className="text-xs text-stone-500">Daily chats</p>
             <p className="text-sm font-medium text-stone-800">
-              {me.chats_used_today} / {me.daily_chat_limit ?? 'Unlimited'}
+              {me.chats_used_today} / {me.daily_chat_limit ?? 'Generous'}
             </p>
           </div>
         </div>
