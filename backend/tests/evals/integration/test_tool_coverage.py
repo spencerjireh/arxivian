@@ -28,18 +28,8 @@ async def test_list_papers_tool_invoked(agent_service: AgentService):
         "List all the papers currently available in my knowledge base using the list papers tool.",
     )
     assert result.done_event is not None
-    # Check if list_papers tool was invoked or answer mentions papers
-    has_list_tool = any(
-        "list_papers" in str(getattr(e.data, "details", {}))
-        for e in result.status_events
-    )
-    answer_lower = result.answer.lower()
-    has_paper_mention = any(
-        term in answer_lower
-        for term in ["attention", "bert", "gpt", "transformer", "vision"]
-    )
-    assert has_list_tool or has_paper_mention, (
-        f"Should invoke list_papers or mention papers: {result.answer[:300]}"
+    assert "list_papers" in result.tools_invoked, (
+        f"Expected list_papers in tools_invoked, got: {result.tools_invoked}"
     )
 
 
@@ -51,13 +41,6 @@ async def test_arxiv_search_tool_invoked(agent_service: AgentService):
         "Search arXiv for papers about chain-of-thought prompting and list what you find.",
     )
     assert result.done_event is not None
-    # The arxiv_search tool should be invoked (visible in status events)
-    has_search = any(
-        "arxiv_search" in str(getattr(e.data, "details", {}))
-        for e in result.status_events
+    assert "arxiv_search" in result.tools_invoked, (
+        f"Expected arxiv_search in tools_invoked, got: {result.tools_invoked}"
     )
-    assert has_search or len(result.answer) > 0, (
-        "Should invoke arxiv_search or produce an answer"
-    )
-
-

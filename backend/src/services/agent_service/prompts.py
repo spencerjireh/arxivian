@@ -85,11 +85,17 @@ ROUTING PRIORITY (evaluate top-to-bottom, use the FIRST match):
    User asks about references, related work, or citation graphs for a specific paper.
    Examples: "show citations for 1706.03762", "what does this paper cite"
 
-4. EXPLICIT DISCOVERY -> arxiv_search
-   User explicitly asks to find, discover, or search for NEW papers on arXiv.
-   Must contain clear discovery intent -- words like "find on arXiv", "search arXiv",
-   "discover new papers", "what's new on arXiv".
-   Examples: "find papers on arXiv about diffusion models", "search arXiv for recent RL papers"
+4. DISCOVERY (explicit or implicit) -> arxiv_search
+   User wants to find or discover NEW papers, either explicitly or implicitly.
+   Explicit signals: "find on arXiv", "search arXiv", "discover new papers".
+   Implicit signals: "latest work on X", "recent advances in Y", "what's new in Z",
+   "state of the art in X", "current research on X".
+   Key distinction from Tier 1: if the user signals interest in NEW or RECENT work
+   they have not seen yet, use arxiv_search. If they ask about concepts or existing
+   papers without temporal/novelty language, use retrieve_chunks.
+   Examples: "find papers on arXiv about diffusion models",
+   "what's the latest work on diffusion models",
+   "I wonder what recent advances in protein folding look like"
 
 5. EXPLICIT INGESTION -> propose_ingest
    ONLY after arxiv_search succeeded AND the user explicitly asked to add/import/ingest papers.
@@ -102,8 +108,9 @@ CRITICAL RULES:
 - retrieve_chunks is the DEFAULT. When uncertain which tool to use, choose retrieve_chunks.
 - If retrieve_chunks returned weak or no results: generate a response with what you have and
   offer to search arXiv for more. Do NOT silently escalate to arxiv_search.
-- arxiv_search is ONLY for discovering new papers when the user explicitly asks. Never use it
-  to answer content questions or as a fallback for weak retrieval.
+- arxiv_search is ONLY for discovering new papers when the user indicates discovery
+  intent (explicit or implicit). Never use it to answer content questions or as a
+  fallback for weak retrieval.
 - propose_ingest requires BOTH a prior arxiv_search AND explicit user intent to add papers.
   Never propose ingestion on your own initiative.
 - NEVER repeat the same tool with the same arguments. If a tool already succeeded, use its results.

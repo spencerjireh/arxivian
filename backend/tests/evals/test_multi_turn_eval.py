@@ -6,31 +6,18 @@ Scores the final answer with a custom GEval metric for coherence.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 from deepeval import assert_test
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
-from src.services.agent_service.tools import ToolResult
 from .fixtures.multi_turn_scenarios import (
     MULTI_TURN_SCENARIOS,
     MultiTurnScenario,
-    Turn,
 )
-from .helpers import build_initial_state, extract_answer
-
-
-def _make_turn_execute(turn: Turn) -> AsyncMock:
-    """Mock tool execution for a single turn."""
-
-    async def _execute(name: str, **kwargs) -> ToolResult:
-        if name == "retrieve_chunks":
-            return ToolResult(success=True, data=turn.canned_chunks, tool_name=name)
-        return ToolResult(success=True, data=[], tool_name=name)
-
-    return AsyncMock(side_effect=_execute)
+from .helpers import build_initial_state, extract_answer, make_tool_execute
 
 
 @pytest.mark.parametrize(
@@ -55,7 +42,11 @@ async def test_multi_turn_coherence(
             max_iterations=ctx.max_iterations,
         )
 
-        with patch.object(ctx.tool_registry, "execute", side_effect=_make_turn_execute(turn)):
+        with patch.object(
+            ctx.tool_registry,
+            "execute",
+            side_effect=make_tool_execute(turn.canned_chunks),
+        ):
             final_state = await compiled_graph.ainvoke(state, eval_config)
 
         answer = extract_answer(final_state)
@@ -68,7 +59,7 @@ async def test_multi_turn_coherence(
 
     # Score the final answer in context of the full conversation
     full_input = "\n".join(
-        f"Turn {i+1} - User: {t.query}\nTurn {i+1} - Assistant: {answers[i]}"
+        f"Turn {i + 1} - User: {t.query}\nTurn {i + 1} - Assistant: {answers[i]}"
         for i, t in enumerate(scenario.turns[:-1])
     )
     full_input += f"\nCurrent query: {scenario.turns[-1].query}"

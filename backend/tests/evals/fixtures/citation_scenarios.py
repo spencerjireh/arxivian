@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from src.schemas.conversation import ConversationMessage
-from .canned_data import TRANSFORMER_CHUNKS, BERT_CHUNKS
+from .canned_data import TRANSFORMER_CHUNKS, BERT_CHUNKS, IRRELEVANT_CHUNKS
 
 
 @dataclass
@@ -49,5 +49,16 @@ CITATION_SCENARIOS: list[CitationScenario] = [
         expected_arxiv_ids=["1706.03762"],
         expected_titles=["Attention Is All You Need"],
         description="Should cite only 1706.03762, no fabricated paper references",
+    ),
+    CitationScenario(
+        id="no_citations_when_no_context",
+        query="What does the paper on quantum error correction by Smith et al. say about fault tolerance?",
+        canned_chunks=IRRELEVANT_CHUNKS,
+        expected_arxiv_ids=[],
+        expected_titles=[],
+        description=(
+            "Query about a non-existent paper with irrelevant chunks. "
+            "Answer must NOT fabricate citations to papers not in context."
+        ),
     ),
 ]

@@ -6,31 +6,20 @@ the papers present in the retrieval context without fabricating citations.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 from deepeval import assert_test
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
-from src.services.agent_service.tools import ToolResult
-
 from .fixtures.citation_scenarios import CITATION_SCENARIOS, CitationScenario
-from .helpers import build_initial_state, extract_answer, extract_retrieval_context
-
-
-def _make_tool_execute(scenario: CitationScenario) -> AsyncMock:
-    """Build a mock for ToolRegistry.execute that returns canned data."""
-
-    async def _execute(name: str, **kwargs) -> ToolResult:
-        if name == "retrieve_chunks":
-            return ToolResult(success=True, data=scenario.canned_chunks, tool_name=name)
-        for out in scenario.canned_tool_outputs:
-            if out["tool_name"] == name:
-                return ToolResult(success=True, data=out["data"], tool_name=name)
-        return ToolResult(success=True, data=[], tool_name=name)
-
-    return AsyncMock(side_effect=_execute)
+from .helpers import (
+    build_initial_state,
+    extract_answer,
+    extract_retrieval_context,
+    make_tool_execute,
+)
 
 
 @pytest.mark.parametrize(
@@ -51,7 +40,11 @@ async def test_citation_accuracy(
         max_iterations=ctx.max_iterations,
     )
 
-    with patch.object(ctx.tool_registry, "execute", side_effect=_make_tool_execute(scenario)):
+    with patch.object(
+        ctx.tool_registry,
+        "execute",
+        side_effect=make_tool_execute(scenario.canned_chunks, scenario.canned_tool_outputs),
+    ):
         final_state = await compiled_graph.ainvoke(state, eval_config)
 
     actual_output = extract_answer(final_state)
@@ -64,18 +57,37 @@ async def test_citation_accuracy(
         tool_outputs = final_state.get("tool_outputs", [])
         retrieval_context = [str(out.get("data", "")) for out in tool_outputs if out.get("data")]
 
-    expected_ids_str = ", ".join(scenario.expected_arxiv_ids)
-    expected_titles_str = ", ".join(scenario.expected_titles)
+    # Fall back to raw canned chunks so the evaluator can verify the agent
+    # did not fabricate citations from irrelevant context.
+    if not retrieval_context and scenario.canned_chunks:
+        retrieval_context = [
+            c.get("chunk_text", "") for c in scenario.canned_chunks if c.get("chunk_text")
+        ]
 
-    criteria = (
-        "Evaluate the citation accuracy of an academic research assistant's response. "
-        f"The response SHOULD reference these arXiv paper IDs: {expected_ids_str}. "
-        f"The papers are titled: {expected_titles_str}. "
-        "The response should: "
-        "1) Mention or attribute information to the expected papers (by ID, title, or author), "
-        "2) Not fabricate citations to papers that were not in the retrieval context, "
-        "3) Correctly associate claims with their source papers."
-    )
+    if scenario.expected_arxiv_ids:
+        expected_ids_str = ", ".join(scenario.expected_arxiv_ids)
+        expected_titles_str = ", ".join(scenario.expected_titles)
+        criteria = (
+            "Evaluate the citation accuracy of an academic research assistant's response. "
+            f"The response SHOULD reference these arXiv paper IDs: {expected_ids_str}. "
+            f"The papers are titled: {expected_titles_str}. "
+            "The response should: "
+            "1) Mention or attribute information to the expected papers "
+            "(by ID, title, or author), "
+            "2) Not fabricate citations to papers that were not in the retrieval context, "
+            "3) Correctly associate claims with their source papers."
+        )
+    else:
+        criteria = (
+            "Evaluate whether the response avoids fabricating citations. "
+            "The retrieval context does NOT contain papers relevant to the query. "
+            "The response should: "
+            "1) NOT cite specific arXiv IDs, paper titles, or authors that are not "
+            "present in the retrieval context, "
+            "2) Acknowledge the lack of relevant sources or decline to answer rather "
+            "than inventing references, "
+            "3) Not attribute claims to non-existent papers."
+        )
 
     test_case = LLMTestCase(
         input=scenario.query,
@@ -83,13 +95,14 @@ async def test_citation_accuracy(
         retrieval_context=retrieval_context if retrieval_context else None,
     )
 
+    eval_params = [LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT]
+    if retrieval_context:
+        eval_params.append(LLMTestCaseParams.RETRIEVAL_CONTEXT)
+
     metric = GEval(
         name="Citation Accuracy",
         criteria=criteria,
-        evaluation_params=[
-            LLMTestCaseParams.INPUT,
-            LLMTestCaseParams.ACTUAL_OUTPUT,
-        ],
+        evaluation_params=eval_params,
         threshold=0.5,
     )
 

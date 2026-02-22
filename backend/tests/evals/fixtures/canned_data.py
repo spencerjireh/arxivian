@@ -99,6 +99,33 @@ BERT_CHUNKS = [
     ),
 ]
 
+CONTRADICTORY_CHUNKS = [
+    make_chunk(
+        chunk_id="chunk-contra1",
+        chunk_text=(
+            "We trained the Transformer (big) model using a batch size of 25,000 "
+            "source tokens and 25,000 target tokens per batch on 8 P100 GPUs. "
+            "Training took 3.5 days to complete."
+        ),
+        arxiv_id="1706.03762",
+        title="Attention Is All You Need",
+        authors="A. Vaswani, N. Shazeer, N. Parmar et al.",
+        section_name="Training",
+    ),
+    make_chunk(
+        chunk_id="chunk-contra2",
+        chunk_text=(
+            "Each training batch contained approximately 50,000 tokens total. "
+            "The base model was trained for 100,000 steps on 8 P100 GPUs, "
+            "which took approximately 12 hours."
+        ),
+        arxiv_id="1706.03762",
+        title="Attention Is All You Need",
+        authors="A. Vaswani, N. Shazeer, N. Parmar et al.",
+        section_name="Training Details",
+    ),
+]
+
 IRRELEVANT_CHUNKS = [
     make_chunk(
         chunk_id="chunk-irr1",
@@ -159,11 +186,16 @@ CITATION_RESULTS = {
     "paper_title": "Attention Is All You Need",
     "arxiv_id": "1706.03762",
     "references": [
-        {"arxiv_id": "1409.0473", "title": "Neural Machine Translation by Jointly Learning to Align and Translate"},
+        {
+            "arxiv_id": "1409.0473",
+            "title": "Neural Machine Translation by Jointly Learning to Align and Translate",
+        },
         {"arxiv_id": "1412.6980", "title": "Adam: A Method for Stochastic Optimization"},
     ],
     "cited_by": [
-        {"arxiv_id": "1810.04805", "title": "BERT: Pre-training of Deep Bidirectional Transformers"},
+        {
+            "arxiv_id": "1810.04805",
+            "title": "BERT: Pre-training of Deep Bidirectional Transformers",
+        },
     ],
 }
-

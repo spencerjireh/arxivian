@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
+from typing import Any
 from unittest.mock import AsyncMock
 
 from langchain_core.messages import HumanMessage
@@ -81,6 +83,35 @@ def make_retrieve_mock(canned_chunks: list[dict]) -> AsyncMock:
     mock = AsyncMock()
     mock.hybrid_search = AsyncMock(return_value=canned_chunks)
     return mock
+
+
+def make_tool_execute(
+    canned_chunks: list[dict],
+    canned_tool_outputs: list[dict] | None = None,
+) -> Callable[..., Coroutine[Any, Any, ToolResult]]:
+    """Build a side_effect function for ToolRegistry.execute that returns canned data.
+
+    For ``retrieve_chunks`` calls, returns *canned_chunks*.
+    For other tools, matches by ``tool_name`` in *canned_tool_outputs* and
+    honours the optional ``success`` flag (defaults to ``True``).
+    Anything unmatched falls back to an empty successful result.
+    """
+    outputs = canned_tool_outputs or []
+
+    async def _execute(name: str, **kwargs: object) -> ToolResult:
+        if name == "retrieve_chunks":
+            return ToolResult(success=True, data=canned_chunks, tool_name=name)
+        for out in outputs:
+            if out["tool_name"] == name:
+                return ToolResult(
+                    success=out.get("success", True),
+                    data=out.get("data"),
+                    error=out.get("error"),
+                    tool_name=name,
+                )
+        return ToolResult(success=True, data=[], tool_name=name)
+
+    return _execute
 
 
 def make_tool_result(tool_name: str, data: object, success: bool = True) -> ToolResult:

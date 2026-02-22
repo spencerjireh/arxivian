@@ -243,6 +243,7 @@ services:
       - ./backend/.env
     environment:
       - DEEPEVAL_PER_ATTEMPT_TIMEOUT_SECONDS_OVERRIDE=300
+      - OPENAI_MODEL_NAME=gpt-4o-mini
     volumes:
       - ./backend:/app
       - /app/.venv

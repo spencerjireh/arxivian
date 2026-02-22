@@ -6,6 +6,8 @@ chunks and triggers query rewrites when appropriate.
 
 from __future__ import annotations
 
+import copy
+
 import pytest
 
 from src.services.agent_service.nodes.grading import grade_documents_node
@@ -25,33 +27,30 @@ async def test_grading_relevance(
 ) -> None:
     """Grading node should correctly classify chunk relevance and trigger rewrites."""
     ctx = eval_config["configurable"]["context"]
-    original_top_k = ctx.top_k
+    test_ctx = copy.copy(ctx)
+    test_ctx.top_k = scenario.top_k
+    test_config = {"configurable": {"context": test_ctx}}
 
-    try:
-        ctx.top_k = scenario.top_k
+    state = build_initial_state(
+        query=scenario.query,
+        original_query=scenario.query,
+        retrieved_chunks=scenario.chunks,
+        max_iterations=scenario.max_iterations,
+    )
+    state["iteration"] = scenario.iteration
 
-        state = build_initial_state(
-            query=scenario.query,
-            original_query=scenario.query,
-            retrieved_chunks=scenario.chunks,
-            max_iterations=scenario.max_iterations,
-        )
-        state["iteration"] = scenario.iteration
+    result = await grade_documents_node(state, test_config)
 
-        result = await grade_documents_node(state, eval_config)
+    # Check relevant chunk IDs
+    actual_ids = sorted(c["chunk_id"] for c in result["relevant_chunks"])
+    expected_ids = sorted(scenario.expected_relevant_ids)
+    assert actual_ids == expected_ids, (
+        f"[{scenario.id}] Expected relevant IDs {expected_ids}, got {actual_ids}"
+    )
 
-        # Check relevant chunk IDs
-        actual_ids = sorted(c["chunk_id"] for c in result["relevant_chunks"])
-        expected_ids = sorted(scenario.expected_relevant_ids)
-        assert actual_ids == expected_ids, (
-            f"[{scenario.id}] Expected relevant IDs {expected_ids}, got {actual_ids}"
-        )
-
-        # Check rewrite behavior
-        has_rewrite = result["rewritten_query"] is not None
-        assert has_rewrite == scenario.expect_rewrite, (
-            f"[{scenario.id}] Expected rewrite={scenario.expect_rewrite}, "
-            f"got rewritten_query={'present' if has_rewrite else 'None'}"
-        )
-    finally:
-        ctx.top_k = original_top_k
+    # Check rewrite behavior
+    has_rewrite = result["rewritten_query"] is not None
+    assert has_rewrite == scenario.expect_rewrite, (
+        f"[{scenario.id}] Expected rewrite={scenario.expect_rewrite}, "
+        f"got rewritten_query={'present' if has_rewrite else 'None'}"
+    )

@@ -8,6 +8,7 @@ from src.schemas.conversation import ConversationMessage
 from .canned_data import (
     TRANSFORMER_CHUNKS,
     BERT_CHUNKS,
+    CONTRADICTORY_CHUNKS,
     IRRELEVANT_CHUNKS,
     ARXIV_SEARCH_RESULTS,
 )
@@ -21,6 +22,7 @@ class AnswerQualityScenario:
     canned_chunks: list[dict] = field(default_factory=list)
     canned_tool_outputs: list[dict] = field(default_factory=list)
     description: str = ""
+    metrics_override: list[str] | None = None
 
 
 ANSWER_QUALITY_SCENARIOS: list[AnswerQualityScenario] = [
@@ -54,5 +56,33 @@ ANSWER_QUALITY_SCENARIOS: list[AnswerQualityScenario] = [
         query="Retrieve from our knowledge base the training results and datasets for the Transformer model",
         canned_chunks=TRANSFORMER_CHUNKS[1:2] + IRRELEVANT_CHUNKS,
         description="Mix of relevant and irrelevant chunks -- grading integration",
+    ),
+    # Adversarial / regression scenarios
+    AnswerQualityScenario(
+        id="contradictory_chunks",
+        query="What batch size was used to train the Transformer model?",
+        canned_chunks=CONTRADICTORY_CHUNKS,
+        description=(
+            "Two chunks from the same paper disagree on batch size. "
+            "Answer should acknowledge the discrepancy, not silently pick one."
+        ),
+        metrics_override=["answer_relevancy", "contextual_relevancy"],
+    ),
+    AnswerQualityScenario(
+        id="tool_failure_recovery",
+        query="Search arXiv for the latest papers on sparse attention mechanisms",
+        canned_chunks=[],
+        canned_tool_outputs=[
+            {
+                "tool_name": "arxiv_search",
+                "data": None,
+                "error": "arXiv API timeout",
+                "success": False,
+            },
+        ],
+        description=(
+            "arxiv_search returns success=False. Agent should handle gracefully "
+            "and inform the user rather than producing a hallucinated answer."
+        ),
     ),
 ]

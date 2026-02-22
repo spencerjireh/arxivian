@@ -8,7 +8,7 @@ Runs graph.ainvoke() and scores the final answer with DeepEval metrics:
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 from deepeval import assert_test
@@ -19,28 +19,16 @@ from deepeval.metrics import (
 )
 from deepeval.test_case import LLMTestCase
 
-from src.services.agent_service.tools import ToolResult
 from .fixtures.answer_quality_scenarios import (
     ANSWER_QUALITY_SCENARIOS,
     AnswerQualityScenario,
 )
-from .helpers import build_initial_state, extract_answer, extract_retrieval_context
-
-
-def _make_tool_execute(scenario: AnswerQualityScenario) -> AsyncMock:
-    """Build a mock for ToolRegistry.execute that returns canned data."""
-
-    async def _execute(name: str, **kwargs) -> ToolResult:
-        if name == "retrieve_chunks":
-            return ToolResult(success=True, data=scenario.canned_chunks, tool_name=name)
-        # For other tools, check canned_tool_outputs
-        for out in scenario.canned_tool_outputs:
-            if out["tool_name"] == name:
-                return ToolResult(success=True, data=out["data"], tool_name=name)
-        return ToolResult(success=True, data=[], tool_name=name)
-
-    mock = AsyncMock(side_effect=_execute)
-    return mock
+from .helpers import (
+    build_initial_state,
+    extract_answer,
+    extract_retrieval_context,
+    make_tool_execute,
+)
 
 
 @pytest.mark.parametrize(
@@ -61,7 +49,11 @@ async def test_answer_quality(
         max_iterations=ctx.max_iterations,
     )
 
-    with patch.object(ctx.tool_registry, "execute", side_effect=_make_tool_execute(scenario)):
+    with patch.object(
+        ctx.tool_registry,
+        "execute",
+        side_effect=make_tool_execute(scenario.canned_chunks, scenario.canned_tool_outputs),
+    ):
         final_state = await compiled_graph.ainvoke(state, eval_config)
 
     actual_output = extract_answer(final_state)
@@ -72,9 +64,14 @@ async def test_answer_quality(
 
     # If there is no retrieval context (e.g. arxiv_search-only scenario),
     # use tool output summaries as context for faithfulness.
+    # Exclude error-only outputs ({"error": "..."}) -- they carry no real content.
     if not retrieval_context:
         tool_outputs = final_state.get("tool_outputs", [])
-        retrieval_context = [str(out.get("data", "")) for out in tool_outputs if out.get("data")]
+        retrieval_context = [
+            str(out["data"])
+            for out in tool_outputs
+            if out.get("data") and not (isinstance(out["data"], dict) and "error" in out["data"])
+        ]
 
     # Skip faithfulness/context checks when there is truly no context
     if not retrieval_context:
@@ -91,9 +88,15 @@ async def test_answer_quality(
         retrieval_context=retrieval_context,
     )
 
-    metrics = [
-        AnswerRelevancyMetric(threshold=0.5),
-        FaithfulnessMetric(threshold=0.5),
-        ContextualRelevancyMetric(threshold=0.5),
-    ]
+    metric_map: dict[str, type] = {
+        "answer_relevancy": AnswerRelevancyMetric,
+        "faithfulness": FaithfulnessMetric,
+        "contextual_relevancy": ContextualRelevancyMetric,
+    }
+
+    if scenario.metrics_override:
+        metrics = [metric_map[name](threshold=0.5) for name in scenario.metrics_override]
+    else:
+        metrics = [cls(threshold=0.5) for cls in metric_map.values()]
+
     assert_test(test_case, metrics)

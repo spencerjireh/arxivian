@@ -101,7 +101,10 @@ ROUTER_SCENARIOS: list[RouterScenario] = [
         id="history_arxiv_after_retrieval",
         query="Now search arxiv for more on this topic",
         conversation_history=[
-            {"role": "user", "content": "Retrieve from our knowledge base what we have on attention mechanisms"},
+            {
+                "role": "user",
+                "content": "Retrieve from our knowledge base what we have on attention mechanisms",
+            },
             {
                 "role": "assistant",
                 "content": (
@@ -201,5 +204,106 @@ ROUTER_SCENARIOS: list[RouterScenario] = [
             "A content question about a research topic should default to "
             "retrieve_chunks even without explicit retrieval language"
         ),
+    ),
+    # Implicit intent scenarios -- no directive verbs
+    RouterScenario(
+        id="implicit_retrieve_conceptual",
+        query="How does positional encoding work in the Transformer?",
+        expected_tools=["retrieve_chunks"],
+        expected_action="execute_tools",
+        description="Conceptual question should infer retrieve_chunks without directive verbs",
+    ),
+    RouterScenario(
+        id="implicit_arxiv_discovery",
+        query=("I wonder what the latest work on diffusion models for text generation looks like"),
+        expected_tools=["arxiv_search"],
+        expected_action="execute_tools",
+        description="Curiosity about recent work should infer arxiv_search",
+    ),
+    RouterScenario(
+        id="implicit_list_inventory",
+        query="What do I have available on vision transformers?",
+        expected_tools=["list_papers"],
+        expected_action="execute_tools",
+        description="Inventory question phrased naturally should infer list_papers",
+    ),
+    RouterScenario(
+        id="implicit_citations",
+        query="What are the academic influences on 1706.03762?",
+        expected_tools=["explore_citations"],
+        expected_action="execute_tools",
+        description="Question about academic influences should infer explore_citations",
+    ),
+    RouterScenario(
+        id="implicit_retrieve_comparison",
+        query=("What are the key differences between how BERT and GPT-3 approach pre-training?"),
+        expected_tools=["retrieve_chunks"],
+        expected_action="execute_tools",
+        description="Comparative question should infer retrieve_chunks",
+    ),
+    # propose_ingest scenarios
+    RouterScenario(
+        id="propose_ingest_after_search",
+        query="Those look great, please add them to my knowledge base",
+        conversation_history=[
+            {"role": "user", "content": "Search arXiv for papers on RLHF"},
+            {
+                "role": "assistant",
+                "content": (
+                    "I found several papers on RLHF:\n"
+                    "1. 'Training language models to follow instructions with human feedback' "
+                    "(2203.02155)\n"
+                    "2. 'Learning to summarize from human feedback' (2009.01325)"
+                ),
+            },
+        ],
+        tool_history=[
+            ToolExecution(
+                tool_name="arxiv_search",
+                tool_args={"query": "RLHF"},
+                success=True,
+                result_summary="Found 2 papers",
+            ),
+        ],
+        expected_tools=["propose_ingest"],
+        expected_action="execute_tools",
+        description="After arxiv_search, explicit add request should trigger propose_ingest",
+    ),
+    RouterScenario(
+        id="propose_ingest_combined",
+        query="Find papers about RLHF on arXiv and add the best ones to my collection",
+        expected_tools=["arxiv_search"],
+        expected_action="execute_tools",
+        description=(
+            "Combined search+add should route to arxiv_search first; "
+            "propose_ingest follows after search completes"
+        ),
+    ),
+    RouterScenario(
+        id="no_auto_propose_without_request",
+        query="What did the recent search find?",
+        conversation_history=[
+            {"role": "user", "content": "Search arXiv for papers on RLHF"},
+            {
+                "role": "assistant",
+                "content": (
+                    "I found several papers on RLHF:\n"
+                    "1. 'Training language models to follow instructions with human feedback' "
+                    "(2203.02155)\n"
+                    "2. 'Learning to summarize from human feedback' (2009.01325)"
+                ),
+            },
+        ],
+        tool_history=[
+            ToolExecution(
+                tool_name="arxiv_search",
+                tool_args={"query": "RLHF"},
+                success=True,
+                result_summary="Found 2 papers",
+            ),
+        ],
+        expected_tools=[],
+        expected_action="generate",
+        description="Asking about search results must NOT auto-propose ingestion",
     ),
 ]

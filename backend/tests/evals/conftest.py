@@ -125,24 +125,23 @@ def eval_config(eval_context: AgentContext) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Autouse: patch adispatch_custom_event (no streaming callback in ainvoke)
+# Autouse: stub get_stream_writer (no active stream in ainvoke / direct calls)
 # ---------------------------------------------------------------------------
+
+_STREAM_WRITER_TARGETS = (
+    "src.services.agent_service.nodes.executor.get_stream_writer",
+    "src.services.agent_service.nodes.generation.get_stream_writer",
+    "src.services.agent_service.nodes.out_of_scope.get_stream_writer",
+)
 
 
 @pytest.fixture(autouse=True)
-def patch_custom_events():
-    with (
-        patch(
-            "src.services.agent_service.nodes.executor.adispatch_custom_event",
-            new_callable=AsyncMock,
-        ),
-        patch(
-            "src.services.agent_service.nodes.generation.adispatch_custom_event",
-            new_callable=AsyncMock,
-        ),
-        patch(
-            "src.services.agent_service.nodes.out_of_scope.adispatch_custom_event",
-            new_callable=AsyncMock,
-        ),
-    ):
-        yield
+def patch_stream_writer():
+    """Stub get_stream_writer in every node module that imports it."""
+    noop_writer = lambda data: None  # noqa: E731
+    patches = [patch(target, return_value=noop_writer) for target in _STREAM_WRITER_TARGETS]
+    for p in patches:
+        p.start()
+    yield
+    for p in patches:
+        p.stop()

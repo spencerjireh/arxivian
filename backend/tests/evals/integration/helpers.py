@@ -7,9 +7,9 @@ from dataclasses import dataclass, field
 from src.schemas.stream import (
     StreamEvent,
     StreamEventType,
+    StatusEventData,
     SourcesEventData,
     MetadataEventData,
-    ErrorEventData,
 )
 from src.services.agent_service import AgentService
 
@@ -25,6 +25,19 @@ class StreamResult:
     metadata_event: StreamEvent | None = None
     done_event: StreamEvent | None = None
     error_events: list[StreamEvent] = field(default_factory=list)
+
+    @property
+    def tools_invoked(self) -> list[str]:
+        """Extract tool names from status events with step='executing'."""
+        tools: list[str] = []
+        for e in self.status_events:
+            data = e.data
+            if isinstance(data, StatusEventData) and data.step == "executing":
+                details = data.details or {}
+                tool_name = details.get("tool_name")
+                if tool_name:
+                    tools.append(tool_name)
+        return tools
 
     @property
     def answer(self) -> str:
