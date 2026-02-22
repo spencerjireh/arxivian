@@ -109,9 +109,6 @@ export async function streamChat(
     },
 
     onerror: (err) => {
-      if (err.name === 'AbortError') {
-        throw new StreamAbortError()
-      }
       callbacks.onError?.({ error: err.message || 'Stream connection error' })
       throw err
     },
@@ -120,6 +117,12 @@ export async function streamChat(
       callbacks.onDone?.()
     },
   })
+
+  // fetchEventSource resolves silently on abort instead of rejecting.
+  // Honor the contract callers expect: abort means StreamAbortError.
+  if (ctrl.signal.aborted) {
+    throw new StreamAbortError()
+  }
 }
 
 export function createStreamAbortController(): AbortController {
