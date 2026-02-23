@@ -63,7 +63,10 @@ TRANSFORMER_CHUNKS = [
         chunk_text=(
             "Positional encodings are added to the input embeddings at the bottoms of "
             "the encoder and decoder stacks. We use sine and cosine functions of different "
-            "frequencies to encode position information."
+            "frequencies: PE(pos,2i) = sin(pos/10000^(2i/d_model)) and "
+            "PE(pos,2i+1) = cos(pos/10000^(2i/d_model)). We chose this function because "
+            "it allows the model to attend to relative positions, since for any fixed "
+            "offset k, PE(pos+k) can be represented as a linear function of PE(pos)."
         ),
         arxiv_id="1706.03762",
         title="Attention Is All You Need",

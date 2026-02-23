@@ -38,6 +38,7 @@ ANSWER_QUALITY_SCENARIOS: list[AnswerQualityScenario] = [
         query="Retrieve papers from our knowledge base about quantum error correction",
         canned_chunks=IRRELEVANT_CHUNKS,
         description="Question with no relevant chunks -- should caveat honestly",
+        metrics_override=["answer_relevancy"],
     ),
     AnswerQualityScenario(
         id="synthesis_across_chunks",
