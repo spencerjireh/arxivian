@@ -1,6 +1,6 @@
 import ReactMarkdown from 'react-markdown'
 import clsx from 'clsx'
-import { markdownComponents, remarkPlugins, rehypePlugins } from '../../lib/markdown'
+import { markdownComponents, remarkPlugins, rehypePlugins, preprocessLatex } from '../../lib/markdown'
 import ErrorBoundary from '../ui/ErrorBoundary'
 import 'katex/dist/katex.min.css'
 
@@ -10,6 +10,7 @@ interface MarkdownRendererProps {
 }
 
 export default function MarkdownRenderer({ content, streamingCursor }: MarkdownRendererProps) {
+  const processed = preprocessLatex(content || '')
 
   return (
     <div
@@ -24,7 +25,7 @@ export default function MarkdownRenderer({ content, streamingCursor }: MarkdownR
           rehypePlugins={rehypePlugins}
           components={markdownComponents}
         >
-          {content || ''}
+          {processed}
         </ReactMarkdown>
       </ErrorBoundary>
       {streamingCursor}

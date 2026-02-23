@@ -1,16 +1,19 @@
 import { useState, useRef, useEffect } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { AlertCircle, Lightbulb, User } from 'lucide-react'
 import logoIcon from '../../assets/logo-icon.png'
 import clsx from 'clsx'
 import { useChatStore } from '../../stores/chatStore'
 import type { Message } from '../../types/api'
-import SourceCard from './SourceCard'
+import SourcesSection from './SourcesSection'
 import CitationTree from './CitationTree'
 import MarkdownRenderer from './MarkdownRenderer'
 import ThinkingTimeline from './ThinkingTimeline'
 import IngestConfirmation from './IngestConfirmation'
-import { cursorTransitionVariants } from '../../lib/animations'
+import {
+  cursorTransitionVariants,
+  sourcesRevealContainer,
+} from '../../lib/animations'
 
 interface ChatMessageProps {
   message: Message
@@ -34,19 +37,32 @@ export default function ChatMessage({
   const [cursorPhase, setCursorPhase] = useState<'streaming' | 'complete'>('streaming')
   const prevIsStreaming = useRef(isStreaming)
 
+  // Defer footer (sources / general-knowledge label) until after streaming ends
+  const [showFooter, setShowFooter] = useState(!isStreaming)
+
   useEffect(() => {
-    if (!isStreaming && prevIsStreaming.current) {
-      // Use queueMicrotask to avoid synchronous setState in effect
+    const wasStreaming = prevIsStreaming.current
+    prevIsStreaming.current = isStreaming
+
+    if (!isStreaming && wasStreaming) {
       queueMicrotask(() => setCursorPhase('complete'))
-      const timer = setTimeout(() => {
-        setCursorPhase('streaming')
-      }, shouldReduceMotion ? 0 : 400)
-      return () => clearTimeout(timer)
+      const cursorTimer = setTimeout(
+        () => setCursorPhase('streaming'),
+        shouldReduceMotion ? 0 : 400,
+      )
+      const footerTimer = setTimeout(
+        () => setShowFooter(true),
+        shouldReduceMotion ? 0 : 300,
+      )
+      return () => {
+        clearTimeout(cursorTimer)
+        clearTimeout(footerTimer)
+      }
     }
     if (isStreaming) {
       queueMicrotask(() => setCursorPhase('streaming'))
+      queueMicrotask(() => setShowFooter(false))
     }
-    prevIsStreaming.current = isStreaming
   }, [isStreaming, shouldReduceMotion])
 
   const showCursor = (isStreaming && !!content) || cursorPhase === 'complete'
@@ -64,8 +80,63 @@ export default function ChatMessage({
             </>
           ) : (
             <>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-stone-100">
-                <img src={logoIcon} alt="" className="w-4 h-4" aria-hidden="true" />
+              <div className="relative">
+                <AnimatePresence>
+                  {isStreaming && (
+                    <motion.div
+                      key="streaming-ring"
+                      className="absolute inset-0"
+                      initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.85 }}
+                      animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+                      exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
+                      transition={
+                        shouldReduceMotion
+                          ? { duration: 0 }
+                          : { duration: 0.4, ease: [0.4, 0, 0.2, 1] }
+                      }
+                    >
+                      {shouldReduceMotion ? (
+                        <div
+                          className="absolute -inset-[3px] rounded-xl border-2 border-[#C2704A]"
+                          style={{ boxShadow: '0 0 8px rgba(194, 112, 74, 0.3)' }}
+                        />
+                      ) : (
+                        <>
+                          {/* Diffuse ambient glow */}
+                          <motion.div
+                            className="absolute -inset-[6px] rounded-2xl blur-[4px] opacity-40"
+                            style={{
+                              background:
+                                'conic-gradient(from 180deg, transparent 60%, #C2704A 78%, transparent 95%)',
+                            }}
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 2.4, repeat: Infinity, ease: 'linear' }}
+                          />
+                          {/* Sharp primary arc */}
+                          <motion.div
+                            className="absolute -inset-[3px] rounded-xl"
+                            style={{
+                              background:
+                                'conic-gradient(from 180deg, transparent 65%, #C2704A 82%, transparent 95%)',
+                            }}
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 2.4, repeat: Infinity, ease: 'linear' }}
+                          />
+                        </>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center bg-stone-100 relative"
+                  style={
+                    isStreaming && !shouldReduceMotion
+                      ? { boxShadow: '0 0 6px rgba(194, 112, 74, 0.15)' }
+                      : undefined
+                  }
+                >
+                  <img src={logoIcon} alt="" className="w-4 h-4" aria-hidden="true" />
+                </div>
               </div>
               <span className="text-sm font-medium text-stone-500">Arxivian</span>
             </>
@@ -129,24 +200,26 @@ export default function ChatMessage({
             </div>
           )}
 
-          {!isUser && message.sources && message.sources.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-stone-100">
-              <h4 className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-3">
-                Sources
-              </h4>
-              <div className="space-y-2">
-                {message.sources.map((source, index) => (
-                  <SourceCard key={`${source.arxiv_id}-${index}`} source={source} />
-                ))}
-              </div>
-            </div>
+          {!isUser && showFooter && message.sources && message.sources.length > 0 && (
+            <motion.div
+              variants={shouldReduceMotion ? undefined : sourcesRevealContainer}
+              initial="initial"
+              animate="animate"
+            >
+              <SourcesSection sources={message.sources} shouldReduceMotion={!!shouldReduceMotion} />
+            </motion.div>
           )}
 
-          {!isUser && !isStreaming && !message.sources && !hasToolActivity && content && !message.error && (
-            <div className="mt-4 flex items-center gap-2 text-xs text-stone-400">
+          {!isUser && showFooter && !message.sources && !hasToolActivity && content && !message.error && (
+            <motion.div
+              className="mt-4 flex items-center gap-2 text-xs text-stone-400"
+              variants={shouldReduceMotion ? undefined : sourcesRevealContainer}
+              initial="initial"
+              animate="animate"
+            >
               <Lightbulb className="w-3.5 h-3.5" strokeWidth={1.5} />
               <span>Answered from general knowledge</span>
-            </div>
+            </motion.div>
           )}
         </div>
       </div>

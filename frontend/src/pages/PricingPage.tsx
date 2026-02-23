@@ -135,7 +135,7 @@ export default function PricingPage() {
                 </ul>
 
                 {isPro ? (
-                  <a href="mailto:spencercebrian123@gmail.com?subject=Arxivian Pro Beta Access">
+                  <a href="mailto:email@spencerjireh.com?subject=Arxivian Pro Beta Access">
                     <Button variant="primary" size="md" className="w-full" leftIcon={<Mail className="w-4 h-4" strokeWidth={1.5} />}>
                       Contact us
                     </Button>

@@ -3,7 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { AlertCircle, ChevronRight, Clock, Eye, EyeOff, Info } from 'lucide-react'
 import clsx from 'clsx'
 import type { ThinkingStep, MetadataEventData } from '../../types/api'
-import { getStepDuration, formatDuration } from '../../utils/duration'
+import { formatDuration } from '../../utils/duration'
 import { formatDetailKey, formatDetailValue } from '../../utils/formatting'
 import { AnimatedCollapse } from '../ui/AnimatedCollapse'
 import { transitions } from '../../lib/animations'
@@ -81,8 +81,6 @@ export default function ThinkingExpandedList({ steps, totalDuration, metadata }:
         {visibleSteps.map((step) => {
           const hasDetails = step.details && Object.keys(step.details).length > 0
           const isExpanded = expandedStepId === step.id
-          const duration = getStepDuration(step)
-
           return (
             <div key={step.id}>
               <div
@@ -109,9 +107,7 @@ export default function ThinkingExpandedList({ steps, totalDuration, metadata }:
 
                 <span className="text-stone-500 flex-1 truncate">{step.message}</span>
 
-                <span className="text-xs text-stone-400 font-mono tabular-nums flex-shrink-0">
-                  {formatDuration(duration)}
-                </span>
+                {/* Per-step timing removed -- restore from git history when needed */}
 
                 {hasDetails && (
                   <motion.div

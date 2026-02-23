@@ -1,12 +1,5 @@
 import type { ThinkingStep } from '../types/api'
 
-export function getStepDuration(step: ThinkingStep): number {
-  if (!step.endTime || isNaN(step.endTime.getTime())) {
-    return Date.now() - step.startTime.getTime()
-  }
-  return step.endTime.getTime() - step.startTime.getTime()
-}
-
 export function formatDuration(ms: number): string {
   if (ms < 1000) {
     return `${Math.round(ms)}ms`

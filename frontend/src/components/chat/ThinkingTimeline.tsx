@@ -7,7 +7,13 @@ import { buildCollapsedSummaryParts } from '../../lib/thinking/summary'
 import ActivityList from './ActivityList'
 import ThinkingExpandedList from './ThinkingExpandedList'
 import { AnimatedCollapse } from '../ui/AnimatedCollapse'
-import { pulseVariants, fadeIn, transitions } from '../../lib/animations'
+import {
+  pulseVariants,
+  fadeIn,
+  crossfadeStep,
+  bgFadeIn,
+  transitions,
+} from '../../lib/animations'
 import { STEP_ICONS, STEP_ANIMATION_VARIANTS } from '../../lib/thinking/constants'
 
 interface ThinkingTimelineProps {
@@ -16,53 +22,61 @@ interface ThinkingTimelineProps {
   metadata?: MetadataEventData
 }
 
-function StreamingHeader({ steps, reduceMotion }: { steps: ThinkingStep[]; reduceMotion: boolean | null }) {
-  const runningStep = steps.findLast((s) => s.status === 'running')
-  const Icon = runningStep ? STEP_ICONS[runningStep.kind] : Search
-  const variants = runningStep
-    ? STEP_ANIMATION_VARIANTS[runningStep.kind]
-    : pulseVariants
+function LatestStepDisplay({
+  step,
+  reduceMotion,
+}: {
+  step: ActivityStep | undefined
+  reduceMotion: boolean | null
+}) {
+  const Icon = step ? STEP_ICONS[step.kind] : Search
+  const variants = step ? STEP_ANIMATION_VARIANTS[step.kind] : pulseVariants
 
   return (
-    <div className="flex items-center gap-2">
+    <AnimatePresence mode="wait">
       <motion.div
-        key={runningStep?.kind ?? 'default'}
-        variants={reduceMotion ? undefined : variants}
+        key={step?.id ?? 'default'}
+        className="flex items-center gap-2"
+        variants={reduceMotion ? undefined : crossfadeStep}
+        initial="initial"
         animate="animate"
+        exit="exit"
+        transition={transitions.fast}
       >
-        <Icon className="w-4 h-4 text-amber-600" strokeWidth={1.5} />
+        <motion.div
+          variants={reduceMotion ? undefined : variants}
+          animate="animate"
+        >
+          <Icon className="w-4 h-4 text-amber-600" strokeWidth={1.5} />
+        </motion.div>
+        <span className="text-sm font-display italic font-normal text-amber-800">
+          {step?.message ?? 'Researching...'}
+        </span>
       </motion.div>
-      <span className="text-sm font-display italic font-normal text-amber-800">Researching...</span>
-    </div>
+    </AnimatePresence>
   )
 }
 
 export default function ThinkingTimeline({ steps, isStreaming = false, metadata }: ThinkingTimelineProps) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const [showExpandedAfterStream, setShowExpandedAfterStream] = useState(false)
+  const [streamExpanded, setStreamExpanded] = useState(false)
   const prevIsStreaming = useRef(isStreaming)
   const shouldReduceMotion = useReducedMotion()
 
   useEffect(() => {
     if (prevIsStreaming.current && !isStreaming) {
-      queueMicrotask(() => setShowExpandedAfterStream(true))
-
-      const collapseTimer = setTimeout(
-        () => {
-          setShowExpandedAfterStream(false)
-        },
-        shouldReduceMotion ? 0 : 1500
-      )
-
-      return () => clearTimeout(collapseTimer)
+      queueMicrotask(() => setStreamExpanded(false))
     }
     prevIsStreaming.current = isStreaming
-  }, [isStreaming, shouldReduceMotion])
+  }, [isStreaming])
 
   const activitySteps = useMemo(
     () => steps.filter((s): s is ActivityStep => !s.isInternal),
     [steps]
   )
+
+  const latestStep = activitySteps.length > 0 ? activitySteps[activitySteps.length - 1] : undefined
+  const completedSteps = activitySteps.slice(0, -1)
 
   const totalDuration = useMemo(() => calculateTotalDuration(steps), [steps])
 
@@ -80,7 +94,7 @@ export default function ThinkingTimeline({ steps, isStreaming = false, metadata 
       {isStreaming ? (
         <motion.div
           key="streaming"
-          className="p-4 border-l-2 border-amber-600/70 bg-stone-50/30 space-y-3"
+          className="relative border-l-2 border-amber-600/70"
           variants={fadeIn}
           initial="initial"
           animate="animate"
@@ -88,9 +102,38 @@ export default function ThinkingTimeline({ steps, isStreaming = false, metadata 
           transition={transitions.fast}
           style={{ contain: 'layout' }}
         >
-          <StreamingHeader steps={steps} reduceMotion={shouldReduceMotion} />
+          <motion.div
+            className="absolute inset-0 bg-stone-50/30 rounded-r-lg pointer-events-none"
+            variants={shouldReduceMotion ? undefined : bgFadeIn}
+            initial="initial"
+            animate="animate"
+            aria-hidden="true"
+          />
 
-          <ActivityList steps={activitySteps} isStreaming />
+          <div className="relative p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <LatestStepDisplay step={latestStep} reduceMotion={shouldReduceMotion} />
+
+              {completedSteps.length > 0 && (
+                <button
+                  onClick={() => setStreamExpanded(!streamExpanded)}
+                  className="flex items-center gap-1 text-xs text-stone-400 hover:text-stone-600 transition-colors duration-150"
+                >
+                  <span className="font-mono tabular-nums">{completedSteps.length}</span>
+                  <motion.div
+                    animate={{ rotate: streamExpanded ? 90 : 0 }}
+                    transition={shouldReduceMotion ? { duration: 0 } : transitions.fast}
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  </motion.div>
+                </button>
+              )}
+            </div>
+
+            <AnimatedCollapse isOpen={streamExpanded}>
+              <ActivityList steps={completedSteps} isStreaming />
+            </AnimatedCollapse>
+          </div>
         </motion.div>
       ) : (
         <motion.div
@@ -126,7 +169,7 @@ export default function ThinkingTimeline({ steps, isStreaming = false, metadata 
             </div>
           </button>
 
-          <AnimatedCollapse isOpen={isExpanded || showExpandedAfterStream}>
+          <AnimatedCollapse isOpen={isExpanded}>
             <div className="px-4 pb-4 pt-1">
               <ThinkingExpandedList steps={steps} totalDuration={totalDuration} metadata={metadata} />
             </div>

@@ -3,7 +3,6 @@ import { streamChat, StreamAbortError } from '../../../src/api/stream'
 import type { StreamCallbacks } from '../../../src/api/stream'
 import type { StreamRequest } from '../../../src/types/api'
 
-// Capture the config fetchEventSource receives so tests can drive callbacks.
 type FESConfig = {
   signal?: AbortSignal
   onopen?: (response: Response) => Promise<void>
@@ -11,8 +10,6 @@ type FESConfig = {
   onerror?: (err: Error) => void
   onclose?: () => void
 }
-
-let capturedConfig: FESConfig = {}
 
 vi.mock('@microsoft/fetch-event-source', () => ({
   fetchEventSource: vi.fn(),
@@ -33,14 +30,12 @@ const baseRequest: StreamRequest = { query: 'test query' }
 
 describe('streamChat', () => {
   beforeEach(() => {
-    capturedConfig = {}
     vi.clearAllMocks()
   })
 
   it('throws StreamAbortError when signal is already aborted', async () => {
     const fes = await getFESMock()
-    fes.mockImplementation(async (_url, config) => {
-      capturedConfig = config as FESConfig
+    fes.mockImplementation(async () => {
       // fetchEventSource resolves silently even when aborted
     })
 
@@ -55,8 +50,7 @@ describe('streamChat', () => {
 
     let abortDuringExecution: () => void
 
-    fes.mockImplementation(async (_url, config) => {
-      capturedConfig = config as FESConfig
+    fes.mockImplementation(async () => {
       // Give the test a hook to abort while fetchEventSource is "running".
       await new Promise<void>((resolve) => {
         abortDuringExecution = () => {

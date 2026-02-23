@@ -82,6 +82,17 @@ export const completionPopVariants: Variants = {
   },
 }
 
+export const crossfadeStep: Variants = {
+  initial: { opacity: 0, y: 4 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -4 },
+}
+
+export const bgFadeIn: Variants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { duration: 1, ease: 'easeOut' } },
+}
+
 export const cursorTransitionVariants: Variants = {
   streaming: {
     opacity: [1, 0, 1],
@@ -97,6 +108,21 @@ export const cursorTransitionVariants: Variants = {
       duration: 0.4,
       times: [0, 0.25, 1],
       ease: 'easeOut',
+    },
+  },
+}
+
+// -- Sources reveal (post-stream fade-in + stagger) --
+
+export const sourcesRevealContainer: Variants = {
+  initial: { opacity: 0, y: 6 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.4, 0, 0.2, 1],
+      staggerChildren: 0.06,
     },
   },
 }

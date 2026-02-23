@@ -39,17 +39,33 @@ export const markdownComponents: Components = {
     <p className="text-stone-700 leading-relaxed mb-4 last:mb-0">{children}</p>
   ),
 
-  a: ({ href, children }) => (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-stone-900 underline decoration-stone-300 underline-offset-2 hover:decoration-stone-500 transition-colors duration-150 inline-flex items-center gap-0.5"
-    >
-      {children}
-      <ExternalLink className="w-3 h-3 text-stone-400 flex-shrink-0" strokeWidth={1.5} />
-    </a>
-  ),
+  a: ({ href, children }) => {
+    const isArxiv = href?.includes('arxiv.org/abs/')
+    if (isArxiv) {
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="bg-amber-50 text-amber-700 font-mono text-xs rounded-md px-1.5 py-0.5 border border-amber-200 hover:bg-amber-100 no-underline transition-colors duration-150 inline-flex items-center gap-1"
+        >
+          {children}
+          <ExternalLink className="w-2.5 h-2.5 text-amber-400 flex-shrink-0" strokeWidth={1.5} />
+        </a>
+      )
+    }
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-stone-900 underline decoration-stone-300 underline-offset-2 hover:decoration-stone-500 transition-colors duration-150 inline-flex items-center gap-0.5"
+      >
+        {children}
+        <ExternalLink className="w-3 h-3 text-stone-400 flex-shrink-0" strokeWidth={1.5} />
+      </a>
+    )
+  },
 
   ul: ({ children }) => <ul className="mb-4 last:mb-0 space-y-1.5 list-none pl-0">{children}</ul>,
   ol: ({ children }) => (

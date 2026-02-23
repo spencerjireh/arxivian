@@ -1,5 +1,5 @@
 import type { ThinkingStep } from '../../../src/types/api'
-import { getStepDuration, formatDuration, calculateTotalDuration } from '../../../src/utils/duration'
+import { formatDuration, calculateTotalDuration } from '../../../src/utils/duration'
 
 function makeStep(overrides: Partial<ThinkingStep> = {}): ThinkingStep {
   return {
@@ -13,30 +13,6 @@ function makeStep(overrides: Partial<ThinkingStep> = {}): ThinkingStep {
     ...overrides,
   }
 }
-
-describe('getStepDuration', () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
-  it('returns elapsed time from startTime to endTime when complete', () => {
-    const step = makeStep({
-      startTime: new Date(1000),
-      endTime: new Date(3500),
-    })
-    expect(getStepDuration(step)).toBe(2500)
-  })
-
-  it('returns elapsed time from startTime to now when still running', () => {
-    vi.setSystemTime(new Date(5000))
-    const step = makeStep({ startTime: new Date(2000), endTime: undefined })
-    expect(getStepDuration(step)).toBe(3000)
-  })
-})
 
 describe('formatDuration', () => {
   it('formats sub-second durations in ms', () => {

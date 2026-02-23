@@ -1,32 +1,13 @@
-import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { X } from 'lucide-react'
 import clsx from 'clsx'
 import type { ActivityStep } from '../../types/api'
-import { getStepDuration, formatDuration } from '../../utils/duration'
 import { staggerItem, completionPopVariants, transitions } from '../../lib/animations'
 import { STEP_ICONS, STEP_ICON_COLORS, STEP_ANIMATION_VARIANTS } from '../../lib/thinking/constants'
 
 interface ActivityListProps {
   steps: ActivityStep[]
   isStreaming?: boolean
-}
-
-function ElapsedTimer({ startTime }: { startTime: Date }) {
-  const [elapsed, setElapsed] = useState(() => Date.now() - startTime.getTime())
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setElapsed(Date.now() - startTime.getTime())
-    }, 100)
-    return () => clearInterval(interval)
-  }, [startTime])
-
-  return (
-    <span className="text-xs text-stone-400 font-mono tabular-nums flex-shrink-0">
-      {formatDuration(elapsed)}
-    </span>
-  )
 }
 
 function StatusIcon({ step, reduceMotion, isStreaming }: { step: ActivityStep; reduceMotion: boolean | null; isStreaming: boolean }) {
@@ -75,8 +56,6 @@ export default function ActivityList({ steps, isStreaming = false }: ActivityLis
     <div className="space-y-1.5">
       <AnimatePresence initial={false}>
         {steps.map((step) => {
-          const duration = getStepDuration(step)
-
           return (
             <motion.div
               key={step.id}
@@ -101,13 +80,7 @@ export default function ActivityList({ steps, isStreaming = false }: ActivityLis
                 {step.message}
               </span>
 
-              {step.status === 'running' ? (
-                <ElapsedTimer startTime={step.startTime} />
-              ) : (
-                <span className="text-xs text-stone-400 font-mono tabular-nums flex-shrink-0">
-                  {formatDuration(duration)}
-                </span>
-              )}
+              {/* Per-step timing removed -- restore from git history when needed */}
             </motion.div>
           )
         })}
