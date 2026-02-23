@@ -285,6 +285,16 @@ class ConversationRepository:
             turn_number=turn_number,
         )
 
+    async def update_title(self, session_id: str, title: str) -> None:
+        """Update the title of a conversation."""
+        result = await self.session.execute(
+            select(Conversation).where(Conversation.session_id == session_id)
+        )
+        conv = result.scalar_one_or_none()
+        if conv:
+            conv.title = title
+            await self.session.flush()
+
     async def delete(self, session_id: str, user_id: Optional[UUID] = None) -> bool:
         """
         Delete a conversation and all its turns.

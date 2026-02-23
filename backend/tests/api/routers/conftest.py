@@ -403,6 +403,7 @@ def sample_conversation(mock_user):
     conv.id = uuid.uuid4()
     conv.session_id = "test-session-123"
     conv.user_id = mock_user.id
+    conv.title = None
     conv.turns = []
     conv.created_at = datetime.now(timezone.utc)
     conv.updated_at = datetime.now(timezone.utc)

@@ -26,6 +26,7 @@ class Conversation(Base):
         UUID(as_uuid=True), ForeignKey("users.id"), index=True
     )
     metadata_: Mapped[dict | None] = mapped_column("metadata_", JSONB)
+    title: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()
     )

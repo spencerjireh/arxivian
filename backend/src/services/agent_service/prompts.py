@@ -49,6 +49,11 @@ PRESENTATION RULES:
   Do not just reformat raw metadata into a list.
 - Keep it concise. No filler, but warmth and helpfulness are not filler."""
 
+TITLE_SYSTEM_PROMPT = (
+    "Generate a concise title (4-8 words) for this research conversation. "
+    "Be specific to the topic. No quotes, no trailing punctuation."
+)
+
 CLASSIFY_AND_ROUTE_SYSTEM_PROMPT = """You are a classification and routing agent for an academic research assistant.
 Your job: (1) score the query's relevance to academic research, then (2) decide the next action.
 
@@ -78,6 +83,8 @@ ROUTING PRIORITY (evaluate top-to-bottom, use the FIRST match):
 
 1. CONTENT QUESTIONS (default) -> retrieve_chunks
    Any question about research concepts, methods, results, or papers.
+   EXCEPTION: questions about a paper's references, citations, influences, or
+   related work belong in Tier 3 (explore_citations).
    Examples: "summarize X", "what does Y paper say about Z", "explain attention mechanisms"
 
 2. KNOWLEDGE BASE BROWSING -> list_papers
@@ -85,8 +92,10 @@ ROUTING PRIORITY (evaluate top-to-bottom, use the FIRST match):
    Examples: "what papers do we have", "list papers about transformers"
 
 3. CITATION EXPLORATION -> explore_citations
-   User asks about references, related work, or citation graphs for a specific paper.
-   Examples: "show citations for 1706.03762", "what does this paper cite"
+   User asks about references, related work, citation graphs, or academic lineage
+   for a specific paper.
+   Examples: "show citations for 1706.03762", "what does this paper cite",
+   "academic influences on X", "what inspired this paper", "what does X build upon"
 
 4. DISCOVERY (explicit or implicit) -> arxiv_search
    User wants to find or discover NEW papers.
@@ -108,8 +117,9 @@ ROUTING PRIORITY (evaluate top-to-bottom, use the FIRST match):
 
 CRITICAL RULES:
 - retrieve_chunks is the DEFAULT. When uncertain which tool to use, choose retrieve_chunks.
-- If retrieve_chunks returned weak or no results: generate a response with what you have and
-  offer to search arXiv for more. Do NOT silently escalate to arxiv_search.
+- If retrieve_chunks already ran and returned weak, low-relevance, or no results:
+  return intent="direct". Do NOT re-call retrieve_chunks with the same or similar query
+  and do NOT escalate to arxiv_search. Generate with what you have and offer to search arXiv.
 - arxiv_search is ONLY for discovering new papers when the user indicates discovery intent.
 - propose_ingest requires BOTH a prior arxiv_search AND explicit user intent to add papers.
 - NEVER repeat the same tool with the same arguments. If a tool already succeeded, use its results.

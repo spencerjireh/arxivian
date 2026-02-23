@@ -56,6 +56,7 @@ async def list_conversations(
         items.append(
             ConversationListItem(
                 session_id=conv.session_id,
+                title=conv.title,
                 turn_count=len(conv.turns),
                 created_at=conv.created_at,
                 updated_at=conv.updated_at,
@@ -117,6 +118,7 @@ async def get_conversation(
 
     return ConversationDetailResponse(
         session_id=conv.session_id,
+        title=conv.title,
         created_at=conv.created_at,
         updated_at=conv.updated_at,
         turns=turns,

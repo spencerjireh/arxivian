@@ -48,6 +48,7 @@ from src.schemas.stream import (
 )
 from src.schemas.common import SourceInfo
 from src.utils.logger import get_logger
+from src.services.title_service import generate_title
 from .context import AgentContext
 
 log = get_logger(__name__)
@@ -605,6 +606,11 @@ class AgentService:
                         user_id=self.user_id,
                     )
                     turn_number = turn.turn_number
+
+                    if turn_number == 0:
+                        title = await generate_title(self.context.llm_client, query)
+                        if title:
+                            await self.conversation_repo.update_title(session_id, title)
 
         finally:
             set_trace_context(None)  # Clear trace context

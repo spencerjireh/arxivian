@@ -186,6 +186,7 @@ export interface ConversationTurnResponse {
 
 export interface ConversationListItem {
   session_id: string
+  title?: string
   turn_count: number
   created_at: string
   updated_at: string
@@ -201,6 +202,7 @@ export interface ConversationListResponse {
 
 export interface ConversationDetailResponse {
   session_id: string
+  title?: string
   created_at: string
   updated_at: string
   turns: ConversationTurnResponse[]

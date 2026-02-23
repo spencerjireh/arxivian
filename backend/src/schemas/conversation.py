@@ -73,6 +73,7 @@ class ConversationListItem(BaseModel):
     """Summary item for conversation list."""
 
     session_id: str
+    title: str | None = None
     turn_count: int
     created_at: datetime
     updated_at: datetime
@@ -92,6 +93,7 @@ class ConversationDetailResponse(BaseModel):
     """Full conversation with all turns."""
 
     session_id: str
+    title: str | None = None
     created_at: datetime
     updated_at: datetime
     turns: list[ConversationTurnResponse]

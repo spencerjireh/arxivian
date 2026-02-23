@@ -42,9 +42,9 @@ export default function SidebarConversationItem({
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0">
           <p className={clsx('text-sm leading-tight truncate', isActive ? 'text-stone-900 font-medium' : 'text-stone-700')}>
-            {conversation.last_query
+            {conversation.title || (conversation.last_query
               ? truncate(conversation.last_query, 50)
-              : 'New conversation'}
+              : 'New conversation')}
           </p>
         </div>
 
