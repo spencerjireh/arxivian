@@ -183,6 +183,7 @@ def get_agent_service(
         llm_client=llm_client,
         search_service=search_service,
         redis=redis,
+        db_session=db_session,
         ingest_service=ingest_service,
         arxiv_client=arxiv_client,
         paper_repository=paper_repository,

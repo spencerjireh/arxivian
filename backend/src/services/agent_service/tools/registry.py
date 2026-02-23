@@ -1,9 +1,14 @@
 """Tool registry for managing agent tools."""
 
-from typing import Iterator
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Iterator
 
 from src.utils.logger import get_logger
 from .base import BaseTool, ToolResult
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 log = get_logger(__name__)
 
@@ -15,8 +20,9 @@ class ToolRegistry:
     Provides tool registration, lookup, and schema generation for LLM tool calling.
     """
 
-    def __init__(self):
+    def __init__(self, session: AsyncSession | None = None):
         self._tools: dict[str, BaseTool] = {}
+        self._session = session
 
     def register(self, tool: BaseTool) -> None:
         """
@@ -102,6 +108,9 @@ class ToolRegistry:
             kwargs["tool_outputs"] = tool_outputs
 
         try:
+            if self._session:
+                async with self._session.begin_nested():
+                    return await tool.execute(**kwargs)
             return await tool.execute(**kwargs)
         except Exception as e:
             log.error("tool execution failed", tool_name=name, error=str(e), exc_info=True)

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, AsyncIterator
 from uuid import UUID
 
 if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
     from src.repositories.usage_counter_repository import UsageCounterRepository
 
 from langchain_core.messages import HumanMessage, AIMessage
@@ -129,6 +130,7 @@ class AgentService:
         search_service: SearchService,
         graph: CompiledStateGraph,
         redis: Redis | None = None,
+        db_session: AsyncSession | None = None,
         ingest_service: IngestService | None = None,
         arxiv_client: ArxivClient | None = None,
         paper_repository: PaperRepository | None = None,
@@ -151,6 +153,7 @@ class AgentService:
         self.context = AgentContext(
             llm_client=llm_client,
             search_service=search_service,
+            db_session=db_session,
             ingest_service=ingest_service,
             arxiv_client=arxiv_client,
             paper_repository=paper_repository,

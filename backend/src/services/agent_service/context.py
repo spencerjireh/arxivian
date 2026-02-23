@@ -21,6 +21,7 @@ from .tools import (
 )
 
 if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
     from src.repositories.usage_counter_repository import UsageCounterRepository
 
 
@@ -85,6 +86,7 @@ class AgentContext:
         self,
         llm_client: BaseLLMClient,
         search_service: SearchService,
+        db_session: AsyncSession | None = None,
         ingest_service: IngestService | None = None,
         arxiv_client: ArxivClient | None = None,
         paper_repository: PaperRepository | None = None,
@@ -117,7 +119,7 @@ class AgentContext:
         if tool_registry:
             self.tool_registry = tool_registry
         else:
-            self.tool_registry = ToolRegistry()
+            self.tool_registry = ToolRegistry(session=db_session)
             # Register default tools
             self.tool_registry.register(
                 RetrieveChunksTool(
