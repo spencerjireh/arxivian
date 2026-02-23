@@ -1,11 +1,12 @@
 """Classify-and-route node: merged guardrail + router in a single LLM call."""
 
+import json
 import re
 
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 
-from src.schemas.langgraph_state import AgentState, ClassificationResult
+from src.schemas.langgraph_state import AgentState, ClassificationResult, ToolCall
 from src.utils.logger import get_logger
 from ..context import AgentContext
 from ..prompts import get_classify_and_route_prompt
@@ -161,14 +162,35 @@ async def classify_and_route_node(state: AgentState, config: RunnableConfig) -> 
 
     # Post-LLM guard: prevent re-emitting one-shot tools that already succeeded.
     # Tools with extends_chunks flow through evaluate_batch, which has its own
-    # stagnation detection -- exempt them from the dedup guard.
+    # stagnation detection -- exempt them from the dedup guard UNLESS they are
+    # called with the exact same arguments as a prior success.
     if result.intent == "execute" and result.tool_calls and tool_history:
         succeeded = {t.tool_name for t in tool_history if t.success}
+
+        # Build set of (tool_name, normalized_args) for extends_chunks successes
+        succeeded_with_args: set[tuple[str, str]] = set()
+        for t in tool_history:
+            if t.success and getattr(
+                context.tool_registry.get(t.tool_name), "extends_chunks", False
+            ):
+                norm = json.dumps(t.tool_args, sort_keys=True)
+                succeeded_with_args.add((t.tool_name, norm))
+
         blocked = {
             name for name in succeeded
             if not getattr(context.tool_registry.get(name), "extends_chunks", False)
         }
-        novel = [tc for tc in result.tool_calls if tc.tool_name not in blocked]
+
+        def _is_same_args(tc: ToolCall) -> bool:
+            norm = json.dumps(
+                json.loads(tc.tool_args_json or "{}"), sort_keys=True
+            )
+            return (tc.tool_name, norm) in succeeded_with_args
+
+        novel = [
+            tc for tc in result.tool_calls
+            if tc.tool_name not in blocked and not _is_same_args(tc)
+        ]
         if not novel:
             log.info(
                 "classify_and_route: all requested tools already succeeded, forcing direct",

@@ -536,3 +536,38 @@ class TestClassifyAndRouteNode:
 
         assert result["classification_result"].intent == "execute"
         assert result["classification_result"].tool_calls[0].tool_name == "retrieve_chunks"
+
+    @pytest.mark.asyncio
+    async def test_dedup_blocks_retryable_tool_same_args(
+        self, mock_context, make_config, base_state
+    ):
+        """retrieve_chunks with identical args to a prior success is blocked."""
+        from src.services.agent_service.nodes.classify_and_route import (
+            classify_and_route_node,
+        )
+
+        base_state["tool_history"] = [
+            ToolExecution(
+                tool_name="retrieve_chunks",
+                tool_args={"query": "dropout regularization"},
+                success=True,
+                result_summary="Retrieved 1 item (low relevance)",
+            ),
+        ]
+
+        mock_context.llm_client.generate_structured = AsyncMock(
+            return_value=ClassificationResult(
+                intent="execute",
+                scope_score=90,
+                reasoning="Try retrieve again",
+                tool_calls=[ToolCall(
+                    tool_name="retrieve_chunks",
+                    tool_args_json='{"query": "dropout regularization"}',
+                )],
+            )
+        )
+
+        result = await classify_and_route_node(base_state, make_config)
+
+        assert result["classification_result"].intent == "direct"
+        assert result["classification_result"].tool_calls == []
