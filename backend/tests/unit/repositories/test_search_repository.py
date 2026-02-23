@@ -14,10 +14,10 @@ class TestSearchRepositoryQueryPreparation:
         return SearchRepository(session=mock_async_session)
 
     @pytest.mark.asyncio
-    async def test_fulltext_search_prepares_tsquery_with_ampersands(
+    async def test_fulltext_search_passes_raw_query_to_websearch_tsquery(
         self, search_repository, mock_async_session
     ):
-        """Verify multi-word queries are joined with ' & ' for PostgreSQL tsquery."""
+        """Verify raw query is passed to websearch_to_tsquery (no manual tokenisation)."""
         mock_result = Mock()
         mock_result.fetchall.return_value = []
         mock_async_session.execute.return_value = mock_result
@@ -26,7 +26,7 @@ class TestSearchRepositoryQueryPreparation:
 
         call_args = mock_async_session.execute.call_args
         params = call_args[0][1]
-        assert params["query"] == "machine & learning & models"
+        assert params["query"] == "machine learning models"
 
     @pytest.mark.asyncio
     async def test_fulltext_search_single_word_unchanged(

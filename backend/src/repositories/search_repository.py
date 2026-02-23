@@ -113,7 +113,7 @@ class SearchRepository:
         log.debug("fulltext search", query=query[:50], top_k=top_k)
 
         search_query = text("""
-            SELECT 
+            SELECT
                 c.id as chunk_id,
                 c.paper_id,
                 c.arxiv_id,
@@ -122,19 +122,17 @@ class SearchRepository:
                 c.chunk_text,
                 c.section_name,
                 c.page_number,
-                ts_rank(c.search_vector, to_tsquery('english', :query)) as score,
+                ts_rank(c.search_vector, websearch_to_tsquery('english', :query)) as score,
                 p.published_date,
                 p.pdf_url
             FROM chunks c
             JOIN papers p ON c.paper_id = p.id
-            WHERE c.search_vector @@ to_tsquery('english', :query)
+            WHERE c.search_vector @@ websearch_to_tsquery('english', :query)
             ORDER BY score DESC
             LIMIT :limit
         """)
 
-        prepared_query = " & ".join(query.split())
-
-        result = await self.session.execute(search_query, {"query": prepared_query, "limit": top_k})
+        result = await self.session.execute(search_query, {"query": query, "limit": top_k})
 
         results = [
             SearchResult(
