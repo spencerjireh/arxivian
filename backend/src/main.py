@@ -105,9 +105,11 @@ register_exception_handlers(app)
 
 # CORS middleware (must be first in middleware stack)
 _cors_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
+if not _cors_origins:
+    log.warning("CORS_ORIGINS is empty; no cross-origin requests will be allowed")
 app.add_middleware(
     CORSMiddleware,  # type: ignore[invalid-argument-type]
-    allow_origins=_cors_origins or ["*"],
+    allow_origins=_cors_origins,
     allow_credentials=bool(_cors_origins),
     allow_methods=["*"],
     allow_headers=["*"],

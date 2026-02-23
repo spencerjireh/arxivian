@@ -50,20 +50,25 @@ class ConversationRepository:
 
         return conv
 
-    async def get_history(self, session_id: str, limit: int = 5) -> List[ConversationTurn]:
+    async def get_history(
+        self, session_id: str, limit: int = 5, user_id: Optional[UUID] = None
+    ) -> List[ConversationTurn]:
         """
         Get conversation history for a session.
 
         Args:
             session_id: Session identifier
             limit: Maximum number of turns to return
+            user_id: Optional user ID for ownership verification
 
         Returns:
             List of ConversationTurn in chronological order
         """
-        result = await self.session.execute(
-            select(Conversation).where(Conversation.session_id == session_id)
-        )
+        query = select(Conversation).where(Conversation.session_id == session_id)
+        if user_id is not None:
+            query = query.where(Conversation.user_id == user_id)
+
+        result = await self.session.execute(query)
         conv = result.scalar_one_or_none()
 
         if not conv:

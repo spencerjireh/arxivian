@@ -487,7 +487,9 @@ class AgentService:
         history: list[ConversationMessage] = []
         last_guardrail_score: int | None = None
         if session_id and self.conversation_repo:
-            turns = await self.conversation_repo.get_history(session_id, self.conversation_window)
+            turns = await self.conversation_repo.get_history(
+                session_id, self.conversation_window, user_id=self.user_id
+            )
             for t in turns:
                 history.append({"role": "user", "content": t.user_query})
                 history.append({"role": "assistant", "content": t.agent_response})

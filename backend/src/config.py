@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     redis_checkpoint_url: str = "redis://redis:6379/0"
 
     # CORS
-    cors_origins: str = ""  # comma-separated allowed origins; empty = allow all (dev)
+    cors_origins: str = ""  # comma-separated allowed origins; empty = block all cross-origin requests
 
     # App
     debug: bool = False
