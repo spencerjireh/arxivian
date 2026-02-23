@@ -263,8 +263,8 @@ class TestAuthServiceJWKSClient:
             assert "Token validation failed" in str(exc_info.value)
 
     def test_jwks_client_cache_bounded(self):
-        """Verify JWKS client cache does not grow unbounded in dev mode."""
-        auth_service = AuthService(allowed_domain="")
+        """Verify JWKS client cache does not grow unbounded."""
+        auth_service = AuthService(allowed_domain="test.clerk.accounts.dev")
 
         for i in range(15):
             auth_service._get_jwks_client(f"domain-{i}.clerk.accounts.dev")
@@ -304,23 +304,3 @@ class TestAuthServiceIssuerDomainValidation:
 
             assert "Token issuer not trusted" in str(exc_info.value)
 
-    @pytest.mark.asyncio
-    async def test_empty_allowed_domain_skips_validation(self, valid_jwt_payload):
-        """Verify empty allowed_domain skips issuer validation (dev mode)."""
-        auth_service = AuthService(allowed_domain="")
-
-        mock_signing_key = MagicMock()
-        mock_signing_key.key = "mock-key"
-
-        with patch.object(pyjwt, "decode") as mock_decode, \
-             patch("src.services.auth_service.PyJWKClient") as mock_jwks_class:
-
-            mock_decode.side_effect = [valid_jwt_payload, valid_jwt_payload]
-
-            mock_jwks_instance = MagicMock()
-            mock_jwks_instance.get_signing_key_from_jwt.return_value = mock_signing_key
-            mock_jwks_class.return_value = mock_jwks_instance
-
-            result = await auth_service.verify_token("Bearer valid.token")
-
-            assert result.clerk_id == "user_2abc123def456"

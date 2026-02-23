@@ -28,7 +28,7 @@ class AuthService:
     # Clerk JWKS URL pattern
     JWKS_URL_TEMPLATE = "https://{clerk_domain}/.well-known/jwks.json"
 
-    def __init__(self, allowed_domain: str = "") -> None:
+    def __init__(self, allowed_domain: str) -> None:
         self._allowed_domain = allowed_domain
         self._jwks_clients: dict[str, PyJWKClient] = {}
 
@@ -79,7 +79,7 @@ class AuthService:
             # Extract domain from issuer for JWKS lookup
             clerk_domain = issuer.replace("https://", "")
 
-            if self._allowed_domain and clerk_domain != self._allowed_domain:
+            if clerk_domain != self._allowed_domain:
                 raise InvalidTokenError("Token issuer not trusted")
 
             # Get cached JWKS client for this domain

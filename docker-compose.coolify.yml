@@ -1,0 +1,254 @@
+# Coolify Production Deployment
+#
+# Coolify auto-detects ${VAR} placeholders and surfaces them in its UI.
+# Three services are publicly routed via Coolify's Traefik proxy:
+#   - frontend (main domain)    -> nginx serving SPA + reverse proxy to app
+#   - flower (subdomain)        -> Celery monitoring dashboard
+#   - langfuse (subdomain)      -> LLM observability platform
+#
+# Post-deploy: assign domains in Coolify UI, fill env vars, enable TLS.
+
+services:
+  # ---------------------------------------------------------------------------
+  # Data Stores (internal)
+  # ---------------------------------------------------------------------------
+
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-arxiv_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-arxiv_rag}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-arxiv_user} -d $${POSTGRES_DB:-arxiv_rag}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  langfuse-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: ${LANGFUSE_DB_PASSWORD:-langfuse_secret}
+      POSTGRES_DB: langfuse
+    volumes:
+      - langfuse_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse -d langfuse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Backend Services (internal)
+  # ---------------------------------------------------------------------------
+
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    environment:
+      # Database (composed from shared vars so user enters credentials once)
+      POSTGRES_URL: postgresql+asyncpg://${POSTGRES_USER:-arxiv_user}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-arxiv_rag}
+
+      # Redis (internal Docker DNS, no need to configure)
+      REDIS_URL: redis://redis:6379/2
+      REDIS_CHECKPOINT_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+
+      # LLM
+      DEFAULT_LLM_MODEL: ${DEFAULT_LLM_MODEL:-openai/gpt-4o-mini}
+      ALLOWED_LLM_MODELS: ${ALLOWED_LLM_MODELS:-openai/gpt-4o-mini}
+      STRUCTURED_OUTPUT_MODEL: ${STRUCTURED_OUTPUT_MODEL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY}
+      NVIDIA_NIM_API_KEY: ${NVIDIA_NIM_API_KEY:-}
+      NVIDIA_NIM_API_BASE: ${NVIDIA_NIM_API_BASE:-}
+
+      # Embeddings
+      JINA_API_KEY: ${JINA_API_KEY:?Set JINA_API_KEY}
+
+      # Auth
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:?Set CLERK_SECRET_KEY}
+      CLERK_DOMAIN: ${CLERK_DOMAIN:?Set CLERK_DOMAIN}
+
+      # CORS (must match the public frontend domain)
+      CORS_ORIGINS: ${CORS_ORIGINS:?Set CORS_ORIGINS}
+
+      # Langfuse
+      LANGFUSE_ENABLED: ${LANGFUSE_ENABLED:-false}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_HOST: ${LANGFUSE_URL:-http://langfuse:3000}
+
+      # App
+      DEBUG: ${DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_REQUEST_BODY: ${LOG_REQUEST_BODY:-false}
+      LOG_RESPONSE_BODY: ${LOG_RESPONSE_BODY:-false}
+      API_KEY: ${API_KEY:-}
+
+      # Search / chunking / agent tuning
+      DEFAULT_TOP_K: ${DEFAULT_TOP_K:-3}
+      RRF_K: ${RRF_K:-60}
+      CHUNK_SIZE_WORDS: ${CHUNK_SIZE_WORDS:-600}
+      CHUNK_OVERLAP_WORDS: ${CHUNK_OVERLAP_WORDS:-100}
+      MIN_CHUNK_WORDS: ${MIN_CHUNK_WORDS:-100}
+      GUARDRAIL_THRESHOLD: ${GUARDRAIL_THRESHOLD:-75}
+      MAX_RETRIEVAL_ATTEMPTS: ${MAX_RETRIEVAL_ATTEMPTS:-3}
+      DEFAULT_MAX_ITERATIONS: ${DEFAULT_MAX_ITERATIONS:-5}
+
+      # Timeouts
+      AGENT_TIMEOUT_SECONDS: ${AGENT_TIMEOUT_SECONDS:-180}
+      LLM_CALL_TIMEOUT_SECONDS: ${LLM_CALL_TIMEOUT_SECONDS:-60}
+      CELERY_TASK_TIMEOUT: ${CELERY_TASK_TIMEOUT:-600}
+
+      # Scheduled jobs
+      INGEST_SCHEDULE_CRON: ${INGEST_SCHEDULE_CRON:-0 2 * * *}
+      CLEANUP_SCHEDULE_CRON: ${CLEANUP_SCHEDULE_CRON:-0 3 * * *}
+      CLEANUP_RETENTION_DAYS: ${CLEANUP_RETENTION_DAYS:-90}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    command: uv run celery -A src.celery_app worker --loglevel=info --concurrency=2
+    environment:
+      POSTGRES_URL: postgresql+asyncpg://${POSTGRES_USER:-arxiv_user}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-arxiv_rag}
+      REDIS_URL: redis://redis:6379/2
+      REDIS_CHECKPOINT_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY}
+      JINA_API_KEY: ${JINA_API_KEY:?Set JINA_API_KEY}
+      NVIDIA_NIM_API_KEY: ${NVIDIA_NIM_API_KEY:-}
+      NVIDIA_NIM_API_BASE: ${NVIDIA_NIM_API_BASE:-}
+      DEFAULT_LLM_MODEL: ${DEFAULT_LLM_MODEL:-openai/gpt-4o-mini}
+      ALLOWED_LLM_MODELS: ${ALLOWED_LLM_MODELS:-openai/gpt-4o-mini}
+      STRUCTURED_OUTPUT_MODEL: ${STRUCTURED_OUTPUT_MODEL:-}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:?Set CLERK_SECRET_KEY}
+      CLERK_DOMAIN: ${CLERK_DOMAIN:?Set CLERK_DOMAIN}
+      LANGFUSE_ENABLED: ${LANGFUSE_ENABLED:-false}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_HOST: ${LANGFUSE_URL:-http://langfuse:3000}
+      DEBUG: ${DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      CHUNK_SIZE_WORDS: ${CHUNK_SIZE_WORDS:-600}
+      CHUNK_OVERLAP_WORDS: ${CHUNK_OVERLAP_WORDS:-100}
+      MIN_CHUNK_WORDS: ${MIN_CHUNK_WORDS:-100}
+      CELERY_TASK_TIMEOUT: ${CELERY_TASK_TIMEOUT:-600}
+      INGEST_SCHEDULE_CRON: ${INGEST_SCHEDULE_CRON:-0 2 * * *}
+      CLEANUP_SCHEDULE_CRON: ${CLEANUP_SCHEDULE_CRON:-0 3 * * *}
+      CLEANUP_RETENTION_DAYS: ${CLEANUP_RETENTION_DAYS:-90}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "uv run celery -A src.celery_app inspect ping --timeout 5 2>/dev/null | grep -q pong || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    command: uv run celery -A src.celery_app beat --loglevel=info
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      INGEST_SCHEDULE_CRON: ${INGEST_SCHEDULE_CRON:-0 2 * * *}
+      CLEANUP_SCHEDULE_CRON: ${CLEANUP_SCHEDULE_CRON:-0 3 * * *}
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Public-Facing Services (Coolify proxy routes to these)
+  # ---------------------------------------------------------------------------
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:?Set VITE_CLERK_PUBLISHABLE_KEY}
+    expose:
+      - "5173"
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5173/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  flower:
+    image: mher/flower:2.0
+    command: celery --broker=redis://redis:6379/0 flower --port=5555
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      FLOWER_BASIC_AUTH: ${FLOWER_BASIC_AUTH:-admin:changeme}
+    expose:
+      - "5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  langfuse:
+    image: langfuse/langfuse:2
+    environment:
+      DATABASE_URL: postgresql://langfuse:${LANGFUSE_DB_PASSWORD:-langfuse_secret}@langfuse-db:5432/langfuse
+      NEXTAUTH_URL: ${LANGFUSE_URL:?Set LANGFUSE_URL}
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:?Set LANGFUSE_NEXTAUTH_SECRET}
+      SALT: ${LANGFUSE_SALT:?Set LANGFUSE_SALT}
+      TELEMETRY_ENABLED: "false"
+    expose:
+      - "3000"
+    depends_on:
+      langfuse-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/public/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  postgres_data:
+  redis_data:
+  langfuse_postgres_data:

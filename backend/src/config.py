@@ -67,7 +67,7 @@ class Settings(BaseSettings):
 
     # Clerk Authentication
     clerk_secret_key: str = ""
-    clerk_domain: str = ""  # e.g. "your-app.clerk.accounts.dev"; empty = skip validation
+    clerk_domain: str  # e.g. "your-app.clerk.accounts.dev"
 
     # Celery/Redis
     celery_broker_url: str = "redis://redis:6379/0"
@@ -95,4 +95,4 @@ class Settings(BaseSettings):
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """Get cached settings instance."""
-    return Settings()
+    return Settings()  # ty: ignore[missing-argument]  # pydantic_settings reads from env

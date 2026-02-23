@@ -24,6 +24,11 @@ CMD ["npm", "run", "dev"]
 # Builder stage for production
 FROM base AS builder
 
+# Vite bakes VITE_* env vars into the JS bundle at build time.
+# This must be set via build args in docker-compose (not runtime env).
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+
 # Copy source code
 COPY . .
 
