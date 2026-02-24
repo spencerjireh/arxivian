@@ -70,6 +70,11 @@ export interface ErrorEventData {
   code?: string
 }
 
+export interface MessageError {
+  message: string
+  code: string
+}
+
 // Citation explorer types
 
 export interface CitationsEventData {
@@ -274,7 +279,7 @@ export interface Message {
   metadata?: MetadataEventData
   thinkingSteps?: ThinkingStep[]
   isStreaming?: boolean
-  error?: string
+  error?: MessageError
   createdAt: Date
   citations?: CitationsEventData
   ingestProposal?: ConfirmIngestEventData

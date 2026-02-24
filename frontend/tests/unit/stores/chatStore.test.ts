@@ -6,7 +6,6 @@ const initialState = () => ({
   streamingContent: '',
   currentStatus: null,
   sources: [],
-  error: null,
   thinkingSteps: [],
   ingestProposal: null,
   isIngesting: false,
@@ -39,10 +38,6 @@ describe('chatStore', () => {
       expect(useChatStore.getState().sources).toEqual(sources)
     })
 
-    it('setError updates error', () => {
-      useChatStore.getState().setError('something broke')
-      expect(useChatStore.getState().error).toBe('something broke')
-    })
   })
 
   describe('appendStreamingContent', () => {
@@ -224,7 +219,6 @@ describe('chatStore', () => {
       useChatStore.getState().setStreaming(true)
       useChatStore.getState().setStreamingContent('some content')
       useChatStore.getState().setStatus('processing')
-      useChatStore.getState().setError('error')
       useChatStore.getState().addThinkingStep({ step: 'guardrail', message: 'test' })
 
       useChatStore.getState().resetStreamingState()
@@ -234,7 +228,6 @@ describe('chatStore', () => {
       expect(state.streamingContent).toBe('')
       expect(state.currentStatus).toBeNull()
       expect(state.sources).toEqual([])
-      expect(state.error).toBeNull()
       expect(state.thinkingSteps).toEqual([])
     })
 

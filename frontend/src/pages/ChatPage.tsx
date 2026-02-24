@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { toast } from 'sonner'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useConversation } from '../api/conversations'
 import { useChat } from '../hooks/useChat'
@@ -26,8 +25,6 @@ export default function ChatPage() {
 
   // Subscribe to streaming state directly from store for real-time updates
   const isStreaming = useChatStore((state) => state.isStreaming)
-  const error = useChatStore((state) => state.error)
-  const setError = useChatStore((state) => state.setError)
   const ingestProposal = useChatStore((state) => state.ingestProposal)
 
   const {
@@ -35,6 +32,7 @@ export default function ChatPage() {
     sendMessage,
     cancelStream,
     sendResume,
+    retryMessage,
     loadFromHistory,
     clearMessages,
   } = useChat(effectiveSessionId)
@@ -78,14 +76,6 @@ export default function ChatPage() {
     }
   }, [sessionId, setLastSessionId])
 
-  // Show error as toast and clear store error
-  useEffect(() => {
-    if (error) {
-      toast.error('Something went wrong', { description: error })
-      setError(null)
-    }
-  }, [error, setError])
-
   const isEmpty = messages.length === 0
   const motionProps = shouldReduceMotion
     ? {}
@@ -104,7 +94,7 @@ export default function ChatPage() {
           </motion.div>
         ) : (
           <motion.div key="active" className="flex-1 flex flex-col min-h-0 relative" {...motionProps}>
-            <ChatMessages messages={messages} />
+            <ChatMessages messages={messages} onRetry={retryMessage} />
             <div className="absolute bottom-0 left-0 right-0">
               {ingestProposal ? (
                 <IngestConfirmBar onConfirm={sendResume} />

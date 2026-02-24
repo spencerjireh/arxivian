@@ -34,6 +34,15 @@ export class StreamAbortError extends Error {
   }
 }
 
+export class StreamError extends Error {
+  code: string
+  constructor(message: string, code: string) {
+    super(message)
+    this.name = 'StreamError'
+    this.code = code
+  }
+}
+
 export async function streamChat(
   request: StreamRequest,
   callbacks: StreamCallbacks,
@@ -54,13 +63,20 @@ export async function streamChat(
       if (!response.ok) {
         const errorText = await response.text()
         let errorMessage = errorText
+        let errorCode = 'INTERNAL_ERROR'
         try {
           const parsed = JSON.parse(errorText)
-          errorMessage = parsed.detail || parsed.message || errorText
+          // Structured error from error middleware: { error: { code, message } }
+          if (parsed.error?.code) {
+            errorCode = parsed.error.code
+            errorMessage = parsed.error.message || errorText
+          } else {
+            errorMessage = parsed.detail || parsed.message || errorText
+          }
         } catch {
           // Keep original text
         }
-        throw new Error(errorMessage)
+        throw new StreamError(errorMessage, errorCode)
       }
     },
 
@@ -109,8 +125,7 @@ export async function streamChat(
     },
 
     onerror: (err) => {
-      callbacks.onError?.({ error: err.message || 'Stream connection error' })
-      throw err
+      throw new StreamError(err.message || 'Stream connection error', 'CONNECTION_ERROR')
     },
 
     onclose: () => {

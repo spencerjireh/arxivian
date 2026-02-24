@@ -21,7 +21,7 @@ from src.dependencies import (
     RedisDep,
     ConversationRepoDep,
 )
-from src.exceptions import ConflictError
+from src.exceptions import BaseAPIException, ConflictError
 from src.factories.service_factories import get_agent_service
 from src.services.task_registry import task_registry
 from src.utils.logger import get_logger
@@ -34,6 +34,14 @@ def _format_sse_error(error: str, code: str) -> str:
     """Format an error as an SSE event."""
     error_data = ErrorEventData(error=error, code=code)
     return f"event: error\ndata: {json.dumps(error_data.model_dump())}\n\n"
+
+
+_USER_SAFE_ERROR_CODES: frozenset[str] = frozenset({
+    "USAGE_LIMIT_EXCEEDED",
+    "CHECKPOINT_EXPIRED",
+    "FORBIDDEN",
+    "CONFLICT",
+})
 
 
 @router.post("/stream")
@@ -176,7 +184,10 @@ async def stream(
 
         except Exception as e:
             log.error("stream error", error=str(e), task_id=task_id, exc_info=True)
-            yield _format_sse_error("An unexpected error occurred", "INTERNAL_ERROR")
+            if isinstance(e, BaseAPIException) and e.error_code in _USER_SAFE_ERROR_CODES:
+                yield _format_sse_error(e.message, e.error_code)
+            else:
+                yield _format_sse_error("An unexpected error occurred", "INTERNAL_ERROR")
             yield "event: done\ndata: {}\n\n"
 
         finally:

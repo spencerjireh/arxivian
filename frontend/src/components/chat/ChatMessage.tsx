@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { AlertCircle, Lightbulb, User } from 'lucide-react'
+import { Lightbulb, User } from 'lucide-react'
 import logoIcon from '../../assets/logo-icon.png'
 import clsx from 'clsx'
 import { useChatStore } from '../../stores/chatStore'
@@ -10,6 +10,7 @@ import CitationTree from './CitationTree'
 import MarkdownRenderer from './MarkdownRenderer'
 import ThinkingTimeline from './ThinkingTimeline'
 import IngestConfirmation from './IngestConfirmation'
+import MessageErrorDisplay from './MessageErrorDisplay'
 import {
   cursorTransitionVariants,
   sourcesRevealContainer,
@@ -18,12 +19,15 @@ import {
 interface ChatMessageProps {
   message: Message
   isStreaming?: boolean
-  isFirst?: boolean
+  onRetry?: (query: string, erroredMessageId: string) => void
+  retryQuery?: string
 }
 
 export default function ChatMessage({
   message,
   isStreaming,
+  onRetry,
+  retryQuery,
 }: ChatMessageProps) {
   const hasProposal = !!message.ingestProposal
   const storeIsIngesting = useChatStore((s) => (hasProposal ? s.isIngesting : false))
@@ -188,10 +192,11 @@ export default function ChatMessage({
           </div>
 
           {!isUser && message.error && (
-            <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <span>{message.error}</span>
-            </div>
+            <MessageErrorDisplay
+              error={message.error}
+              onRetry={onRetry && ((query) => onRetry(query, message.id))}
+              retryQuery={retryQuery}
+            />
           )}
 
           {!isUser && message.citations && (

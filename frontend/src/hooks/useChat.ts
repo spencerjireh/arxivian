@@ -1,7 +1,8 @@
 import { useCallback, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { streamChat, createStreamAbortController, StreamAbortError } from '../api/stream'
+import { toast } from 'sonner'
+import { streamChat, createStreamAbortController, StreamAbortError, StreamError } from '../api/stream'
 import type { StreamCallbacks } from '../api/stream'
 import { conversationKeys } from '../api/conversations'
 import { useChatStore } from '../stores/chatStore'
@@ -9,9 +10,11 @@ import { useSettingsStore, DEFAULT_SETTINGS } from '../stores/settingsStore'
 import { useUserStore } from '../stores/userStore'
 import { generateMessageId } from '../utils/id'
 import { useMessageCache, chatKeys } from './useMessageCache'
+import { getErrorTreatment } from '../lib/errorMapping'
 import type {
   StreamRequest,
   Message,
+  MessageError,
   SourceInfo,
   MetadataEventData,
   ThinkingStep,
@@ -42,7 +45,6 @@ export function useChat(sessionId: string | null) {
   const appendStreamingContent = useChatStore((s) => s.appendStreamingContent)
   const setStatus = useChatStore((s) => s.setStatus)
   const setSources = useChatStore((s) => s.setSources)
-  const setError = useChatStore((s) => s.setError)
   const addThinkingStep = useChatStore((s) => s.addThinkingStep)
   const addGeneratingStep = useChatStore((s) => s.addGeneratingStep)
   const completeGeneratingStep = useChatStore((s) => s.completeGeneratingStep)
@@ -139,6 +141,53 @@ export function useChat(sessionId: string | null) {
       }
     },
     [setMessages, sessionId, queryClient, navigate]
+  )
+
+  const handleStreamError = useCallback(
+    (code: string, message: string) => {
+      const treatment = getErrorTreatment(code, message)
+
+      if (treatment.display === 'none') {
+        // CANCELLED: remove placeholder silently
+        if (streamingMessageIdRef.current) {
+          setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageIdRef.current))
+          streamingMessageIdRef.current = null
+        }
+        resetStreamingState()
+        setStreaming(false)
+        return
+      }
+
+      const error: MessageError = { message, code }
+
+      if (treatment.display === 'inline') {
+        if (streamingMessageIdRef.current) {
+          updateStreamingMessage(streamingMessageIdRef.current, {
+            isStreaming: false,
+            error,
+          })
+          streamingMessageIdRef.current = null
+        }
+      } else {
+        // toast-only: remove empty placeholder
+        if (streamingMessageIdRef.current) {
+          setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageIdRef.current))
+          streamingMessageIdRef.current = null
+        }
+      }
+
+      if (treatment.display === 'toast') {
+        toast.error(treatment.title, { description: treatment.body ?? message })
+      }
+
+      if (treatment.clearsIngest) {
+        clearIngestState()
+      }
+
+      resetStreamingState()
+      setStreaming(false)
+    },
+    [setMessages, updateStreamingMessage, resetStreamingState, setStreaming, clearIngestState]
   )
 
   const buildStreamRequest = useCallback(
@@ -248,51 +297,30 @@ export function useChat(sessionId: string | null) {
     async (
       request: StreamRequest,
       callbacks: StreamCallbacks,
-      onCleanupError?: () => void,
     ) => {
       try {
         await streamChat(request, callbacks, abortControllerRef.current!)
       } catch (err) {
         if (err instanceof StreamAbortError) {
-          if (streamingMessageIdRef.current) {
-            setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageIdRef.current))
-            streamingMessageIdRef.current = null
-          }
-          resetStreamingState()
-          setStreaming(false)
+          handleStreamError('CANCELLED', 'Stream aborted')
           return
         }
+        const errorCode = err instanceof StreamError ? err.code : 'INTERNAL_ERROR'
         const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
-        if (streamingMessageIdRef.current) {
-          updateStreamingMessage(streamingMessageIdRef.current, {
-            isStreaming: false,
-            error: errorMessage,
-          })
-          streamingMessageIdRef.current = null
-        }
-        onCleanupError?.()
-        resetStreamingState()
-        setError(errorMessage)
-        setStreaming(false)
+        handleStreamError(errorCode, errorMessage)
       } finally {
         abortControllerRef.current = null
         useUserStore.getState().fetchMe()
       }
     },
-    [setMessages, resetStreamingState, setStreaming, updateStreamingMessage, setError]
+    [handleStreamError]
   )
 
-  const sendMessage = useCallback(
+  const executeQueryStream = useCallback(
     async (query: string) => {
-      if (useChatStore.getState().isStreaming) {
-        return
-      }
-
-      addUserMessage(query)
       resetStreamingState()
       hasAddedGeneratingStep.current = false
       setStreaming(true)
-      setError(null)
 
       const streamingMessageId = addStreamingPlaceholder()
       streamingMessageIdRef.current = streamingMessageId
@@ -323,16 +351,7 @@ export function useChat(sessionId: string | null) {
           setStreaming(false)
         },
         onError: (data) => {
-          if (streamingMessageIdRef.current) {
-            updateStreamingMessage(streamingMessageIdRef.current, {
-              isStreaming: false,
-              error: data.error,
-            })
-            streamingMessageIdRef.current = null
-          }
-          resetStreamingState()
-          setError(data.error)
-          setStreaming(false)
+          handleStreamError(data.code ?? 'INTERNAL_ERROR', data.error)
         },
         onConfirmIngest: (data) => {
           setIngestProposal(data)
@@ -354,14 +373,13 @@ export function useChat(sessionId: string | null) {
       await runStream(request, callbacks)
     },
     [
-      addUserMessage,
       addStreamingPlaceholder,
       buildStreamRequest,
       buildStreamCallbacks,
       runStream,
       resetStreamingState,
       setStreaming,
-      setError,
+      handleStreamError,
       updateStreamingMessage,
       completeGeneratingStep,
       getThinkingSteps,
@@ -372,6 +390,15 @@ export function useChat(sessionId: string | null) {
     ]
   )
 
+  const sendMessage = useCallback(
+    async (query: string) => {
+      if (useChatStore.getState().isStreaming) return
+      addUserMessage(query)
+      await executeQueryStream(query)
+    },
+    [addUserMessage, executeQueryStream]
+  )
+
   const sendResume = useCallback(
     async (approved: boolean, selectedIds: string[]) => {
       const proposal = useChatStore.getState().ingestProposal
@@ -380,7 +407,6 @@ export function useChat(sessionId: string | null) {
       resetStreamingState()
       hasAddedGeneratingStep.current = false
       setStreaming(true)
-      setError(null)
 
       const streamingMessageId = addStreamingPlaceholder()
       streamingMessageIdRef.current = streamingMessageId
@@ -439,21 +465,11 @@ export function useChat(sessionId: string | null) {
           setStreaming(false)
         },
         onError: (data) => {
-          if (streamingMessageIdRef.current) {
-            updateStreamingMessage(streamingMessageIdRef.current, {
-              isStreaming: false,
-              error: data.error,
-            })
-            streamingMessageIdRef.current = null
-          }
-          clearIngestState()
-          resetStreamingState()
-          setError(data.error)
-          setStreaming(false)
+          handleStreamError(data.code ?? 'INTERNAL_ERROR', data.error)
         },
       })
 
-      await runStream(request, callbacks, clearIngestState)
+      await runStream(request, callbacks)
     },
     [
       addStreamingPlaceholder,
@@ -461,7 +477,7 @@ export function useChat(sessionId: string | null) {
       runStream,
       resetStreamingState,
       setStreaming,
-      setError,
+      handleStreamError,
       updateStreamingMessage,
       addThinkingStep,
       getThinkingSteps,
@@ -471,6 +487,18 @@ export function useChat(sessionId: string | null) {
       setIsIngesting,
       clearIngestState,
     ]
+  )
+
+  const retryMessage = useCallback(
+    async (query: string, erroredMessageId: string) => {
+      if (useChatStore.getState().isStreaming) return
+
+      // Remove the specific errored assistant message
+      setMessages((prev) => prev.filter((msg) => msg.id !== erroredMessageId))
+
+      await executeQueryStream(query)
+    },
+    [setMessages, executeQueryStream]
   )
 
   const cancelStream = useCallback(() => {
@@ -485,6 +513,7 @@ export function useChat(sessionId: string | null) {
     sendMessage,
     cancelStream,
     sendResume,
+    retryMessage,
     loadFromHistory,
     clearMessages,
   }

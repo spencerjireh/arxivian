@@ -25,7 +25,6 @@ interface ChatUIState {
   streamingContent: string
   currentStatus: string | null
   sources: SourceInfo[]
-  error: string | null
   thinkingSteps: ThinkingStep[]
   ingestProposal: ConfirmIngestEventData | null
   isIngesting: boolean
@@ -36,7 +35,6 @@ interface ChatUIState {
   appendStreamingContent: (token: string) => void
   setStatus: (status: string | null) => void
   setSources: (sources: SourceInfo[]) => void
-  setError: (error: string | null) => void
 
   addThinkingStep: (data: StatusEventData) => void
   addGeneratingStep: () => void
@@ -57,7 +55,6 @@ const initialStreamingState = {
   streamingContent: '',
   currentStatus: null,
   sources: [] as SourceInfo[],
-  error: null,
   thinkingSteps: [] as ThinkingStep[],
   ingestProposal: null as ConfirmIngestEventData | null,
   isIngesting: false,
@@ -79,8 +76,6 @@ export const useChatStore = create<ChatUIState>((set, get) => ({
   setStatus: (status) => set({ currentStatus: status }),
 
   setSources: (sources) => set({ sources }),
-
-  setError: (error) => set({ error }),
 
   addThinkingStep: (data: StatusEventData) => {
     const now = new Date()

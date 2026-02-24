@@ -146,17 +146,6 @@ class InsufficientChunksError(BusinessLogicError):
         self.error_code = "INSUFFICIENT_CHUNKS"
 
 
-class GuardrailRejectionError(BusinessLogicError):
-    """Raised when a query is rejected by guardrail validation."""
-
-    def __init__(self, query: str, score: float, threshold: float):
-        super().__init__(
-            message="Query rejected by guardrail - not related to academic research",
-            details={"query": query, "score": score, "threshold": threshold},
-        )
-        self.error_code = "GUARDRAIL_REJECTION"
-
-
 class ProcessingLimitError(BusinessLogicError):
     """Raised when processing limits are exceeded."""
 

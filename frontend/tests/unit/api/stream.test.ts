@@ -1,5 +1,5 @@
 import type { EventSourceMessage } from '@microsoft/fetch-event-source'
-import { streamChat, StreamAbortError } from '../../../src/api/stream'
+import { streamChat, StreamAbortError, StreamError } from '../../../src/api/stream'
 import type { StreamCallbacks } from '../../../src/api/stream'
 import type { StreamRequest } from '../../../src/types/api'
 
@@ -153,23 +153,26 @@ describe('streamChat', () => {
     expect(callbacks.onContent).not.toHaveBeenCalled()
   })
 
-  it('propagates non-abort errors from onerror', async () => {
+  it('propagates non-abort errors from onerror as StreamError with CONNECTION_ERROR code', async () => {
     const fes = await getFESMock()
     const networkError = new Error('Network failure')
 
     fes.mockImplementation(async (_url, config) => {
       const { onerror } = config as FESConfig
-      // onerror re-throws, which causes fetchEventSource to reject
-      try {
-        onerror?.(networkError)
-      } catch {
-        throw networkError
-      }
+      // onerror wraps the error as StreamError and re-throws
+      onerror?.(networkError)
     })
 
     const callbacks: StreamCallbacks = { onError: vi.fn() }
 
-    await expect(streamChat(baseRequest, callbacks)).rejects.toThrow('Network failure')
-    expect(callbacks.onError).toHaveBeenCalledWith({ error: 'Network failure' })
+    const promise = streamChat(baseRequest, callbacks)
+    await expect(promise).rejects.toThrow(StreamError)
+    await promise.catch((err) => {
+      expect(err).toBeInstanceOf(StreamError)
+      expect(err.code).toBe('CONNECTION_ERROR')
+      expect(err.message).toBe('Network failure')
+    })
+    // onerror no longer calls callbacks.onError (handled by runStream catch)
+    expect(callbacks.onError).not.toHaveBeenCalled()
   })
 })
