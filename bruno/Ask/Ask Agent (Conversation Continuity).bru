@@ -18,10 +18,38 @@ body:json {
   {
     "query": "Follow up: Can you give me more details about the architecture you just described?",
     "session_id": "same-uuid-as-previous-question",
+    "max_iterations": 5,
+    "timeout_seconds": 180,
     "conversation_window": 5
   }
 }
 
 docs {
-  Example of conversation continuity using the same session_id. The agent will remember previous context and provide contextual responses via SSE streaming. Metadata events include session_id and turn_number to track conversation flow.
+  Demonstrates multi-turn conversation continuity. Reuse the same session_id from a
+  previous request to carry context forward. The agent retrieves prior turns
+  (controlled by conversation_window) and generates contextual follow-up responses.
+
+  The METADATA event includes session_id and turn_number to track conversation flow.
+
+  ## How to Test
+
+  1. Send an initial question using "Ask Agent (Basic)" -- note the session_id
+     from the METADATA event
+  2. Paste that session_id into this request's body
+  3. Send a follow-up question -- the agent will reference prior context
+
+  ## Authentication
+
+  Requires a valid Clerk JWT in the Authorization header.
+
+  ## Tier Gating
+
+  Free-tier users can use conversation continuity (session_id is not gated),
+  but cannot customize max_iterations, timeout_seconds, or conversation_window.
+
+  ## SSE Event Types
+
+  Response streams as Server-Sent Events with these event types:
+  STATUS, CONTENT, SOURCES, METADATA, CITATIONS, CONFIRM_INGEST,
+  INGEST_COMPLETE, ERROR, DONE.
 }

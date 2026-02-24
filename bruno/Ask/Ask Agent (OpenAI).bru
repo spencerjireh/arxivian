@@ -18,14 +18,37 @@ body:json {
   {
     "query": "What are neural networks",
     "provider": "openai",
-    "model": "gpt-4o-mini",
+    "model": "openai/gpt-4o-mini",
     "top_k": 5,
     "temperature": 0.3,
+    "max_iterations": 5,
+    "timeout_seconds": 180,
     "session_id": "optional-uuid-for-conversation",
     "conversation_window": 5
   }
 }
 
 docs {
-  Stream agent response with OpenAI provider explicitly specified. Uses gpt-4o-mini model with custom parameters and conversation memory support. Streams via Server-Sent Events (SSE) with real-time status updates and content tokens.
+  Stream agent response with OpenAI provider explicitly specified. Uses gpt-4o-mini
+  via LiteLLM prefix routing format ("openai/gpt-4o-mini").
+
+  Note: The model field must use LiteLLM format with the provider prefix.
+  Allowed models: "openai/gpt-4o-mini", "nvidia_nim/openai/gpt-oss-120b".
+
+  ## Authentication
+
+  Requires a valid Clerk JWT in the Authorization header.
+
+  ## Tier Gating
+
+  Free-tier users cannot customize provider, model, temperature, top_k,
+  guardrail_threshold, max_retrieval_attempts, conversation_window, max_iterations,
+  or timeout_seconds. These fields are silently reset to defaults. Upgrade to Pro
+  for full parameter control.
+
+  ## SSE Event Types
+
+  Response streams as Server-Sent Events with these event types:
+  STATUS, CONTENT, SOURCES, METADATA, CITATIONS, CONFIRM_INGEST,
+  INGEST_COMPLETE, ERROR, DONE.
 }

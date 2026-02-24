@@ -11,7 +11,26 @@ get {
 }
 
 docs {
-  Get the currently authenticated user's profile. Returns user details including tier, usage counters, and account metadata.
+  Get the currently authenticated user's profile including tier, usage counters,
+  and permission flags.
+
+  ## Response Fields
+
+  | Field | Type | Description |
+  |-------|------|-------------|
+  | id | string | User ID (from Clerk) |
+  | email | string | User email address |
+  | first_name | string | User first name |
+  | last_name | string | User last name |
+  | tier | string | Subscription tier: "free" or "pro" |
+  | daily_chat_limit | int or null | Max chats per day (null = unlimited for Pro) |
+  | chats_used_today | int | Number of chats used in the current day |
+  | daily_ingest_limit | int or null | Max ingestions per day (null = unlimited for Pro) |
+  | ingests_used_today | int | Number of ingestions used in the current day |
+  | can_adjust_settings | bool | Whether user can customize agent parameters |
+  | can_view_execution_details | bool | Whether user can view execution traces |
+
+  ## Authentication
 
   Requires Clerk JWT authentication via the Authorization header.
 }

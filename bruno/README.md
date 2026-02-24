@@ -55,7 +55,7 @@ bruno/
 └── Users/                    # User profile endpoints
 ```
 
-Total: **29 API requests** across 9 folders
+Total: **30 API requests** across 9 folders
 
 ## Environment Configuration
 
@@ -104,12 +104,40 @@ vars {
 ### Ask (Streaming with SSE)
 
 - **Ask Agent (Basic)**: POST `/api/v1/stream` -- Stream with default settings via SSE
-- **Ask Agent (OpenAI)**: POST `/api/v1/stream` -- Use OpenAI provider (gpt-4o-mini)
-- **Ask Agent (Z.AI)**: POST `/api/v1/stream` -- Use Z.AI provider (glm-4.6)
+- **Ask Agent (OpenAI)**: POST `/api/v1/stream` -- Use OpenAI provider (openai/gpt-4o-mini)
+- **Ask Agent (NVIDIA NIM)**: POST `/api/v1/stream` -- Use NVIDIA NIM provider (nvidia_nim/openai/gpt-oss-120b)
 - **Ask Agent (Advanced Parameters)**: POST `/api/v1/stream` -- Custom parameters with streaming
 - **Ask Agent (Conversation Continuity)**: POST `/api/v1/stream` -- Multi-turn conversation with streaming
+- **Ask Agent (Resume HITL)**: POST `/api/v1/stream` -- Resume after Human-in-the-Loop ingest confirmation
 
 All Ask Agent endpoints use Server-Sent Events (SSE) to stream responses in real-time. You will see status updates, content tokens, sources, and metadata as separate events.
+
+#### SSE Event Types
+
+| Event Type | Description |
+|------------|-------------|
+| `STATUS` | Workflow step updates (guardrail, retrieval, grading, generation) |
+| `CONTENT` | Streamed response tokens |
+| `SOURCES` | Retrieved document chunks used for the answer |
+| `METADATA` | Final metadata: execution_time_ms, model, session_id, turn_number, trace_id |
+| `CITATIONS` | Paper citation details (arxiv_id, title, reference_count) |
+| `CONFIRM_INGEST` | HITL pause: proposed papers for user approval (includes session_id, thread_id) |
+| `INGEST_COMPLETE` | Ingestion result (papers_processed, chunks_created, duration_seconds) |
+| `ERROR` | Error with structured code and message |
+| `DONE` | Stream complete |
+
+#### Human-in-the-Loop (HITL) Flow
+
+When the agent finds new papers during an arXiv search, it can propose them for ingestion:
+
+1. Agent emits a `CONFIRM_INGEST` event with a list of proposed papers, `session_id`, and `thread_id`
+2. The client displays the proposal to the user
+3. The user selects which papers to ingest (or rejects)
+4. The client sends a resume request with `{ "resume": { "session_id", "thread_id", "approved", "selected_ids" } }`
+5. If approved, the agent ingests papers and emits `INGEST_COMPLETE`
+6. The agent continues with generation using the newly available content
+
+See the "Ask Agent (Resume HITL)" request for the exact payload format.
 
 ### Papers
 
@@ -132,9 +160,9 @@ All Ask Agent endpoints use Server-Sent Events (SSE) to stream responses in real
 
 - **Cleanup Orphaned Records**: POST `/api/v1/ops/cleanup` -- Remove orphaned papers
 - **Bulk Ingest Papers**: POST `/api/v1/ops/ingest` -- Ingest papers by ID or search query
-- **List Tasks**: GET `/api/v1/ops/tasks` -- List background Celery tasks
-- **Get Task Status**: GET `/api/v1/ops/tasks/:task_id` -- Poll task completion status
-- **Revoke Task**: DELETE `/api/v1/ops/tasks/:task_id` -- Revoke a pending or running task
+- **List Tasks**: GET `/api/v1/ops/tasks` -- List background Celery tasks (supports limit, offset)
+- **Get Task Status**: GET `/api/v1/ops/tasks/:task_id` -- Poll task status (supports include_result)
+- **Revoke Task**: DELETE `/api/v1/ops/tasks/:task_id` -- Revoke a task (supports terminate flag)
 - **Delete Paper**: DELETE `/api/v1/ops/papers/:arxiv_id` -- Delete paper and chunks
 - **Update User Tier**: PATCH `/api/v1/ops/users/:user_id/tier` -- Change a user's tier
 - **Get System arXiv Searches**: GET `/api/v1/ops/system/arxiv-searches` -- Get scheduled search configs
@@ -147,6 +175,33 @@ All Ask Agent endpoints use Server-Sent Events (SSE) to stream responses in real
 ### Root
 
 - **API Information**: GET `/` -- API version and feature information
+
+## Tier System
+
+The API enforces usage limits based on user tier:
+
+| Tier | Daily Chats | Daily Ingests | Adjust Settings | View Execution Details |
+|------|-------------|---------------|-----------------|------------------------|
+| Free | 10 | 5 | No | No |
+| Pro | Unlimited | Unlimited | Yes | Yes |
+
+Free-tier users can still use all agent features (retrieval, arXiv search, ingestion), but cannot customize parameters like provider, model, temperature, top_k, etc. These are silently reset to defaults.
+
+## Error Response Format
+
+All API errors return a structured JSON response:
+
+```json
+{
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "Daily chat limit reached (10/10). Resets at midnight UTC.",
+    "details": {}
+  }
+}
+```
+
+During SSE streaming, errors are delivered as an `ERROR` event with `code` and `error` fields.
 
 ## Usage Tips
 
@@ -181,6 +236,17 @@ To test multi-turn conversations with the Ask Agent:
 
 The agent will remember context from previous turns in the conversation.
 
+### Testing HITL Ingest Flow
+
+To test the Human-in-the-Loop ingestion:
+
+1. Ask a question that references papers not yet in the system (e.g., a very recent topic)
+2. If the agent triggers an arXiv search and finds new papers, you'll receive a `CONFIRM_INGEST` event
+3. Copy the `session_id` and `thread_id` from the event data
+4. Open the "Ask Agent (Resume HITL)" request
+5. Fill in the `session_id`, `thread_id`, set `approved` to true, and list the `selected_ids`
+6. Send the request -- the agent will ingest the papers and continue generating
+
 ### Ops Endpoints
 
 All Ops endpoints require the `X-Api-Key` header for authentication. Set the `api_key` variable in your environment to your actual API key before using these requests.
@@ -199,6 +265,13 @@ For GET requests with query parameters:
 1. Open the request in Bruno
 2. Use the "Params" tab to enable/disable or modify query parameters
 3. Bruno will automatically update the URL
+
+## Security Headers
+
+The API returns security headers on all responses:
+
+- `X-Frame-Options: DENY` -- prevents clickjacking
+- `X-Content-Type-Options: nosniff` -- prevents MIME type sniffing
 
 ## FastAPI Documentation
 

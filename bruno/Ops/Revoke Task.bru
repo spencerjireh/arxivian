@@ -5,7 +5,7 @@ meta {
 }
 
 delete {
-  url: {{base_url}}/api/v1/ops/tasks/:task_id
+  url: {{base_url}}/api/v1/ops/tasks/:task_id?terminate=false
   body: none
   auth: none
 }
@@ -14,12 +14,32 @@ headers {
   X-Api-Key: {{api_key}}
 }
 
+params:query {
+  terminate: false
+}
+
 params:path {
   task_id: your-task-id-here
 }
 
 docs {
-  Revoke a pending or running background task. The task will be terminated if currently executing.
+  Revoke a pending or running background task.
 
-  Requires API key authentication.
+  ## Query Parameters
+
+  | Parameter | Type | Default | Description |
+  |-----------|------|---------|-------------|
+  | terminate | bool | false | If true, sends SIGTERM to terminate a currently executing task. If false (default), only prevents the task from starting if it is still pending. |
+
+  ## Behavior
+
+  - With terminate=false (default): marks the task as revoked. If the task has not
+    started yet, it will never execute. If already running, it continues until completion
+    but its result is discarded.
+  - With terminate=true: sends a termination signal to the worker process. Use with
+    caution as this can leave resources in an inconsistent state.
+
+  ## Authentication
+
+  Requires API key via X-Api-Key header.
 }

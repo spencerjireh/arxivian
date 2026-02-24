@@ -18,10 +18,12 @@ body:json {
   {
     "query": "How do diffusion models generate images?",
     "provider": "openai",
-    "model": "gpt-4o",
+    "model": "openai/gpt-4o-mini",
     "top_k": 10,
     "guardrail_threshold": 80,
     "max_retrieval_attempts": 5,
+    "max_iterations": 10,
+    "timeout_seconds": 300,
     "temperature": 0.7,
     "session_id": "optional-uuid-for-conversation",
     "conversation_window": 5
@@ -29,5 +31,26 @@ body:json {
 }
 
 docs {
-  Stream agent response with advanced parameters including higher guardrail threshold, more retrieval attempts, higher temperature for creative responses, and conversation memory support. Streams via Server-Sent Events (SSE) with status, content, sources, and metadata events.
+  Stream agent response with advanced parameters: higher guardrail threshold,
+  more retrieval attempts, higher temperature for creative responses, increased
+  iteration limit, and extended timeout.
+
+  Note: The model uses LiteLLM format ("openai/gpt-4o-mini"). The "gpt-4o" model
+  is not in the allowed list -- only "openai/gpt-4o-mini" and
+  "nvidia_nim/openai/gpt-oss-120b" are accepted.
+
+  ## Authentication
+
+  Requires a valid Clerk JWT in the Authorization header.
+
+  ## Tier Gating
+
+  All non-default parameter values in this request require Pro tier.
+  Free-tier users will have these silently reset to defaults.
+
+  ## SSE Event Types
+
+  Response streams as Server-Sent Events with these event types:
+  STATUS, CONTENT, SOURCES, METADATA, CITATIONS, CONFIRM_INGEST,
+  INGEST_COMPLETE, ERROR, DONE.
 }

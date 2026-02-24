@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{base_url}}/api/v1/ops/tasks/:task_id
+  url: {{base_url}}/api/v1/ops/tasks/:task_id?include_result=false
   body: none
   auth: none
 }
@@ -14,12 +14,30 @@ headers {
   X-Api-Key: {{api_key}}
 }
 
+params:query {
+  include_result: false
+}
+
 params:path {
   task_id: your-task-id-here
 }
 
 docs {
-  Get the status of a specific background task by its ID. Returns task state, result, and progress info.
+  Get the status of a specific background task by its ID.
 
-  Requires API key authentication.
+  ## Query Parameters
+
+  | Parameter | Type | Default | Description |
+  |-----------|------|---------|-------------|
+  | include_result | bool | false | Include the task result payload in the response |
+
+  ## Response
+
+  Returns task state, progress info, and optionally the result payload.
+
+  Task statuses: pending, started, success, failure, retry, revoked.
+
+  ## Authentication
+
+  Requires API key via X-Api-Key header.
 }

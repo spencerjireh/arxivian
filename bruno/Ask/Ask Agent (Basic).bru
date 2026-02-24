@@ -22,5 +22,51 @@ body:json {
 }
 
 docs {
-  Stream agent response via Server-Sent Events (SSE) using default LLM provider and model. Features guardrail validation, document grading, query rewriting, and optional multi-turn conversation memory. Response includes status updates, content tokens, sources, and metadata as separate SSE events.
+  Stream agent response via SSE using all default settings. This is the simplest
+  possible request -- only `query` is required.
+
+  ## StreamRequest Fields
+
+  All fields except `query` are optional:
+
+  | Field | Type | Default | Description |
+  |-------|------|---------|-------------|
+  | query | string | (required) | Question to ask the agent |
+  | provider | string | null | LLM provider: "openai" or "nvidia_nim" |
+  | model | string | null | Model in LiteLLM format (e.g. "openai/gpt-4o-mini") |
+  | top_k | int | 3 | Number of chunks to retrieve (1-10) |
+  | temperature | float | 0.3 | LLM temperature (0.0-1.0) |
+  | max_iterations | int | 5 | Max agent loop iterations (1-20) |
+  | timeout_seconds | int | null | Agent timeout in seconds (10-600, default from server config: 180) |
+  | guardrail_threshold | int | 75 | Minimum relevance score to pass guardrail (0-100) |
+  | max_retrieval_attempts | int | 3 | Max retrieval-rewrite cycles (1-5) |
+  | session_id | string | null | UUID for multi-turn conversation continuity |
+  | conversation_window | int | 5 | Number of prior turns to include as context (1-10) |
+  | resume | object | null | HITL resume payload (mutually exclusive with query) |
+
+  ## Authentication
+
+  Requires a valid Clerk JWT in the Authorization header.
+
+  ## Tier Gating
+
+  Free-tier users cannot customize provider, model, temperature, top_k,
+  guardrail_threshold, max_retrieval_attempts, conversation_window, max_iterations,
+  or timeout_seconds. These fields are silently reset to defaults.
+
+  ## SSE Event Types
+
+  The response streams as Server-Sent Events. Each event has a `type` field:
+
+  | Event Type | Description |
+  |------------|-------------|
+  | STATUS | Workflow step updates (guardrail, retrieval, grading, generation) |
+  | CONTENT | Streamed response tokens |
+  | SOURCES | Retrieved document chunks used for the answer |
+  | METADATA | Final metadata: execution_time_ms, model, session_id, turn_number, trace_id, etc. |
+  | CITATIONS | Paper citation details (arxiv_id, title, reference_count) |
+  | CONFIRM_INGEST | HITL pause: proposed papers for user approval (includes session_id, thread_id) |
+  | INGEST_COMPLETE | Result of ingestion (papers_processed, chunks_created, duration_seconds) |
+  | ERROR | Error with code and message |
+  | DONE | Stream complete |
 }

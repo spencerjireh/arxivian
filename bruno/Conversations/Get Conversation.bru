@@ -15,9 +15,30 @@ params:path {
 }
 
 docs {
-  Get a conversation with all its turns. Returns full conversation details including each turn's query, response, sources, reasoning steps, and metadata.
+  Get a conversation with all its turns. Returns full conversation details
+  including each turn's query, response, sources, reasoning steps, and metadata.
 
   Replace :session_id with the actual session ID from a previous streaming request.
+
+  ## Turn Fields
+
+  Each turn in the conversation includes:
+
+  | Field | Type | Description |
+  |-------|------|-------------|
+  | turn_number | int | Sequential turn number |
+  | query | string | The user's question |
+  | response | string | The agent's full response |
+  | sources | array | Retrieved chunks used to generate the response |
+  | thinking_steps | array | Agent reasoning steps (guardrail, retrieval, grading, generation) |
+  | citations | array | Paper citations referenced in the response |
+  | pending_confirmation | object or null | Active HITL confirmation awaiting user decision |
+  | execution_time_ms | int | Time taken for this turn |
+  | provider | string | LLM provider used |
+  | model | string | Model used |
+  | created_at | string | ISO 8601 timestamp |
+
+  ## Authentication
 
   Requires authentication. Returns 404 if conversation not found or not owned by user.
 }

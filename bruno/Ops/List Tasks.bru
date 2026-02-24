@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{base_url}}/api/v1/ops/tasks
+  url: {{base_url}}/api/v1/ops/tasks?limit=20&offset=0
   body: none
   auth: none
 }
@@ -14,8 +14,28 @@ headers {
   X-Api-Key: {{api_key}}
 }
 
-docs {
-  List all background Celery tasks. Returns task IDs, statuses, and metadata.
+params:query {
+  limit: 20
+  offset: 0
+}
 
-  Requires API key authentication.
+docs {
+  List all background Celery tasks with pagination.
+
+  ## Query Parameters
+
+  | Parameter | Type | Default | Description |
+  |-----------|------|---------|-------------|
+  | limit | int | 20 | Number of tasks to return (1-100) |
+  | offset | int | 0 | Number of tasks to skip (for pagination) |
+
+  ## Response
+
+  Returns an array of task objects with fields: task_id, status, created_at, and metadata.
+
+  Task statuses: pending, started, success, failure, retry, revoked.
+
+  ## Authentication
+
+  Requires API key via X-Api-Key header.
 }

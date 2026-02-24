@@ -1,0 +1,79 @@
+meta {
+  name: Ask Agent (Resume HITL)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{base_url}}/api/v1/stream
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "resume": {
+      "session_id": "conversation-session-id",
+      "thread_id": "langgraph-thread-id",
+      "approved": true,
+      "selected_ids": ["2401.12345", "2401.67890"]
+    }
+  }
+}
+
+docs {
+  Resume an agent session after a Human-in-the-Loop (HITL) ingest confirmation.
+
+  When the agent proposes papers for ingestion, it pauses and emits a CONFIRM_INGEST
+  event containing a list of papers, a session_id, and a thread_id. The client must
+  send this resume request to continue the workflow.
+
+  ## HITL Flow
+
+  1. User asks a question that triggers an arXiv search
+  2. Agent finds new papers not yet in the knowledge base
+  3. Agent emits CONFIRM_INGEST event with proposed papers, session_id, thread_id
+  4. Client displays the proposal to the user for approval
+  5. User selects which papers to ingest (or rejects all)
+  6. Client sends this resume request with the user's decision
+  7. If approved, agent ingests selected papers and emits INGEST_COMPLETE
+  8. Agent continues with generation using the newly ingested content
+
+  ## Request Fields
+
+  The `resume` object (exactly one of `query` or `resume` must be provided):
+
+  | Field | Type | Description |
+  |-------|------|-------------|
+  | session_id | string | Conversation session ID from the CONFIRM_INGEST event |
+  | thread_id | string | LangGraph thread ID for checkpoint resume |
+  | approved | bool | Whether the user approved the ingestion |
+  | selected_ids | string[] | arXiv IDs the user selected (empty array if rejected) |
+
+  ## CONFIRM_INGEST Event Data
+
+  The event that triggers this flow contains:
+
+  | Field | Type | Description |
+  |-------|------|-------------|
+  | papers | array | List of proposed papers with arxiv_id, title, authors, abstract, published_date, pdf_url |
+  | session_id | string | Session ID to echo back in the resume request |
+  | thread_id | string | Thread ID to echo back in the resume request |
+
+  ## Authentication
+
+  Requires a valid Clerk JWT in the Authorization header.
+
+  ## Notes
+
+  - If `approved` is false, the agent skips ingestion and continues generation
+    with whatever context was already available.
+  - If `approved` is true but `selected_ids` is empty, the agent treats it
+    as a rejection.
+  - The resume request must be sent to the same `/api/v1/stream` endpoint.
+  - The thread_id ensures the LangGraph checkpoint is resumed at the correct point.
+}
