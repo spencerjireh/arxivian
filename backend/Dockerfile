@@ -43,5 +43,10 @@ RUN uv sync --frozen --no-editable --no-dev
 # Copy application code
 COPY . .
 
+RUN addgroup --system --gid 1001 appgroup \
+    && adduser --system --uid 1001 --ingroup appgroup appuser \
+    && chown -R appuser:appgroup /app
+USER appuser
+
 # Run migrations and start server
 CMD ["sh", "-c", "uv run alembic upgrade head && uv run uvicorn src.main:app --host 0.0.0.0 --port 8000"]

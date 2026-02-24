@@ -36,7 +36,7 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM nginx:alpine AS production
+FROM nginxinc/nginx-unprivileged:alpine AS production
 
 # Copy custom nginx config for SPA routing and API proxy
 COPY nginx.conf /etc/nginx/nginx.conf

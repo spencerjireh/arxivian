@@ -5,8 +5,10 @@ from datetime import datetime, timezone
 from src.schemas.health import HealthResponse, ServiceStatus
 from src.dependencies import DbSession, EmbeddingsClientDep, PaperRepoDep, ChunkRepoDep
 from src.config import get_settings
+from src.utils.logger import get_logger
 
 router = APIRouter()
+log = get_logger(__name__)
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -42,7 +44,8 @@ async def health_check(
             details={"papers_count": papers_count, "chunks_count": chunks_count},
         )
     except Exception as e:
-        services["database"] = ServiceStatus(status="unhealthy", message=f"Error: {str(e)}")
+        log.error("health check failed", service="database", error=str(e))
+        services["database"] = ServiceStatus(status="unhealthy", message="Service unavailable")
         overall_status = "degraded"
 
     # Check LLM provider configuration
@@ -69,7 +72,8 @@ async def health_check(
         else:
             raise ValueError(f"No API key configured for provider: {provider}")
     except Exception as e:
-        services["llm"] = ServiceStatus(status="unhealthy", message=f"Error: {str(e)}")
+        log.error("health check failed", service="llm", error=str(e))
+        services["llm"] = ServiceStatus(status="unhealthy", message="Service unavailable")
         overall_status = "degraded"
 
     # Check Jina
@@ -79,7 +83,8 @@ async def health_check(
         else:
             raise ValueError("No API key")
     except Exception as e:
-        services["jina"] = ServiceStatus(status="unhealthy", message=f"Error: {str(e)}")
+        log.error("health check failed", service="jina", error=str(e))
+        services["jina"] = ServiceStatus(status="unhealthy", message="Service unavailable")
         overall_status = "degraded"
 
     return HealthResponse(

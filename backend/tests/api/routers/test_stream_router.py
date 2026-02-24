@@ -605,9 +605,11 @@ class TestStreamErrorHandling:
         assert response.status_code == 200
         events = parse_sse_events(response.text)
 
-        # Should have error event
-        event_types = [e.get("event") for e in events]
-        assert "error" in event_types
+        # Should have error event with generic message (not leaking internal details)
+        error_events = [e for e in events if e.get("event") == "error"]
+        assert len(error_events) > 0
+        assert error_events[0]["data"]["error"] == "An unexpected error occurred"
+        assert "Test error" not in str(error_events[0]["data"])
 
         # Should still end with done event
         assert events[-1]["event"] == "done"

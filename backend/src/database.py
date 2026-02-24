@@ -15,7 +15,7 @@ class Base(DeclarativeBase):
 settings = get_settings()
 engine = create_async_engine(
     settings.postgres_url,
-    echo=settings.debug,
+    echo=settings.sql_echo,
     future=True,
     pool_pre_ping=True,
     pool_recycle=1800,

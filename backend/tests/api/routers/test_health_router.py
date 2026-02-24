@@ -51,7 +51,7 @@ class TestHealthEndpoint:
         data = response.json()
         assert data["status"] == "degraded"
         assert data["services"]["database"]["status"] == "unhealthy"
-        assert "Database connection failed" in data["services"]["database"]["message"]
+        assert data["services"]["database"]["message"] == "Service unavailable"
 
     def test_health_degraded_on_missing_llm_key(
         self,

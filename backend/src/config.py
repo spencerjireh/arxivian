@@ -55,6 +55,7 @@ class Settings(BaseSettings):
 
     # App
     debug: bool = False
+    sql_echo: bool = False
     log_level: str = "INFO"
     log_request_body: bool = True
     log_response_body: bool = True

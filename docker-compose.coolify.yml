@@ -41,7 +41,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: langfuse
-      POSTGRES_PASSWORD: ${LANGFUSE_DB_PASSWORD:-langfuse_secret}
+      POSTGRES_PASSWORD: ${LANGFUSE_DB_PASSWORD:?Set LANGFUSE_DB_PASSWORD}
       POSTGRES_DB: langfuse
     volumes:
       - langfuse_postgres_data:/var/lib/postgresql/data
@@ -221,7 +221,7 @@ services:
     command: celery --broker=redis://redis:6379/0 flower --port=5555
     environment:
       CELERY_BROKER_URL: redis://redis:6379/0
-      FLOWER_BASIC_AUTH: ${FLOWER_BASIC_AUTH:-admin:changeme}
+      FLOWER_BASIC_AUTH: ${FLOWER_BASIC_AUTH:?Set FLOWER_BASIC_AUTH}
     expose:
       - "5555"
     depends_on:
@@ -231,7 +231,7 @@ services:
   langfuse:
     image: langfuse/langfuse:2
     environment:
-      DATABASE_URL: postgresql://langfuse:${LANGFUSE_DB_PASSWORD:-langfuse_secret}@langfuse-db:5432/langfuse
+      DATABASE_URL: postgresql://langfuse:${LANGFUSE_DB_PASSWORD:?Set LANGFUSE_DB_PASSWORD}@langfuse-db:5432/langfuse
       NEXTAUTH_URL: ${LANGFUSE_URL:?Set LANGFUSE_URL}
       NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:?Set LANGFUSE_NEXTAUTH_SECRET}
       SALT: ${LANGFUSE_SALT:?Set LANGFUSE_SALT}

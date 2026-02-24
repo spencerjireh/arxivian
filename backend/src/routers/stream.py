@@ -176,7 +176,7 @@ async def stream(
 
         except Exception as e:
             log.error("stream error", error=str(e), task_id=task_id, exc_info=True)
-            yield _format_sse_error(str(e), "INTERNAL_ERROR")
+            yield _format_sse_error("An unexpected error occurred", "INTERNAL_ERROR")
             yield "event: done\ndata: {}\n\n"
 
         finally:
