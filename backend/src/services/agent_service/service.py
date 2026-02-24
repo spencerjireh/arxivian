@@ -471,7 +471,9 @@ class AgentService:
         # Get turn count for deterministic thread_id (enables checkpoint resume)
         turn_number = 0
         if self.conversation_repo:
-            turn_number = await self.conversation_repo.get_turn_count(session_id)
+            turn_number = await self.conversation_repo.get_turn_count(
+                session_id, user_id=self.user_id
+            )
         thread_id = f"{session_id}:{turn_number}"
 
         log.info(
@@ -615,7 +617,9 @@ class AgentService:
                     if turn_number == 0:
                         title = await generate_title(self.context.llm_client, query)
                         if title:
-                            await self.conversation_repo.update_title(session_id, title)
+                            await self.conversation_repo.update_title(
+                                session_id, title, user_id=self.user_id
+                            )
 
         finally:
             set_trace_context(None)  # Clear trace context
@@ -791,7 +795,7 @@ class AgentService:
             )
             if self.conversation_repo and pending_turn_number is not None:
                 await self.conversation_repo.clear_pending_confirmation(
-                    session_id, pending_turn_number
+                    session_id, pending_turn_number, user_id=self.user_id
                 )
             yield StreamEvent(
                 event=StreamEventType.ERROR,
@@ -816,7 +820,7 @@ class AgentService:
 
             if pending_turn_number is not None:
                 await self.conversation_repo.clear_pending_confirmation(
-                    session_id, pending_turn_number
+                    session_id, pending_turn_number, user_id=self.user_id
                 )
 
         execution_time = (time.time() - start_time) * 1000

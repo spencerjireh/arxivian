@@ -151,7 +151,7 @@ async def delete_conversation(
         HTTPException: 404 if conversation not found or not owned by user
     """
     # Get turn count before deletion
-    turn_count = await conversation_repo.get_turn_count(session_id)
+    turn_count = await conversation_repo.get_turn_count(session_id, user_id=current_user.id)
 
     # Check if conversation exists and is owned by user
     conv = await conversation_repo.get_by_session_id(session_id, user_id=current_user.id)

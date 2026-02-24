@@ -190,6 +190,10 @@ class TestDeleteConversationEndpoint:
         response = client.delete("/api/v1/conversations/test-session-123")
 
         assert response.status_code == 200
+        # Verify get_turn_count is scoped to user
+        mock_conversation_repo.get_turn_count.assert_called_once_with(
+            "test-session-123", user_id=mock_user.id
+        )
         # Verify delete is called with user_id for ownership verification
         mock_conversation_repo.delete.assert_called_once_with(
             "test-session-123", user_id=mock_user.id

@@ -34,9 +34,11 @@ class ConversationRepository:
         Returns:
             Conversation instance
         """
-        result = await self.session.execute(
-            select(Conversation).where(Conversation.session_id == session_id)
-        )
+        query = select(Conversation).where(Conversation.session_id == session_id)
+        if user_id is not None:
+            query = query.where(Conversation.user_id == user_id)
+
+        result = await self.session.execute(query)
         conv = result.scalar_one_or_none()
 
         if not conv:
@@ -108,11 +110,15 @@ class ConversationRepository:
 
         for attempt in range(max_retries):
             try:
-                result = await self.session.execute(
+                query = (
                     select(Conversation)
                     .where(Conversation.session_id == session_id)
                     .with_for_update()
                 )
+                if user_id is not None:
+                    query = query.where(Conversation.user_id == user_id)
+
+                result = await self.session.execute(query)
                 conv = result.scalar_one_or_none()
 
                 if not conv:
@@ -176,15 +182,18 @@ class ConversationRepository:
         sources: list[dict] | None = None,
         reasoning_steps: list[str] | None = None,
         citations: dict | None = None,
+        user_id: Optional[UUID] = None,
     ) -> Optional[ConversationTurn]:
         """
         Complete a previously saved partial turn after HITL confirmation.
 
         Clears pending_confirmation and updates the agent response with final content.
         """
-        result = await self.session.execute(
-            select(Conversation).where(Conversation.session_id == session_id)
-        )
+        query = select(Conversation).where(Conversation.session_id == session_id)
+        if user_id is not None:
+            query = query.where(Conversation.user_id == user_id)
+
+        result = await self.session.execute(query)
         conv = result.scalar_one_or_none()
         if not conv:
             return None
@@ -260,12 +269,14 @@ class ConversationRepository:
         return result.scalar_one_or_none()
 
     async def clear_pending_confirmation(
-        self, session_id: str, turn_number: int
+        self, session_id: str, turn_number: int, user_id: Optional[UUID] = None
     ) -> None:
         """Clear the pending_confirmation flag on a turn without updating other fields."""
-        result = await self.session.execute(
-            select(Conversation).where(Conversation.session_id == session_id)
-        )
+        query = select(Conversation).where(Conversation.session_id == session_id)
+        if user_id is not None:
+            query = query.where(Conversation.user_id == user_id)
+
+        result = await self.session.execute(query)
         conv = result.scalar_one_or_none()
         if not conv:
             return
@@ -290,11 +301,15 @@ class ConversationRepository:
             turn_number=turn_number,
         )
 
-    async def update_title(self, session_id: str, title: str) -> None:
+    async def update_title(
+        self, session_id: str, title: str, user_id: Optional[UUID] = None
+    ) -> None:
         """Update the title of a conversation."""
-        result = await self.session.execute(
-            select(Conversation).where(Conversation.session_id == session_id)
-        )
+        query = select(Conversation).where(Conversation.session_id == session_id)
+        if user_id is not None:
+            query = query.where(Conversation.user_id == user_id)
+
+        result = await self.session.execute(query)
         conv = result.scalar_one_or_none()
         if conv:
             conv.title = title
@@ -346,19 +361,24 @@ class ConversationRepository:
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_turn_count(self, session_id: str) -> int:
+    async def get_turn_count(
+        self, session_id: str, user_id: Optional[UUID] = None
+    ) -> int:
         """
         Get the number of turns in a conversation.
 
         Args:
             session_id: Session identifier
+            user_id: Optional user ID for ownership verification
 
         Returns:
             Number of turns
         """
-        result = await self.session.execute(
-            select(Conversation).where(Conversation.session_id == session_id)
-        )
+        query = select(Conversation).where(Conversation.session_id == session_id)
+        if user_id is not None:
+            query = query.where(Conversation.user_id == user_id)
+
+        result = await self.session.execute(query)
         conv = result.scalar_one_or_none()
 
         if not conv:

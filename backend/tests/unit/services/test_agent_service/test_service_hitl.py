@@ -248,7 +248,9 @@ class TestResumeStream:
         assert "Confirmed ingestion" in turn_data.user_query
 
         # Verify pending cleared
-        repo.clear_pending_confirmation.assert_called_once_with("s1", 0)
+        repo.clear_pending_confirmation.assert_called_once_with(
+            "s1", 0, user_id=None
+        )
 
     @pytest.mark.asyncio
     async def test_declined_resumes_graph_without_ingest(self):
@@ -337,4 +339,6 @@ class TestResumeStream:
         assert error_event.data.code == "CHECKPOINT_EXPIRED"
 
         # Verify pending was cleared
-        repo.clear_pending_confirmation.assert_called_once_with("s1", 0)
+        repo.clear_pending_confirmation.assert_called_once_with(
+            "s1", 0, user_id=None
+        )

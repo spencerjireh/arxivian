@@ -472,6 +472,138 @@ class TestConversationRepositoryUserFiltering:
         assert conv is None
 
     @pytest.mark.asyncio
+    async def test_get_or_create_does_not_return_other_users_conversation(
+        self, db_session, test_user_1, test_user_2
+    ):
+        """Verify get_or_create creates a new conversation when session belongs to another user."""
+        repo = ConversationRepository(session=db_session)
+
+        session_id = f"session-{uuid.uuid4().hex[:8]}"
+
+        # User 1 creates a conversation
+        conv1 = await repo.get_or_create(session_id, user_id=test_user_1.id)
+        assert conv1.user_id == test_user_1.id
+
+        # User 2 calls get_or_create with the same session_id -- should get a NEW conversation
+        conv2 = await repo.get_or_create(session_id, user_id=test_user_2.id)
+        assert conv2.id != conv1.id
+        assert conv2.user_id == test_user_2.id
+
+    @pytest.mark.asyncio
+    async def test_save_turn_does_not_write_to_other_users_conversation(
+        self, db_session, test_user_1, test_user_2
+    ):
+        """Verify save_turn creates a new conversation when session belongs to another user."""
+        repo = ConversationRepository(session=db_session)
+
+        session_id = f"session-{uuid.uuid4().hex[:8]}"
+
+        turn_data = TurnData(
+            user_query="Question",
+            agent_response="Answer",
+            provider="openai",
+            model="gpt-4o-mini",
+        )
+
+        # User 1 saves a turn (creates conversation)
+        t1 = await repo.save_turn(session_id, turn_data, user_id=test_user_1.id)
+
+        # User 2 saves a turn with the same session_id -- should create a NEW conversation
+        t2 = await repo.save_turn(session_id, turn_data, user_id=test_user_2.id)
+
+        assert t1.conversation_id != t2.conversation_id
+
+    @pytest.mark.asyncio
+    async def test_clear_pending_confirmation_filters_by_user_id(
+        self, db_session, test_user_1, test_user_2
+    ):
+        """Verify clear_pending_confirmation no-ops when user_id does not match."""
+        repo = ConversationRepository(session=db_session)
+
+        session_id = f"session-{uuid.uuid4().hex[:8]}"
+
+        turn_data = TurnData(
+            user_query="Question",
+            agent_response="",
+            provider="openai",
+            model="gpt-4o-mini",
+            pending_confirmation={"papers": [], "proposed_ids": []},
+        )
+        saved = await repo.save_turn(session_id, turn_data, user_id=test_user_1.id)
+
+        # User 2 attempts to clear -- should no-op
+        await repo.clear_pending_confirmation(
+            session_id, saved.turn_number, user_id=test_user_2.id
+        )
+        await db_session.flush()
+
+        # Pending confirmation should still be set
+        pending = await repo.get_pending_turn(session_id, user_id=test_user_1.id)
+        assert pending is not None
+        assert pending.pending_confirmation is not None
+
+        # Owner clears successfully
+        await repo.clear_pending_confirmation(
+            session_id, saved.turn_number, user_id=test_user_1.id
+        )
+        await db_session.flush()
+
+        pending = await repo.get_pending_turn(session_id, user_id=test_user_1.id)
+        assert pending is None
+
+    @pytest.mark.asyncio
+    async def test_update_title_filters_by_user_id(
+        self, db_session, test_user_1, test_user_2
+    ):
+        """Verify update_title no-ops when user_id does not match."""
+        repo = ConversationRepository(session=db_session)
+
+        session_id = f"session-{uuid.uuid4().hex[:8]}"
+
+        await repo.get_or_create(session_id, user_id=test_user_1.id)
+
+        # User 2 attempts to set title -- should no-op
+        await repo.update_title(session_id, "Hacked", user_id=test_user_2.id)
+        await db_session.flush()
+
+        conv = await repo.get_by_session_id(session_id, user_id=test_user_1.id)
+        assert conv is not None
+        assert conv.title is None  # unchanged
+
+        # Owner sets title successfully
+        await repo.update_title(session_id, "My Title", user_id=test_user_1.id)
+        await db_session.flush()
+
+        conv = await repo.get_by_session_id(session_id, user_id=test_user_1.id)
+        assert conv is not None
+        assert conv.title == "My Title"
+
+    @pytest.mark.asyncio
+    async def test_get_turn_count_filters_by_user_id(
+        self, db_session, test_user_1, test_user_2
+    ):
+        """Verify get_turn_count returns 0 when user_id does not match."""
+        repo = ConversationRepository(session=db_session)
+
+        session_id = f"session-{uuid.uuid4().hex[:8]}"
+
+        turn_data = TurnData(
+            user_query="Question",
+            agent_response="Answer",
+            provider="openai",
+            model="gpt-4o-mini",
+        )
+        await repo.save_turn(session_id, turn_data, user_id=test_user_1.id)
+
+        # Owner sees correct count
+        count = await repo.get_turn_count(session_id, user_id=test_user_1.id)
+        assert count == 1
+
+        # Other user sees 0
+        count = await repo.get_turn_count(session_id, user_id=test_user_2.id)
+        assert count == 0
+
+    @pytest.mark.asyncio
     async def test_delete_filters_by_user_id(self, db_session, test_user_1, test_user_2):
         """Verify delete filters by user_id."""
         repo = ConversationRepository(session=db_session)
