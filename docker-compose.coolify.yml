@@ -29,10 +29,11 @@ services:
 
   redis:
     image: redis:8-alpine
+    command: redis-server --requirepass "${REDIS_PASSWORD:?Set REDIS_PASSWORD}"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$REDIS_PASSWORD\" ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -64,11 +65,11 @@ services:
       # Database (composed from shared vars so user enters credentials once)
       POSTGRES_URL: postgresql+asyncpg://${POSTGRES_USER:-arxiv_user}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-arxiv_rag}
 
-      # Redis (internal Docker DNS, no need to configure)
-      REDIS_URL: redis://redis:6379/2
-      REDIS_CHECKPOINT_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      # Redis (internal Docker DNS; password required in production)
+      REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/2
+      REDIS_CHECKPOINT_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/1
 
       # LLM
       DEFAULT_LLM_MODEL: ${DEFAULT_LLM_MODEL:-openai/gpt-4o-mini}
@@ -140,10 +141,10 @@ services:
     command: uv run celery -A src.celery_app worker --loglevel=info --concurrency=2
     environment:
       POSTGRES_URL: postgresql+asyncpg://${POSTGRES_USER:-arxiv_user}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-arxiv_rag}
-      REDIS_URL: redis://redis:6379/2
-      REDIS_CHECKPOINT_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/2
+      REDIS_CHECKPOINT_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/1
       OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY}
       JINA_API_KEY: ${JINA_API_KEY:?Set JINA_API_KEY}
       NVIDIA_NIM_API_KEY: ${NVIDIA_NIM_API_KEY:-}
@@ -185,8 +186,8 @@ services:
       target: production
     command: uv run celery -A src.celery_app beat --loglevel=info
     environment:
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/1
       INGEST_SCHEDULE_CRON: ${INGEST_SCHEDULE_CRON:-0 2 * * *}
       CLEANUP_SCHEDULE_CRON: ${CLEANUP_SCHEDULE_CRON:-0 3 * * *}
     depends_on:
@@ -218,9 +219,9 @@ services:
 
   flower:
     image: mher/flower:2.0
-    command: celery --broker=redis://redis:6379/0 flower --port=5555
+    command: celery --broker=redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/0 flower --port=5555
     environment:
-      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/0
       FLOWER_BASIC_AUTH: ${FLOWER_BASIC_AUTH:?Set FLOWER_BASIC_AUTH}
     expose:
       - "5555"
