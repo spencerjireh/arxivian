@@ -4,15 +4,15 @@ import pytest
 from unittest.mock import AsyncMock, Mock
 from datetime import datetime, timezone
 
-import src.services.auth_service as _auth_mod
+from src.services.auth_service import reset_auth_service
 
 
 @pytest.fixture(autouse=True)
 def _reset_auth_service_singleton():
     """Reset AuthService singleton between tests."""
-    _auth_mod._auth_service = None
+    reset_auth_service()
     yield
-    _auth_mod._auth_service = None
+    reset_auth_service()
 
 
 @pytest.fixture

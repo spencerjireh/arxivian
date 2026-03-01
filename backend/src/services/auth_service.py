@@ -28,8 +28,9 @@ class AuthService:
     # Clerk JWKS URL pattern
     JWKS_URL_TEMPLATE = "https://{clerk_domain}/.well-known/jwks.json"
 
-    def __init__(self, allowed_domain: str) -> None:
+    def __init__(self, allowed_domain: str, audience: str | None = None) -> None:
         self._allowed_domain = allowed_domain
+        self._audience = audience
         self._jwks_clients: dict[str, PyJWKClient] = {}
 
     _MAX_JWKS_CLIENTS = 10
@@ -94,10 +95,12 @@ class AuthService:
                 signing_key.key,
                 algorithms=["RS256"],
                 issuer=issuer,
+                audience=self._audience,
                 options={
                     "verify_exp": True,
                     "verify_iat": True,
                     "verify_nbf": True,
+                    "verify_aud": bool(self._audience),
                 },
             )
 
@@ -151,5 +154,14 @@ def get_auth_service() -> AuthService:
         from src.config import get_settings
 
         settings = get_settings()
-        _auth_service = AuthService(allowed_domain=settings.clerk_domain)
+        _auth_service = AuthService(
+            allowed_domain=settings.clerk_domain,
+            audience=settings.clerk_jwt_audience or None,
+        )
     return _auth_service
+
+
+def reset_auth_service() -> None:
+    """Reset singleton for testing."""
+    global _auth_service
+    _auth_service = None

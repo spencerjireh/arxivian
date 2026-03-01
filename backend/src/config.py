@@ -67,8 +67,9 @@ class Settings(BaseSettings):
     langfuse_host: str = "http://langfuse:3000"  # Self-hosted default
 
     # Clerk Authentication
-    clerk_secret_key: str = ""
     clerk_domain: str  # e.g. "your-app.clerk.accounts.dev"
+    clerk_jwt_audience: str = ""
+    clerk_webhook_secret: str = ""
 
     # Celery/Redis
     celery_broker_url: str = "redis://redis:6379/0"

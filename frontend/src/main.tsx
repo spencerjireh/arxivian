@@ -20,15 +20,12 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60, // 1 minute
-      retry: 1,
+      retry: (count, error) => count < 1 && !isAuthError(error),
     },
     mutations: {
       onError: (error) => {
-        if (isAuthError(error)) {
-          toast.error('Session expired', {
-            description: 'Please sign in again to continue.',
-          })
-        } else {
+        // Auth errors trigger forced redirect via auth:signout event; skip toast
+        if (!isAuthError(error)) {
           toast.error('Action failed', {
             description: getUserMessage(error),
           })

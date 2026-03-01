@@ -28,6 +28,7 @@ from src.config import Settings, get_settings
 from src.schemas.stream import StreamRequest
 from src.tiers import TierPolicy, get_policy
 from src.exceptions import (
+    AuthenticationError,
     ForbiddenError,
     InvalidApiKeyError,
     MissingTokenError,
@@ -175,7 +176,7 @@ async def get_current_user_optional(
 
     try:
         return await _sync_user(authorization, db)
-    except Exception:
+    except AuthenticationError:
         return None
 
 

@@ -18,6 +18,7 @@ from src.routers import (
     ops,
     feedback,
     users,
+    webhooks,
 )
 
 # Import middleware
@@ -98,6 +99,8 @@ app = FastAPI(
     description="Arxivian - academic research assistant powered by arXiv",
     version="0.4.0",
     lifespan=lifespan,
+    docs_url="/docs" if settings.debug else None,
+    redoc_url="/redoc" if settings.debug else None,
 )
 
 # Register exception handlers first
@@ -127,34 +130,13 @@ app.include_router(papers.router, prefix="/api/v1", tags=["Papers"])
 app.include_router(ops.router, prefix="/api/v1", tags=["Ops"])
 app.include_router(feedback.router, prefix="/api/v1", tags=["Feedback"])
 app.include_router(users.router, prefix="/api/v1", tags=["Users"])
+app.include_router(webhooks.router, prefix="/api/v1", tags=["Webhooks"])
 
 
 @app.get("/")
 async def root():
-    """Root endpoint with API information."""
-    return {
-        "name": "Arxivian API",
-        "version": "0.4.0",
-        "features": [
-            "Agentic RAG with LangGraph",
-            "Multi-provider LLM support (OpenAI, NVIDIA NIM) via LiteLLM",
-            "Hybrid search (vector + full-text)",
-            "arXiv paper ingestion",
-            "SSE streaming responses",
-            "Conversation history management",
-            "User tiers (Free, Pro)",
-        ],
-        "endpoints": {
-            "health": "/api/v1/health",
-            "search": "/api/v1/search",
-            "stream": "/api/v1/stream",
-            "papers": "/api/v1/papers",
-            "conversations": "/api/v1/conversations",
-            "ops": "/api/v1/ops",
-            "users": "/api/v1/users",
-        },
-        "docs": "/docs",
-    }
+    """Root endpoint."""
+    return {"name": "Arxivian API", "status": "ok"}
 
 
 if __name__ == "__main__":

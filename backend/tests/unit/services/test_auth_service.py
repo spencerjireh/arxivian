@@ -304,3 +304,75 @@ class TestAuthServiceIssuerDomainValidation:
 
             assert "Token issuer not trusted" in str(exc_info.value)
 
+
+class TestAuthServiceAudienceValidation:
+    """Tests for JWT audience (aud) claim validation."""
+
+    @pytest.mark.asyncio
+    async def test_aud_validation_passes_when_matched(self, valid_jwt_payload):
+        """Verify token accepted when aud claim matches configured audience."""
+        payload_with_aud = {**valid_jwt_payload, "aud": "my-app"}
+        auth_service = AuthService(
+            allowed_domain="test-clerk.clerk.accounts.dev",
+            audience="my-app",
+        )
+
+        mock_signing_key = MagicMock()
+        mock_signing_key.key = "mock-key"
+
+        with patch.object(pyjwt, "decode") as mock_decode, \
+             patch("src.services.auth_service.PyJWKClient") as mock_jwks_class:
+            mock_decode.side_effect = [valid_jwt_payload, payload_with_aud]
+            mock_jwks_instance = MagicMock()
+            mock_jwks_instance.get_signing_key_from_jwt.return_value = mock_signing_key
+            mock_jwks_class.return_value = mock_jwks_instance
+
+            result = await auth_service.verify_token("Bearer valid.token")
+            assert result.clerk_id == valid_jwt_payload["sub"]
+
+    @pytest.mark.asyncio
+    async def test_aud_validation_rejects_mismatched(self, valid_jwt_payload):
+        """Verify InvalidTokenError when aud claim does not match."""
+        auth_service = AuthService(
+            allowed_domain="test-clerk.clerk.accounts.dev",
+            audience="my-app",
+        )
+
+        mock_signing_key = MagicMock()
+        mock_signing_key.key = "mock-key"
+
+        with patch.object(pyjwt, "decode") as mock_decode, \
+             patch("src.services.auth_service.PyJWKClient") as mock_jwks_class:
+            mock_decode.side_effect = [
+                valid_jwt_payload,
+                pyjwt.InvalidAudienceError("Audience mismatch"),
+            ]
+            mock_jwks_instance = MagicMock()
+            mock_jwks_instance.get_signing_key_from_jwt.return_value = mock_signing_key
+            mock_jwks_class.return_value = mock_jwks_instance
+
+            with pytest.raises(InvalidTokenError):
+                await auth_service.verify_token("Bearer wrong.aud.token")
+
+    @pytest.mark.asyncio
+    async def test_aud_validation_skipped_when_no_audience_configured(self, valid_jwt_payload):
+        """Verify tokens without aud pass when audience is not configured."""
+        auth_service = AuthService(allowed_domain="test-clerk.clerk.accounts.dev")
+
+        mock_signing_key = MagicMock()
+        mock_signing_key.key = "mock-key"
+
+        with patch.object(pyjwt, "decode") as mock_decode, \
+             patch("src.services.auth_service.PyJWKClient") as mock_jwks_class:
+            mock_decode.side_effect = [valid_jwt_payload, valid_jwt_payload]
+            mock_jwks_instance = MagicMock()
+            mock_jwks_instance.get_signing_key_from_jwt.return_value = mock_signing_key
+            mock_jwks_class.return_value = mock_jwks_instance
+
+            result = await auth_service.verify_token("Bearer no.aud.token")
+            assert result.clerk_id == valid_jwt_payload["sub"]
+
+            # Verify the second decode call had verify_aud=False
+            verified_call = mock_decode.call_args_list[1]
+            assert verified_call.kwargs.get("options", {}).get("verify_aud") is False
+

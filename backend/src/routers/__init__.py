@@ -9,6 +9,7 @@ from src.routers import (
     papers,
     feedback,
     users,
+    webhooks,
 )
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "papers",
     "feedback",
     "users",
+    "webhooks",
 ]

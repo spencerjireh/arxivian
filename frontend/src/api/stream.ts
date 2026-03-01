@@ -76,6 +76,9 @@ export async function streamChat(
         } catch {
           // Keep original text
         }
+        if (response.status === 401) {
+          window.dispatchEvent(new CustomEvent('auth:signout'))
+        }
         throw new StreamError(errorMessage, errorCode)
       }
     },

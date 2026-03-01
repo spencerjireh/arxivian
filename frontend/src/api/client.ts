@@ -60,6 +60,9 @@ async function handleResponse<T>(response: Response): Promise<T> {
     } catch {
       // Keep original text if not JSON
     }
+    if (response.status === 401) {
+      window.dispatchEvent(new CustomEvent('auth:signout'))
+    }
     throw new ApiError(response.status, response.statusText, message)
   }
   return response.json()
