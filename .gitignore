@@ -243,6 +243,7 @@ dist
 .cache/
 public
 !/public/
+!frontend/public/
 
 # Vite build output
 dist/
