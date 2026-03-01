@@ -4,12 +4,12 @@ import type { RouteObject } from 'react-router-dom'
 import { AuthenticateWithRedirectCallback } from '@clerk/clerk-react'
 import { Loader2 } from 'lucide-react'
 import Layout from './components/layout/Layout'
-import ChatPage from './pages/ChatPage'
-import SignInPage from './pages/SignInPage'
-import SignUpPage from './pages/SignUpPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import RouteErrorPage from './pages/RouteErrorPage'
 
+const ChatPage = lazy(() => import('./pages/ChatPage'))
+const SignInPage = lazy(() => import('./pages/SignInPage'))
+const SignUpPage = lazy(() => import('./pages/SignUpPage'))
 const LandingPage = lazy(() => import('./pages/LandingPage'))
 const PricingPage = lazy(() => import('./pages/PricingPage'))
 const LibraryPage = lazy(() => import('./pages/LibraryPage'))
@@ -24,33 +24,33 @@ function PageFallback() {
   )
 }
 
+function Lazy({ component: Component }: { component: React.LazyExoticComponent<() => React.JSX.Element> }) {
+  return (
+    <Suspense fallback={<PageFallback />}>
+      <Component />
+    </Suspense>
+  )
+}
+
 // eslint-disable-next-line react-refresh/only-export-components
 export const routes: RouteObject[] = [
   // Public routes
   {
     path: '/',
-    element: (
-      <Suspense fallback={<PageFallback />}>
-        <LandingPage />
-      </Suspense>
-    ),
+    element: <Lazy component={LandingPage} />,
     errorElement: <RouteErrorPage />,
   },
   {
     path: '/sign-in',
-    element: <SignInPage />,
+    element: <Lazy component={SignInPage} />,
   },
   {
     path: '/sign-up',
-    element: <SignUpPage />,
+    element: <Lazy component={SignUpPage} />,
   },
   {
     path: '/pricing',
-    element: (
-      <Suspense fallback={<PageFallback />}>
-        <PricingPage />
-      </Suspense>
-    ),
+    element: <Lazy component={PricingPage} />,
     errorElement: <RouteErrorPage />,
   },
   {
@@ -66,34 +66,16 @@ export const routes: RouteObject[] = [
     ),
     errorElement: <RouteErrorPage />,
     children: [
-      { path: '/chat', element: <ChatPage /> },
-      { path: '/chat/:sessionId', element: <ChatPage /> },
-      {
-        path: '/library',
-        element: (
-          <Suspense fallback={<PageFallback />}>
-            <LibraryPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: '/settings',
-        element: (
-          <Suspense fallback={<PageFallback />}>
-            <SettingsPage />
-          </Suspense>
-        ),
-      },
+      { path: '/chat', element: <Lazy component={ChatPage} /> },
+      { path: '/chat/:sessionId', element: <Lazy component={ChatPage} /> },
+      { path: '/library', element: <Lazy component={LibraryPage} /> },
+      { path: '/settings', element: <Lazy component={SettingsPage} /> },
     ],
   },
   // Catch-all 404
   {
     path: '*',
-    element: (
-      <Suspense fallback={<PageFallback />}>
-        <NotFoundPage />
-      </Suspense>
-    ),
+    element: <Lazy component={NotFoundPage} />,
   },
 ]
 
