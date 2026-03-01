@@ -1,15 +1,15 @@
-import type { ThinkingStep } from '../../../src/types/api'
+import type { ThinkingStep, InternalStep } from '../../../src/types/api'
 import { formatDuration, calculateTotalDuration } from '../../../src/utils/duration'
 
-function makeStep(overrides: Partial<ThinkingStep> = {}): ThinkingStep {
+function makeStep(overrides: Partial<InternalStep> = {}): ThinkingStep {
   return {
     id: 'step-1',
-    step: 'executing',
+    kind: 'executing',
+    label: 'Executing',
     message: 'test',
     status: 'running',
-    timestamp: new Date(1000),
     startTime: new Date(1000),
-    order: 3,
+    isInternal: true as const,
     ...overrides,
   }
 }

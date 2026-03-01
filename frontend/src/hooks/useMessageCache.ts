@@ -78,7 +78,7 @@ export function useMessageCache(sessionId: string | null) {
             reasoning_steps: turn.reasoning_steps ?? [],
           },
           thinkingSteps: hydrateThinkingSteps(turn.thinking_steps),
-          citations: (turn.citations as CitationsEventData) ?? undefined,
+          citations: (turn.citations as unknown as CitationsEventData) ?? undefined,
           ingestProposal: turn.pending_confirmation ?? undefined,
           createdAt: new Date(turn.created_at),
         },
