@@ -44,6 +44,4 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # Copy built assets from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-EXPOSE 5173
-
 CMD ["nginx", "-g", "daemon off;"]
