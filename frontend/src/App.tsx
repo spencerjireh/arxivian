@@ -15,6 +15,7 @@ const PricingPage = lazy(() => import('./pages/PricingPage'))
 const LibraryPage = lazy(() => import('./pages/LibraryPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 
 function PageFallback() {
   return (
@@ -51,6 +52,11 @@ export const routes: RouteObject[] = [
   {
     path: '/pricing',
     element: <Lazy component={PricingPage} />,
+    errorElement: <RouteErrorPage />,
+  },
+  {
+    path: '/privacy',
+    element: <Lazy component={PrivacyPage} />,
     errorElement: <RouteErrorPage />,
   },
   {
