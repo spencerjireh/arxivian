@@ -16,7 +16,6 @@ interface EquationNode {
   depth: number
   wobblePhase: number
   wobbleAmplitude: number
-  glowRadius: number
   textWidth: number
   text: string
   displayX: number
@@ -30,14 +29,6 @@ interface EquationNode {
   lifecycleOpacity: number
 }
 
-interface SmoothedMouse {
-  x: number
-  y: number
-  targetX: number
-  targetY: number
-  active: boolean
-}
-
 // -- Layer presets --
 
 const LAYER_CONFIG = {
@@ -45,19 +36,16 @@ const LAYER_CONFIG = {
     fontSize: [30, 50],
     opacity: [0.05, 0.10],
     velocity: [-0.03, 0.03],
-    parallaxMultiplier: 0.004,
   },
   mid: {
     fontSize: [18, 34],
     opacity: [0.10, 0.18],
     velocity: [-0.06, 0.06],
-    parallaxMultiplier: 0.008,
   },
   fg: {
     fontSize: [14, 22],
     opacity: [0.15, 0.24],
     velocity: [-0.10, 0.10],
-    parallaxMultiplier: 0.014,
   },
 } as const
 
@@ -103,9 +91,6 @@ const EQUATIONS = [
 const NODE_COUNT = 25
 const EDGE_MARGIN = 40
 const LINE_THRESHOLD = 140
-const GLOW_RADIUS = 200
-const MOUSE_LERP = 0.08
-
 // Exclusion zone (fraction of canvas dimensions)
 const EXCLUSION = { x1: 0.15, x2: 0.85, y1: 0.10, y2: 0.75 }
 
@@ -160,7 +145,6 @@ function assignNodeProperties(node: EquationNode, layer: DepthLayer, text: strin
   node.fadeOutDuration = randomRange(1500, 3000)
   node.lifecycleOpacity = 0
 
-  node.glowRadius = 0
   node.textWidth = 0
 }
 
@@ -223,7 +207,6 @@ function createNodes(width: number, height: number): EquationNode[] {
       depth,
       wobblePhase: randomRange(0, Math.PI * 2),
       wobbleAmplitude: randomRange(0.1, 0.25),
-      glowRadius: 0,
       textWidth: 0,
       text,
       displayX: 0,
@@ -250,13 +233,6 @@ export default function EquationConstellation({ className }: Props) {
   const fgCanvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const nodesRef = useRef<EquationNode[]>([])
-  const mouseRef = useRef<SmoothedMouse>({
-    x: 0,
-    y: 0,
-    targetX: 0,
-    targetY: 0,
-    active: false,
-  })
   const rafRef = useRef<number>(0)
   const lastTimeRef = useRef<number>(0)
   const reducedMotion = useReducedMotion()
@@ -388,13 +364,6 @@ export default function EquationConstellation({ className }: Props) {
         const dt = Math.min(rawDelta, 3)
         lastTimeRef.current = time
 
-        // Lerp smoothed mouse
-        const mouse = mouseRef.current
-        if (mouse.active) {
-          mouse.x += (mouse.targetX - mouse.x) * MOUSE_LERP
-          mouse.y += (mouse.targetY - mouse.y) * MOUSE_LERP
-        }
-
         // Clear all 3 canvases
         bgCtx.clearRect(0, 0, w, h)
         midCtx.clearRect(0, 0, w, h)
@@ -470,29 +439,8 @@ export default function EquationConstellation({ className }: Props) {
             }
           }
 
-          // Mouse parallax (layer-based multiplier)
-          const parallaxFactor = LAYER_CONFIG[node.layer].parallaxMultiplier
-          let parallaxX = 0
-          let parallaxY = 0
-          if (mouse.active) {
-            const centerX = w / 2
-            const centerY = h / 2
-            parallaxX = (mouse.x - centerX) * node.depth * parallaxFactor
-            parallaxY = (mouse.y - centerY) * node.depth * parallaxFactor
-          }
-          node.displayX = node.x + parallaxX
-          node.displayY = node.y + parallaxY
-
-          // Proximity glow
-          node.glowRadius = 0
-          if (mouse.active) {
-            const dx = node.displayX - mouse.x
-            const dy = node.displayY - mouse.y
-            const dist = Math.sqrt(dx * dx + dy * dy)
-            if (dist < GLOW_RADIUS) {
-              node.glowRadius = 0.15 * (1 - dist / GLOW_RADIUS)
-            }
-          }
+          node.displayX = node.x
+          node.displayY = node.y
         }
 
         // Draw constellation lines on fg canvas (no blur needed for thin lines)
@@ -524,7 +472,7 @@ export default function EquationConstellation({ className }: Props) {
           if (node.lifecycleOpacity < 0.01) continue
 
           const totalOpacity = Math.min(
-            (node.opacity * node.lifecycleOpacity) + node.glowRadius,
+            node.opacity * node.lifecycleOpacity,
             0.35,
           )
           if (totalOpacity < 0.005) continue
@@ -535,12 +483,6 @@ export default function EquationConstellation({ className }: Props) {
           ctx.translate(node.displayX, node.displayY)
           ctx.rotate((node.rotation * Math.PI) / 180)
           ctx.font = `italic ${node.fontSize}px ${FONT_STACK}`
-
-          // Shadow glow
-          if (node.glowRadius > 0) {
-            ctx.shadowColor = `rgba(120, 113, 108, ${node.glowRadius * node.lifecycleOpacity})`
-            ctx.shadowBlur = 2 + node.glowRadius * 8
-          }
 
           ctx.fillStyle = `rgba(120, 113, 108, ${totalOpacity})`
           ctx.fillText(node.text, -node.textWidth / 2, node.fontSize / 3)
@@ -554,24 +496,6 @@ export default function EquationConstellation({ className }: Props) {
     }
 
     init()
-
-    // Mouse events on fg canvas (topmost, has pointerEvents: auto)
-    const handleMouseMove = (e: MouseEvent) => {
-      if (reducedMotion) return
-      const rect = fgCanvas.getBoundingClientRect()
-      mouseRef.current.targetX = e.clientX - rect.left
-      mouseRef.current.targetY = e.clientY - rect.top
-      mouseRef.current.active = true
-    }
-
-    const handleMouseLeave = () => {
-      mouseRef.current.active = false
-    }
-
-    if (!reducedMotion) {
-      fgCanvas.addEventListener('mousemove', handleMouseMove)
-      fgCanvas.addEventListener('mouseleave', handleMouseLeave)
-    }
 
     // Resize observer
     const observer = new ResizeObserver(() => {
@@ -601,8 +525,6 @@ export default function EquationConstellation({ className }: Props) {
     return () => {
       cancelAnimationFrame(rafRef.current)
       observer.disconnect()
-      fgCanvas.removeEventListener('mousemove', handleMouseMove)
-      fgCanvas.removeEventListener('mouseleave', handleMouseLeave)
       clearTimeout(resizeTimer)
     }
   }, [reducedMotion, setupCanvas, measureTextWidths, drawStaticFrame])
@@ -633,7 +555,7 @@ export default function EquationConstellation({ className }: Props) {
       />
       <canvas
         ref={fgCanvasRef}
-        style={{ ...canvasBase, pointerEvents: 'auto' }}
+        style={canvasBase}
       />
     </div>
   )
