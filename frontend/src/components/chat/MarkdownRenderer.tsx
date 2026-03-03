@@ -1,16 +1,40 @@
+import { lazy, Suspense, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import clsx from 'clsx'
-import { markdownComponents, remarkPlugins, rehypePlugins, preprocessLatex } from '../../lib/markdown'
+import { remarkPluginsBase, rehypePluginsBase } from '../../lib/markdown/config.base'
+import { markdownComponentsBase } from '../../lib/markdown/components.base'
+import { needsEnhancedRenderer } from '../../lib/markdown/detect'
 import ErrorBoundary from '../ui/ErrorBoundary'
-import 'katex/dist/katex.min.css'
+
+const EnhancedMarkdownRenderer = lazy(() => import('./EnhancedMarkdownRenderer'))
 
 interface MarkdownRendererProps {
   content: string
   streamingCursor?: React.ReactNode
 }
 
+function BaseRenderer({ content, streamingCursor }: MarkdownRendererProps) {
+  return (
+    <>
+      <ErrorBoundary fallback={<pre className="text-sm text-stone-500 whitespace-pre-wrap">{content}</pre>}>
+        <ReactMarkdown
+          remarkPlugins={remarkPluginsBase}
+          rehypePlugins={rehypePluginsBase}
+          components={markdownComponentsBase}
+        >
+          {content}
+        </ReactMarkdown>
+      </ErrorBoundary>
+      {streamingCursor}
+    </>
+  )
+}
+
 export default function MarkdownRenderer({ content, streamingCursor }: MarkdownRendererProps) {
-  const processed = preprocessLatex(content || '')
+  const [enhanced, setEnhanced] = useState(false)
+  if (!enhanced && needsEnhancedRenderer(content || '')) {
+    setEnhanced(true)
+  }
 
   return (
     <div
@@ -19,16 +43,13 @@ export default function MarkdownRenderer({ content, streamingCursor }: MarkdownR
         streamingCursor && '[&_p:last-of-type]:inline [&_p:last-of-type]:mb-0'
       )}
     >
-      <ErrorBoundary fallback={<pre className="text-sm text-stone-500 whitespace-pre-wrap">{content}</pre>}>
-        <ReactMarkdown
-          remarkPlugins={remarkPlugins}
-          rehypePlugins={rehypePlugins}
-          components={markdownComponents}
-        >
-          {processed}
-        </ReactMarkdown>
-      </ErrorBoundary>
-      {streamingCursor}
+      {enhanced ? (
+        <Suspense fallback={<BaseRenderer content={content} streamingCursor={streamingCursor} />}>
+          <EnhancedMarkdownRenderer content={content} streamingCursor={streamingCursor} />
+        </Suspense>
+      ) : (
+        <BaseRenderer content={content} streamingCursor={streamingCursor} />
+      )}
     </div>
   )
 }

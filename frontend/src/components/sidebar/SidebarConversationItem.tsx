@@ -1,8 +1,6 @@
-import { motion, useReducedMotion } from 'framer-motion'
 import { Loader2, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 import type { ConversationListItem } from '../../types/api'
-import { transitions } from '../../lib/animations'
 
 interface SidebarConversationItemProps {
   conversation: ConversationListItem
@@ -24,15 +22,13 @@ export default function SidebarConversationItem({
   onDelete,
   isDeleting,
 }: SidebarConversationItemProps) {
-  const shouldReduceMotion = useReducedMotion()
-
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
     onDelete()
   }
 
   return (
-    <motion.div
+    <div
       onClick={onClick}
       className={clsx(
         'group relative px-3 py-1.5 rounded-lg cursor-pointer transition-colors duration-150',
@@ -48,12 +44,9 @@ export default function SidebarConversationItem({
           </p>
         </div>
 
-        <motion.button
+        <button
           onClick={handleDelete}
           disabled={isDeleting}
-          whileHover={shouldReduceMotion ? {} : { scale: 1.1 }}
-          whileTap={shouldReduceMotion ? {} : { scale: 0.9 }}
-          transition={transitions.fast}
           className="
             p-1.5 rounded-md opacity-0 group-hover:opacity-100
             text-stone-400 hover:text-red-600 hover:bg-red-50
@@ -67,8 +60,8 @@ export default function SidebarConversationItem({
           ) : (
             <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
           )}
-        </motion.button>
+        </button>
       </div>
-    </motion.div>
+    </div>
   )
 }

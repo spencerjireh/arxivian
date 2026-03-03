@@ -1,9 +1,7 @@
 import { useState } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
 import { ChevronRight, ExternalLink, FileText, Check, AlertTriangle } from 'lucide-react'
 import type { SourceInfo } from '../../types/api'
 import { AnimatedCollapse } from '../ui/AnimatedCollapse'
-import { transitions } from '../../lib/animations'
 
 interface SourceCardProps {
   source: SourceInfo
@@ -11,7 +9,6 @@ interface SourceCardProps {
 
 export default function SourceCard({ source }: SourceCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const shouldReduceMotion = useReducedMotion()
 
   const relevancePercent = (source.relevance_score * 100).toFixed(0)
 
@@ -34,13 +31,12 @@ export default function SourceCard({ source }: SourceCardProps) {
           <p className="text-sm text-stone-700 leading-snug line-clamp-2">{source.title}</p>
         </div>
 
-        <motion.div
-          className="flex-shrink-0 text-stone-300 mt-1"
-          animate={{ rotate: isExpanded ? 90 : 0 }}
-          transition={shouldReduceMotion ? { duration: 0 } : transitions.fast}
+        <div
+          className="flex-shrink-0 text-stone-300 mt-1 chevron-rotate"
+          data-expanded={isExpanded}
         >
           <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
-        </motion.div>
+        </div>
       </button>
 
       <AnimatedCollapse isOpen={isExpanded}>
@@ -65,11 +61,9 @@ export default function SourceCard({ source }: SourceCardProps) {
                 <span className="text-xs text-stone-400 uppercase tracking-wide">Relevance</span>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="w-24 h-1.5 bg-stone-100 rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full bg-stone-600 rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${relevancePercent}%` }}
-                      transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.5, ease: 'easeOut' }}
+                    <div
+                      className="h-full bg-stone-600 rounded-full transition-[width] duration-500 ease-out"
+                      style={{ width: `${relevancePercent}%` }}
                     />
                   </div>
                   <span className="text-xs font-mono text-stone-500">{relevancePercent}%</span>

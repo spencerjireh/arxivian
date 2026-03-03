@@ -1,9 +1,7 @@
 import { useState } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
 import { GitBranch, ChevronRight } from 'lucide-react'
 import type { CitationsEventData } from '../../types/api'
 import { AnimatedCollapse } from '../ui/AnimatedCollapse'
-import { transitions } from '../../lib/animations'
 
 interface CitationTreeProps {
   citations: CitationsEventData
@@ -11,7 +9,6 @@ interface CitationTreeProps {
 
 export default function CitationTree({ citations }: CitationTreeProps) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const shouldReduceMotion = useReducedMotion()
 
   if (citations.reference_count === 0) {
     return null
@@ -39,13 +36,12 @@ export default function CitationTree({ citations }: CitationTreeProps) {
           <p className="text-sm text-stone-700 leading-snug truncate">{citations.title}</p>
         </div>
 
-        <motion.div
-          className="flex-shrink-0 text-stone-300"
-          animate={{ rotate: isExpanded ? 90 : 0 }}
-          transition={shouldReduceMotion ? { duration: 0 } : transitions.fast}
+        <div
+          className="flex-shrink-0 text-stone-300 chevron-rotate"
+          data-expanded={isExpanded}
         >
           <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
-        </motion.div>
+        </div>
       </button>
 
       <AnimatedCollapse isOpen={isExpanded}>

@@ -1,12 +1,11 @@
 import { forwardRef } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import clsx from 'clsx'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'icon'
 type ButtonSize = 'sm' | 'md' | 'lg'
 
-interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onAnimationStart' | 'onDrag' | 'onDragEnd' | 'onDragStart'> {
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
   size?: ButtonSize
   isLoading?: boolean
@@ -49,7 +48,6 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
-    const shouldReduceMotion = useReducedMotion()
     const isIconOnly = variant === 'icon' && !children
 
     const classes = clsx(
@@ -58,19 +56,17 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       'transition-colors duration-150',
       'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
       'disabled:opacity-50 disabled:pointer-events-none',
+      'hover-lift',
       variantClasses[variant],
       isIconOnly ? iconSizeClasses[size] : sizeClasses[size],
       className,
     )
 
     return (
-      <motion.button
+      <button
         ref={ref}
         className={classes}
         disabled={disabled || isLoading}
-        whileHover={shouldReduceMotion ? undefined : { y: -1 }}
-        whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
-        transition={{ duration: 0.15, ease: 'easeOut' }}
         {...props}
       >
         {isLoading ? (
@@ -82,7 +78,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             {rightIcon && <span className="shrink-0">{rightIcon}</span>}
           </>
         )}
-      </motion.button>
+      </button>
     )
   }
 )

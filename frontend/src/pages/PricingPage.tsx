@@ -1,10 +1,9 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
-import { motion, useReducedMotion } from 'framer-motion'
 import clsx from 'clsx'
 import { Check, Mail } from 'lucide-react'
-import { staggerContainer, staggerItem, transitions } from '../lib/animations'
 import { useUserStore } from '../stores/userStore'
+import { useInView } from '../hooks'
 import Button from '../components/ui/Button'
 import PublicHeader from '../components/layout/PublicHeader'
 import Footer from '../components/layout/Footer'
@@ -51,7 +50,7 @@ const comparisonRows = [
 export default function PricingPage() {
   const { isSignedIn } = useAuth()
   const me = useUserStore((state) => state.me)
-  const shouldReduceMotion = useReducedMotion()
+  const [comparisonRef, comparisonInView] = useInView<HTMLDivElement>({ once: true, margin: '-40px' })
 
   const userTier = me?.tier ?? 'free'
 
@@ -61,51 +60,41 @@ export default function PricingPage() {
 
       {/* Hero */}
       <section className="px-4 sm:px-6 lg:px-8 pt-20 pb-8 text-center">
-        <motion.div
-          variants={staggerContainer}
-          initial="initial"
-          animate="animate"
-        >
-          <motion.p
-            variants={shouldReduceMotion ? undefined : staggerItem}
-            transition={transitions.base}
-            className="text-sm text-stone-500 uppercase tracking-wider font-medium mb-4"
+        <div>
+          <p
+            style={{ '--stagger-index': 0 } as React.CSSProperties}
+            className="text-sm text-stone-500 uppercase tracking-wider font-medium mb-4 animate-stagger"
           >
             Pricing
-          </motion.p>
-          <motion.h1
-            variants={shouldReduceMotion ? undefined : staggerItem}
-            transition={transitions.base}
-            className="font-display text-4xl sm:text-5xl text-stone-900 tracking-tight mb-4"
+          </p>
+          <h1
+            style={{ '--stagger-index': 1 } as React.CSSProperties}
+            className="font-display text-4xl sm:text-5xl text-stone-900 tracking-tight mb-4 animate-stagger"
           >
             Simple, transparent pricing
-          </motion.h1>
-          <motion.p
-            variants={shouldReduceMotion ? undefined : staggerItem}
-            transition={transitions.base}
-            className="text-lg text-stone-500 max-w-xl mx-auto"
+          </h1>
+          <p
+            style={{ '--stagger-index': 2 } as React.CSSProperties}
+            className="text-lg text-stone-500 max-w-xl mx-auto animate-stagger"
           >
             Pro access is free while we are in beta. No credit card required.
-          </motion.p>
-        </motion.div>
+          </p>
+        </div>
       </section>
 
       {/* Tier cards */}
       <section className="px-4 sm:px-6 lg:px-8 pb-16">
-        <motion.div
-          className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6"
-          variants={staggerContainer}
-          initial="initial"
-          animate="animate"
-        >
-          {tiers.map((tier) => {
+        <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+          {tiers.map((tier, index) => {
             const isPro = tier.name === 'Pro'
             return (
-              <motion.div
+              <div
                 key={tier.name}
-                variants={shouldReduceMotion ? undefined : staggerItem}
-                transition={transitions.base}
-                className={clsx('bg-white border rounded-xl p-6 flex flex-col', isPro ? 'border-stone-900 ring-1 ring-stone-900' : 'border-stone-200')}
+                style={{ '--stagger-index': index + 3 } as React.CSSProperties}
+                className={clsx(
+                  'bg-white border rounded-xl p-6 flex flex-col animate-stagger',
+                  isPro ? 'border-stone-900 ring-1 ring-stone-900' : 'border-stone-200'
+                )}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-display text-lg font-semibold text-stone-900">
@@ -155,33 +144,30 @@ export default function PricingPage() {
                     </Button>
                   </Link>
                 )}
-              </motion.div>
+              </div>
             )
           })}
-        </motion.div>
+        </div>
       </section>
 
       {/* Comparison table */}
       <section className="px-4 sm:px-6 lg:px-8 pb-24">
-        <motion.div
-          className="max-w-2xl mx-auto"
-          variants={staggerContainer}
-          initial="initial"
-          whileInView="animate"
-          viewport={{ once: true, margin: '-40px' }}
-        >
-          <motion.h2
-            variants={shouldReduceMotion ? undefined : staggerItem}
-            transition={transitions.base}
-            className="font-display text-xl font-semibold text-stone-900 text-center mb-8"
+        <div ref={comparisonRef} className="max-w-2xl mx-auto">
+          <h2
+            className={clsx(
+              'font-display text-xl font-semibold text-stone-900 text-center mb-8',
+              comparisonInView ? 'animate-fade-in-up' : 'opacity-0'
+            )}
           >
             Compare plans
-          </motion.h2>
+          </h2>
 
-          <motion.div
-            variants={shouldReduceMotion ? undefined : staggerItem}
-            transition={transitions.base}
-            className="bg-white border border-stone-200 rounded-xl overflow-hidden"
+          <div
+            className={clsx(
+              'bg-white border border-stone-200 rounded-xl overflow-hidden',
+              comparisonInView ? 'animate-fade-in-up' : 'opacity-0'
+            )}
+            style={comparisonInView ? { animationDelay: '50ms' } : undefined}
           >
             {/* Header */}
             <div className="grid grid-cols-3 border-b border-stone-100 px-5 py-3">
@@ -202,8 +188,8 @@ export default function PricingPage() {
                 </div>
               </div>
             ))}
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       </section>
 
       <Footer />

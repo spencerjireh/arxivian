@@ -1,23 +1,13 @@
 import { useNavigate } from 'react-router-dom'
-import { motion, useReducedMotion } from 'framer-motion'
 import { BookX } from 'lucide-react'
-import { fadeInUp, transitions } from '../lib/animations'
 import Button from '../components/ui/Button'
 
 export default function NotFoundPage() {
   const navigate = useNavigate()
-  const shouldReduceMotion = useReducedMotion()
-
-  const motionProps = shouldReduceMotion
-    ? {}
-    : { variants: fadeInUp, initial: 'initial', animate: 'animate', transition: transitions.base }
 
   return (
     <div className="min-h-screen bg-[var(--color-cream)] paper-grain flex items-center justify-center p-6">
-      <motion.div
-        className="relative z-10 max-w-md w-full bg-white rounded-xl border border-stone-200 shadow-md p-8 text-center"
-        {...motionProps}
-      >
+      <div className="relative z-10 max-w-md w-full bg-white rounded-xl border border-stone-200 shadow-md p-8 text-center animate-fade-in-up">
         <p className="font-display text-7xl font-semibold text-stone-200 mb-4 select-none">
           404
         </p>
@@ -44,7 +34,7 @@ export default function NotFoundPage() {
             Return home
           </Button>
         </div>
-      </motion.div>
+      </div>
     </div>
   )
 }

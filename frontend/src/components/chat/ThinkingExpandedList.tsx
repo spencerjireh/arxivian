@@ -1,12 +1,10 @@
 import { useState } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
 import { AlertCircle, ChevronRight, Clock, Eye, EyeOff, Info } from 'lucide-react'
 import clsx from 'clsx'
 import type { ThinkingStep, MetadataEventData } from '../../types/api'
 import { formatDuration } from '../../utils/duration'
 import { formatDetailKey, formatDetailValue } from '../../utils/formatting'
 import { AnimatedCollapse } from '../ui/AnimatedCollapse'
-import { transitions } from '../../lib/animations'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { useUserStore } from '../../stores/userStore'
 import { STEP_ICONS, STEP_ICON_COLORS } from '../../lib/thinking/constants'
@@ -35,7 +33,6 @@ export default function ThinkingExpandedList({ steps, totalDuration, metadata }:
   const [expandedStepId, setExpandedStepId] = useState<string | null>(null)
   const [localShowInternal, setLocalShowInternal] = useState<boolean | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const shouldReduceMotion = useReducedMotion()
   const globalShowInternal = useSettingsStore((s) => s.showInternalSteps)
   const canViewExecutionDetails = useUserStore((s) => s.me?.can_view_execution_details ?? false)
 
@@ -110,13 +107,12 @@ export default function ThinkingExpandedList({ steps, totalDuration, metadata }:
                 {/* Per-step timing removed -- restore from git history when needed */}
 
                 {hasDetails && (
-                  <motion.div
-                    className="flex-shrink-0 text-stone-300"
-                    animate={{ rotate: isExpanded ? 90 : 0 }}
-                    transition={shouldReduceMotion ? { duration: 0 } : transitions.fast}
+                  <div
+                    className="flex-shrink-0 text-stone-300 chevron-rotate"
+                    data-expanded={isExpanded}
                   >
                     <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
-                  </motion.div>
+                  </div>
                 )}
               </div>
 

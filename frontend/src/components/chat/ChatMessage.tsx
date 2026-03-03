@@ -1,16 +1,17 @@
-import { useState, useRef, useEffect } from 'react'
+import { lazy, Suspense, useState, useRef, useEffect } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Lightbulb, User } from 'lucide-react'
 import logoIcon from '../../assets/logo-icon.png'
 import clsx from 'clsx'
 import { useChatStore } from '../../stores/chatStore'
 import type { Message } from '../../types/api'
-import SourcesSection from './SourcesSection'
-import CitationTree from './CitationTree'
 import MarkdownRenderer from './MarkdownRenderer'
-import ThinkingTimeline from './ThinkingTimeline'
-import IngestConfirmation from './IngestConfirmation'
 import MessageErrorDisplay from './MessageErrorDisplay'
+
+const ThinkingTimeline = lazy(() => import('./ThinkingTimeline'))
+const SourcesSection = lazy(() => import('./SourcesSection'))
+const CitationTree = lazy(() => import('./CitationTree'))
+const IngestConfirmation = lazy(() => import('./IngestConfirmation'))
 import {
   cursorTransitionVariants,
   sourcesRevealContainer,
@@ -150,17 +151,21 @@ export default function ChatMessage({
         <div className={clsx(isUser ? 'pr-9 text-right' : 'pl-9')}>
           {!isUser && thinkingSteps && thinkingSteps.length > 0 && (
             <div className="mb-4">
-              <ThinkingTimeline steps={thinkingSteps} isStreaming={isStreaming} metadata={message.metadata} />
+              <Suspense fallback={<div className="h-8" />}>
+                <ThinkingTimeline steps={thinkingSteps} isStreaming={isStreaming} metadata={message.metadata} />
+              </Suspense>
             </div>
           )}
 
           {!isUser && message.ingestProposal && (
-            <IngestConfirmation
-              proposal={message.ingestProposal}
-              isResolved={message.ingestResolved}
-              isIngesting={storeIsIngesting}
-              ingestDeclined={message.ingestDeclined}
-            />
+            <Suspense fallback={null}>
+              <IngestConfirmation
+                proposal={message.ingestProposal}
+                isResolved={message.ingestResolved}
+                isIngesting={storeIsIngesting}
+                ingestDeclined={message.ingestDeclined}
+              />
+            </Suspense>
           )}
 
           {!isUser && !isStreaming && thinkingSteps && thinkingSteps.length > 0 && content && (
@@ -201,7 +206,9 @@ export default function ChatMessage({
 
           {!isUser && message.citations && (
             <div className="mt-4">
-              <CitationTree citations={message.citations} />
+              <Suspense fallback={null}>
+                <CitationTree citations={message.citations} />
+              </Suspense>
             </div>
           )}
 
@@ -211,7 +218,9 @@ export default function ChatMessage({
               initial="initial"
               animate="animate"
             >
-              <SourcesSection sources={message.sources} shouldReduceMotion={!!shouldReduceMotion} />
+              <Suspense fallback={null}>
+                <SourcesSection sources={message.sources} shouldReduceMotion={!!shouldReduceMotion} />
+              </Suspense>
             </motion.div>
           )}
 

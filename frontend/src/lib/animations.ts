@@ -6,12 +6,6 @@ export const fadeIn: Variants = {
   exit: { opacity: 0 },
 }
 
-export const fadeInUp: Variants = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -8 },
-}
-
 export const staggerContainer: Variants = {
   initial: {},
   animate: {
@@ -19,6 +13,20 @@ export const staggerContainer: Variants = {
       staggerChildren: 0.05,
     },
   },
+}
+
+export const heroStaggerContainer: Variants = {
+  initial: {},
+  animate: {
+    transition: {
+      staggerChildren: 0.12,
+    },
+  },
+}
+
+export const heroOrnamentLine: Variants = {
+  initial: { scaleX: 0 },
+  animate: { scaleX: 1 },
 }
 
 export const staggerItem: Variants = {

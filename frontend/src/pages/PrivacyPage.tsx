@@ -1,5 +1,3 @@
-import { motion, useReducedMotion } from 'framer-motion'
-import { staggerContainer, staggerItem, transitions } from '../lib/animations'
 import PublicHeader from '../components/layout/PublicHeader'
 import Footer from '../components/layout/Footer'
 
@@ -9,42 +7,31 @@ const EFFECTIVE_DATE = 'March 2, 2026'
 interface SectionProps {
   title: string
   children: React.ReactNode
-  reducedMotion: boolean | null
 }
 
-function Section({ title, children, reducedMotion }: SectionProps) {
+function Section({ title, children }: SectionProps) {
   return (
-    <motion.section
-      variants={reducedMotion ? undefined : staggerItem}
-      transition={transitions.base}
-    >
+    <section className="animate-fade-in">
       <h2 className="font-display text-lg font-semibold text-stone-900 mb-3">
         {title}
       </h2>
       <div className="text-sm text-stone-600 leading-relaxed space-y-3">
         {children}
       </div>
-    </motion.section>
+    </section>
   )
 }
 
 export default function PrivacyPage() {
-  const shouldReduceMotion = useReducedMotion()
-
   return (
     <div className="min-h-screen bg-[#FAFAF9] flex flex-col paper-grain">
       <PublicHeader />
 
-      <motion.article
-        className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 space-y-10 flex-1"
-        variants={staggerContainer}
-        initial="initial"
-        animate="animate"
-      >
+      <article className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 space-y-10 flex-1">
         {/* Header */}
-        <motion.header
-          variants={shouldReduceMotion ? undefined : staggerItem}
-          transition={transitions.base}
+        <header
+          style={{ '--stagger-index': 0 } as React.CSSProperties}
+          className="animate-stagger"
         >
           <p className="text-sm text-stone-500 uppercase tracking-wider font-medium mb-4">
             Legal
@@ -55,20 +42,19 @@ export default function PrivacyPage() {
           <p className="text-stone-500">
             Effective {EFFECTIVE_DATE}
           </p>
-        </motion.header>
+        </header>
 
         {/* Intro */}
-        <motion.p
-          variants={shouldReduceMotion ? undefined : staggerItem}
-          transition={transitions.base}
-          className="text-sm text-stone-600 leading-relaxed"
+        <p
+          style={{ '--stagger-index': 1 } as React.CSSProperties}
+          className="text-sm text-stone-600 leading-relaxed animate-stagger"
         >
           Arxivian is an AI-powered research assistant for analyzing academic papers from arXiv.
           This policy describes what data we collect, how we use it, and your rights regarding
           that data. We are committed to handling your information responsibly and transparently.
-        </motion.p>
+        </p>
 
-        <Section title="1. Information We Collect" reducedMotion={shouldReduceMotion}>
+        <Section title="1. Information We Collect">
           <p>
             <strong className="text-stone-800">Account information.</strong>{' '}
             When you sign up, we receive your name, email address, and profile picture from your
@@ -89,7 +75,7 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
-        <Section title="2. How We Use Your Data" reducedMotion={shouldReduceMotion}>
+        <Section title="2. How We Use Your Data">
           <ul className="list-disc list-inside space-y-1.5 text-stone-600">
             <li>To provide and maintain the Arxivian service</li>
             <li>To authenticate your identity and manage your account</li>
@@ -102,7 +88,7 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
-        <Section title="3. Third-Party Services" reducedMotion={shouldReduceMotion}>
+        <Section title="3. Third-Party Services">
           <p>Arxivian relies on the following third-party services to operate:</p>
           <ul className="list-disc list-inside space-y-1.5 text-stone-600">
             <li>
@@ -168,7 +154,7 @@ export default function PrivacyPage() {
           </ul>
         </Section>
 
-        <Section title="4. Google User Data Disclosure" reducedMotion={shouldReduceMotion}>
+        <Section title="4. Google User Data Disclosure">
           <p>
             Arxivian uses Google Sign-In (via Clerk) to authenticate users. Through this
             process, we access the following data from your Google account:
@@ -208,7 +194,7 @@ export default function PrivacyPage() {
           </ul>
         </Section>
 
-        <Section title="5. Data Retention and Deletion" reducedMotion={shouldReduceMotion}>
+        <Section title="5. Data Retention and Deletion">
           <p>
             Your data is retained for as long as your account is active. You can delete your
             account at any time from the Settings page, which will permanently remove your
@@ -225,7 +211,7 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
-        <Section title="6. Cookies and Local Storage" reducedMotion={shouldReduceMotion}>
+        <Section title="6. Cookies and Local Storage">
           <p>
             Arxivian uses cookies set by Clerk for authentication sessions. We also use browser
             local storage to persist your display and model preferences. We do not use
@@ -233,7 +219,7 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
-        <Section title="7. Security" reducedMotion={shouldReduceMotion}>
+        <Section title="7. Security">
           <p>
             We use industry-standard measures to protect your data, including encrypted
             connections (TLS), secure authentication via Clerk, and isolated database access.
@@ -241,7 +227,7 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
-        <Section title="8. Children's Privacy" reducedMotion={shouldReduceMotion}>
+        <Section title="8. Children's Privacy">
           <p>
             Arxivian is not directed at children under 13. We do not knowingly collect personal
             information from children. If you believe a child has provided us with personal
@@ -249,7 +235,7 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
-        <Section title="9. Changes to This Policy" reducedMotion={shouldReduceMotion}>
+        <Section title="9. Changes to This Policy">
           <p>
             We may update this policy from time to time. If we make material changes, we will
             notify you by updating the date at the top of this page. Your continued use of
@@ -257,7 +243,7 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
-        <Section title="10. Contact" reducedMotion={shouldReduceMotion}>
+        <Section title="10. Contact">
           <p>
             If you have questions about this privacy policy or your data, contact us at{' '}
             <a
@@ -268,7 +254,7 @@ export default function PrivacyPage() {
             </a>.
           </p>
         </Section>
-      </motion.article>
+      </article>
 
       <Footer />
     </div>

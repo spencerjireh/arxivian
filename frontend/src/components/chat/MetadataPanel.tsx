@@ -1,9 +1,7 @@
 import { useState } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
 import { ChevronRight, Info } from 'lucide-react'
 import type { MetadataEventData } from '../../types/api'
 import { AnimatedCollapse } from '../ui/AnimatedCollapse'
-import { transitions } from '../../lib/animations'
 
 interface MetadataPanelProps {
   metadata: MetadataEventData
@@ -12,7 +10,6 @@ interface MetadataPanelProps {
 
 export default function MetadataPanel({ metadata, defaultExpanded = false }: MetadataPanelProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
-  const shouldReduceMotion = useReducedMotion()
 
   const executionTime = (metadata.execution_time_ms / 1000).toFixed(2)
 
@@ -24,12 +21,12 @@ export default function MetadataPanel({ metadata, defaultExpanded = false }: Met
       >
         <Info className="w-3.5 h-3.5" strokeWidth={1.5} />
         <span>{isExpanded ? 'Hide' : 'View'} execution details</span>
-        <motion.div
-          animate={{ rotate: isExpanded ? 90 : 0 }}
-          transition={shouldReduceMotion ? { duration: 0 } : transitions.fast}
+        <div
+          className="chevron-rotate"
+          data-expanded={isExpanded}
         >
           <ChevronRight className="w-3 h-3" strokeWidth={1.5} />
-        </motion.div>
+        </div>
       </button>
 
       <AnimatedCollapse isOpen={isExpanded}>

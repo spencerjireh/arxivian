@@ -1,5 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
-import { useReducedMotion } from 'framer-motion'
+import { useEffect, useRef, useCallback, useState } from 'react'
 
 // -- Internal types --
 
@@ -235,7 +234,11 @@ export default function EquationConstellation({ className }: Props) {
   const nodesRef = useRef<EquationNode[]>([])
   const rafRef = useRef<number>(0)
   const lastTimeRef = useRef<number>(0)
-  const reducedMotion = useReducedMotion()
+  const [reducedMotion] = useState(
+    () => typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : false
+  )
 
   const setupCanvas = useCallback(() => {
     const container = containerRef.current

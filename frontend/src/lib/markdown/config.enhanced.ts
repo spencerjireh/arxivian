@@ -4,9 +4,9 @@ import rehypeKatex from 'rehype-katex'
 import type { PluggableList } from 'unified'
 import { remarkArxivLinks } from './remark-arxiv-links'
 
-export const remarkPlugins: PluggableList = [remarkGfm, remarkMath, remarkArxivLinks]
+export const remarkPluginsEnhanced: PluggableList = [remarkGfm, remarkMath, remarkArxivLinks]
 
-export const rehypePlugins: PluggableList = [
+export const rehypePluginsEnhanced: PluggableList = [
   [
     rehypeKatex,
     {

@@ -1,21 +1,15 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Sparkles, BookOpen, Search, GitBranch, ArrowRight, ChevronDown, ChevronRight, User, FileText } from 'lucide-react'
 import logoIcon from '../assets/logo-icon.png'
 import clsx from 'clsx'
-import gsap from 'gsap'
-import { useGSAP } from '@gsap/react'
-import { SplitText } from 'gsap/SplitText'
-import { ScrambleTextPlugin } from 'gsap/ScrambleTextPlugin'
-import { staggerContainer, staggerItem, transitions } from '../lib/animations'
+import { staggerContainer, staggerItem, heroStaggerContainer, heroOrnamentLine, transitions } from '../lib/animations'
 import Button from '../components/ui/Button'
 import EquationConstellation from '../components/ui/EquationConstellation'
 import PublicHeader from '../components/layout/PublicHeader'
 import Footer from '../components/layout/Footer'
-
-gsap.registerPlugin(SplitText, ScrambleTextPlugin)
 
 // -- Inline illustration components --
 
@@ -279,7 +273,6 @@ export default function LandingPage() {
   const { isSignedIn } = useAuth()
   const navigate = useNavigate()
   const shouldReduceMotion = useReducedMotion()
-  const heroRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (isSignedIn) {
@@ -287,89 +280,57 @@ export default function LandingPage() {
     }
   }, [isSignedIn, navigate])
 
-  useGSAP(() => {
-    if (shouldReduceMotion) return
-
-    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } })
-
-    const split = new SplitText('.hero-heading', {
-      type: 'words',
-      autoSplit: true,
-    })
-    tl.from(split.words, {
-      y: 40,
-      opacity: 0,
-      stagger: 0.06,
-      duration: 0.8,
-    })
-
-    tl.to('.hero-badge-text', {
-      scrambleText: {
-        text: 'AI-powered research depth',
-        chars: 'arxiv0123456789',
-        speed: 0.4,
-        revealDelay: 0.3,
-      },
-      duration: 1.2,
-    }, '<0.3')
-
-    tl.from('.hero-description', {
-      opacity: 0,
-      y: 20,
-      duration: 0.6,
-    }, '-=0.4')
-
-    tl.from('.hero-cta', {
-      opacity: 0,
-      y: 16,
-      duration: 0.5,
-    }, '-=0.2')
-
-    tl.from('.hero-ornament-line', {
-      scaleX: 0,
-      duration: 0.6,
-      ease: 'power2.inOut',
-      stagger: 0.1,
-    }, '-=0.4')
-
-    tl.from('.hero-product-mock', {
-      opacity: 0,
-      y: 40,
-      duration: 0.8,
-      ease: 'power3.out',
-    }, '-=0.3')
-  }, { scope: heroRef })
-
   return (
     <div className="min-h-screen bg-[#FAFAF9] flex flex-col paper-grain">
       <PublicHeader />
 
       {/* Hero */}
-      <section ref={heroRef} className="relative flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
+      <section className="relative flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
         <div className="hero-vignette" aria-hidden="true" />
         <EquationConstellation className="hidden sm:block" />
-        <div className="relative z-10 max-w-4xl mx-auto text-center">
+        <motion.div
+          className="relative z-10 max-w-4xl mx-auto text-center"
+          variants={shouldReduceMotion ? undefined : heroStaggerContainer}
+          initial="initial"
+          animate="animate"
+        >
           <div className="max-w-3xl mx-auto">
-            <div className="mb-6">
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stone-100 text-stone-600 text-xs font-medium tracking-wide uppercase">
-                <span className="hero-badge-text">AI-powered research depth</span>
-              </span>
-            </div>
-
-            <div className="hero-ornament-line h-px w-20 bg-stone-300 mx-auto mb-4" />
-            <h1 className="hero-heading font-display text-5xl sm:text-6xl text-stone-900 tracking-tight leading-[1.1] mb-2 letterpress">
+            <motion.div
+              className="h-px w-20 bg-stone-300 mx-auto mb-4"
+              variants={shouldReduceMotion ? undefined : heroOrnamentLine}
+              transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+              style={{ transformOrigin: 'center' }}
+            />
+            <motion.h1
+              variants={shouldReduceMotion ? undefined : staggerItem}
+              transition={transitions.slow}
+              className="font-display text-5xl sm:text-6xl text-stone-900 tracking-tight leading-[1.1] mb-2 letterpress"
+            >
               Understand research
               <br />
               at depth
-            </h1>
-            <div className="hero-ornament-line h-px w-20 bg-stone-300 mx-auto mt-4 mb-6" />
+            </motion.h1>
+            <motion.div
+              className="h-px w-20 bg-stone-300 mx-auto mt-4 mb-6"
+              variants={shouldReduceMotion ? undefined : heroOrnamentLine}
+              transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+              style={{ transformOrigin: 'center' }}
+            />
 
-            <p className="hero-description text-lg sm:text-xl text-stone-500 leading-relaxed mb-10 max-w-2xl mx-auto">
+            <motion.p
+              variants={shouldReduceMotion ? undefined : staggerItem}
+              transition={transitions.slow}
+              className="text-lg sm:text-xl text-stone-500 leading-relaxed mb-10 max-w-2xl mx-auto"
+            >
               An intelligent research assistant that reads, indexes, and reasons over
               academic papers -- so you can focus on the ideas that matter.
-            </p>
+            </motion.p>
 
-            <div className="hero-cta flex flex-col sm:flex-row items-center justify-center gap-3">
+            <motion.div
+              variants={shouldReduceMotion ? undefined : staggerItem}
+              transition={transitions.slow}
+              className="flex flex-col sm:flex-row items-center justify-center gap-3"
+            >
               <Link to={isSignedIn ? '/chat' : '/sign-up'}>
                 <Button
                   variant="primary"
@@ -399,13 +360,17 @@ export default function LandingPage() {
                   </button>
                 </>
               )}
-            </div>
+            </motion.div>
           </div>
 
-          <div className="hero-product-mock mt-16 sm:mt-20">
+          <motion.div
+            variants={shouldReduceMotion ? undefined : staggerItem}
+            transition={transitions.slow}
+            className="mt-16 sm:mt-20"
+          >
             <ProductMock />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </section>
 
       {/* Academic divider */}

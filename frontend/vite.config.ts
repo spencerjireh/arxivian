@@ -22,13 +22,19 @@ export default defineConfig({
             return 'clerk'
           }
           if (
-            id.includes('react-markdown') ||
-            id.includes('remark-') ||
-            id.includes('rehype-') ||
             id.includes('katex') ||
+            id.includes('remark-math') ||
+            id.includes('rehype-katex') ||
             id.includes('react-syntax-highlighter')
           ) {
-            return 'markdown'
+            return 'markdown-enhanced'
+          }
+          if (
+            id.includes('react-markdown') ||
+            id.includes('remark-') ||
+            id.includes('rehype-')
+          ) {
+            return 'markdown-base'
           }
         },
       },
