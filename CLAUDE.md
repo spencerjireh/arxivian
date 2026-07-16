@@ -43,11 +43,13 @@ Test markers: `@pytest.mark.unit`, `@pytest.mark.api`, `@pytest.mark.integration
 
 ### Backend (`/backend/src/`)
 
-Layered: `routers/` -> `services/` -> `repositories/` -> `models/` (async SQLAlchemy). Also: `schemas/` (Pydantic), `clients/` (OpenAI, arXiv, Jina, Langfuse), `middleware/`, `factories/`.
+Layered: `routers/` -> `services/` -> `repositories/` -> `models/` (async SQLAlchemy). Also: `schemas/` (Pydantic), `clients/` (LiteLLM/LLM, arXiv, Jina, Langfuse; planned: GitHub, Semantic Scholar), `middleware/`, `factories/`.
 
-**Agent service** (`services/agent_service/`): LangGraph workflow with nodes: guardrail -> router -> executor -> grading -> generation. Tools (in `tools/`): retrieve, arxiv_search, ingest, list_papers, explore_citations. SSE streaming with custom event types (STATUS, CONTENT, SOURCES, METADATA, DONE).
+**Agent service** (`services/agent_service/`): the chat Q&A LangGraph workflow with nodes: classify_and_route -> executor -> evaluate_batch -> generate, plus out_of_scope and confirm_ingest (HITL). Tools (in `tools/`): retrieve_chunks, arxiv_search, ingest_papers, propose_ingest, list_papers, explore_citations. SSE streaming with custom event types (STATUS, CONTENT, SOURCES, CITATIONS, INGEST_COMPLETE, DONE).
 
-**Celery tasks** (`tasks/`): Redis broker, RedBeat scheduler. Files: `ingest_tasks.py`, `cleanup_tasks.py`, `scheduled_tasks.py`, `signals.py`, `tracing.py`. Flower at port 5555.
+**Scoring service** (`services/scoring_service/`, planned -- feed pivot): a second LangGraph workflow, a fixed fan-out/fan-in DAG (fetch_and_extract -> 5 parallel dimension nodes -> compose_and_persist) that scores papers for implementability. No streaming, no checkpointer. See `docs/design/scoring-pipeline.md`.
+
+**Celery tasks** (`tasks/`): Redis broker, RedBeat scheduler. Files: `ingest_tasks.py`, `cleanup_tasks.py`, `scheduled_tasks.py`, `signals.py`, `tracing.py`; planned (pivot): `triage_tasks.py` (Stage 1), `score_tasks.py` (Stage 2 driver), `build_digest_task`. Flower at port 5555.
 
 **Key patterns:**
 - Dependency injection via `Depends()` with `Annotated` type aliases in `dependencies.py`
@@ -63,7 +65,7 @@ React 19 + TypeScript + Vite. Zustand stores (chat, settings, sidebar, user). SS
 
 ### Database
 
-PostgreSQL 16 + pgvector. Migrations via Alembic (`backend/alembic/`). Tables: papers, chunks, conversations, conversation_turns, users, agent_executions, task_executions, usage_counters, reports.
+PostgreSQL 16 + pgvector. Migrations via Alembic (`backend/alembic/`). Tables: papers, chunks, conversations, conversation_turns, users, agent_executions, task_executions, usage_counters. Planned (feed pivot): paper_scores, score_evidence, user_paper_states, digests (see `docs/design/scoring-pipeline.md`).
 
 ### Infrastructure
 
