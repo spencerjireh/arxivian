@@ -27,6 +27,13 @@ comes from this pipeline. The design goals, in priority order:
 3. **Tunability.** Reweighting the rubric must be arithmetic over stored sub-scores, never
    a re-run of extraction.
 
+**v1 scope note.** v1 ships a **4-dimension rubric** (method clarity, resource feasibility,
+data availability, demand) with **zero GitHub dependency**. The **code-gap** dimension --
+highest-weighted but also least reliable (unproven recall, aggressive rate limits, stale in
+the weekly cache) -- is **deferred to v1.1**, where it debuts as an unweighted evidence chip
+and is promoted to a weighted signal only after the `spikes/github-code-gap/` spike proves
+recall. See the deferral decision below.
+
 ### Decisions resolved during design review
 
 - **Global sub-scores, read-time composite.** The pipeline persists *global*
@@ -37,12 +44,32 @@ comes from this pipeline. The design goals, in priority order:
   *and* personalize by compute profile, but you can cache the sub-scores and do the cheap
   arithmetic per request. `digests` caches a candidate ranking snapshot, not a final
   per-user order.
-- **Only 2 of 5 dimensions are LLM calls.** Code gap is a GitHub search, demand is a
-  Semantic Scholar lookup, data availability is largely extraction. Only **method
-  clarity** and **resource feasibility** are genuinely LLM-judged. Those two route to a
-  stronger model via LiteLLM prefix routing; everything else stays on the cheap/free
-  model. The real throughput bottleneck is external API rate limits (GitHub, Semantic
-  Scholar), not tokens.
+- **Code gap is deferred to v1.1; v1 ships a 4-dimension rubric.** Code gap (does an
+  implementation already exist?) is simultaneously the highest-weighted signal *and* the
+  least reliable one: unproven GitHub-search recall, aggressive rate limits, and a
+  time-sensitive answer that goes stale in the weekly cache ("no code today, code next
+  week"). Anchoring v1's ranking on the riskiest signal is the exact false-authority
+  trust-killer this design most guards against. So **v1 scores on the four self-contained /
+  low-risk dimensions** (method clarity, resource feasibility, data availability, demand)
+  and drops `score_code_gap`, `github_client.py`, and `GithubSearchTool` from v1 scope. Code
+  gap returns in **v1.1**, first as an *unweighted* "possible existing implementations, as
+  of `<date>`" evidence chip, then promoted to a weighted ranking signal only once the spike
+  (`spikes/github-code-gap/`) and real usage prove recall clears the bar. This also means
+  v1 has **zero GitHub dependency** and only one soft external API (Semantic Scholar). Do
+  not ship any "no existing code" claim in the product until code gap is actually weighted.
+- **Only 2 of the (v1) 4 dimensions are LLM calls.** Demand is a Semantic Scholar lookup and
+  data availability is largely extraction. Only **method clarity** and **resource
+  feasibility** are genuinely LLM-judged. (Code gap, when it lands in v1.1, is a GitHub
+  search plus a light match-judge -- see the deferral above.) The two LLM dimensions use a
+  stronger model by passing an explicit `model=` override to `generate_structured` -- the
+  per-call param already exists on `LiteLLMClient`, but **nothing auto-escalates**;
+  `ScoringContext` carries the strong-model id (e.g. `openai/gpt-4o-mini` from the
+  allowlist) and the nodes pass it. Everything else stays on the cheap/free default. Caveat:
+  the cheap default provider (`nvidia_nim/openai/gpt-oss-120b`) satisfies `response_format`
+  via prompt-injected JSON, not native schema-constrained decoding, so structured-score
+  reliability on the cheap path must be validated -- another reason the eval gate matters.
+  The real throughput bottleneck is external API rate limits (Semantic Scholar in v1;
+  GitHub once code gap lands), not tokens.
 - **Stage 1 is a batch task, not a graph.** A single classification call over batched
   abstracts needs no LangGraph. It also must NOT reuse `ingest_papers_task` -- Stage 1
   runs on title + abstract only, via a metadata-only crawl distinct from the
@@ -124,12 +151,12 @@ START
  -> fetch_and_extract          ensure full text ingested (reuse ingest pipeline);
                                extract candidate evidence spans: pseudocode blocks,
                                compute mentions, dataset mentions
- -> [FAN-OUT: 5 parallel dimension nodes, each writes a DISTINCT state key]
-     score_code_gap            github_search tool: API + light LLM match-judge   (weight: highest)
+ -> [FAN-OUT: 4 parallel dimension nodes (v1), each writes a DISTINCT state key]
      score_method_clarity      LLM-judged from extracted evidence                (weight: high)
      score_resource_feasibility LLM-judged compute extraction -> normalized      (weight: high)
      score_data_availability   extraction -> gate flag                           (gate)
      score_demand              semantic_scholar tool: citation velocity          (weight: medium)
+     [v1.1] score_code_gap     github_search tool: API + light LLM match-judge   (deferred)
  -> [FAN-IN]
  -> compose_and_persist        assemble sub-scores + evidence; persist
                                paper_scores + score_evidence; GLOBAL sub-scores
@@ -137,26 +164,32 @@ START
  -> END
 ```
 
+`score_code_gap` is drawn dashed above: it is **not in v1** (see the deferral decision).
+v1 fans out to four nodes; adding code gap in v1.1 is one more `add_node` + one more edge
+pair, no topology change.
+
 Registration mirrors `graph_builder.build_graph` -- `StateGraph(PaperScoreState)`,
-`add_node(name, fn)`, `add_edge(START, "fetch_and_extract")`, fan-out via five
+`add_node(name, fn)`, `add_edge(START, "fetch_and_extract")`, fan-out via four (v1)
 `add_edge("fetch_and_extract", "score_<dim>")` edges (LangGraph runs same-source edges in
-parallel), fan-in via five `add_edge("score_<dim>", "compose_and_persist")` edges (the
-join node runs once after all five complete), `add_edge("compose_and_persist", END)`,
+parallel), fan-in via four `add_edge("score_<dim>", "compose_and_persist")` edges (the
+join node runs once after all complete), `add_edge("compose_and_persist", END)`,
 `compile(checkpointer=checkpointer)`.
 
-### Rubric (v1)
+### Rubric
 
-| Dimension | Weight | Signal source | LLM? |
-|---|---|---|---|
-| Code gap | Highest | GitHub code/README search for title + arXiv ID; repo stars/issue health | Light (match judge) |
-| Method clarity | High | Pseudocode/algorithm blocks, stated hyperparameters, specified architecture | Yes (stronger model) |
-| Resource feasibility | High | Compute requirements extracted from full text -> normalized | Yes (stronger model) |
-| Data availability | Gate | Public datasets vs. proprietary/clinical; disqualifying if inaccessible | Extraction |
-| Demand | Medium | Citation velocity via Semantic Scholar | No (API) |
+| Dimension | Ships in | Weight | Signal source | LLM? |
+|---|---|---|---|---|
+| Method clarity | v1 | High | Pseudocode/algorithm blocks, stated hyperparameters, specified architecture | Yes (stronger model) |
+| Resource feasibility | v1 | High | Compute requirements extracted from full text -> normalized | Yes (stronger model) |
+| Data availability | v1 | Gate | Public datasets vs. proprietary/clinical; disqualifying if inaccessible | Extraction |
+| Demand | v1 | Medium | Citation velocity via Semantic Scholar | No (API) |
+| Code gap | **v1.1** | Highest (when weighted) | GitHub code/README search for title + arXiv ID; repo stars/issue health | Light (match judge) |
 
-Weights match `proposal.md` Section 5.1. Because only method clarity and resource
-feasibility are stronger-model LLM calls, the per-paper LLM cost is two structured calls;
-the rest are API lookups or cheap extraction.
+Full-rubric weights match `proposal.md` Section 5.1. **Code gap is deferred to v1.1** (see
+the deferral decision above): in v1 it is absent, then reintroduced as an unweighted
+evidence chip before becoming the highest-weighted signal. Because only method clarity and
+resource feasibility are stronger-model LLM calls, the per-paper LLM cost in v1 is two
+structured calls; the rest are API lookups or cheap extraction.
 
 ### State schema
 
@@ -175,11 +208,11 @@ class PaperScoreState(TypedDict):
     paper_id: str
     arxiv_id: str
     extracted_spans: dict           # pseudocode / compute / dataset candidates
-    code_gap_result: DimensionScore
     method_clarity_result: DimensionScore
     resource_feasibility_result: DimensionScore
     data_availability_result: DimensionScore
     demand_result: DimensionScore
+    # code_gap_result: DimensionScore   # v1.1 -- added with the github_search node
     rubric_version: str
 ```
 
@@ -213,26 +246,37 @@ async def score_method_clarity_node(state: PaperScoreState, config: RunnableConf
 ## New Clients and Tools
 
 Two external signals do not exist in the codebase today (no GitHub or Semantic Scholar
-client -- confirmed). They are the highest-value and highest-risk parts of the build.
+client -- confirmed). **Only the Semantic Scholar client ships in v1**; the GitHub client
+is v1.1 (it belongs to the deferred code-gap dimension). They are the highest-value and
+highest-risk parts of the build, which is exactly why the riskier one (GitHub) is deferred
+behind the spike.
 
 ### Clients
 
-- `clients/github_client.py` -- GitHub code/repo search for arXiv ID, title variants, and
-  author repos. Returns hits (repo, stars, last commit, README snippet). **Redis-cached,
-  backoff-aware** -- copy the rate-limit-retry pattern from `clients/embeddings_client.py`
-  (`JinaEmbeddingsClient`). GitHub code search is aggressively rate-limited; caching and
-  backoff are load-bearing, not optional.
-- `clients/semantic_scholar_client.py` -- lookup by arXiv ID -> citation count and
-  velocity. Cached similarly.
+- `clients/semantic_scholar_client.py` (**v1**) -- lookup by arXiv ID -> citation count and
+  velocity. Backoff-aware + net-new Redis cache (see the pattern note below). S2 is the one
+  external API v1 depends on; it is far gentler than GitHub code search.
+- `clients/github_client.py` (**v1.1**) -- GitHub code/repo search for arXiv ID, title
+  variants, and author repos. Returns hits (repo, stars, last commit, README snippet).
+  **Backoff-aware + Redis-cached** -- copy the tenacity `Retry-After`-aware backoff pattern
+  from `clients/embeddings_client.py` (`JinaEmbeddingsClient`). Note: that client has the
+  backoff/retry pattern but **no cache** -- the Redis cache is net-new here (Redis already
+  runs for Celery/RedBeat/checkpointing, so the infrastructure exists; there is just no
+  client-side caching pattern in the repo to copy). GitHub code search is aggressively
+  rate-limited; caching and backoff are load-bearing, not optional. Efficacy is gated by
+  the `spikes/github-code-gap/` spike before this client is built.
 
 ### Tools (BaseTool wrappers)
 
-- `GithubSearchTool` / `SemanticScholarTool` subclass `BaseTool`
+- `SemanticScholarTool` (**v1**) / `GithubSearchTool` (**v1.1**) subclass `BaseTool`
   (`services/agent_service/tools/base.py`): `extends_chunks=False`, implement
   `parameters_schema` + `async execute(...) -> ToolResult`; return
   `ToolResult(success, data={...}, prompt_text=<summary>, tool_name=...)` -- copy the
-  `tools/list_papers.py` / `tools/propose_ingest.py` shape. Register names in
-  `tools/constants.py`.
+  `tools/list_papers.py` / `tools/propose_ingest.py` shape. Registration is manual and
+  imperative in `AgentContext.__init__` (no auto-discovery), so wire each new tool there
+  (and mirror it in `ScoringContext`); add name constants to `tools/constants.py` to match
+  convention, though note existing tools hardcode `name` as a class attr rather than
+  sourcing it from that module.
 - **Why wrap as tools, not just node-local client calls:** the scoped per-paper chat agent
   can then reuse them directly ("is there code for this paper?", "how cited is this?"),
   registered in the chat agent's existing `ToolRegistry`. One implementation, two
@@ -252,20 +296,22 @@ New tables (Alembic migrations are a later task; sketch only):
 | `digests` | week identifier, category set, cached candidate ranking snapshot (sub-scores, not a per-user order). |
 
 Onboarding profile (categories, compute profile, interest keywords) extends the existing
-**`user_preferences`** JSON already read by `scheduled_tasks.py::daily_ingest_task` -- no
-new table needed for the profile.
+**`preferences`** JSONB column on the `users` model (`models/user.py`) -- the same blob
+`scheduled_tasks.py::daily_ingest_task` already reads as `preferences["arxiv_searches"]`.
+It is a column, not a `user_preferences` table; no new table is needed for the profile.
 
 **Store-evidence-not-numbers** is the governing rule: sub-scores and their supporting
 spans are first-class, which makes both the UI breakdown trustworthy and the rubric
 tunable (reweighting = arithmetic over stored sub-scores, never a re-extraction).
 
-### Code-gap staleness
+### Code-gap staleness (v1.1)
 
 The "no code found" signal is time-sensitive (no code today, code next week) but the
 digest caches it. This is exactly the false-authority failure the design most guards
-against. `score_evidence` for the code-gap dimension carries an "as of `<date>`" stamp,
-surfaced in the UI, and the dimension is subject to a re-score/decay policy (open
-question below).
+against -- and the primary reason code gap is **deferred out of v1**. When it lands in
+v1.1, `score_evidence` for the code-gap dimension carries an "as of `<date>`" stamp,
+surfaced in the UI, it debuts as an unweighted chip, and the dimension is subject to a
+re-score/decay policy (open question below).
 
 ---
 
@@ -275,25 +321,42 @@ question below).
   under the existing eval infrastructure.
 - Rubric-accuracy eval runs under the `@pytest.mark.eval` profile in CI, alongside the
   existing 80% coverage gate. Target: >=85% agreement with hand labels on the feasibility
-  and code-gap dimensions; must not regress.
+  dimension in v1 (add code-gap agreement in v1.1); must not regress.
 - User dismissals tagged "misjudged" flow into the golden set over time.
 - **The eval gate is what licenses the cheap models.** Using a small model for the two
   judgment dimensions is safe precisely because the golden set catches drift -- e.g. a
   cluster-scale training paper rated "single-GPU feasible."
+- **The golden set is a prerequisite, not a later step.** Because the eval gate is what
+  licenses the cheap models, the 30-50 labeled papers must exist before the two LLM
+  dimensions can be trusted -- build the labeled set alongside (not after) the pipeline.
+
+### Validation before build (spikes)
+
+Two bets are unproven and cheap to test before any schema is committed:
+
+- **Code-gap recall (highest-weighted, highest-risk).** Whether GitHub search can actually
+  find a paper's known implementation is an efficacy question, not a coding question. A
+  throwaway spike lives at `spikes/github-code-gap/`: it runs several GitHub Search API
+  query strategies over ~20 papers with known repos and reports recall@k per strategy plus
+  observed rate-limit behavior. Decision rule: if combined recall@10 on
+  papers-with-known-code is materially below the bar (~0.8), the code-gap signal needs
+  rethinking before the client and `paper_scores` schema are built. The spike's
+  `golden_papers.json` doubles as the seed for the eval golden set above.
 
 ---
 
 ## Files Summary (future implementation)
 
-| Area | New / changed |
-|---|---|
-| Tasks | `tasks/triage_tasks.py` (Stage 1), `tasks/score_tasks.py` (Stage 2 driver), `tasks/scheduled_tasks.py` (extend: weekly crawl + `build_digest_task`) |
-| Scoring graph | `services/scoring_service/` (builder, nodes, context), `schemas/scoring_state.py` |
-| Clients | `clients/github_client.py`, `clients/semantic_scholar_client.py` |
-| Tools | `services/agent_service/tools/github_search.py`, `.../semantic_scholar.py`, `tools/constants.py` |
-| Crawl | metadata-only path on `clients/arxiv_client.py` |
-| DB | migrations for `paper_scores`, `score_evidence`, `user_paper_states`, `digests`; extend `user_preferences` |
-| Lifespan | compile scoring graph in `main.py` alongside `agent_graph` |
+| Area | New / changed | Phase |
+|---|---|---|
+| Tasks | `tasks/triage_tasks.py` (Stage 1), `tasks/score_tasks.py` (Stage 2 driver), `tasks/scheduled_tasks.py` (extend: weekly crawl + `build_digest_task`) | v1 |
+| Scoring graph | `services/scoring_service/` (builder, 4 dimension nodes, context), `schemas/scoring_state.py` | v1 |
+| Clients | `clients/semantic_scholar_client.py` | v1 |
+| Tools | `services/agent_service/tools/semantic_scholar.py`, `tools/constants.py` | v1 |
+| Crawl | metadata-only path on `clients/arxiv_client.py` | v1 |
+| DB | migrations for `paper_scores`, `score_evidence`, `user_paper_states`, `digests`; extend the `preferences` JSONB on `users` | v1 |
+| Lifespan | compile scoring graph in `main.py` alongside `agent_graph` | v1 |
+| Code gap | `clients/github_client.py`, `.../tools/github_search.py`, `score_code_gap` node | **v1.1** |
 
 ---
 
@@ -303,8 +366,8 @@ question below).
 - Integration: full scoring graph over a fixture paper against the test DB
   (`@pytest.mark.integration`, port 5433).
 - Eval: golden-set rubric accuracy (`@pytest.mark.eval`).
-- Clients: `github_client` / `semantic_scholar_client` against recorded fixtures with
-  rate-limit/backoff paths exercised.
+- Clients: `semantic_scholar_client` (v1; `github_client` in v1.1) against recorded
+  fixtures with rate-limit/backoff paths exercised.
 
 ---
 
@@ -313,10 +376,10 @@ question below).
 | Risk | Mitigation |
 |---|---|
 | Scoring cost | Stage 1 cheap-model filter; only survivors incur full-text cost; digests cached weekly. |
-| False authority | Evidence-first records, golden-set eval gate, dismissal feedback as training signal. |
-| GitHub search recall | Search arXiv IDs + title variants + author repos; surface the raw results in evidence so misses are visible. |
-| GitHub / S2 rate limits (the real bottleneck) | Redis cache + backoff from day one (reuse `embeddings_client.py` pattern). |
-| Code-gap staleness | "As of `<date>`" stamp + re-score/decay policy. |
+| False authority | Evidence-first records, golden-set eval gate, dismissal feedback as training signal. **Chief mitigation for the riskiest signal: code gap is deferred out of v1 and debuts unweighted in v1.1.** |
+| GitHub search recall (v1.1) | Gated by the `spikes/github-code-gap/` spike before build; search arXiv IDs + title variants + author repos; surface the raw results in evidence so misses are visible. |
+| S2 rate limits (v1); GitHub rate limits (v1.1, the real bottleneck) | Net-new Redis cache + backoff from day one (reuse the `embeddings_client.py` backoff pattern; add the cache, which does not yet exist in any client). |
+| Code-gap staleness (v1.1) | "As of `<date>`" stamp + re-score/decay policy; unweighted chip first. |
 | Cheap-model misjudgment | Route the 2 judgment dimensions to a stronger model; golden-set gate. |
 
 ---

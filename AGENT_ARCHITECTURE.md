@@ -503,9 +503,10 @@ is deterministic and eval-friendly:
 
 ```
 START -> fetch_and_extract
-      -> [fan-out: score_code_gap | score_method_clarity | score_resource_feasibility
+      -> [fan-out (v1): score_method_clarity | score_resource_feasibility
                  | score_data_availability | score_demand]   (parallel, distinct state keys)
       -> [fan-in] compose_and_persist -> END
+         (v1.1 adds a 5th parallel node, score_code_gap)
 ```
 
 Key contrasts to the chat graph:
@@ -513,14 +514,16 @@ Key contrasts to the chat graph:
   checkpointer** (no HITL interrupts).
 - Parallel dimension nodes each write a distinct `PaperScoreState` key, so last-write-wins
   never collides -- no reducers.
-- Only 2 of 5 dimensions are LLM calls (method clarity, resource feasibility, routed to a
-  stronger model); the rest are external-API lookups.
+- Only 2 of the 4 v1 dimensions are LLM calls (method clarity, resource feasibility, on a
+  stronger model via an explicit `model=` override); the rest are extraction / external-API
+  lookups. **Code gap (GitHub search) is deferred to v1.1** -- highest-weighted but riskiest
+  signal, gated on the `spikes/github-code-gap/` recall spike; v1 has no GitHub dependency.
 
-**Shared reuse.** Both graphs are compiled once in `main.py` lifespan. The new
-`github_search` and `semantic_scholar` tools subclass the same `BaseTool` and register in
-the same `ToolRegistry`, so the scoped chat agent can call them too ("is there code for
-this paper?"). This "two graphs, one toolset" story is the strongest part of the pivot's
-architecture narrative.
+**Shared reuse.** Both graphs are compiled once in `main.py` lifespan. The
+`semantic_scholar` tool (v1; `github_search` in v1.1) subclasses the same `BaseTool` and
+registers in the same `ToolRegistry`, so the scoped chat agent can call it too ("how cited
+is this paper?"; "is there code for this?" once v1.1 lands). This "two graphs, one toolset"
+story is the strongest part of the pivot's architecture narrative.
 
 *Note: Graph B and its tools/clients are a design blueprint (`scoring-pipeline.md`), not
 yet implemented.*
