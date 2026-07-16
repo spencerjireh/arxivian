@@ -27,6 +27,16 @@ valuable, feasible to implement solo, and has no existing code?"
 triages cards in about five minutes, saves a couple, dismisses the rest, and optionally
 goes deep on one.
 
+**v1 scope note.** The "no existing code" half of the pitch -- the **code-gap** signal
+backed by GitHub search -- is **deferred to v1.1**. It is the highest-value differentiator
+but also the least reliable signal (unproven search recall, aggressive rate limits, answers
+that go stale week to week), so v1 scores papers on the four dependable dimensions (method
+clarity, resource feasibility, data availability, demand) and does **not** yet make a
+"no existing code" claim. Code gap returns in v1.1, first as an informational
+"possible existing implementations" chip and later as a weighted ranking signal, once its
+recall is validated (see `docs/design/scoring-pipeline.md`). Until then, no surface should
+promise that a paper is un-implemented.
+
 ---
 
 ## 2. Target Persona
@@ -70,9 +80,9 @@ A card must answer "why should I care?" in about two seconds.
 | Element | Content |
 |---|---|
 | Title + meta | Title, authors, category, submission date |
-| Verdict line | One LLM sentence, e.g. "Novel KV-cache eviction method, no official code, single-GPU feasible" |
+| Verdict line | One LLM sentence, e.g. "Novel KV-cache eviction method, single-GPU feasible" (the "no official code" clause is added in v1.1 with the code-gap signal) |
 | Score badge | Composite implementability score; visually secondary to the verdict |
-| Signal chips | "No code found" / "Pseudocode present" / "Public datasets" / "1 GPU" |
+| Signal chips | v1: "Pseudocode present" / "Public datasets" / "1 GPU". v1.1 adds "No code found" / "Possible existing repo (as of `<date>`)" |
 | Actions | Save, Dismiss, Mark as Implementing |
 
 ---
@@ -81,14 +91,15 @@ A card must answer "why should I care?" in about two seconds.
 
 - **Onboarding (new, one-time).** After sign-in: select arXiv categories, declare compute
   reality (laptop / single GPU / cloud budget), optional interest keywords. ~30 seconds;
-  stored on the existing `user_preferences` model. Shapes the first digest so it is
-  personal, not generic.
+  stored on the existing `preferences` JSONB column on the user record. Shapes the first
+  digest so it is personal, not generic.
 - **Home = Feed.** Ranked cards for the current week, filter bar (category, minimum score,
   "no existing code only"), week selector for past digests (pre-scored and cached, so
   historical browsing is free). Dismiss is a single action, no confirmation.
 - **Paper detail.** The deep-dive surface. Top: score breakdown, each sub-score paired
-  with quoted evidence (the pseudocode block, the compute requirements, the GitHub search
-  results). Bottom / slide-over: **scoped chat**, pre-loaded with the paper's ingested
+  with quoted evidence (the pseudocode block, the compute requirements, the dataset
+  mentions; GitHub search results join in v1.1 with code gap). Bottom / slide-over:
+  **scoped chat**, pre-loaded with the paper's ingested
   content, seeded with suggested prompts ("Explain the core method," "What would a minimal
   repo look like," "What are the risky parts to reproduce"). Reuses the existing streaming
   + citation UI with a narrowed context.
@@ -101,7 +112,9 @@ A card must answer "why should I care?" in about two seconds.
 ## 6. Scope Boundary
 
 ### In scope (v1)
-- Scoring pipeline (Stage 1 triage + Stage 2 graph) and new tables.
+- Scoring pipeline (Stage 1 triage + Stage 2 graph) and new tables, on a **4-dimension
+  rubric** (method clarity, resource feasibility, data availability, demand). No GitHub
+  dependency.
 - Feed with weekly ranked cards, filters, week selector.
 - Paper detail with evidence breakdown + scoped chat.
 - Onboarding (categories + compute profile + keywords).
@@ -109,6 +122,9 @@ A card must answer "why should I care?" in about two seconds.
 - Golden-set eval gate in CI.
 
 ### Out of scope (deferred)
+- **Code-gap dimension + GitHub search -> v1.1** (fast-follow, not far-future). The
+  differentiator, gated on the `spikes/github-code-gap/` recall spike; ships first as an
+  unweighted evidence chip.
 - Automated implementation generation (paper-to-code agents). The product finds and
   scopes; the human implements.
 - Social/community features (comments, shared feeds, leaderboards).
@@ -141,9 +157,9 @@ are no longer primary.
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| False authority (wrong score at top of feed) | High (kills trust) | Evidence-first UI, golden-set eval gate, dismissal feedback as signal |
+| False authority (wrong score at top of feed) | High (kills trust) | Evidence-first UI, golden-set eval gate, dismissal feedback as signal; the riskiest signal (code gap) is deferred out of v1 and debuts unweighted in v1.1 |
 | Scoring cost | Medium | Stage 1 cheap filter; only survivors full-text scored; weekly cached digests |
-| GitHub search recall / rate limits | Medium | arXiv IDs + title variants + author repos; surface raw results as evidence; Redis cache + backoff |
+| GitHub search recall / rate limits (v1.1) | Medium | Gated by the `spikes/github-code-gap/` spike; arXiv IDs + title variants + author repos; surface raw results as evidence; Redis cache + backoff |
 | Cold-start relevance | Medium | Onboarding (categories + compute profile) shapes the first digest |
 | Scope creep back toward chat | Medium | Chat deliberately scoped to one paper; pressure to re-globalize -> improve the feed instead |
 
@@ -153,14 +169,19 @@ are no longer primary.
 
 Additive and reversible (system is in production):
 
-1. **Pipeline in the dark.** Ship scoring pipeline + tables; runs on schedule, no UI.
-   Validate against golden set; tune weights.
-2. **Feed alongside chat.** Ship feed, cards, paper detail, onboarding as new routes;
+1. **Pipeline in the dark (v1).** Ship the 4-dimension scoring pipeline + tables; runs on
+   schedule, no UI. Validate against golden set; tune weights. GitHub code-gap spike runs in
+   parallel but is not on the critical path.
+2. **Feed alongside chat (v1).** Ship feed, cards, paper detail, onboarding as new routes;
    chat remains default; existing users see a banner. Scoped chat reuses the current agent
    with narrowed context.
-3. **Flip and remove.** Feed becomes default home; global chat tab + conversation-history
+3. **Flip and remove (v1).** Feed becomes default home; global chat tab + conversation-history
    UI removed; conversation data archived. Library and lifecycle states ship here if not
    earlier.
+4. **Code gap (v1.1).** Once the spike clears the recall bar, ship `github_client` + the
+   `score_code_gap` node; surface an unweighted "possible existing implementations" chip,
+   then promote code gap to the highest-weighted ranking signal and enable the
+   "no existing code" claim.
 
 User accounts, auth, and the communal knowledge base are untouched throughout.
 

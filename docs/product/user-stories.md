@@ -27,33 +27,40 @@ design in `docs/design/scoring-pipeline.md`.
   enqueue Stage 2. AC: 70-80% eliminated; no PDF download in Stage 1; deterministic task
   IDs.
 - **SCORE-2 (Must):** Stage 2 scoring graph (`services/scoring_service/`) -- fan-out/fan-in
-  DAG over the 5 rubric dimensions; persists `paper_scores` + `score_evidence` with global
-  sub-scores only. AC: each dimension carries quoted evidence; the 2 LLM dimensions route
-  to the stronger model.
-- **SCORE-3 (Must):** `github_client` + `semantic_scholar_client` (Redis-cached,
-  backoff-aware) and their `BaseTool` wrappers, reusable by the scoped chat agent. AC:
-  code-gap searches arXiv ID + title variants + author repos; raw hits surfaced as
-  evidence with an "as of `<date>`" stamp.
+  DAG over the **4 v1 rubric dimensions** (method clarity, resource feasibility, data
+  availability, demand; code gap deferred to v1.1); persists `paper_scores` +
+  `score_evidence` with global sub-scores only. AC: each dimension carries quoted evidence;
+  the 2 LLM dimensions route to the stronger model via an explicit `model=` override.
+- **SCORE-3 (Must):** `semantic_scholar_client` (backoff-aware + net-new Redis cache) and
+  its `SemanticScholarTool` `BaseTool` wrapper, reusable by the scoped chat agent. AC:
+  demand from citation velocity; rate-limit/backoff path covered. (v1's only external API.)
 - **SCORE-4 (Must):** `build_digest_task` -> `digests` cached candidate ranking snapshot;
   read-time user-weighted composite + compute-profile match. AC: past weeks render without
   recomputation.
 - **SCORE-5 (Should):** Golden-set eval (30-50 labeled papers) in the `@pytest.mark.eval`
-  CI profile. AC: >=85% agreement on feasibility + code-gap; no regression.
+  CI profile. AC: >=85% agreement on feasibility; no regression. Prerequisite, not a
+  follow-on -- the labeled set gates trusting the cheap LLM dimensions.
+- **SCORE-6 (v1.1):** Code-gap dimension -- `github_client` (backoff-aware + Redis cache) +
+  `GithubSearchTool` + `score_code_gap` node, gated on the `spikes/github-code-gap/` recall
+  spike. AC: searches arXiv ID + title variants + author repos; raw hits surfaced as
+  evidence with an "as of `<date>`" stamp; ships unweighted first, then promoted to the
+  highest-weighted signal; add code-gap agreement to the eval gate.
 
 ### Epic: FEED-DIGEST -- Weekly Ranked Feed
 
 - **FEED-DIGEST-1 (Must):** Home feed of ranked paper cards for the current week (verdict
   line primary, score secondary, signal chips, Save/Dismiss/Implementing actions). AC:
   fully triageable from cards alone; dismiss is one action, no confirmation.
-- **FEED-DIGEST-2 (Must):** Filter bar (category, minimum score, "no existing code only")
-  + week selector for past digests. AC: historical browsing hits cached digests.
+- **FEED-DIGEST-2 (Must):** Filter bar (category, minimum score) + week selector for past
+  digests. AC: historical browsing hits cached digests. (The "no existing code only" filter
+  arrives in v1.1 with the code-gap signal -- see SCORE-6.)
 
 ### Epic: ONBOARD -- Onboarding Profile
 
 - **ONBOARD-1 (Must):** One-time post-sign-in flow -- select arXiv categories, declare
   compute reality (laptop / single GPU / cloud budget), optional interest keywords; stored
-  on `user_preferences`. AC: ~30s; shapes the first digest; reuses the JSON path read by
-  `scheduled_tasks.py::daily_ingest_task`.
+  on the `preferences` JSONB column on the `users` model. AC: ~30s; shapes the first digest;
+  reuses the JSON path read by `scheduled_tasks.py::daily_ingest_task`.
 
 ### Epic: LIFECYCLE -- Paper Lifecycle States
 
@@ -68,8 +75,8 @@ design in `docs/design/scoring-pipeline.md`.
 - **SCOPED-CHAT-1 (Must):** Chat on paper detail, pre-loaded with the paper's ingested
   content, seeded prompts ("Explain the core method," "What would a minimal repo look
   like," "What are the risky parts to reproduce"). Reuses the existing streaming + citation
-  UI with a narrowed context and the `github_search`/`semantic_scholar` tools. AC: no
-  global chat tab; conversation history list removed (data archived).
+  UI with a narrowed context and the `semantic_scholar` tool (the `github_search` tool joins
+  in v1.1). AC: no global chat tab; conversation history list removed (data archived).
 
 ---
 

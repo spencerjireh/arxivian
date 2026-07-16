@@ -1,0 +1,185 @@
+{
+  "description": "Hand-labeled papers for the GitHub code-gap efficacy spike. Doubles as the seed for the scoring pipeline's eval golden set. 'known_repo' is the canonical implementation (owner/name) a good search should surface; null means no widely-known repo exists (a true 'code gap' the pipeline should score highly). 'has_code' marks whether a known repo exists at all -- recall is measured only over has_code=true rows.",
+  "papers": [
+    {
+      "arxiv_id": "2106.09685",
+      "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+      "authors": ["Edward J. Hu", "Yelong Shen", "Phillip Wallis"],
+      "known_repo": "microsoft/LoRA",
+      "has_code": true,
+      "difficulty": "easy",
+      "notes": "Famous official repo, arXiv id and title both distinctive."
+    },
+    {
+      "arxiv_id": "2312.00752",
+      "title": "Mamba: Linear-Time Sequence Modeling with Selective State Spaces",
+      "authors": ["Albert Gu", "Tri Dao"],
+      "known_repo": "state-spaces/mamba",
+      "has_code": true,
+      "difficulty": "easy",
+      "notes": "Well-known official repo."
+    },
+    {
+      "arxiv_id": "2205.14135",
+      "title": "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness",
+      "authors": ["Tri Dao", "Daniel Y. Fu", "Stefano Ermon"],
+      "known_repo": "Dao-AILab/flash-attention",
+      "has_code": true,
+      "difficulty": "easy",
+      "notes": "Repo name diverges from title token 'FlashAttention' (hyphenation)."
+    },
+    {
+      "arxiv_id": "2304.02643",
+      "title": "Segment Anything",
+      "authors": ["Alexander Kirillov", "Eric Mintun", "Nikhila Ravi"],
+      "known_repo": "facebookresearch/segment-anything",
+      "has_code": true,
+      "difficulty": "easy",
+      "notes": "Very short generic title -- title-token search likely low precision."
+    },
+    {
+      "arxiv_id": "2010.11929",
+      "title": "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale",
+      "authors": ["Alexey Dosovitskiy", "Lucas Beyer", "Alexander Kolesnikov"],
+      "known_repo": "google-research/vision_transformer",
+      "has_code": true,
+      "difficulty": "medium",
+      "notes": "ViT. Official repo name shares no title tokens -- arXiv-id search is the lever."
+    },
+    {
+      "arxiv_id": "2005.11401",
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "authors": ["Patrick Lewis", "Ethan Perez", "Aleksandra Piktus"],
+      "known_repo": "huggingface/transformers",
+      "has_code": true,
+      "difficulty": "hard",
+      "notes": "RAG. No standalone official repo; implementation lives inside a huge monorepo -- a hard recall case."
+    },
+    {
+      "arxiv_id": "1810.04805",
+      "title": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+      "authors": ["Jacob Devlin", "Ming-Wei Chang", "Kenton Lee"],
+      "known_repo": "google-research/bert",
+      "has_code": true,
+      "difficulty": "easy",
+      "notes": "Distinctive title acronym and famous repo."
+    },
+    {
+      "arxiv_id": "1706.03762",
+      "title": "Attention Is All You Need",
+      "authors": ["Ashish Vaswani", "Noam Shazeer", "Niki Parmar"],
+      "known_repo": "tensorflow/tensor2tensor",
+      "has_code": true,
+      "difficulty": "hard",
+      "notes": "Transformer. Original code is a subdir of tensor2tensor; many third-party reimplementations pollute results."
+    },
+    {
+      "arxiv_id": "2302.13971",
+      "title": "LLaMA: Open and Efficient Foundation Language Models",
+      "authors": ["Hugo Touvron", "Thibaut Lavril", "Gautier Izacard"],
+      "known_repo": "meta-llama/llama",
+      "has_code": true,
+      "difficulty": "medium",
+      "notes": "Official repo renamed over time (facebookresearch/llama -> meta-llama/llama)."
+    },
+    {
+      "arxiv_id": "2112.10752",
+      "title": "High-Resolution Image Synthesis with Latent Diffusion Models",
+      "authors": ["Robin Rombach", "Andreas Blattmann", "Dominik Lorenz"],
+      "known_repo": "CompVis/latent-diffusion",
+      "has_code": true,
+      "difficulty": "medium",
+      "notes": "Stable Diffusion paper; repo name uses 'latent-diffusion' not the title's 'image synthesis'."
+    },
+    {
+      "arxiv_id": "1512.03385",
+      "title": "Deep Residual Learning for Image Recognition",
+      "authors": ["Kaiming He", "Xiangyu Zhang", "Shaoqing Ren"],
+      "known_repo": "KaimingHe/deep-residual-networks",
+      "has_code": true,
+      "difficulty": "medium",
+      "notes": "ResNet. Author-named repo -- tests the author-repo strategy."
+    },
+    {
+      "arxiv_id": "1412.6980",
+      "title": "Adam: A Method for Stochastic Optimization",
+      "authors": ["Diederik P. Kingma", "Jimmy Ba"],
+      "known_repo": null,
+      "has_code": false,
+      "difficulty": "hard",
+      "notes": "No canonical single repo; Adam is implemented in every framework. A genuine 'ubiquitous, no single implementation' case -- excluded from recall, useful as a false-signal check."
+    },
+    {
+      "arxiv_id": "2201.11903",
+      "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+      "authors": ["Jason Wei", "Xuezhi Wang", "Dale Schuurmans"],
+      "known_repo": null,
+      "has_code": false,
+      "difficulty": "hard",
+      "notes": "Prompting technique, no official code artifact. Should score as a real code gap; a search that 'finds' a repo here is a false positive."
+    },
+    {
+      "arxiv_id": "2307.09288",
+      "title": "Llama 2: Open Foundation and Fine-Tuned Chat Models",
+      "authors": ["Hugo Touvron", "Louis Martin", "Kevin Stone"],
+      "known_repo": "meta-llama/llama",
+      "has_code": true,
+      "difficulty": "medium",
+      "notes": "Shares a repo with the first LLaMA paper; tests id-vs-repo mapping when one repo serves two papers."
+    },
+    {
+      "arxiv_id": "2103.00020",
+      "title": "Learning Transferable Visual Models From Natural Language Supervision",
+      "authors": ["Alec Radford", "Jong Wook Kim", "Chris Hallacy"],
+      "known_repo": "openai/CLIP",
+      "has_code": true,
+      "difficulty": "hard",
+      "notes": "CLIP. Title contains none of the popular name; arXiv-id search is essential."
+    },
+    {
+      "arxiv_id": "1707.06347",
+      "title": "Proximal Policy Optimization Algorithms",
+      "authors": ["John Schulman", "Filip Wolski", "Prafulla Dhariwal"],
+      "known_repo": "openai/baselines",
+      "has_code": true,
+      "difficulty": "hard",
+      "notes": "PPO lives inside openai/baselines; distinctive-title, non-obvious-repo case."
+    },
+    {
+      "arxiv_id": "2006.11239",
+      "title": "Denoising Diffusion Probabilistic Models",
+      "authors": ["Jonathan Ho", "Ajay Jain", "Pieter Abbeel"],
+      "known_repo": "hojonathanho/diffusion",
+      "has_code": true,
+      "difficulty": "medium",
+      "notes": "DDPM. Author-named repo, title tokens generic."
+    },
+    {
+      "arxiv_id": "2303.08774",
+      "title": "GPT-4 Technical Report",
+      "authors": ["OpenAI"],
+      "known_repo": null,
+      "has_code": false,
+      "difficulty": "hard",
+      "notes": "Closed model, no implementation. A search returning a repo is a false positive."
+    },
+    {
+      "arxiv_id": "1810.00826",
+      "title": "How Powerful are Graph Neural Networks?",
+      "authors": ["Keyulu Xu", "Weihua Hu", "Jure Leskovec"],
+      "known_repo": "weihua916/powerful-gnns",
+      "has_code": true,
+      "difficulty": "medium",
+      "notes": "GIN. Question-form title, author-named repo."
+    },
+    {
+      "arxiv_id": "2204.02311",
+      "title": "PaLM: Scaling Language Modeling with Pathways",
+      "authors": ["Aakanksha Chowdhery", "Sharan Narang", "Jacob Devlin"],
+      "known_repo": null,
+      "has_code": false,
+      "difficulty": "hard",
+      "notes": "No official release; many third-party 'palm' repos exist -> tests false-positive rate on a genuine gap."
+    }
+  ]
+}
