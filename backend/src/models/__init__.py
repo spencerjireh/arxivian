@@ -7,6 +7,9 @@ from src.models.agent_execution import AgentExecution
 from src.models.user import User
 from src.models.task_execution import TaskExecution
 from src.models.usage_counter import UsageCounter
+from src.models.paper_score import PaperScore, ScoreEvidence
+from src.models.user_paper_state import UserPaperState
+from src.models.digest import Digest
 
 __all__ = [
     "Paper",
@@ -17,4 +20,8 @@ __all__ = [
     "User",
     "TaskExecution",
     "UsageCounter",
+    "PaperScore",
+    "ScoreEvidence",
+    "UserPaperState",
+    "Digest",
 ]
