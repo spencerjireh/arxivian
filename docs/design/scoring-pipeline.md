@@ -5,10 +5,11 @@ arXiv submissions and produces an evidence-backed implementability score per pap
 doc is the implementation blueprint; it is grounded in the existing
 `services/agent_service/` scaffolding so the new graph reads as native to the codebase.
 
-**Status:** Design (blueprint for a later implementation task -- no code shipped yet)
+**Status:** In progress -- Phase 0 is shipped (the `PaperScoreState` / `DimensionScore` schemas, the v1 rubric + LLM prompts, a labeled golden set, and the DB tables via migration `019`). The Stage 1 triage task and the Stage 2 scoring graph are Phase 1.
 **Author:** Spencer Jireh
 **Date:** July 2026
 **Related:** `proposal.md` (direction pitch), `docs/product/feed-prd.md` (product),
+`docs/design/scoring-rubric.md` (the concrete v1 rubric anchors + band scale),
 `docs/design/agent-graph-refactor.md` (the sibling chat graph)
 
 ---
@@ -286,7 +287,7 @@ behind the spike.
 
 ## Data Model
 
-New tables (Alembic migrations are a later task; sketch only):
+New tables (shipped in migration `019_add_scoring_tables`; models in `backend/src/models/`):
 
 | Table | Columns (sketch) |
 |---|---|
