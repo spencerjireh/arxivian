@@ -22,7 +22,7 @@ from src.routers import (
 )
 
 # Import middleware
-from src.middleware import logging_middleware, register_exception_handlers
+from src.middleware import logging_middleware, maintenance_middleware, register_exception_handlers
 from src.utils.logger import configure_logging, get_logger
 
 settings = get_settings()
@@ -117,6 +117,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Maintenance curtain (503 for all but health when MAINTENANCE_MODE is on).
+# Registered before logging so logging stays outermost and still records the 503.
+app.middleware("http")(maintenance_middleware)
 
 # Request logging middleware (function-based, works with streaming)
 app.middleware("http")(logging_middleware)

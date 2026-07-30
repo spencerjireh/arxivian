@@ -28,6 +28,8 @@ FROM base AS builder
 # This must be set via build args in docker-compose (not runtime env).
 ARG VITE_CLERK_PUBLISHABLE_KEY
 ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+ARG VITE_MAINTENANCE_MODE
+ENV VITE_MAINTENANCE_MODE=$VITE_MAINTENANCE_MODE
 
 # Copy source code
 COPY . .

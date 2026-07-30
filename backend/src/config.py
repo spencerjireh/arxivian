@@ -59,6 +59,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_request_body: bool = True
     log_response_body: bool = True
+    # When true, all API routes except health return 503 (pivot maintenance curtain).
+    maintenance_mode: bool = False
 
     # Langfuse Observability
     langfuse_enabled: bool = False
