@@ -99,6 +99,7 @@ services:
       # App
       DEBUG: ${DEBUG:-false}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      MAINTENANCE_MODE: ${MAINTENANCE_MODE:-false}
       LOG_REQUEST_BODY: ${LOG_REQUEST_BODY:-false}
       LOG_RESPONSE_BODY: ${LOG_RESPONSE_BODY:-false}
       API_KEY: ${API_KEY:-}
@@ -205,6 +206,7 @@ services:
       target: production
       args:
         VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:?Set VITE_CLERK_PUBLISHABLE_KEY}
+        VITE_MAINTENANCE_MODE: ${VITE_MAINTENANCE_MODE:-false}
     expose:
       - "8080"
     depends_on:
