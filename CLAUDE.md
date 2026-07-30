@@ -47,7 +47,7 @@ Layered: `routers/` -> `services/` -> `repositories/` -> `models/` (async SQLAlc
 
 **Agent service** (`services/agent_service/`): the chat Q&A LangGraph workflow with nodes: classify_and_route -> executor -> evaluate_batch -> generate, plus out_of_scope and confirm_ingest (HITL). Tools (in `tools/`): retrieve_chunks, arxiv_search, ingest_papers, propose_ingest, list_papers, explore_citations. SSE streaming with custom event types (STATUS, CONTENT, SOURCES, CITATIONS, INGEST_COMPLETE, DONE).
 
-**Scoring service** (`services/scoring_service/`, planned -- feed pivot): a second LangGraph workflow, a fixed fan-out/fan-in DAG (fetch_and_extract -> 5 parallel dimension nodes -> compose_and_persist) that scores papers for implementability. No streaming, no checkpointer. See `docs/design/scoring-pipeline.md`.
+**Scoring service** (`services/scoring_service/`, feed pivot -- Phase 0 shipped, graph is Phase 1): a second LangGraph workflow, a fixed fan-out/fan-in DAG (fetch_and_extract -> 4 parallel dimension nodes (v1; code gap is v1.1) -> compose_and_persist) that scores papers for implementability. No streaming, no checkpointer. Shipped so far: the v1 rubric + LLM prompts (`prompts.py`), the `PaperScoreState` / `DimensionScore` schemas (`schemas/scoring_state.py`), and a labeled golden set (`tests/evals/fixtures/scoring_scenarios.py`). See `docs/design/scoring-pipeline.md` and `docs/design/scoring-rubric.md`.
 
 **Celery tasks** (`tasks/`): Redis broker, RedBeat scheduler. Files: `ingest_tasks.py`, `cleanup_tasks.py`, `scheduled_tasks.py`, `signals.py`, `tracing.py`; planned (pivot): `triage_tasks.py` (Stage 1), `score_tasks.py` (Stage 2 driver), `build_digest_task`. Flower at port 5555.
 
@@ -65,11 +65,19 @@ React 19 + TypeScript + Vite. Zustand stores (chat, settings, sidebar, user). SS
 
 ### Database
 
-PostgreSQL 16 + pgvector. Migrations via Alembic (`backend/alembic/`). Tables: papers, chunks, conversations, conversation_turns, users, agent_executions, task_executions, usage_counters. Planned (feed pivot): paper_scores, score_evidence, user_paper_states, digests (see `docs/design/scoring-pipeline.md`).
+PostgreSQL 16 + pgvector. Migrations via Alembic (`backend/alembic/`). Tables: papers, chunks, conversations, conversation_turns, users, agent_executions, task_executions, usage_counters, plus the feed-pivot scoring tables paper_scores, score_evidence, user_paper_states, digests (migration `019_add_scoring_tables`; see `docs/design/scoring-pipeline.md`).
 
 ### Infrastructure
 
 Docker profiles: `dev`, `prod`, `test`, `eval`. Redis, Langfuse (self-hosted), Flower. See `docker-compose.yml` for service details.
+
+### Deployment (Coolify) & branch strategy
+
+Production is a single Coolify docker-compose app deploying `docker-compose.coolify.yml`. **During the feed pivot, prod is frozen on the `production` branch and curtained behind a maintenance screen -- it does NOT track `main`.** Develop on `main` (Coolify does not auto-deploy it); Phase 1 work merges there freely with no prod impact.
+
+- **Maintenance curtain** (env-flagged, default off): backend `MAINTENANCE_MODE=true` -> `maintenance_middleware` returns 503 for all routes except health; frontend `VITE_MAINTENANCE_MODE=true` (build-time -- wired as a compose build arg in `docker-compose.coolify.yml` + `frontend/Dockerfile`) -> renders `MaintenanceScreen`.
+- **Relaunch**: merge `main -> production`, set both flags to `false` in the Coolify env, redeploy (a rebuild, so the frontend flag re-bakes).
+- External API base is `/api` (frontend nginx rewrites `/api/` -> backend `/api/v1/`); the public health path is `/api/health`.
 
 ## Code Style
 
