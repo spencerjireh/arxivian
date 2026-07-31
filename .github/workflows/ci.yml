@@ -17,6 +17,11 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      # clerk_domain is the only Settings field without a default; tests import the
+      # app (which instantiates Settings) but mock all downstream calls, so a dummy
+      # value is enough to let collection proceed.
+      CLERK_DOMAIN: test.clerk.accounts.dev
     steps:
       - uses: actions/checkout@v4
 
