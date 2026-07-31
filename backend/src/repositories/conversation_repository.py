@@ -361,9 +361,7 @@ class ConversationRepository:
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_turn_count(
-        self, session_id: str, user_id: Optional[UUID] = None
-    ) -> int:
+    async def get_turn_count(self, session_id: str, user_id: Optional[UUID] = None) -> int:
         """
         Get the number of turns in a conversation.
 

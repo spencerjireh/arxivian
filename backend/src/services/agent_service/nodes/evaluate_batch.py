@@ -13,8 +13,7 @@ log = get_logger(__name__)
 def _chunk_fingerprints(chunks: list[dict]) -> list[str]:
     """Sorted fingerprints for stagnation detection across iterations."""
     return sorted(
-        f"{c.get('arxiv_id', 'unknown')}:{(c.get('chunk_text') or '')[:100]}"
-        for c in chunks
+        f"{c.get('arxiv_id', 'unknown')}:{(c.get('chunk_text') or '')[:100]}" for c in chunks
     )
 
 
@@ -43,9 +42,7 @@ async def evaluate_batch_node(state: AgentState, config: RunnableConfig) -> dict
     previous_fingerprints = metadata.get("previous_chunk_fingerprints", [])
 
     if chunks and current_fingerprints == previous_fingerprints:
-        log.info(
-            "evaluate_batch: stagnation detected", chunks=len(chunks), iteration=iteration
-        )
+        log.info("evaluate_batch: stagnation detected", chunks=len(chunks), iteration=iteration)
         reasoning_steps.append(
             f"Evaluated retrieval ({len(chunks)} chunks): stagnation detected, promoting all"
         )
@@ -101,9 +98,7 @@ async def evaluate_batch_node(state: AgentState, config: RunnableConfig) -> dict
     if evaluation.sufficient:
         # Promote all retrieved chunks -- they're already ranked by hybrid search
         updates["relevant_chunks"] = chunks
-        reasoning_steps.append(
-            f"Evaluated retrieval ({len(chunks)} chunks): sufficient"
-        )
+        reasoning_steps.append(f"Evaluated retrieval ({len(chunks)} chunks): sufficient")
     elif iteration >= max_iterations:
         # Max iterations reached -- promote all anyway (best-effort)
         updates["relevant_chunks"] = chunks

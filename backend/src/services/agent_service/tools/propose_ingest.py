@@ -153,14 +153,16 @@ class ProposeIngestTool(BaseTool):
         papers: list[IngestProposalPaper] = []
         for aid in remaining_ids:
             meta = search_lookup.get(aid, {})
-            papers.append(IngestProposalPaper(
-                arxiv_id=aid,
-                title=meta.get("title", "Unknown"),
-                authors=meta.get("authors", []),
-                abstract=meta.get("abstract", ""),
-                published_date=meta.get("published_date"),
-                pdf_url=meta.get("pdf_url", f"https://arxiv.org/pdf/{aid}.pdf"),
-            ))
+            papers.append(
+                IngestProposalPaper(
+                    arxiv_id=aid,
+                    title=meta.get("title", "Unknown"),
+                    authors=meta.get("authors", []),
+                    abstract=meta.get("abstract", ""),
+                    published_date=meta.get("published_date"),
+                    pdf_url=meta.get("pdf_url", f"https://arxiv.org/pdf/{aid}.pdf"),
+                )
+            )
 
         log.info(
             "propose_ingest",

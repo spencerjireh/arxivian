@@ -280,9 +280,7 @@ class AgentService:
                         final_state.update(output)
 
                     # Emit detailed status per node
-                    if node_name == "classify_and_route" and output.get(
-                        "classification_result"
-                    ):
+                    if node_name == "classify_and_route" and output.get("classification_result"):
                         result = output["classification_result"]
                         classify_details = {
                             "score": result.scope_score,
@@ -291,8 +289,7 @@ class AgentService:
                             "reasoning": result.reasoning,
                         }
                         classify_msg = (
-                            f"Classified: intent={result.intent}, "
-                            f"score={result.scope_score}"
+                            f"Classified: intent={result.intent}, score={result.scope_score}"
                         )
                         yield StreamEvent(
                             event=StreamEventType.STATUS,
@@ -393,9 +390,7 @@ class AgentService:
     # HITL helpers
     # ------------------------------------------------------------------
 
-    async def _run_inline_ingest(
-        self, arxiv_ids: list[str]
-    ) -> AsyncIterator[StreamEvent]:
+    async def _run_inline_ingest(self, arxiv_ids: list[str]) -> AsyncIterator[StreamEvent]:
         """Ingest papers inline and yield progress/completion events."""
         total = len(arxiv_ids)
         yield StreamEvent(
@@ -501,9 +496,7 @@ class AgentService:
 
         # Build LangGraph config with context, thread_id, and Langfuse callback
         config: dict = {"configurable": {"context": self.context, "thread_id": thread_id}}
-        trace_id = self._attach_langfuse_callback(
-            config, session_id, {"query": query[:200]}
-        )
+        trace_id = self._attach_langfuse_callback(config, session_id, {"query": query[:200]})
 
         # Initial state
         initial_state: dict = {
@@ -540,9 +533,7 @@ class AgentService:
 
         try:
             # First pass: consume stream
-            async for event in self._consume_stream(
-                initial_state, config, final_state, tracker
-            ):
+            async for event in self._consume_stream(initial_state, config, final_state, tracker):
                 if isinstance(event, dict) and "__interrupt__" in event:
                     interrupted = True
                     interrupt_value = event["__interrupt__"]
@@ -724,9 +715,7 @@ class AgentService:
         # Fetch the pending turn once -- used for double-confirm guard and later cleanup.
         pending_turn_number: int | None = None
         if self.conversation_repo:
-            pending_turn = await self.conversation_repo.get_pending_turn(
-                session_id, self.user_id
-            )
+            pending_turn = await self.conversation_repo.get_pending_turn(session_id, self.user_id)
             if not pending_turn or not pending_turn.pending_confirmation:
                 log.warning("resume_stream_double_confirm", session_id=session_id)
                 yield StreamEvent(

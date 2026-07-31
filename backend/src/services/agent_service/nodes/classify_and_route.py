@@ -177,19 +177,17 @@ async def classify_and_route_node(state: AgentState, config: RunnableConfig) -> 
                 succeeded_with_args.add((t.tool_name, norm))
 
         blocked = {
-            name for name in succeeded
+            name
+            for name in succeeded
             if not getattr(context.tool_registry.get(name), "extends_chunks", False)
         }
 
         def _is_same_args(tc: ToolCall) -> bool:
-            norm = json.dumps(
-                json.loads(tc.tool_args_json or "{}"), sort_keys=True
-            )
+            norm = json.dumps(json.loads(tc.tool_args_json or "{}"), sort_keys=True)
             return (tc.tool_name, norm) in succeeded_with_args
 
         novel = [
-            tc for tc in result.tool_calls
-            if tc.tool_name not in blocked and not _is_same_args(tc)
+            tc for tc in result.tool_calls if tc.tool_name not in blocked and not _is_same_args(tc)
         ]
         if not novel:
             log.info(
@@ -206,9 +204,7 @@ async def classify_and_route_node(state: AgentState, config: RunnableConfig) -> 
             log.info(
                 "classify_and_route: stripped duplicate tool calls",
                 kept=[tc.tool_name for tc in novel],
-                stripped=[
-                    tc.tool_name for tc in result.tool_calls if tc.tool_name in blocked
-                ],
+                stripped=[tc.tool_name for tc in result.tool_calls if tc.tool_name in blocked],
             )
             result = ClassificationResult(
                 intent=result.intent,

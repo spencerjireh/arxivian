@@ -17,6 +17,16 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      # Tests import the app (which instantiates Settings) and mock all downstream
+      # network calls, so these dummies never make a real request. CLERK_DOMAIN is the
+      # only field without a default; the provider keys let the happy-path health
+      # check (real settings, default nvidia_nim provider) report healthy instead of
+      # degraded.
+      CLERK_DOMAIN: test.clerk.accounts.dev
+      NVIDIA_NIM_API_KEY: ci-dummy-key
+      OPENAI_API_KEY: ci-dummy-key
+      JINA_API_KEY: ci-dummy-key
     steps:
       - uses: actions/checkout@v4
 

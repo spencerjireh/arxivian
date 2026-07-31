@@ -22,8 +22,13 @@ class TestHealthEndpoint:
         assert data["services"]["database"]["details"]["papers_count"] == 100
         assert data["services"]["database"]["details"]["chunks_count"] == 500
 
-    def test_health_includes_llm_status(self, client, mock_settings):
+    def test_health_includes_llm_status(self, client, mock_settings, monkeypatch):
         """Test that LLM provider status is included."""
+        # Apply mock_settings to the health router (openai/gpt-4o-mini + key set),
+        # mirroring test_health_degraded_on_missing_llm_key. Without this the fixture
+        # is inert and the router reads the real default provider (nvidia_nim).
+        monkeypatch.setattr("src.routers.health.get_settings", lambda: mock_settings)
+
         response = client.get("/api/v1/health")
 
         assert response.status_code == 200
