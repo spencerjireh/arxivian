@@ -88,6 +88,12 @@ class Settings(BaseSettings):
     cleanup_schedule_cron: str = "0 3 * * *"  # Daily at 3am UTC
     cleanup_retention_days: int = 90
 
+    # Stage 1 triage (scoring pipeline entry point)
+    triage_schedule_cron: str = "0 6 * * 1"  # Weekly Monday 6am UTC
+    triage_categories: list[str] = ["cs.LG", "cs.CL", "cs.CV", "cs.AI"]
+    triage_lookback_days: int = 7
+    triage_max_per_category: int = 100
+
     # Helper methods
     def get_allowed_models_list(self) -> list[str]:
         """Get list of all allowed LiteLLM model strings."""
