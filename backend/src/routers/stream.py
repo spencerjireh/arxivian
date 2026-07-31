@@ -36,12 +36,14 @@ def _format_sse_error(error: str, code: str) -> str:
     return f"event: error\ndata: {json.dumps(error_data.model_dump())}\n\n"
 
 
-_USER_SAFE_ERROR_CODES: frozenset[str] = frozenset({
-    "USAGE_LIMIT_EXCEEDED",
-    "CHECKPOINT_EXPIRED",
-    "FORBIDDEN",
-    "CONFLICT",
-})
+_USER_SAFE_ERROR_CODES: frozenset[str] = frozenset(
+    {
+        "USAGE_LIMIT_EXCEEDED",
+        "CHECKPOINT_EXPIRED",
+        "FORBIDDEN",
+        "CONFLICT",
+    }
+)
 
 
 @router.post("/stream")
@@ -92,9 +94,7 @@ async def stream(
     )
 
     # Use session_id if provided, otherwise generate a temporary task ID
-    task_id = (
-        request.resume.session_id if is_resume else request.session_id
-    ) or str(uuid.uuid4())
+    task_id = (request.resume.session_id if is_resume else request.session_id) or str(uuid.uuid4())
 
     user_id = current_user.id
 

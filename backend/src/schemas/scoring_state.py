@@ -44,8 +44,12 @@ class EvidenceSpan(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    text: str = Field(..., description="The exact quoted span from the paper (or an external result)")
-    kind: EvidenceKind = Field(..., description="What this span evidences: pseudocode, compute, dataset, or citation")
+    text: str = Field(
+        ..., description="The exact quoted span from the paper (or an external result)"
+    )
+    kind: EvidenceKind = Field(
+        ..., description="What this span evidences: pseudocode, compute, dataset, or citation"
+    )
     source: str = Field(
         default="",
         description="Where the span came from, e.g. a section name, 'abstract', or an external URL",
@@ -62,12 +66,16 @@ class DimensionScore(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     dimension: str = Field(..., description="Dimension name, e.g. 'method_clarity'")
-    score: int = Field(..., ge=0, le=100, description="Sub-score 0-100 (0 or 100 for the data-availability gate)")
+    score: int = Field(
+        ..., ge=0, le=100, description="Sub-score 0-100 (0 or 100 for the data-availability gate)"
+    )
     evidence: list[EvidenceSpan] = Field(
         default_factory=list,
         description="Quoted spans that justify the score; empty only when genuinely no signal exists",
     )
-    reasoning: str = Field(..., description="Brief explanation of the score, referencing the evidence")
+    reasoning: str = Field(
+        ..., description="Brief explanation of the score, referencing the evidence"
+    )
 
 
 class PaperScoreState(TypedDict):

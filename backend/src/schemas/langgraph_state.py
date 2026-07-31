@@ -30,7 +30,8 @@ class ClassificationResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     intent: Literal["out_of_scope", "direct", "execute"] = Field(
-        ..., description="Query intent: out_of_scope, direct (answer from context), execute (call tools)"
+        ...,
+        description="Query intent: out_of_scope, direct (answer from context), execute (call tools)",
     )
     tool_calls: list[ToolCall] = Field(
         default_factory=list,

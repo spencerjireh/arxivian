@@ -81,9 +81,7 @@ class ToolRegistry:
             raise KeyError(f"Tool '{name}' is not registered")
         return tool
 
-    async def execute(
-        self, name: str, *, tool_outputs: list | None = None, **kwargs
-    ) -> ToolResult:
+    async def execute(self, name: str, *, tool_outputs: list | None = None, **kwargs) -> ToolResult:
         """
         Execute a tool by name.
 

@@ -112,5 +112,3 @@ class CancelStreamResponse(BaseModel):
     session_id: str
     cancelled: bool
     message: str
-
-

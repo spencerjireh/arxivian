@@ -199,5 +199,3 @@ async def cancel_stream(
             cancelled=False,
             message="No active stream found for this session",
         )
-
-

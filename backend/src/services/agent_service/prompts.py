@@ -326,5 +326,3 @@ class PromptBuilder:
     def build(self) -> tuple[str, str]:
         """Build the final system and user prompts."""
         return self._system, "\n\n".join(self._user_parts)
-
-
