@@ -262,6 +262,31 @@ class EmbeddingRateLimitError(EmbeddingServiceError):
         self.retry_after = retry_after
 
 
+class SemanticScholarError(ExternalServiceError):
+    """Raised when the Semantic Scholar service encounters an error."""
+
+    def __init__(self, message: str, details: Optional[dict[str, Any]] = None):
+        super().__init__(service_name="Semantic Scholar", message=message, details=details)
+        self.error_code = "SEMANTIC_SCHOLAR_ERROR"
+
+
+class SemanticScholarRateLimitError(SemanticScholarError):
+    """Raised when the Semantic Scholar API returns 429 rate limit exceeded."""
+
+    def __init__(
+        self,
+        message: str = "Semantic Scholar API rate limit exceeded",
+        retry_after: Optional[float] = None,
+        details: Optional[dict[str, Any]] = None,
+    ):
+        details = details or {}
+        if retry_after is not None:
+            details["retry_after"] = retry_after
+        super().__init__(message=message, details=details)
+        self.error_code = "SEMANTIC_SCHOLAR_RATE_LIMIT"
+        self.retry_after = retry_after
+
+
 class PDFProcessingError(ExternalServiceError):
     """Raised when PDF processing fails."""
 

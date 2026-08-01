@@ -8,6 +8,7 @@ from .constants import (
     LIST_PAPERS,
     PROPOSE_INGEST,
     RETRIEVE_CHUNKS,
+    SEMANTIC_SCHOLAR,
 )
 from .registry import ToolRegistry
 from .retrieve import RetrieveChunksTool
@@ -16,6 +17,7 @@ from .list_papers import ListPapersTool
 from .arxiv_search import ArxivSearchTool
 from .explore_citations import ExploreCitationsTool
 from .propose_ingest import ProposeIngestTool
+from .semantic_scholar import SemanticScholarTool
 
 __all__ = [
     "BaseTool",
@@ -27,10 +29,12 @@ __all__ = [
     "ListPapersTool",
     "ArxivSearchTool",
     "ExploreCitationsTool",
+    "SemanticScholarTool",
     "RETRIEVE_CHUNKS",
     "INGEST_PAPERS",
     "PROPOSE_INGEST",
     "LIST_PAPERS",
     "ARXIV_SEARCH",
     "EXPLORE_CITATIONS",
+    "SEMANTIC_SCHOLAR",
 ]

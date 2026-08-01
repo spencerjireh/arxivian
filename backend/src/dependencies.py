@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_db
 from src.clients.arxiv_client import ArxivClient
 from src.clients.embeddings_client import JinaEmbeddingsClient
+from src.clients.semantic_scholar_client import SemanticScholarClient
 from src.services.search_service import SearchService
 from src.services.ingest_service import IngestService
 from src.services.auth_service import get_auth_service
@@ -39,6 +40,7 @@ from src.utils.logger import get_logger
 from src.factories.client_factories import (
     get_arxiv_client,
     get_embeddings_client,
+    get_semantic_scholar_client,
 )
 from src.factories.service_factories import (
     get_search_service,
@@ -56,6 +58,7 @@ DbSession = Annotated[AsyncSession, Depends(get_db)]
 # Client dependencies (singletons)
 ArxivClientDep = Annotated[ArxivClient, Depends(get_arxiv_client)]
 EmbeddingsClientDep = Annotated[JinaEmbeddingsClient, Depends(get_embeddings_client)]
+SemanticScholarClientDep = Annotated[SemanticScholarClient, Depends(get_semantic_scholar_client)]
 
 
 # Service dependencies

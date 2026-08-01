@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     # Embeddings
     jina_api_key: str = ""
 
+    # Semantic Scholar (demand signal -- citation velocity)
+    # Key is optional: the keyless public pool works, just with tighter rate limits
+    # (the client's backoff path handles 429s either way).
+    semantic_scholar_api_key: str = ""
+    semantic_scholar_cache_ttl_seconds: int = 604800  # 7 days
+
     # Search configuration
     default_top_k: int = 3
     rrf_k: int = 60
