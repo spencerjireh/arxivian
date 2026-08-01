@@ -7,6 +7,7 @@ from uuid import UUID
 
 from src.clients.base_llm_client import BaseLLMClient
 from src.clients.arxiv_client import ArxivClient
+from src.clients.semantic_scholar_client import SemanticScholarClient
 from src.services.search_service import SearchService
 from src.services.ingest_service import IngestService
 from src.repositories.paper_repository import PaperRepository
@@ -18,6 +19,7 @@ from .tools import (
     ListPapersTool,
     ArxivSearchTool,
     ExploreCitationsTool,
+    SemanticScholarTool,
 )
 
 if TYPE_CHECKING:
@@ -89,6 +91,7 @@ class AgentContext:
         db_session: AsyncSession | None = None,
         ingest_service: IngestService | None = None,
         arxiv_client: ArxivClient | None = None,
+        semantic_scholar_client: SemanticScholarClient | None = None,
         paper_repository: PaperRepository | None = None,
         tool_registry: ToolRegistry | None = None,
         conversation_formatter: ConversationFormatter | None = None,
@@ -142,3 +145,7 @@ class AgentContext:
                 self.tool_registry.register(ExploreCitationsTool(paper_repository=paper_repository))
             if arxiv_client:
                 self.tool_registry.register(ArxivSearchTool(arxiv_client=arxiv_client))
+            if semantic_scholar_client:
+                self.tool_registry.register(
+                    SemanticScholarTool(semantic_scholar_client=semantic_scholar_client)
+                )

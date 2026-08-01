@@ -22,6 +22,7 @@ from src.factories.client_factories import (
     get_embeddings_client,
     get_llm_client,
     get_arxiv_client,
+    get_semantic_scholar_client,
 )
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.chunk_repository import ChunkRepository
@@ -169,6 +170,8 @@ def get_agent_service(
     user_id_str = str(user_id)
     ingest_service = get_ingest_service(db_session, ingested_by=user_id_str) if can_ingest else None
     arxiv_client = get_arxiv_client() if can_search_arxiv else None
+    # Cheap read-only citation lookup -- always available (no tier gate).
+    semantic_scholar_client = get_semantic_scholar_client()
 
     # Paper repository: get from ingest_service if available, otherwise create directly
     if ingest_service is not None:
@@ -186,6 +189,7 @@ def get_agent_service(
         db_session=db_session,
         ingest_service=ingest_service,
         arxiv_client=arxiv_client,
+        semantic_scholar_client=semantic_scholar_client,
         paper_repository=paper_repository,
         conversation_repo=conversation_repo,
         conversation_window=conversation_window,

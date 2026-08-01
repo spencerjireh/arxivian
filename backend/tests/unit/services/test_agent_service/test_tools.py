@@ -12,6 +12,7 @@ from src.services.agent_service.tools import (
     IngestPapersTool,
     ArxivSearchTool,
     ExploreCitationsTool,
+    SemanticScholarTool,
 )
 from src.services.agent_service.tools.retrieve import MAX_TOP_K
 
@@ -600,3 +601,127 @@ class TestToolRegistry:
             registry.register(DummyTool())
 
         assert "already registered" in str(exc_info.value)
+
+
+class TestSemanticScholarTool:
+    """Tests for SemanticScholarTool."""
+
+    @pytest.fixture
+    def mock_s2_client(self):
+        return AsyncMock()
+
+    @pytest.fixture
+    def tool(self, mock_s2_client):
+        return SemanticScholarTool(semantic_scholar_client=mock_s2_client)
+
+    @staticmethod
+    def _metrics(**overrides):
+        from src.clients.semantic_scholar_client import CitationMetrics
+
+        defaults = dict(
+            arxiv_id="2301.00001",
+            found=True,
+            citation_count=120,
+            influential_citation_count=15,
+            publication_date="2023-01-01",
+            citations_per_month=3.5,
+            demand_band="HIGH",
+        )
+        defaults.update(overrides)
+        return CitationMetrics(**defaults)
+
+    @pytest.mark.asyncio
+    async def test_empty_arxiv_id_returns_error(self, tool):
+        result = await tool.execute(arxiv_id="")
+        assert result.success is False
+        assert "required" in result.error.lower()
+
+    @pytest.mark.asyncio
+    async def test_whitespace_arxiv_id_returns_error(self, tool):
+        result = await tool.execute(arxiv_id="   ")
+        assert result.success is False
+        assert "required" in result.error.lower()
+
+    @pytest.mark.asyncio
+    async def test_successful_lookup(self, tool, mock_s2_client):
+        mock_s2_client.get_citation_metrics.return_value = self._metrics()
+
+        result = await tool.execute(arxiv_id="2301.00001")
+
+        assert result.success is True
+        assert result.data["citation_count"] == 120
+        assert result.data["demand_band"] == "HIGH"
+        assert "3.5 citations/month" in result.prompt_text
+
+    @pytest.mark.asyncio
+    async def test_arxiv_id_is_stripped_before_lookup(self, tool, mock_s2_client):
+        mock_s2_client.get_citation_metrics.return_value = self._metrics()
+
+        await tool.execute(arxiv_id="  2301.00001  ")
+
+        call_args = mock_s2_client.get_citation_metrics.call_args
+        assert call_args.args[0] == "2301.00001"
+
+    @pytest.mark.asyncio
+    async def test_not_found_still_succeeds(self, tool, mock_s2_client):
+        mock_s2_client.get_citation_metrics.return_value = self._metrics(
+            found=False,
+            citation_count=0,
+            influential_citation_count=0,
+            publication_date=None,
+            citations_per_month=0.0,
+            demand_band="LOW",
+        )
+
+        result = await tool.execute(arxiv_id="2301.99999")
+
+        assert result.success is True
+        assert result.data["found"] is False
+        assert "No Semantic Scholar record" in result.prompt_text
+
+    @pytest.mark.asyncio
+    async def test_client_error_wrapped_in_failed_result(self, tool, mock_s2_client):
+        mock_s2_client.get_citation_metrics.side_effect = RuntimeError("boom")
+
+        result = await tool.execute(arxiv_id="2301.00001")
+
+        assert result.success is False
+        assert "boom" in result.error
+
+    def test_class_variables(self, tool):
+        assert tool.extends_chunks is False
+        assert "semantic_scholar_client" in tool.required_dependencies
+
+
+class TestSemanticScholarPromptText:
+    """Tests for semantic_scholar prompt text formatting."""
+
+    def test_formats_found_metrics(self):
+        from src.clients.semantic_scholar_client import CitationMetrics
+        from src.services.agent_service.tools.semantic_scholar import _format_metrics
+
+        metrics = CitationMetrics(
+            arxiv_id="2301.00001",
+            found=True,
+            citation_count=120,
+            influential_citation_count=15,
+            publication_date="2023-01-01",
+            citations_per_month=3.5,
+            demand_band="HIGH",
+        )
+        result = _format_metrics(metrics)
+
+        assert "arXiv:2301.00001" in result
+        assert "120 citations" in result
+        assert "15 influential" in result
+        assert "demand: HIGH" in result
+
+    def test_formats_not_found(self):
+        from src.clients.semantic_scholar_client import CitationMetrics
+        from src.services.agent_service.tools.semantic_scholar import _format_metrics
+
+        metrics = CitationMetrics(arxiv_id="2301.99999", found=False)
+        result = _format_metrics(metrics)
+
+        assert "No Semantic Scholar record" in result
+        assert "2301.99999" in result

@@ -3,6 +3,7 @@
 from src.factories.client_factories import (
     get_arxiv_client,
     get_embeddings_client,
+    get_semantic_scholar_client,
 )
 from src.factories.service_factories import (
     get_chunking_service,
@@ -15,6 +16,7 @@ from src.factories.service_factories import (
 __all__ = [
     "get_arxiv_client",
     "get_embeddings_client",
+    "get_semantic_scholar_client",
     "get_chunking_service",
     "get_pdf_parser",
     "get_search_service",

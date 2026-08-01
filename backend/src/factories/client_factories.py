@@ -5,6 +5,7 @@ from functools import lru_cache
 from src.config import Settings, get_settings
 from src.clients.arxiv_client import ArxivClient
 from src.clients.embeddings_client import JinaEmbeddingsClient
+from src.clients.semantic_scholar_client import SemanticScholarClient
 from src.clients.base_llm_client import BaseLLMClient
 from src.clients.litellm_client import LiteLLMClient
 from src.exceptions import InvalidModelError
@@ -39,6 +40,21 @@ def get_embeddings_client() -> JinaEmbeddingsClient:
     """
     settings = get_settings()
     return JinaEmbeddingsClient(api_key=settings.jina_api_key, model="jina-embeddings-v3")
+
+
+@lru_cache(maxsize=1)
+def get_semantic_scholar_client() -> SemanticScholarClient:
+    """
+    Create singleton Semantic Scholar client.
+
+    Returns:
+        SemanticScholarClient instance
+    """
+    settings = get_settings()
+    return SemanticScholarClient(
+        api_key=settings.semantic_scholar_api_key,
+        cache_ttl_seconds=settings.semantic_scholar_cache_ttl_seconds,
+    )
 
 
 def get_llm_client(model: str | None = None) -> BaseLLMClient:

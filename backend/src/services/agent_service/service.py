@@ -29,6 +29,7 @@ try:
 except ImportError:
     LANGFUSE_CALLBACK_AVAILABLE = False
 from src.clients.arxiv_client import ArxivClient
+from src.clients.semantic_scholar_client import SemanticScholarClient
 from src.services.search_service import SearchService
 from src.services.ingest_service import IngestService
 from src.repositories.conversation_repository import ConversationRepository
@@ -133,6 +134,7 @@ class AgentService:
         db_session: AsyncSession | None = None,
         ingest_service: IngestService | None = None,
         arxiv_client: ArxivClient | None = None,
+        semantic_scholar_client: SemanticScholarClient | None = None,
         paper_repository: PaperRepository | None = None,
         conversation_repo: ConversationRepository | None = None,
         conversation_window: int = 5,
@@ -156,6 +158,7 @@ class AgentService:
             db_session=db_session,
             ingest_service=ingest_service,
             arxiv_client=arxiv_client,
+            semantic_scholar_client=semantic_scholar_client,
             paper_repository=paper_repository,
             guardrail_threshold=guardrail_threshold,
             top_k=top_k,
