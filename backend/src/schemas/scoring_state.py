@@ -88,15 +88,21 @@ class PaperScoreState(TypedDict):
     paper_id: str
     arxiv_id: str
 
+    # Paper identity for the LLM prompts: at least {title, arxiv_id, abstract}. Populated
+    # by fetch_and_extract from the ingested paper row.
+    paper_meta: dict
+
     # Candidate evidence extracted up front by fetch_and_extract: pseudocode / compute /
     # dataset spans, keyed by kind.
     extracted_spans: dict
 
-    # One result per v1 dimension.
-    method_clarity_result: DimensionScore
-    resource_feasibility_result: DimensionScore
-    data_availability_result: DimensionScore
-    demand_result: DimensionScore
+    # One result per v1 dimension. `None` marks a dimension that soft-failed (its column
+    # persists NULL) -- the columns are nullable by design, so a paper can be partially
+    # scored rather than lost.
+    method_clarity_result: DimensionScore | None
+    resource_feasibility_result: DimensionScore | None
+    data_availability_result: DimensionScore | None
+    demand_result: DimensionScore | None
     # code_gap_result: DimensionScore   # v1.1 -- added with the github_search node
 
     rubric_version: str

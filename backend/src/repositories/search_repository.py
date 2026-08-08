@@ -35,7 +35,11 @@ class SearchRepository:
         self.session = session
 
     async def vector_search(
-        self, query_embedding: List[float], top_k: int = 10, min_score: float = 0.0
+        self,
+        query_embedding: List[float],
+        top_k: int = 10,
+        min_score: float = 0.0,
+        paper_id: Optional[str] = None,
     ) -> List[SearchResult]:
         """
         Vector similarity search using cosine distance.
@@ -44,17 +48,26 @@ class SearchRepository:
             query_embedding: Query embedding vector
             top_k: Number of results to return
             min_score: Minimum similarity score (0-1)
+            paper_id: If set, restrict the search to a single paper's chunks (used by
+                the Stage 2 scoring graph for per-dimension, per-paper retrieval).
 
         Returns:
             List of SearchResult objects ordered by similarity
         """
         log.debug(
-            "vector search", top_k=top_k, min_score=min_score, embedding_dim=len(query_embedding)
+            "vector search",
+            top_k=top_k,
+            min_score=min_score,
+            embedding_dim=len(query_embedding),
+            paper_id=paper_id,
         )
 
         embedding_str = f"[{','.join(map(str, query_embedding))}]"
 
-        query = text("""
+        # Static SQL fragment (no user input) -- paper_id itself is a bound parameter.
+        paper_filter = "AND c.paper_id = CAST(:paper_id AS uuid)" if paper_id else ""
+
+        query = text(f"""
             SELECT
                 c.id as chunk_id,
                 c.paper_id,
@@ -70,13 +83,16 @@ class SearchRepository:
             FROM chunks c
             JOIN papers p ON c.paper_id = p.id
             WHERE 1 - (c.embedding <=> CAST(:embedding AS vector)) >= :min_score
+            {paper_filter}
             ORDER BY c.embedding <=> CAST(:embedding AS vector)
             LIMIT :limit
         """)
 
-        result = await self.session.execute(
-            query, {"embedding": embedding_str, "min_score": min_score, "limit": top_k}
-        )
+        params = {"embedding": embedding_str, "min_score": min_score, "limit": top_k}
+        if paper_id:
+            params["paper_id"] = paper_id
+
+        result = await self.session.execute(query, params)
 
         results = [
             SearchResult(

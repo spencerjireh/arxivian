@@ -1,4 +1,4 @@
-"""Unit tests for Stage 1 triage and the Stage 2 stub task."""
+"""Unit tests for Stage 1 triage and the Stage 2 driver task."""
 
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
@@ -166,13 +166,17 @@ class TestTriageNewPapersTask:
         apply_async.assert_not_called()
 
 
-class TestScorePaperTaskStub:
-    def test_stub_returns_arxiv_id(self):
-        from src.tasks.score_tasks import score_paper_task
+class TestScorePaperTask:
+    def test_delegates_to_scoring_run(self):
+        from src.tasks import score_tasks
 
-        score_paper_task.push_request(id="test-task-id")
+        summary = {"status": "scored", "arxiv_id": "2401.001"}
+        score_tasks.score_paper_task.push_request(id="test-task-id")
         try:
-            result = score_paper_task._orig_run(arxiv_id="2401.001")
+            with patch.object(score_tasks, "_run", AsyncMock(return_value=summary)) as mock_run:
+                result = score_tasks.score_paper_task._orig_run(arxiv_id="2401.001")
         finally:
-            score_paper_task.pop_request()
-        assert result == {"status": "stub", "arxiv_id": "2401.001"}
+            score_tasks.score_paper_task.pop_request()
+
+        assert result == summary
+        mock_run.assert_awaited_once_with("2401.001")
