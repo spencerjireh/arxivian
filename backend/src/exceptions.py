@@ -287,6 +287,15 @@ class SemanticScholarRateLimitError(SemanticScholarError):
         self.retry_after = retry_after
 
 
+class ScoringError(Exception):
+    """Raised when the Stage 2 scoring graph cannot score a paper.
+
+    Not HTTP-facing (scoring runs in a Celery task). Raising this from a node aborts the
+    graph invocation so Celery's autoretry re-runs the paper -- used for hard failures like
+    'no usable full text', where partial scoring is not meaningful.
+    """
+
+
 class PDFProcessingError(ExternalServiceError):
     """Raised when PDF processing fails."""
 

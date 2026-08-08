@@ -28,6 +28,9 @@ from src.repositories.paper_repository import PaperRepository
 from src.repositories.chunk_repository import ChunkRepository
 from src.repositories.search_repository import SearchRepository
 from src.repositories.conversation_repository import ConversationRepository
+from src.repositories.scoring_repository import ScoringRepository
+from src.services.scoring_service.context import ScoringContext
+from src.schemas.scoring_state import RUBRIC_VERSION
 
 
 def get_search_service(db_session: AsyncSession) -> SearchService:
@@ -106,6 +109,26 @@ def get_ingest_service(db_session: AsyncSession, ingested_by: str | None = None)
         paper_repository=paper_repository,
         chunk_repository=chunk_repository,
         ingested_by=ingested_by,
+    )
+
+
+def get_scoring_context(db_session: AsyncSession) -> ScoringContext:
+    """Build a ScoringContext for one Stage 2 scoring run.
+
+    Not cached -- request/task-scoped db session. The LLM client is pinned to
+    `scoring_strong_model` so the two judge dimensions use it without a per-call override.
+    """
+    settings = get_settings()
+    return ScoringContext(
+        llm_client=get_llm_client(model=settings.scoring_strong_model),
+        semantic_scholar_client=get_semantic_scholar_client(),
+        ingest_service=get_ingest_service(db_session),
+        search_service=get_search_service(db_session),
+        paper_repository=PaperRepository(db_session),
+        scoring_repository=ScoringRepository(db_session),
+        db_session=db_session,
+        strong_model=settings.scoring_strong_model,
+        rubric_version=RUBRIC_VERSION,
     )
 
 

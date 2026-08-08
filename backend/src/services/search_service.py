@@ -46,6 +46,25 @@ class SearchService:
         log.info("search complete", mode=mode, results=len(results))
         return results
 
+    async def retrieve_within_paper(
+        self, query: str, paper_id: str, top_k: int = 5, min_score: float = 0.0
+    ) -> List[SearchResult]:
+        """Semantic (vector) retrieval scoped to a single paper's chunks.
+
+        Used by the Stage 2 scoring graph to pull the chunks most relevant to a given
+        dimension probe (e.g. compute/pseudocode/dataset) from one paper, instead of a
+        brittle keyword scan.
+        """
+        query_embedding = await self.embeddings_client.embed_query(query)
+        results = await self.search_repo.vector_search(
+            query_embedding=query_embedding,
+            top_k=top_k,
+            min_score=min_score,
+            paper_id=paper_id,
+        )
+        log.debug("within-paper retrieval done", paper_id=paper_id, results=len(results))
+        return results
+
     async def _vector_only_search(
         self, query: str, top_k: int, min_score: float
     ) -> List[SearchResult]:
