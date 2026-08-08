@@ -24,6 +24,17 @@ T = TypeVar("T", bound=BaseModel)
 
 log = get_logger(__name__)
 
+# Reasoning models (e.g. openai/gpt-5-nano) reject params they don't support -- notably a
+# non-default `temperature`. Enabling drop_params makes LiteLLM silently drop unsupported
+# params instead of erroring, and maps `max_tokens` -> `max_completion_tokens` where required.
+# Set at import so it applies in every process that constructs a client (FastAPI AND the
+# Celery workers, which never run the main.py lifespan).
+litellm.drop_params = True
+
+# Default visible-output budget. Reasoning models draw reasoning tokens from the completion
+# budget, so keep this well above a plain answer's size to avoid starving the response.
+DEFAULT_MAX_TOKENS = 4096
+
 # Providers that support native Pydantic response_format (schema-constrained decoding).
 # All others fall back to prompt-based structured output with JSON mode.
 NATIVE_STRUCTURED_OUTPUT_PROVIDERS: frozenset[str] = frozenset({"openai", "anthropic", "google"})
@@ -108,7 +119,7 @@ class LiteLLMClient(BaseLLMClient):
         messages: list[ChatCompletionMessageParam],
         model: str | None = None,
         temperature: float = 0.3,
-        max_tokens: int = 1000,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
         timeout: float | None = None,
     ) -> str:
         model_to_use = model or self._model
@@ -152,7 +163,7 @@ class LiteLLMClient(BaseLLMClient):
         messages: list[ChatCompletionMessageParam],
         model: str | None = None,
         temperature: float = 0.3,
-        max_tokens: int = 1000,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
         timeout: float | None = None,
     ) -> AsyncIterator[str]:
         model_to_use = model or self._model

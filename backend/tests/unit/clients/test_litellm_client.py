@@ -7,6 +7,7 @@ import pytest
 from pydantic import BaseModel, ConfigDict
 
 from src.clients.litellm_client import (
+    DEFAULT_MAX_TOKENS,
     NATIVE_STRUCTURED_OUTPUT_PROVIDERS,
     LiteLLMClient,
     _inject_schema,
@@ -84,7 +85,9 @@ class TestGenerateCompletion:
         mock_response.usage.completion_tokens = 5
         mock_response.usage.total_tokens = 15
 
-        with patch("src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock:
+        with patch(
+            "src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock
+        ) as mock:
             mock.return_value = mock_response
             result = await client.generate_completion(messages)
 
@@ -93,7 +96,7 @@ class TestGenerateCompletion:
         call_kwargs = mock.call_args
         assert call_kwargs.kwargs["model"] == "openai/gpt-4o-mini"
         assert call_kwargs.kwargs["temperature"] == 0.3
-        assert call_kwargs.kwargs["max_tokens"] == 1000
+        assert call_kwargs.kwargs["max_tokens"] == DEFAULT_MAX_TOKENS
 
     @pytest.mark.asyncio
     async def test_completion_with_model_override(self, client, messages):
@@ -102,7 +105,9 @@ class TestGenerateCompletion:
         mock_response.choices[0].message.content = "Response"
         mock_response.usage = None
 
-        with patch("src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock:
+        with patch(
+            "src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock
+        ) as mock:
             mock.return_value = mock_response
             await client.generate_completion(messages, model="openai/gpt-4o")
 
@@ -110,7 +115,9 @@ class TestGenerateCompletion:
 
     @pytest.mark.asyncio
     async def test_completion_timeout_raises(self, client, messages):
-        with patch("src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock:
+        with patch(
+            "src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock
+        ) as mock:
             mock.side_effect = asyncio.TimeoutError()
             with pytest.raises(LLMTimeoutError):
                 await client.generate_completion(messages, timeout=1.0)
@@ -179,7 +186,9 @@ class TestGenerateStructured:
 
     @pytest.mark.asyncio
     async def test_structured_output_parses_model(self, client, messages, structured_response):
-        with patch("src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock:
+        with patch(
+            "src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock
+        ) as mock:
             mock.return_value = structured_response
             result = await client.generate_structured(messages, SampleResponse)
 
@@ -193,14 +202,18 @@ class TestGenerateStructured:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = None
 
-        with patch("src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock:
+        with patch(
+            "src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock
+        ) as mock:
             mock.return_value = mock_response
             with pytest.raises(ValueError, match="empty content"):
                 await client.generate_structured(messages, SampleResponse)
 
     @pytest.mark.asyncio
     async def test_structured_timeout_raises(self, client, messages):
-        with patch("src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock:
+        with patch(
+            "src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock
+        ) as mock:
             mock.side_effect = asyncio.TimeoutError()
             with pytest.raises(LLMTimeoutError):
                 await client.generate_structured(messages, SampleResponse, timeout=1.0)
@@ -210,7 +223,9 @@ class TestGenerateStructured:
         self, client, messages, structured_response
     ):
         """OpenAI (native) should pass the Pydantic class as response_format."""
-        with patch("src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock:
+        with patch(
+            "src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock
+        ) as mock:
             mock.return_value = structured_response
             await client.generate_structured(messages, SampleResponse)
 
@@ -221,7 +236,9 @@ class TestGenerateStructured:
         self, nvidia_client, messages, structured_response
     ):
         """NIM (non-native) should use json_object mode with schema in prompt."""
-        with patch("src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock:
+        with patch(
+            "src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock
+        ) as mock:
             mock.return_value = structured_response
             await nvidia_client.generate_structured(messages, SampleResponse)
 
@@ -232,7 +249,9 @@ class TestGenerateStructured:
         self, nvidia_client, messages, structured_response
     ):
         """Schema injection should append to existing system message."""
-        with patch("src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock:
+        with patch(
+            "src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock
+        ) as mock:
             mock.return_value = structured_response
             await nvidia_client.generate_structured(messages, SampleResponse)
 

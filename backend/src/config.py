@@ -13,11 +13,11 @@ class Settings(BaseSettings):
     postgres_url: str = "postgresql+asyncpg://user:password@localhost:5432/arxiv_rag"
 
     # LLM Configuration (LiteLLM-format model strings: "provider/model")
-    default_llm_model: str = "nvidia_nim/openai/gpt-oss-120b"
-    allowed_llm_models: str = "nvidia_nim/openai/gpt-oss-120b,openai/gpt-4o-mini"
+    default_llm_model: str = "openai/gpt-5-nano"
+    allowed_llm_models: str = "openai/gpt-5-nano,nvidia_nim/openai/gpt-oss-120b,openai/gpt-4o-mini"
     # Model override for structured output calls (router, guardrail, grading).
     # None means use default_llm_model.
-    structured_output_model: str | None = None
+    structured_output_model: str | None = "openai/gpt-5-nano"
 
     # Provider API Keys
     openai_api_key: str = ""
@@ -99,6 +99,10 @@ class Settings(BaseSettings):
     triage_categories: list[str] = ["cs.LG", "cs.CL", "cs.CV", "cs.AI"]
     triage_lookback_days: int = 7
     triage_max_per_category: int = 100
+
+    # Stage 2 scoring -- model for the two LLM-judged dimensions (method clarity,
+    # resource feasibility). Must be in allowed_llm_models.
+    scoring_strong_model: str = "openai/gpt-5-nano"
 
     # Helper methods
     def get_allowed_models_list(self) -> list[str]:
