@@ -100,6 +100,9 @@ class Settings(BaseSettings):
     triage_lookback_days: int = 7
     triage_max_per_category: int = 100
 
+    # Stage 3 digest -- weekly cached ranking snapshot. Runs after triage+scoring settle.
+    digest_schedule_cron: str = "0 8 * * 1"  # Weekly Monday 8am UTC (2h after triage)
+
     # Stage 2 scoring -- model for the two LLM-judged dimensions (method clarity,
     # resource feasibility). Must be in allowed_llm_models.
     scoring_strong_model: str = "openai/gpt-5-nano"

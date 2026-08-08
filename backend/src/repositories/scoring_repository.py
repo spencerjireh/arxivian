@@ -7,12 +7,14 @@ relationship on `PaperScore.evidence`), so Celery retries and re-runs converge.
 """
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.models.paper import Paper
 from src.models.paper_score import PaperScore, ScoreEvidence
 from src.utils.logger import get_logger
 
@@ -94,3 +96,31 @@ class ScoringRepository:
             created=existing is None,
         )
         return score
+
+    async def list_scores_for_digest(
+        self,
+        *,
+        start: datetime,
+        end: datetime,
+        rubric_version: str,
+    ) -> list[tuple[PaperScore, Paper]]:
+        """Gate-passing scores created in `[start, end)`, joined to their paper.
+
+        Candidate set for a weekly digest snapshot (SPE-271): only rows under `rubric_version`
+        that pass the data-availability gate (`data_availability_score == 100`). Category
+        filtering is left to the caller (bounded weekly volume). Ordered by creation time; the
+        digest task re-orders by provisional composite.
+        """
+        stmt = (
+            select(PaperScore, Paper)
+            .join(Paper, PaperScore.paper_id == Paper.id)
+            .where(
+                PaperScore.rubric_version == rubric_version,
+                PaperScore.created_at >= start,
+                PaperScore.created_at < end,
+                PaperScore.data_availability_score == 100,
+            )
+            .order_by(PaperScore.created_at)
+        )
+        rows = (await self.session.execute(stmt)).all()
+        return [(row[0], row[1]) for row in rows]

@@ -68,4 +68,8 @@ celery_app.conf.beat_schedule = {
         "task": "src.tasks.triage_tasks.triage_new_papers_task",
         "schedule": crontab(**parse_cron(settings.triage_schedule_cron)),
     },
+    "weekly-digest": {
+        "task": "src.tasks.digest_tasks.build_digest_task",
+        "schedule": crontab(**parse_cron(settings.digest_schedule_cron)),
+    },
 }
