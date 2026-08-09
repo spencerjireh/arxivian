@@ -1,6 +1,8 @@
 """Application configuration using Pydantic Settings."""
 
 from functools import lru_cache
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -112,6 +114,40 @@ class Settings(BaseSettings):
     def is_model_allowed(self, model: str) -> bool:
         """Check if a LiteLLM model string is in the allowed list."""
         return model in self.get_allowed_models_list()
+
+    @model_validator(mode="after")
+    def _check_referenced_models_allowed(self) -> "Settings":
+        """Fail fast at startup if a referenced LLM model is not in ALLOWED_LLM_MODELS.
+
+        The default/structured/scoring models must all be in the allowlist, or
+        `get_llm_client()` raises `InvalidModelError` deep inside a Celery task at runtime
+        (the SPE-282 env-drift bug). This turns that into a clear boot-time error in every
+        entrypoint (web, worker, beat, shell), since each builds `Settings` at import.
+
+        `structured_output_model` is optional -- empty/None means "use the default" -- so it
+        is only checked when set, mirroring `get_llm_client`'s `structured_output_model or None`.
+        """
+        allowed = self.get_allowed_models_list()
+        referenced = {
+            "default_llm_model": self.default_llm_model,
+            "scoring_strong_model": self.scoring_strong_model,
+        }
+        if self.structured_output_model:
+            referenced["structured_output_model"] = self.structured_output_model
+
+        missing = {name: model for name, model in referenced.items() if model not in allowed}
+        if missing:
+            offending = ", ".join(f"{name}={model!r}" for name, model in missing.items())
+            # Raise a plain RuntimeError, not ValueError: pydantic wraps ValueError into a
+            # ValidationError whose repr dumps the whole settings dict (leaking secrets like
+            # postgres_url / API keys into crash logs). RuntimeError propagates cleanly with
+            # only this message.
+            raise RuntimeError(
+                f"LLM model(s) not in ALLOWED_LLM_MODELS {allowed}: {offending}. "
+                "Add them to ALLOWED_LLM_MODELS (see backend/.env.example) or change the "
+                "model setting -- otherwise get_llm_client() crashes at runtime."
+            )
+        return self
 
 
 @lru_cache(maxsize=1)
