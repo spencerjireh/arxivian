@@ -4,19 +4,36 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ..fixtures.scoring_scenarios import SCORING_SCENARIOS
+
 
 # ---------------------------------------------------------------------------
 # Seed papers (ingested once via `just inteval-seed`)
 # ---------------------------------------------------------------------------
 
-SEED_PAPERS: list[str] = [
+# arXiv IDs whose PDFs break ingestion -- kept out of seeding so the batch does not abort.
+UNINGESTABLE: frozenset[str] = frozenset(
+    {
+        # GPT-4 report -- PDF contains null bytes PostgreSQL rejects
+        # (CharacterNotInRepertoireError: 0x00). Its scoring scenario is skipped.
+        "2303.08774",
+    }
+)
+
+# Papers backing the agent retrieval / multi-turn scenarios below.
+_RETRIEVAL_SEED: list[str] = [
     "1706.03762",  # Attention Is All You Need
     "1810.04805",  # BERT: Pre-training of Deep Bidirectional Transformers
     "2005.14165",  # Language Models are Few-Shot Learners (GPT-3)
     "2010.11929",  # An Image is Worth 16x16 Words (ViT)
-    # NOTE: 2303.08774 (GPT-4) excluded -- PDF contains null bytes that
-    # PostgreSQL rejects (CharacterNotInRepertoireError: 0x00).
 ]
+
+# The scoring golden set (SPE-272): every labeled paper except the uningestable ones. The
+# scoring eval scores whatever seeded successfully; a missing paper skips its scenario.
+_SCORING_SEED: list[str] = [s.arxiv_id for s in SCORING_SCENARIOS if s.arxiv_id not in UNINGESTABLE]
+
+# Deduped, order-stable union.
+SEED_PAPERS: list[str] = list(dict.fromkeys([*_RETRIEVAL_SEED, *_SCORING_SEED]))
 
 
 # ---------------------------------------------------------------------------
