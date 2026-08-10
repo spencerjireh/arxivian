@@ -77,6 +77,7 @@ Production is a single Coolify docker-compose app deploying `docker-compose.cool
 
 - **Maintenance curtain** (env-flagged, default off): backend `MAINTENANCE_MODE=true` -> `maintenance_middleware` returns 503 for all routes except health; frontend `VITE_MAINTENANCE_MODE=true` (build-time -- wired as a compose build arg in `docker-compose.coolify.yml` + `frontend/Dockerfile`) -> renders `MaintenanceScreen`.
 - **Relaunch**: merge `main -> production`, set both flags to `false` in the Coolify env, redeploy (a rebuild, so the frontend flag re-bakes).
+- **LLM model env (relaunch-critical, SPE-282):** `ALLOWED_LLM_MODELS` MUST contain every model referenced by `DEFAULT_LLM_MODEL`, `STRUCTURED_OUTPUT_MODEL`, and `SCORING_STRONG_MODEL` (currently all `openai/gpt-5-nano`). A `Settings` guard fail-fasts the app at boot otherwise (no more `InvalidModelError` deep in a task). The `docker-compose.coolify.yml` defaults now cover this, so a relaunch with no Coolify UI overrides boots clean; if you override any model var in the Coolify env, keep the allowlist consistent.
 - External API base is `/api` (frontend nginx rewrites `/api/` -> backend `/api/v1/`); the public health path is `/api/health`.
 
 ## Code Style
