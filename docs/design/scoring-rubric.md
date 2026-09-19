@@ -9,7 +9,9 @@ to be labeled against. The questions live in code at
 bump `RUBRIC_VERSION` (`backend/src/schemas/scoring_state.py`) when they change.
 
 **`rubric_version = "v2"`** (2026-09-19). v1 rows in `paper_scores` stay readable but no
-longer feed the digest.
+longer feed the digest. Judge instructions sharpened 2026-09-19 (SPE-295, no version bump:
+levels and combine rules unchanged) -- see the notes under resource feasibility and data
+availability.
 
 v2 scores four dimensions with **zero GitHub dependency**. Code gap is deferred to v1.1.
 
@@ -105,6 +107,13 @@ State: `abstract`, `experiments`, `compute_spans` (retrieved chunks).
 | 3 | one 3090/4090-class consumer GPU, or a few cloud GPU-hours |
 | 4 | laptop, CPU, or free-tier notebook GPU within hours |
 
+Instruction notes (SPE-295): the tier is judged at the smallest scale that still demonstrates
+the claim, so a cheap technique stays feasible even when the headline run used a cluster; but
+when the trained model **is** the claim (a pretraining recipe, a foundation model, a
+from-scratch generative model) the training cost counts, and fine-tuning released weights does
+not reproduce it. Stated hardware is converted to single-A100 equivalents (~3 P100/V100
+GPU-hours per A100-hour); inference-only methods against a hosted model API are level 3-4.
+
 Auxiliary Nouls, recorded as judgments but **not combined** (a compute tier is a single
 ordinal judgment; splitting it would break the relationship being judged):
 `compute_stated` (the paper states its compute), `pretrained_weights_released`.
@@ -128,6 +137,12 @@ State: `abstract`, `dataset_spans` (retrieved chunks).
 | not stated | PASS (recall-biased default, as in v1) |
 | available on request or under license | FAIL |
 | proprietary or private | FAIL |
+
+The question asks for the data needed to **demonstrate the core claim**: a data-agnostic
+method whose claim is demonstrable on a standard public dataset is "public benchmark" even
+when the headline experiment used an internal corpus (word2vec, knowledge distillation);
+"proprietary or private" is reserved for claims that cannot be demonstrated without data the
+authors did not release (CLIP, PaLM, Whisper).
 
 Combine: `P(PASS)` = summed mass of the PASS options; `level = 1` when `P(PASS) >= 0.5`.
 The gate decides on the argmax, so the digest filter `data_availability_score == 100` is
