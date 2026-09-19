@@ -267,6 +267,19 @@ export interface MeResponse {
   daily_ingest_limit: number | null  // null = unlimited
   ingests_used_today: number
   can_view_execution_details: boolean
+  preferences?: UserPreferences
+}
+
+export type ComputeProfile = 'laptop' | 'single_gpu' | 'cloud'
+
+export interface FeedProfile {
+  categories: string[]
+  compute_profile: ComputeProfile | null
+  keywords: string[]
+}
+
+export interface UserPreferences {
+  feed_profile?: FeedProfile
 }
 
 // Chat UI types

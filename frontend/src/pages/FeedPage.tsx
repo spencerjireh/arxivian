@@ -4,15 +4,19 @@ import { AlertCircle, Loader2, Newspaper } from 'lucide-react'
 import { useInfiniteFeed } from '../api/feed'
 import { useClearPaperState, useSetPaperState } from '../api/paperState'
 import FeedList from '../components/feed/FeedList'
+import FeedFilterBar, { type FeedFilters } from '../components/feed/FeedFilterBar'
+import WeekSelector from '../components/feed/WeekSelector'
 import type { PendingAction } from '../components/feed/CardActions'
 import Button from '../components/ui/Button'
 import { getUserMessage } from '../lib/errors'
 import { feedParamsFromSearch, formatWeek } from '../lib/feedParams'
-import type { FeedItem } from '../types/api'
+import { useUserStore } from '../stores/userStore'
+import type { AvailableWeek, FeedItem } from '../types/api'
 
 export default function FeedPage() {
-  const [search] = useSearchParams()
+  const [search, setSearchParams] = useSearchParams()
   const params = useMemo(() => feedParamsFromSearch(search), [search])
+  const profileCategories = useUserStore((s) => s.me?.preferences?.feed_profile?.categories)
 
   const { data, isLoading, isPlaceholderData, error, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useInfiniteFeed(params)
@@ -24,6 +28,49 @@ export default function FeedPage() {
   const first = data?.pages[0]
   const total = first?.total ?? 0
   const hasFilters = Boolean(params.category || params.min_score !== undefined)
+
+  // TanStack keeps the last successful data next to an error, so the selector survives a
+  // transient failure without extra state.
+  const knownWeeks: AvailableWeek[] = first?.available_weeks ?? []
+  const categories = useMemo(
+    () => [...new Set([...(profileCategories ?? []), ...(first?.categories_available ?? [])])].sort(),
+    [profileCategories, first],
+  )
+
+  const selectWeek = useCallback(
+    (week: string) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('week', week)
+        return next
+      })
+    },
+    [setSearchParams],
+  )
+  const changeFilters = useCallback(
+    (next: FeedFilters) => {
+      setSearchParams(
+        (prev) => {
+          const out = new URLSearchParams(prev)
+          if ('category' in next) {
+            if (next.category) out.set('category', next.category)
+            else out.delete('category')
+          }
+          if ('minScore' in next) {
+            if (next.minScore !== undefined) out.set('min_score', String(next.minScore))
+            else out.delete('min_score')
+          }
+          if ('includeDismissed' in next) {
+            if (next.includeDismissed) out.set('dismissed', '1')
+            else out.delete('dismissed')
+          }
+          return out
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
   const stateOf = useCallback(
     (arxivId: string) => items.find((i) => i.paper.arxiv_id === arxivId)?.state ?? null,
     [items],
@@ -76,7 +123,7 @@ export default function FeedPage() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="px-6 pt-6 pb-4">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-2xl font-semibold text-stone-900">Feed</h1>
           {first?.week_start && (
             <span className="text-sm text-stone-500">Week of {formatWeek(first.week_start)}</span>
@@ -86,7 +133,26 @@ export default function FeedPage() {
               {total} paper{total !== 1 ? 's' : ''}
             </span>
           )}
+          {knownWeeks.length > 0 && (
+            <div className="ml-auto">
+              <WeekSelector
+                weeks={knownWeeks}
+                value={first?.week_start ?? params.week ?? knownWeeks[0].week_start}
+                onChange={selectWeek}
+              />
+            </div>
+          )}
         </div>
+      </div>
+
+      <div className="px-6 pb-4">
+        <FeedFilterBar
+          categories={categories}
+          category={params.category}
+          minScore={params.min_score}
+          includeDismissed={Boolean(params.include_dismissed)}
+          onChange={changeFilters}
+        />
       </div>
 
       <div className={`flex-1 overflow-y-auto px-6 pb-6 ${isPlaceholderData ? 'opacity-60' : ''}`}>

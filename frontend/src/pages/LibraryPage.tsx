@@ -6,6 +6,7 @@ import { useDebounce } from '../hooks/useDebounce'
 import PaperCard from '../components/library/PaperCard'
 import Button from '../components/ui/Button'
 import { getUserMessage } from '../lib/errors'
+import { selectClass } from '../lib/formClasses'
 import type { PaperListParams } from '../types/api'
 
 type ProcessedFilter = 'all' | 'processed' | 'unprocessed'
@@ -52,9 +53,6 @@ export default function LibraryPage() {
     { value: 'processed', label: 'Processed' },
     { value: 'unprocessed', label: 'Unprocessed' },
   ]
-
-  const selectClass =
-    'px-3 py-2 text-sm text-stone-800 bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-stone-200 focus:border-stone-300 transition-colors duration-150'
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">

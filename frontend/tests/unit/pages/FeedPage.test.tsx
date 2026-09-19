@@ -1,6 +1,8 @@
 import { screen, fireEvent } from '@testing-library/react'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import { renderWithProviders } from '../../helpers/renderWithProviders'
 import FeedPage from '../../../src/pages/FeedPage'
+import { useUserStore } from '../../../src/stores/userStore'
 import { makeFeedItem, makeFeedResponse } from '../../fixtures/feed'
 
 vi.mock('@clerk/clerk-react', () => import('../../mocks/clerk'))
@@ -102,5 +104,60 @@ describe('FeedPage', () => {
     renderWithProviders(<FeedPage />, { initialEntries: ['/feed'] })
     fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
     expect(fetchNextPage).toHaveBeenCalled()
+  })
+
+  it('week selector and filters write to the URL', () => {
+    mockUseInfiniteFeed.mockReturnValue(
+      feedState({
+        data: {
+          pages: [
+            makeFeedResponse([makeFeedItem()], {
+              available_weeks: [
+                { week_start: '2026-08-03', paper_count: 1 },
+                { week_start: '2026-07-27', paper_count: 4 },
+              ],
+            }),
+          ],
+          pageParams: [0],
+        },
+      }),
+    )
+    function LocationProbe() {
+      const { search } = useLocation()
+      return <div data-testid="search">{search}</div>
+    }
+    renderWithProviders(
+      <Routes>
+        <Route path="/feed" element={<><FeedPage /><LocationProbe /></>} />
+      </Routes>,
+      { initialEntries: ['/feed'] },
+    )
+    fireEvent.change(screen.getByLabelText('Digest week'), { target: { value: '2026-07-27' } })
+    expect(screen.getByTestId('search').textContent).toBe('?week=2026-07-27')
+    fireEvent.click(screen.getByRole('button', { name: '70+' }))
+    expect(screen.getByTestId('search').textContent).toBe('?week=2026-07-27&min_score=70')
+    fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'cs.LG' } })
+    expect(screen.getByTestId('search').textContent).toBe('?week=2026-07-27&min_score=70&category=cs.LG')
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    expect(screen.getByTestId('search').textContent).toBe('?week=2026-07-27')
+  })
+
+  it('merges profile categories into the category options', () => {
+    useUserStore.setState({
+      me: {
+        id: 'u', email: null, first_name: null, last_name: null, tier: 'free',
+        daily_chat_limit: null, chats_used_today: 0, can_adjust_settings: true,
+        daily_ingest_limit: null, ingests_used_today: 0, can_view_execution_details: false,
+        preferences: { feed_profile: { categories: ['stat.ML'], compute_profile: 'laptop', keywords: [] } },
+      },
+    })
+    mockUseInfiniteFeed.mockReturnValue(
+      feedState({ data: { pages: [makeFeedResponse([makeFeedItem()])], pageParams: [0] } }),
+    )
+    renderWithProviders(<FeedPage />, { initialEntries: ['/feed'] })
+    const options = screen.getAllByRole('option').map((o) => o.textContent)
+    expect(options).toContain('stat.ML')
+    expect(options).toContain('cs.LG')
+    useUserStore.setState({ me: null })
   })
 })
