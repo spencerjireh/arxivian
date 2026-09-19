@@ -88,9 +88,16 @@ COMPUTE_TIER = Score(
         "claim: a technique that is cheap to apply (a new layer, a fine-tuning method, a "
         "training trick, a small model) is feasible even when the authors' headline "
         "experiment used a large cluster. Only when large scale is the contribution itself "
-        "does the headline cost apply. The hardware, training time, and model sizes the "
-        "paper states are an upper bound. When compute is not stated, infer it from the "
-        "model size and dataset; do not assume cluster scale."
+        "does the headline cost apply. If the paper's core claim is the trained model itself "
+        "(a pretraining recipe, a foundation model, or a from-scratch generative model whose "
+        "output quality is the result), judge the cost to train that model; fine-tuning or "
+        "running released weights does not reproduce the claim. Convert stated hardware to "
+        "single-A100 equivalents: roughly 3 P100 or V100 GPU-hours per A100-hour; a few days "
+        "on one A100 is level 2, several hundred A100-hours is level 1. Methods that only run "
+        "inference against a hosted model API, with no training, are level 3 or 4. The "
+        "hardware, training time, and model sizes the paper states are an upper bound. When "
+        "compute is not stated, infer it from the model size and dataset; do not assume "
+        "cluster scale."
     ),
     criteria=COMPUTE_TIER_LEVELS,
 )
@@ -114,9 +121,13 @@ FEASIBILITY_AUX_QUESTIONS: dict[str, Noul] = {
 
 DATA_ACCESS = Choice(
     instructions=(
-        "How can someone other than the authors obtain the data needed to reproduce the "
-        "main result, according to `abstract` and `dataset_spans`? Judge the primary "
-        "training or evaluation data, not auxiliary baselines."
+        "How can someone other than the authors obtain the data needed to demonstrate the "
+        "paper's core claim, according to `abstract` and `dataset_spans`? Judge the primary "
+        "training or evaluation data, not auxiliary baselines. If the method is "
+        "data-agnostic and the paper also evaluates on, or the claim is demonstrable with, a "
+        "standard public dataset, choose 'public benchmark or standard dataset' even when "
+        "the headline experiment used an internal corpus. Choose 'proprietary or private' "
+        "only when the claim cannot be demonstrated without data the authors did not release."
     ),
     criteria={
         "public benchmark or standard dataset": (
