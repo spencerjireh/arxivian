@@ -55,6 +55,7 @@ def mock_context(mock_llm_client, mock_search_service, conversation_formatter):
     ctx.max_iterations = 5
     ctx.temperature = 0.3
     ctx.max_generation_tokens = 2000
+    ctx.scoped_paper = None
     # Mock(spec=) only exposes class-level attrs; set instance attrs explicitly
     ctx.tool_registry = Mock()
     ctx.tool_registry.get_all_schemas.return_value = [

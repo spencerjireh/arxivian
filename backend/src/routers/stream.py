@@ -3,6 +3,7 @@
 import asyncio
 import json
 import uuid
+from uuid import UUID
 
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
@@ -20,9 +21,18 @@ from src.dependencies import (
     AgentGraphDep,
     RedisDep,
     ConversationRepoDep,
+    PaperRepoDep,
 )
-from src.exceptions import BaseAPIException, ConflictError
+from src.exceptions import (
+    BaseAPIException,
+    ConflictError,
+    PaperNotIngestedError,
+    ScopeMismatchError,
+)
 from src.factories.service_factories import get_agent_service
+from src.repositories.conversation_repository import ConversationRepository
+from src.repositories.paper_repository import PaperRepository
+from src.services.agent_service.context import ScopedPaper
 from src.services.task_registry import task_registry
 from src.utils.logger import get_logger
 
@@ -42,8 +52,46 @@ _USER_SAFE_ERROR_CODES: frozenset[str] = frozenset(
         "CHECKPOINT_EXPIRED",
         "FORBIDDEN",
         "CONFLICT",
+        "PAPER_NOT_INGESTED",
+        "SCOPE_MISMATCH",
     }
 )
+
+
+async def resolve_scoped_paper(
+    request: StreamRequest,
+    session_id: str | None,
+    user_id: UUID,
+    conversation_repo: ConversationRepository,
+    paper_repo: PaperRepository,
+) -> ScopedPaper | None:
+    """Work out the paper scope for this stream (SPE-277).
+
+    A persisted scope (the conversation's `paper_id`) wins, so follow-ups and resumes stay
+    narrowed without the client re-sending `arxiv_id`. A request that names a different
+    paper than the conversation is scoped to is a 409 rather than a silent re-scope.
+    """
+    persisted_paper_id: UUID | None = None
+    if session_id:
+        conv = await conversation_repo.get_by_session_id(session_id, user_id=user_id)
+        if conv is not None and isinstance(conv.paper_id, UUID):
+            persisted_paper_id = conv.paper_id
+
+    if request.arxiv_id is None and persisted_paper_id is None:
+        return None
+
+    if request.arxiv_id is not None:
+        paper = await paper_repo.get_by_arxiv_id(request.arxiv_id)
+        if paper is None or not paper.pdf_processed:
+            raise PaperNotIngestedError(request.arxiv_id)
+        if persisted_paper_id is not None and persisted_paper_id != paper.id:
+            raise ScopeMismatchError(session_id or "", request.arxiv_id)
+    else:
+        paper = await paper_repo.get_by_id(str(persisted_paper_id))
+        if paper is None or not paper.pdf_processed:
+            raise PaperNotIngestedError(str(persisted_paper_id))
+
+    return ScopedPaper(paper_id=str(paper.id), arxiv_id=paper.arxiv_id, title=paper.title)
 
 
 @router.post("/stream")
@@ -55,6 +103,7 @@ async def stream(
     policy: TierPolicyDep,
     usage_repo: UsageCounterRepoDep,
     conversation_repo: ConversationRepoDep,
+    paper_repo: PaperRepoDep,
     graph: AgentGraphDep,
     redis: RedisDep,
     _limit: ChatGuard,
@@ -98,6 +147,14 @@ async def stream(
 
     user_id = current_user.id
 
+    scoped_paper = await resolve_scoped_paper(
+        request,
+        request.resume.session_id if is_resume else request.session_id,
+        user_id,
+        conversation_repo,
+        paper_repo,
+    )
+
     log.info(
         "stream request",
         query=request.query[:100] if request.query else "[resume]",
@@ -109,6 +166,7 @@ async def stream(
         user_id=str(user_id),
         tier=current_user.tier,
         is_resume=is_resume,
+        scoped_arxiv_id=scoped_paper.arxiv_id if scoped_paper else None,
     )
 
     async def event_generator():
@@ -142,6 +200,7 @@ async def stream(
                     redis=redis,
                     daily_ingests=policy.daily_ingests,
                     usage_counter_repo=usage_repo,
+                    scoped_paper=scoped_paper,
                 )
 
                 # Route to ask_stream or resume_stream

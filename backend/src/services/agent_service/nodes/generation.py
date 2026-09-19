@@ -39,6 +39,13 @@ async def generate_answer_node(state: AgentState, config: RunnableConfig) -> dic
         .with_query(query)
     )
 
+    if context.scoped_paper is not None:
+        builder.with_note(
+            f"All retrieved passages come from paper {context.scoped_paper.arxiv_id} "
+            f"('{context.scoped_paper.title}'); the user is reading it. Cite it as "
+            f"[{context.scoped_paper.arxiv_id}]."
+        )
+
     # Add note if batch evaluation found insufficient coverage
     batch_eval = state.get("evaluation_result")
     if batch_eval and not batch_eval.sufficient:

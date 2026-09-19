@@ -1,5 +1,7 @@
 """Conversations management router for chat history."""
 
+from uuid import UUID
+
 from fastapi import APIRouter, Query
 
 from src.schemas.conversation import (
@@ -10,7 +12,7 @@ from src.schemas.conversation import (
     DeleteConversationResponse,
     CancelStreamResponse,
 )
-from src.dependencies import ConversationRepoDep, DbSession, CurrentUserRequired
+from src.dependencies import ConversationRepoDep, DbSession, CurrentUserRequired, PaperRepoDep
 from src.exceptions import ResourceNotFoundError
 from src.services.task_registry import task_registry
 
@@ -20,9 +22,11 @@ router = APIRouter()
 @router.get("/conversations", response_model=ConversationListResponse)
 async def list_conversations(
     conversation_repo: ConversationRepoDep,
+    paper_repo: PaperRepoDep,
     current_user: CurrentUserRequired,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
+    arxiv_id: str | None = Query(None, description="Only threads scoped to this paper"),
 ) -> ConversationListResponse:
     """
     Get paginated list of all conversations.
@@ -34,15 +38,29 @@ async def list_conversations(
         conversation_repo: Injected conversation repository
         offset: Number of conversations to skip
         limit: Maximum number of conversations to return
+        arxiv_id: Restrict to threads scoped to one paper (paper-scoped chat)
 
     Returns:
         ConversationListResponse with paginated conversations
     """
+    scope_paper_id = None
+    if arxiv_id is not None:
+        paper = await paper_repo.get_by_arxiv_id(arxiv_id)
+        if paper is None:
+            raise ResourceNotFoundError("Paper", arxiv_id)
+        scope_paper_id = paper.id
+
     conversations, total = await conversation_repo.get_all(
         offset=offset,
         limit=limit,
         user_id=current_user.id,
+        paper_id=scope_paper_id,
     )
+
+    scoped_ids = {conv.paper_id for conv in conversations if isinstance(conv.paper_id, UUID)}
+    arxiv_by_paper = {
+        paper.id: paper.arxiv_id for paper in await paper_repo.get_by_ids(list(scoped_ids))
+    }
 
     items = []
     for conv in conversations:
@@ -61,6 +79,7 @@ async def list_conversations(
                 created_at=conv.created_at,
                 updated_at=conv.updated_at,
                 last_query=last_query,
+                arxiv_id=arxiv_by_paper.get(conv.paper_id),
             )
         )
 
@@ -76,6 +95,7 @@ async def list_conversations(
 async def get_conversation(
     session_id: str,
     conversation_repo: ConversationRepoDep,
+    paper_repo: PaperRepoDep,
     current_user: CurrentUserRequired,
 ) -> ConversationDetailResponse:
     """
@@ -116,11 +136,17 @@ async def get_conversation(
         for turn in sorted(conv.turns, key=lambda t: t.turn_number)
     ]
 
+    scoped_arxiv_id = None
+    if isinstance(conv.paper_id, UUID):
+        scoped_paper = await paper_repo.get_by_id(str(conv.paper_id))
+        scoped_arxiv_id = scoped_paper.arxiv_id if scoped_paper else None
+
     return ConversationDetailResponse(
         session_id=conv.session_id,
         title=conv.title,
         created_at=conv.created_at,
         updated_at=conv.updated_at,
+        arxiv_id=scoped_arxiv_id,
         turns=turns,
     )
 

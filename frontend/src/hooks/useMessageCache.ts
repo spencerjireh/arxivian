@@ -10,16 +10,20 @@ import type {
 } from '../types/api'
 
 export const chatKeys = {
-  messages: (sessionId: string | null) => ['chat', 'messages', sessionId] as const,
+  /** A draft (sessionId null) may be scoped so a paper panel never shares the global draft. */
+  messages: (sessionId: string | null, scope?: string) =>
+    scope && sessionId === null
+      ? (['chat', 'messages', null, scope] as const)
+      : (['chat', 'messages', sessionId] as const),
 }
 
-export function useMessageCache(sessionId: string | null) {
+export function useMessageCache(sessionId: string | null, scope?: string) {
   const queryClient = useQueryClient()
   const resetStreamingState = useChatStore((s) => s.resetStreamingState)
 
   // Subscribe to messages in query cache (reactive)
   const { data: messages = [] } = useQuery<Message[]>({
-    queryKey: chatKeys.messages(sessionId),
+    queryKey: chatKeys.messages(sessionId, scope),
     queryFn: () => [],
     staleTime: Infinity,
     gcTime: Infinity,
@@ -27,12 +31,12 @@ export function useMessageCache(sessionId: string | null) {
 
   const setMessages = useCallback(
     (updater: Message[] | ((prev: Message[]) => Message[])) => {
-      queryClient.setQueryData<Message[]>(chatKeys.messages(sessionId), (prev) => {
+      queryClient.setQueryData<Message[]>(chatKeys.messages(sessionId, scope), (prev) => {
         const prevMessages = prev ?? []
         return typeof updater === 'function' ? updater(prevMessages) : updater
       })
     },
-    [queryClient, sessionId]
+    [queryClient, sessionId, scope]
   )
 
   const loadFromHistory = useCallback(
@@ -101,9 +105,9 @@ export function useMessageCache(sessionId: string | null) {
   )
 
   const clearMessages = useCallback(() => {
-    queryClient.setQueryData(chatKeys.messages(sessionId), [])
+    queryClient.setQueryData(chatKeys.messages(sessionId, scope), [])
     resetStreamingState()
-  }, [queryClient, sessionId, resetStreamingState])
+  }, [queryClient, sessionId, scope, resetStreamingState])
 
   return {
     messages,

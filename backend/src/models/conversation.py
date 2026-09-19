@@ -25,6 +25,10 @@ class Conversation(Base):
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), index=True
     )
+    # Paper-scoped chat (SPE-277): set on creation from a paper detail page, never changed.
+    paper_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("papers.id", ondelete="SET NULL"), index=True
+    )
     metadata_: Mapped[dict | None] = mapped_column("metadata_", JSONB)
     title: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(

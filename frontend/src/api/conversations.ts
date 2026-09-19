@@ -14,6 +14,8 @@ const PAGE_SIZE = 30
 export const conversationKeys = {
   all: ['conversations'] as const,
   lists: () => [...conversationKeys.all, 'list'] as const,
+  // Nested under lists() so the existing invalidations refresh paper threads too.
+  paperList: (arxivId: string) => [...conversationKeys.lists(), 'paper', arxivId] as const,
   details: () => [...conversationKeys.all, 'detail'] as const,
   detail: (sessionId: string) => [...conversationKeys.details(), sessionId] as const,
 }
@@ -40,7 +42,23 @@ async function deleteConversation(
   return apiDelete<DeleteConversationResponse>(`/conversations/${sessionId}`)
 }
 
+async function fetchPaperConversations(arxivId: string): Promise<ConversationListResponse> {
+  return apiGet<ConversationListResponse>(
+    `/conversations?arxiv_id=${encodeURIComponent(arxivId)}&offset=0&limit=${PAGE_SIZE}`
+  )
+}
+
 // Hooks
+/** Threads scoped to one paper (paper detail chat panel). */
+export function usePaperConversations(arxivId: string | undefined) {
+  return useQuery({
+    queryKey: conversationKeys.paperList(arxivId ?? ''),
+    queryFn: () => fetchPaperConversations(arxivId!),
+    enabled: !!arxivId,
+    staleTime: 60_000,
+  })
+}
+
 export function useInfiniteConversations() {
   return useInfiniteQuery({
     queryKey: conversationKeys.lists(),

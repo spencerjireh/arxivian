@@ -35,6 +35,7 @@ from src.repositories.user_paper_state_repository import UserPaperStateRepositor
 from src.services.feed_service import FeedService
 from src.schemas.digest import category_key_for
 from src.services.scoring_service.context import ScoringContext
+from src.services.agent_service.context import ScopedPaper
 from src.schemas.scoring_state import RUBRIC_VERSION
 
 
@@ -153,6 +154,7 @@ def get_agent_service(
     can_search_arxiv: bool = True,
     daily_ingests: int | None = None,
     usage_counter_repo: UsageCounterRepository | None = None,
+    scoped_paper: ScopedPaper | None = None,
 ) -> AgentService:
     """
     Create agent service with specified LLM model.
@@ -175,6 +177,7 @@ def get_agent_service(
         can_search_arxiv: Whether the arxiv_search tool is available (tier-gated)
         daily_ingests: Daily ingest cap from tier policy (None = unlimited)
         usage_counter_repo: Repository for tracking ingest usage
+        scoped_paper: Narrow the conversation to one paper (paper-scoped chat, SPE-277)
 
     Returns:
         AgentService instance
@@ -228,6 +231,7 @@ def get_agent_service(
         graph=graph,
         daily_ingests=daily_ingests,
         usage_counter_repo=usage_counter_repo,
+        scoped_paper=scoped_paper,
     )
 
 

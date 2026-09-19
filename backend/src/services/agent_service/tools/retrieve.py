@@ -29,6 +29,7 @@ class RetrieveChunksTool(BaseTool):
         search_service: SearchService,
         default_top_k: int = 6,
         min_score: float = 0.5,
+        paper_id: str | None = None,
     ):
         """
         Initialize retrieve tool.
@@ -36,11 +37,19 @@ class RetrieveChunksTool(BaseTool):
         Args:
             search_service: Service for vector/hybrid search
             default_top_k: Default number of chunks to retrieve
-            min_score: Minimum RRF score to include a chunk (0.0-1.0)
+            min_score: Minimum RRF score to include a chunk (0.0-1.0); not applied when
+                scoped to one paper (within-paper retrieval returns raw cosine scores)
+            paper_id: When set, retrieval stays inside this paper (paper-scoped chat)
         """
         self.search_service = search_service
         self.default_top_k = default_top_k
         self.min_score = min_score
+        self.paper_id = paper_id
+        if paper_id is not None:
+            self.description = (
+                "Retrieve passages from the paper the user is currently viewing. "
+                "This is the DEFAULT tool for any question about the paper's content."
+            )
 
     @property
     def parameters_schema(self) -> dict:
@@ -69,13 +78,20 @@ class RetrieveChunksTool(BaseTool):
         log.debug("retrieve_chunks executing", query=query[:100], top_k=clamped_top_k)
 
         try:
-            results = await self.search_service.hybrid_search(
-                query=query,
-                top_k=clamped_top_k,
-                mode="hybrid",
-            )
-
-            results = [r for r in results if r.score >= self.min_score]
+            if self.paper_id is not None:
+                results = await self.search_service.retrieve_within_paper(
+                    query=query,
+                    paper_id=self.paper_id,
+                    top_k=clamped_top_k,
+                    min_score=0.0,
+                )
+            else:
+                results = await self.search_service.hybrid_search(
+                    query=query,
+                    top_k=clamped_top_k,
+                    mode="hybrid",
+                )
+                results = [r for r in results if r.score >= self.min_score]
 
             chunks = [
                 {

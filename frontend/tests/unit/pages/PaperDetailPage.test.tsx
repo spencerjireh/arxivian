@@ -20,6 +20,11 @@ vi.mock('../../../src/api/paperState', () => ({
   useSetPaperState: () => ({ mutateAsync: setMutateAsync }),
   useClearPaperState: () => ({ mutateAsync: clearMutateAsync }),
 }))
+vi.mock('../../../src/components/paper/ScopedChatPanel', () => ({
+  default: ({ arxivId, sessionId }: { arxivId: string; sessionId: string | null }) => (
+    <div data-testid="scoped-chat">{arxivId}:{sessionId ?? 'new'}</div>
+  ),
+}))
 
 function scoreState(overrides: Record<string, unknown>) {
   return { data: undefined, isLoading: false, error: null, pollTimedOut: false, restartPolling, ...overrides }
@@ -82,5 +87,15 @@ describe('PaperDetailPage', () => {
     expect(setMutateAsync).toHaveBeenCalledWith({ arxivId: '2401.00001', body: { state: 'saved' } })
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(setMutateAsync).toHaveBeenCalledWith({ arxivId: '2401.00001', body: { state: 'dismissed' } })
+  })
+
+  it('mounts the scoped chat panel only when ready, with the session from the URL', () => {
+    mockUsePaperScore.mockReturnValue(scoreState({ data: { status: 'pending', task_id: 't1' } }))
+    const { unmount } = renderPage()
+    expect(screen.queryByTestId('scoped-chat')).not.toBeInTheDocument()
+    unmount()
+    mockUsePaperScore.mockReturnValue(scoreState({ data: { status: 'ready', detail: makePaperScoreDetail() } }))
+    renderPage('/papers/2401.00001?session=abc')
+    expect(screen.getByTestId('scoped-chat')).toHaveTextContent('2401.00001:abc')
   })
 })

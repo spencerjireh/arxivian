@@ -174,7 +174,7 @@ Additive and reversible (system is in production):
    parallel but is not on the critical path.
 2. **Feed alongside chat (v1).** Ship feed, cards, paper detail, onboarding as new routes;
    chat remains default; existing users see a banner. Scoped chat reuses the current agent
-   with narrowed context.
+   with narrowed context. *Shipped 2026-09-19 (SPE-273..277; PRs #18-#22).*
 3. **Flip and remove (v1).** Feed becomes default home; global chat tab + conversation-history
    UI removed; conversation data archived. Library and lifecycle states ship here if not
    earlier.
