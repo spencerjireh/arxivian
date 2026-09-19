@@ -12,7 +12,11 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
-from src.schemas.digest import compute_provisional_composite
+from src.schemas.digest import (
+    CompositeWeights,
+    compute_composite,
+    compute_provisional_composite,
+)
 from src.tasks.digest_tasks import _category_key, _week_start, build_digest_for_week
 
 NOW = datetime(2026, 8, 5, 12, 0, tzinfo=timezone.utc)  # a Wednesday
@@ -92,7 +96,16 @@ class TestHelpers:
     def test_category_key_is_sorted(self):
         assert _category_key(["cs.LG", "cs.AI", "cs.CV"]) == "cs.AI,cs.CV,cs.LG"
 
-    def test_composite_treats_nulls_as_zero(self):
-        # 0.35*80 + 0.35*80 + 0.30*0 = 56.0
-        assert compute_provisional_composite(80, 80, None) == 56.0
+    def test_composite_renormalizes_over_present_scores(self):
+        # demand NULL: (0.35*80 + 0.35*60) / 0.70 = 70.0, not 0.35*80 + 0.35*60 = 49.0
+        assert compute_provisional_composite(80, 60, None) == 70.0
+        assert compute_provisional_composite(80, 80, None) == 80.0
         assert compute_provisional_composite(None, None, None) == 0.0
+        # all present: plain weighted sum, unchanged from SPE-271
+        assert compute_provisional_composite(80, 80, 85) == 81.5
+
+    def test_composite_custom_weights(self):
+        weights = CompositeWeights(method_clarity=0.5, resource_feasibility=0.5, demand=0.0)
+        assert compute_composite(80, 60, 85, weights=weights) == 70.0
+        assert compute_composite(80, None, None, weights=weights) == 80.0
+        assert compute_composite(None, None, 85, weights=weights) == 0.0

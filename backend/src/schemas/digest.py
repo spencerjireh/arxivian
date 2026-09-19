@@ -10,12 +10,48 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-# Provisional composite weights (proposed default in `docs/design/scoring-rubric.md`). The
-# data-availability gate is applied by selection (only PASS papers enter a digest), so it is
-# a constant 1 here and omitted from the formula.
-_METHOD_WEIGHT = 0.35
-_FEASIBILITY_WEIGHT = 0.35
-_DEMAND_WEIGHT = 0.30
+
+class CompositeWeights(BaseModel):
+    """Weights over the three scored sub-dimensions.
+
+    The data-availability gate is applied by selection (only PASS papers enter a digest),
+    so it is a constant 1 and omitted from the formula. Per-user weights (SPE-273) reuse
+    this shape; the defaults are the proposed starting point in `docs/design/scoring-rubric.md`.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    method_clarity: float = Field(0.35, ge=0.0)
+    resource_feasibility: float = Field(0.35, ge=0.0)
+    demand: float = Field(0.30, ge=0.0)
+
+
+DEFAULT_WEIGHTS = CompositeWeights()
+
+
+def compute_composite(
+    method_clarity_score: int | None,
+    resource_feasibility_score: int | None,
+    demand_score: int | None,
+    *,
+    weights: CompositeWeights = DEFAULT_WEIGHTS,
+) -> float:
+    """Weighted mean over the sub-scores that are present; weights renormalize to 1.
+
+    A NULL sub-score (a soft-failed lookup, e.g. Semantic Scholar demand on the keyless
+    pool, SPE-284) is excluded rather than counted as 0, so a paper is not penalized for a
+    lookup that happened to fail. All NULL -> 0.0.
+    """
+    pairs = (
+        (method_clarity_score, weights.method_clarity),
+        (resource_feasibility_score, weights.resource_feasibility),
+        (demand_score, weights.demand),
+    )
+    present = [(score, weight) for score, weight in pairs if score is not None]
+    total_weight = sum(weight for _, weight in present)
+    if total_weight <= 0:
+        return 0.0
+    return round(sum(score * weight for score, weight in present) / total_weight, 2)
 
 
 def compute_provisional_composite(
@@ -23,17 +59,8 @@ def compute_provisional_composite(
     resource_feasibility_score: int | None,
     demand_score: int | None,
 ) -> float:
-    """Weighted sub-score sum for the bake-time default order (null sub-scores count as 0).
-
-    Provisional only: read time recomputes with per-user weights + compute-profile match.
-    """
-    method = method_clarity_score or 0
-    feasibility = resource_feasibility_score or 0
-    demand = demand_score or 0
-    return round(
-        _METHOD_WEIGHT * method + _FEASIBILITY_WEIGHT * feasibility + _DEMAND_WEIGHT * demand,
-        2,
-    )
+    """Bake-time default order with the default weights (see `compute_composite`)."""
+    return compute_composite(method_clarity_score, resource_feasibility_score, demand_score)
 
 
 class DigestRankingEntry(BaseModel):
