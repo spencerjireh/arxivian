@@ -186,6 +186,7 @@ def mock_user():
     user.last_name = "User"
     user.tier = "free"
     user.profile_image_url = None
+    user.preferences = {}
     user.created_at = datetime.now(timezone.utc)
     user.updated_at = datetime.now(timezone.utc)
     user.last_login_at = datetime.now(timezone.utc)
@@ -210,6 +211,15 @@ def mock_user_repo():
     repo = AsyncMock()
     repo.update_preferences = AsyncMock()
     repo.get_or_create = AsyncMock(return_value=(Mock(), False))
+    return repo
+
+
+@pytest.fixture
+def mock_usage_repo():
+    """Create a mock UsageCounterRepository."""
+    repo = AsyncMock()
+    repo.get_today_query_count = AsyncMock(return_value=0)
+    repo.get_today_ingest_count = AsyncMock(return_value=0)
     return repo
 
 
@@ -246,6 +256,7 @@ def _create_test_client(
     mock_user_repo,
     mock_state_repo=None,
     mock_feed_service=None,
+    mock_usage_repo=None,
     *,
     mock_user=None,
 ):
@@ -271,6 +282,7 @@ def _create_test_client(
         get_user_repository,
         get_user_paper_state_repository,
         get_feed_service_dep,
+        get_usage_counter_repository,
         verify_api_key,
     )
     from src.factories.client_factories import get_embeddings_client
@@ -296,6 +308,8 @@ def _create_test_client(
     app.dependency_overrides[get_feed_service_dep] = lambda: (
         mock_feed_service if mock_feed_service is not None else AsyncMock()
     )
+    if mock_usage_repo is not None:
+        app.dependency_overrides[get_usage_counter_repository] = lambda: mock_usage_repo
     # Always override Redis and chat guard to avoid needing a real Redis in API tests
     app.dependency_overrides[get_redis] = lambda: AsyncMock()
     app.dependency_overrides[enforce_chat_limit] = lambda: None
@@ -326,6 +340,7 @@ def client(
     mock_user_repo,
     mock_state_repo,
     mock_feed_service,
+    mock_usage_repo,
 ):
     """Create TestClient with all dependencies overridden including auth."""
     yield from _create_test_client(
@@ -341,6 +356,7 @@ def client(
         mock_user_repo,
         mock_state_repo,
         mock_feed_service,
+        mock_usage_repo,
         mock_user=mock_user,
     )
 

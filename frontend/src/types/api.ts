@@ -268,6 +268,13 @@ export interface MeResponse {
   ingests_used_today: number
   can_view_execution_details: boolean
   preferences?: UserPreferences
+  onboarded?: boolean
+}
+
+export interface FeedProfileInput {
+  categories: string[]
+  compute_profile: ComputeProfile
+  keywords: string[]
 }
 
 export type ComputeProfile = 'laptop' | 'single_gpu' | 'cloud'

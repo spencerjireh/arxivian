@@ -10,6 +10,7 @@ export interface UserState {
   error: string | null
 
   fetchMe: () => Promise<void>
+  setMe: (me: MeResponse) => void
   clear: () => void
 }
 
@@ -27,6 +28,8 @@ export const useUserStore = create<UserState>()((set) => ({
       set({ loading: false, error: 'Failed to load user info' })
     }
   },
+
+  setMe: (me) => set({ me, loading: false, error: null }),
 
   clear: () => set({ me: null, loading: false, error: null }),
 }))
