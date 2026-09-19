@@ -35,9 +35,7 @@ def mock_database_init():
         stack.enter_context(patch("src.database.init_db", new_callable=AsyncMock))
         mock_engine = stack.enter_context(patch("src.database.engine"))
         mock_engine.dispose = AsyncMock()
-        stack.enter_context(
-            patch("src.main.AsyncSessionLocal", side_effect=mock_session_factory)
-        )
+        stack.enter_context(patch("src.main.AsyncSessionLocal", side_effect=mock_session_factory))
         stack.enter_context(patch("src.tiers.init_system_user", new_callable=AsyncMock))
         mock_redis_factory = stack.enter_context(patch("redis.asyncio.from_url"))
         mock_redis_factory.return_value = AsyncMock()
@@ -167,9 +165,7 @@ def mock_settings():
     settings.cors_origins = ""
     settings.debug = False
     settings.log_level = "INFO"
-    settings.get_allowed_models_list = Mock(
-        return_value=["openai/gpt-4o-mini", "openai/gpt-4o"]
-    )
+    settings.get_allowed_models_list = Mock(return_value=["openai/gpt-4o-mini", "openai/gpt-4o"])
     settings.is_model_allowed = Mock(return_value=True)
     settings.api_key = "test-api-key"
     settings.clerk_domain = "test-clerk.clerk.accounts.dev"
@@ -216,6 +212,26 @@ def mock_user_repo():
     return repo
 
 
+@pytest.fixture
+def mock_state_repo():
+    """Create a mock UserPaperStateRepository."""
+    repo = AsyncMock()
+    repo.get = AsyncMock(return_value=None)
+    repo.get_many = AsyncMock(return_value={})
+    repo.upsert = AsyncMock()
+    repo.delete = AsyncMock(return_value=True)
+    repo.list_for_user = AsyncMock(return_value=([], 0))
+    return repo
+
+
+@pytest.fixture
+def mock_feed_service():
+    """Create a mock FeedService."""
+    service = AsyncMock()
+    service.get_feed = AsyncMock()
+    return service
+
+
 def _create_test_client(
     mock_db_session,
     mock_paper_repo,
@@ -227,6 +243,8 @@ def _create_test_client(
     mock_settings,
     mock_task_exec_repo,
     mock_user_repo,
+    mock_state_repo=None,
+    mock_feed_service=None,
     *,
     mock_user=None,
 ):
@@ -250,6 +268,8 @@ def _create_test_client(
         get_redis,
         get_task_execution_repository,
         get_user_repository,
+        get_user_paper_state_repository,
+        get_feed_service_dep,
         verify_api_key,
     )
     from src.factories.client_factories import get_embeddings_client
@@ -269,6 +289,12 @@ def _create_test_client(
     app.dependency_overrides[get_settings] = lambda: mock_settings
     app.dependency_overrides[get_task_execution_repository] = lambda: mock_task_exec_repo
     app.dependency_overrides[get_user_repository] = lambda: mock_user_repo
+    app.dependency_overrides[get_user_paper_state_repository] = lambda: (
+        mock_state_repo if mock_state_repo is not None else AsyncMock()
+    )
+    app.dependency_overrides[get_feed_service_dep] = lambda: (
+        mock_feed_service if mock_feed_service is not None else AsyncMock()
+    )
     # Always override Redis and chat guard to avoid needing a real Redis in API tests
     app.dependency_overrides[get_redis] = lambda: AsyncMock()
     app.dependency_overrides[enforce_chat_limit] = lambda: None
@@ -297,6 +323,8 @@ def client(
     mock_user,
     mock_task_exec_repo,
     mock_user_repo,
+    mock_state_repo,
+    mock_feed_service,
 ):
     """Create TestClient with all dependencies overridden including auth."""
     yield from _create_test_client(
@@ -310,6 +338,8 @@ def client(
         mock_settings,
         mock_task_exec_repo,
         mock_user_repo,
+        mock_state_repo,
+        mock_feed_service,
         mock_user=mock_user,
     )
 

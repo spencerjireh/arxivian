@@ -286,3 +286,97 @@ export interface Message {
   ingestResolved?: boolean
   ingestDeclined?: boolean
 }
+
+// Feed / scoring types (Phase 2, SPE-274)
+
+export type PaperLifecycleState = 'saved' | 'dismissed' | 'implementing' | 'shipped'
+
+export interface PaperState {
+  state: PaperLifecycleState
+  repo_url: string | null
+  dismissal_reason: string | null
+  updated_at: string
+}
+
+export interface SetPaperStateBody {
+  state: PaperLifecycleState
+  repo_url?: string
+  dismissal_reason?: string
+}
+
+export interface FeedPaper {
+  arxiv_id: string
+  title: string
+  authors: string[]
+  categories: string[]
+  published_date: string
+  pdf_url: string
+}
+
+export interface FeedScores {
+  method_clarity: number | null
+  resource_feasibility: number | null
+  data_availability: number | null
+  demand: number | null
+  composite: number
+}
+
+export interface FeedSignals {
+  pseudocode_present: boolean
+  public_datasets: boolean
+  single_gpu: boolean
+  code_released: boolean
+  compute_match: boolean | null
+}
+
+export type ScoreDimension =
+  | 'method_clarity'
+  | 'resource_feasibility'
+  | 'data_availability'
+  | 'demand'
+
+export interface FeedItem {
+  paper: FeedPaper
+  scores: FeedScores
+  verdict: string
+  signals: FeedSignals
+  low_confidence: ScoreDimension[]
+  keyword_match: boolean
+  state: PaperState | null
+  scored_at: string
+}
+
+export interface AvailableWeek {
+  week_start: string
+  paper_count: number
+}
+
+export interface FeedResponse {
+  week_start: string | null
+  available_weeks: AvailableWeek[]
+  categories_available: string[]
+  total: number
+  offset: number
+  limit: number
+  items: FeedItem[]
+}
+
+export interface FeedParams {
+  week?: string
+  category?: string
+  min_score?: number
+  include_dismissed?: boolean
+  limit?: number
+}
+
+export interface UserPaperListItem {
+  paper: FeedPaper
+  state: PaperState
+}
+
+export interface UserPaperListResponse {
+  total: number
+  offset: number
+  limit: number
+  items: UserPaperListItem[]
+}

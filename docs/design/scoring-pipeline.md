@@ -313,9 +313,21 @@ New tables (shipped in migration `019_add_scoring_tables`; models in `backend/sr
 | `digests` | week identifier, category set, cached candidate ranking snapshot (sub-scores, not a per-user order). |
 
 Onboarding profile (categories, compute profile, interest keywords) extends the existing
-**`preferences`** JSONB column on the `users` model (`models/user.py`) -- the same blob
-`scheduled_tasks.py::daily_ingest_task` already reads as `preferences["arxiv_searches"]`.
-It is a column, not a `user_preferences` table; no new table is needed for the profile.
+**`preferences`** JSONB column on the `users` model (`models/user.py`) under its own key,
+`preferences["feed_profile"]` (`schemas/users.py::FeedProfile`), next to the
+`preferences["arxiv_searches"]` blob `scheduled_tasks.py::daily_ingest_task` reads. It is a
+column, not a `user_preferences` table; no new table is needed for the profile.
+
+**Read path (Phase 2, SPE-274):** `services/feed_service/` + `schemas/feed.py`. The digest
+row is only the candidate set; every card is rebuilt from the live `papers` / `paper_scores`
+/ `user_paper_states` rows (three `IN` batch loads per page). Read-time personalization:
+per-user composite weights (`compute_composite`, NULL sub-scores renormalize -- SPE-284),
+compute-profile match (`laptop` needs feasibility level >= 3, `single_gpu` >= 2, `cloud`
+>= 1), keyword tie-break. The verdict line is a code template over the stored judgments
+(task type, model family, compute tier, data access) -- no LLM at read time. Signal chips:
+`pseudocode_present` (`algorithm_given`), `public_datasets` (gate PASS and not "not
+stated"), `single_gpu` (level >= 2), `code_released` (the authors' own statement; never a
+"no code" claim). Dimensions with confidence < 0.5 are flagged, not hidden.
 
 **Store-evidence-not-numbers** is the governing rule: sub-scores and their supporting
 spans are first-class, which makes both the UI breakdown trustworthy and the rubric

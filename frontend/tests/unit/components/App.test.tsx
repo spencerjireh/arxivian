@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import type { RouteObject } from 'react-router-dom'
 
@@ -20,6 +21,9 @@ vi.mock('../../../src/pages/PricingPage', () => ({
 }))
 vi.mock('../../../src/pages/NotFoundPage', () => ({
   default: () => <div>Page not found</div>,
+}))
+vi.mock('../../../src/pages/FeedPage', () => ({
+  default: () => <h1>Feed page stub</h1>,
 }))
 
 // Eagerly resolve the App module (and all transitive non-mocked imports)
@@ -64,5 +68,20 @@ describe('App routes', () => {
     expect(
       await screen.findByRole('heading', { name: /Simple, transparent pricing/ }),
     ).toBeInTheDocument()
+  })
+
+  it('renders FeedPage at /feed inside the protected layout', async () => {
+    const router = createMemoryRouter(routes, {
+      initialEntries: ['/feed'],
+    })
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    )
+
+    expect(await screen.findByRole('heading', { name: /Feed page stub/ })).toBeInTheDocument()
   })
 })

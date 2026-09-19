@@ -8,7 +8,19 @@ compute-profile match are applied at read time (SPE-274). See `docs/design/scori
 
 from __future__ import annotations
 
+from datetime import date, timedelta
+
 from pydantic import BaseModel, ConfigDict, Field
+
+
+def week_start_for(day: date) -> date:
+    """Monday of `day`'s ISO week (the `digests.week_start` key)."""
+    return day - timedelta(days=day.weekday())
+
+
+def category_key_for(categories: list[str]) -> str:
+    """Stable key for a category set (matches the `digests` unique constraint)."""
+    return ",".join(sorted(categories))
 
 
 class CompositeWeights(BaseModel):
