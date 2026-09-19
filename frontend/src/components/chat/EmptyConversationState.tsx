@@ -2,6 +2,7 @@ import { useState } from 'react'
 import logoIcon from '../../assets/logo-icon.png'
 import ChatInput from './ChatInput'
 import SuggestionChips from './SuggestionChips'
+import FeedBanner from '../feed/FeedBanner'
 
 interface EmptyConversationStateProps {
   onSend: (query: string) => void
@@ -19,6 +20,8 @@ export default function EmptyConversationState({
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
       <div className="w-full max-w-2xl flex flex-col items-center">
+        <FeedBanner />
+
         {/* Icon */}
         <div
           style={{ '--stagger-index': 0 } as React.CSSProperties}

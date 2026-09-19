@@ -24,6 +24,10 @@ from src.repositories.conversation_repository import ConversationRepository
 from src.repositories.user_repository import UserRepository
 from src.repositories.task_execution_repository import TaskExecutionRepository
 from src.repositories.usage_counter_repository import UsageCounterRepository
+from src.repositories.scoring_repository import ScoringRepository
+from src.repositories.digest_repository import DigestRepository
+from src.repositories.user_paper_state_repository import UserPaperStateRepository
+from src.services.feed_service import FeedService
 from src.models.user import User
 from src.config import Settings, get_settings
 from src.schemas.stream import StreamRequest
@@ -47,6 +51,7 @@ from src.factories.service_factories import (
     get_chunking_service,
     get_pdf_parser,
     get_ingest_service,
+    get_feed_service,
 )
 
 log = get_logger(__name__)
@@ -72,7 +77,13 @@ def get_ingest_service_dep(db: DbSession) -> IngestService:
     return get_ingest_service(db)
 
 
+def get_feed_service_dep(db: DbSession) -> FeedService:
+    """Get FeedService with database session."""
+    return get_feed_service(db)
+
+
 SearchServiceDep = Annotated[SearchService, Depends(get_search_service_dep)]
+FeedServiceDep = Annotated[FeedService, Depends(get_feed_service_dep)]
 IngestServiceDep = Annotated[IngestService, Depends(get_ingest_service_dep)]
 ChunkingServiceDep = Annotated[ChunkingService, Depends(get_chunking_service)]
 PDFParserDep = Annotated[PDFParser, Depends(get_pdf_parser)]
@@ -142,6 +153,33 @@ def get_usage_counter_repository(db: DbSession) -> UsageCounterRepository:
 
 
 UsageCounterRepoDep = Annotated[UsageCounterRepository, Depends(get_usage_counter_repository)]
+
+
+# ============================================================================
+# Feed-pivot repositories (scores, digests, per-user paper state)
+# ============================================================================
+
+
+def get_scoring_repository(db: DbSession) -> ScoringRepository:
+    """Get ScoringRepository with database session."""
+    return ScoringRepository(db)
+
+
+def get_digest_repository(db: DbSession) -> DigestRepository:
+    """Get DigestRepository with database session."""
+    return DigestRepository(db)
+
+
+def get_user_paper_state_repository(db: DbSession) -> UserPaperStateRepository:
+    """Get UserPaperStateRepository with database session."""
+    return UserPaperStateRepository(db)
+
+
+ScoringRepoDep = Annotated[ScoringRepository, Depends(get_scoring_repository)]
+DigestRepoDep = Annotated[DigestRepository, Depends(get_digest_repository)]
+UserPaperStateRepoDep = Annotated[
+    UserPaperStateRepository, Depends(get_user_paper_state_repository)
+]
 
 
 # ============================================================================

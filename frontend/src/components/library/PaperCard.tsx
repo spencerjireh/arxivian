@@ -1,22 +1,10 @@
 import { ExternalLink } from 'lucide-react'
 import clsx from 'clsx'
 import type { PaperListItem } from '../../types/api'
+import { formatAuthors, formatDate } from '../../utils/formatting'
 
 interface PaperCardProps {
   paper: PaperListItem
-}
-
-function formatAuthors(authors: string[]): string {
-  if (authors.length <= 3) return authors.join(', ')
-  return `${authors.slice(0, 3).join(', ')} +${authors.length - 3} more`
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
 }
 
 export default function PaperCard({ paper }: PaperCardProps) {

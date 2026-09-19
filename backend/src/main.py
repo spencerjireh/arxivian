@@ -19,6 +19,8 @@ from src.routers import (
     feedback,
     users,
     webhooks,
+    feed,
+    paper_states,
 )
 
 # Import middleware
@@ -135,6 +137,8 @@ app.include_router(ops.router, prefix="/api/v1", tags=["Ops"])
 app.include_router(feedback.router, prefix="/api/v1", tags=["Feedback"])
 app.include_router(users.router, prefix="/api/v1", tags=["Users"])
 app.include_router(webhooks.router, prefix="/api/v1", tags=["Webhooks"])
+app.include_router(feed.router, prefix="/api/v1", tags=["Feed"])
+app.include_router(paper_states.router, prefix="/api/v1", tags=["Paper States"])
 
 
 @app.get("/")

@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.digest import Digest
@@ -59,6 +59,16 @@ class DigestRepository:
             created=existing is None,
         )
         return digest
+
+    async def list_weeks(self, category_key: str) -> list[tuple[date, int]]:
+        """`(week_start, paper_count)` for every built digest under `category_key`, newest first."""
+        stmt = (
+            select(Digest.week_start, func.jsonb_array_length(Digest.ranking))
+            .where(Digest.category_key == category_key)
+            .order_by(Digest.week_start.desc())
+        )
+        rows = (await self.session.execute(stmt)).all()
+        return [(week_start, int(count)) for week_start, count in rows]
 
     async def get_by_week(self, week_start: date, category_key: str) -> Digest | None:
         """Fetch the cached snapshot for a week + category set, if built."""

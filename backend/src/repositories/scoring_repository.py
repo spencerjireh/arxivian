@@ -113,6 +113,35 @@ class ScoringRepository:
         )
         return score
 
+    async def get_by_paper_id(
+        self,
+        paper_id: uuid.UUID,
+        rubric_version: str,
+        *,
+        with_evidence: bool = False,
+    ) -> PaperScore | None:
+        """The `(paper_id, rubric_version)` row, optionally with its evidence loaded."""
+        stmt = select(PaperScore).where(
+            PaperScore.paper_id == paper_id,
+            PaperScore.rubric_version == rubric_version,
+        )
+        if with_evidence:
+            stmt = stmt.options(selectinload(PaperScore.evidence))
+        return (await self.session.execute(stmt)).scalar_one_or_none()
+
+    async def get_by_paper_ids(
+        self, paper_ids: list[uuid.UUID], rubric_version: str
+    ) -> dict[uuid.UUID, PaperScore]:
+        """Batch fetch (no evidence) keyed by paper id, for feed enrichment."""
+        if not paper_ids:
+            return {}
+        stmt = select(PaperScore).where(
+            PaperScore.paper_id.in_(paper_ids),
+            PaperScore.rubric_version == rubric_version,
+        )
+        rows = (await self.session.execute(stmt)).scalars().all()
+        return {row.paper_id: row for row in rows}
+
     async def list_scores_for_digest(
         self,
         *,

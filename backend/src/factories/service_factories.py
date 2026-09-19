@@ -30,6 +30,10 @@ from src.repositories.chunk_repository import ChunkRepository
 from src.repositories.search_repository import SearchRepository
 from src.repositories.conversation_repository import ConversationRepository
 from src.repositories.scoring_repository import ScoringRepository
+from src.repositories.digest_repository import DigestRepository
+from src.repositories.user_paper_state_repository import UserPaperStateRepository
+from src.services.feed_service import FeedService
+from src.schemas.digest import category_key_for
 from src.services.scoring_service.context import ScoringContext
 from src.schemas.scoring_state import RUBRIC_VERSION
 
@@ -224,4 +228,20 @@ def get_agent_service(
         graph=graph,
         daily_ingests=daily_ingests,
         usage_counter_repo=usage_counter_repo,
+    )
+
+
+def get_feed_service(db_session: AsyncSession) -> FeedService:
+    """Create FeedService over the request session (Phase 2 feed read path).
+
+    Not cached: depends on the request-scoped session. The digest key is the triage
+    category set, matching what `build_digest_task` writes.
+    """
+    settings = get_settings()
+    return FeedService(
+        digest_repo=DigestRepository(db_session),
+        scoring_repo=ScoringRepository(db_session),
+        paper_repo=PaperRepository(db_session),
+        state_repo=UserPaperStateRepository(db_session),
+        category_key=category_key_for(settings.triage_categories),
     )

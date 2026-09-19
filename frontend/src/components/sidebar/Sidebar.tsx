@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { Plus, PanelLeftClose, Loader2, MessageSquare, BookOpen, Settings } from 'lucide-react'
+import { Plus, PanelLeftClose, Loader2, MessageSquare, BookOpen, Settings, Newspaper } from 'lucide-react'
 import clsx from 'clsx'
 import { useInfiniteConversations, useDeleteConversation } from '../../api/conversations'
 import { useSidebarStore } from '../../stores/sidebarStore'
@@ -10,9 +10,11 @@ import Button from '../ui/Button'
 import ErrorBoundary from '../ui/ErrorBoundary'
 import SectionErrorFallback from '../ui/SectionErrorFallback'
 import { getUserMessage } from '../../lib/errors'
+import { matchesNav } from '../../lib/nav'
 import logoIcon from '../../assets/logo-icon.png'
 
 const navItems = [
+  { path: '/feed', label: 'Feed', icon: Newspaper },
   { path: '/chat', label: 'Chat', icon: MessageSquare },
   { path: '/library', label: 'Library', icon: BookOpen },
   { path: '/settings', label: 'Settings', icon: Settings },
@@ -59,9 +61,7 @@ export default function Sidebar() {
           New conversation
         </Button>
         {navItems.map(({ path, label, icon: Icon }) => {
-          const isActive = path === '/chat'
-            ? location.pathname.startsWith('/chat')
-            : location.pathname === path
+          const isActive = matchesNav(path, location.pathname)
           const target = path === '/chat' && lastSessionId
             ? `/chat/${lastSessionId}`
             : path

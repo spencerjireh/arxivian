@@ -9,7 +9,7 @@ Scheduled after `weekly-triage` so scored papers exist. Follows the `daily_inges
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +19,12 @@ from src.config import get_settings
 from src.database import AsyncSessionLocal
 from src.repositories.digest_repository import DigestRepository
 from src.repositories.scoring_repository import ScoringRepository
-from src.schemas.digest import DigestRankingEntry, compute_provisional_composite
+from src.schemas.digest import (
+    DigestRankingEntry,
+    category_key_for,
+    compute_provisional_composite,
+    week_start_for,
+)
 from src.schemas.scoring_state import RUBRIC_VERSION
 from src.tasks.utils import run_async
 from src.utils.logger import get_logger
@@ -27,14 +32,10 @@ from src.utils.logger import get_logger
 log = get_logger(__name__)
 
 
-def _week_start(today: date) -> date:
-    """Monday of `today`'s ISO week."""
-    return today - timedelta(days=today.weekday())
-
-
-def _category_key(categories: list[str]) -> str:
-    """Stable key for the category set (matches the `digests` unique constraint)."""
-    return ",".join(sorted(categories))
+# Kept as module-level names for the existing unit tests; the helpers live in
+# `schemas/digest.py` so the feed read path can import them without pulling in Celery.
+_week_start = week_start_for
+_category_key = category_key_for
 
 
 async def build_digest_for_week(

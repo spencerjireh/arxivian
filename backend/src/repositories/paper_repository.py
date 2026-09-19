@@ -1,5 +1,6 @@
 """Repository for Paper model operations."""
 
+import uuid
 from typing import Optional, List, Literal
 from datetime import datetime, timezone
 from sqlalchemy import select, update, delete, func, desc, asc, or_, text
@@ -23,6 +24,13 @@ class PaperRepository:
         paper = result.scalar_one_or_none()
         log.debug("query result", found=paper is not None)
         return paper
+
+    async def get_by_ids(self, paper_ids: List[uuid.UUID]) -> List[Paper]:
+        """Batch fetch by UUID (feed enrichment). Empty input -> empty list, no query."""
+        if not paper_ids:
+            return []
+        result = await self.session.execute(select(Paper).where(Paper.id.in_(paper_ids)))
+        return list(result.scalars().all())
 
     async def get_by_arxiv_id(self, arxiv_id: str) -> Optional[Paper]:
         """Get paper by arXiv ID."""

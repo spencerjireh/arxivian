@@ -65,6 +65,9 @@ async function handleResponse<T>(response: Response): Promise<T> {
     }
     throw new ApiError(response.status, response.statusText, message)
   }
+  if (response.status === 204) {
+    return undefined as T
+  }
   return response.json()
 }
 
@@ -81,6 +84,26 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   const headers = await getAuthHeaders()
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  })
+  return handleResponse<T>(response)
+}
+
+export async function apiPut<T>(path: string, body: unknown): Promise<T> {
+  const headers = await getAuthHeaders()
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(body),
+  })
+  return handleResponse<T>(response)
+}
+
+export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
+  const headers = await getAuthHeaders()
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'PATCH',
     headers,
     body: JSON.stringify(body),
   })

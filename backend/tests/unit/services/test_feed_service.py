@@ -1,0 +1,242 @@
+"""Tests for FeedService.get_feed over mocked repositories."""
+
+import uuid
+from datetime import date, datetime, timezone
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
+import pytest
+
+from src.services.feed_service import FeedService
+
+WEEK = date(2026, 8, 3)
+KEY = "cs.AI,cs.LG"
+
+
+def _dim(name, level, max_level, confidence=0.9, judgments=()):
+    probs = {str(i): 0.0 for i in range(max_level + 1)}
+    probs[str(level)] = 1.0
+    return {
+        "dimension": name,
+        "level": level,
+        "max_level": max_level,
+        "expected": float(level),
+        "probabilities": probs,
+        "confidence": confidence,
+        "judgments": list(judgments),
+        "evidence": [],
+        "reasoning": "",
+    }
+
+
+def _paper(arxiv_id, categories=("cs.LG",), title="T", abstract="A"):
+    return SimpleNamespace(
+        id=uuid.uuid4(),
+        arxiv_id=arxiv_id,
+        title=title,
+        authors=["A"],
+        abstract=abstract,
+        categories=list(categories),
+        published_date=datetime(2026, 8, 1, tzinfo=timezone.utc),
+        pdf_url=f"https://arxiv.org/pdf/{arxiv_id}.pdf",
+    )
+
+
+def _score(paper, *, method=80, feasibility=80, demand=85, feas_level=3):
+    return SimpleNamespace(
+        paper_id=paper.id,
+        method_clarity_score=method,
+        resource_feasibility_score=feasibility,
+        data_availability_score=100,
+        demand_score=demand,
+        dimensions={
+            "method_clarity": _dim("method_clarity", 3, 4),
+            "resource_feasibility": _dim("resource_feasibility", feas_level, 4),
+            "data_availability": _dim("data_availability", 1, 1),
+        },
+        attributes=None,
+        updated_at=datetime(2026, 8, 4, tzinfo=timezone.utc),
+    )
+
+
+def _state(paper, state):
+    return SimpleNamespace(
+        paper_id=paper.id,
+        state=state,
+        repo_url=None,
+        dismissal_reason=None,
+        updated_at=datetime(2026, 8, 5, tzinfo=timezone.utc),
+    )
+
+
+def _entry(paper, composite=80.0):
+    return {
+        "paper_id": str(paper.id),
+        "arxiv_id": paper.arxiv_id,
+        "title": paper.title,
+        "method_clarity_score": 80,
+        "resource_feasibility_score": 80,
+        "data_availability_score": 100,
+        "demand_score": 85,
+        "provisional_composite": composite,
+    }
+
+
+def _user(preferences=None):
+    return SimpleNamespace(id=uuid.uuid4(), preferences=preferences)
+
+
+def _service(*, weeks, digest, papers, scores, states):
+    digest_repo = AsyncMock()
+    digest_repo.list_weeks = AsyncMock(return_value=weeks)
+    digest_repo.get_by_week = AsyncMock(return_value=digest)
+    scoring_repo = AsyncMock()
+    scoring_repo.get_by_paper_ids = AsyncMock(return_value={s.paper_id: s for s in scores})
+    paper_repo = AsyncMock()
+    paper_repo.get_by_ids = AsyncMock(return_value=papers)
+    state_repo = AsyncMock()
+    state_repo.get_many = AsyncMock(return_value={s.paper_id: s for s in states})
+    return FeedService(
+        digest_repo=digest_repo,
+        scoring_repo=scoring_repo,
+        paper_repo=paper_repo,
+        state_repo=state_repo,
+        category_key=KEY,
+    )
+
+
+def _digest(entries, categories=("cs.AI", "cs.LG")):
+    return SimpleNamespace(week_start=WEEK, categories=list(categories), ranking=entries)
+
+
+@pytest.mark.unit
+class TestGetFeed:
+    async def test_no_digests(self):
+        svc = _service(weeks=[], digest=None, papers=[], scores=[], states=[])
+        out = await svc.get_feed(_user())
+        assert out.week_start is None and out.items == [] and out.available_weeks == []
+
+    async def test_missing_week_returns_empty_not_error(self):
+        svc = _service(weeks=[(WEEK, 3)], digest=None, papers=[], scores=[], states=[])
+        out = await svc.get_feed(_user(), week=date(2026, 7, 1))
+        assert out.week_start == date(2026, 6, 29)
+        assert out.total == 0 and len(out.available_weeks) == 1
+
+    async def test_default_week_is_newest_and_snaps_explicit_week(self):
+        p = _paper("1")
+        svc = _service(
+            weeks=[(WEEK, 1), (date(2026, 7, 27), 1)],
+            digest=_digest([_entry(p)]),
+            papers=[p],
+            scores=[_score(p)],
+            states=[],
+        )
+        out = await svc.get_feed(_user())
+        assert out.week_start == WEEK
+        svc.digest_repo.get_by_week.assert_awaited_with(WEEK, KEY)
+        await svc.get_feed(_user(), week=date(2026, 8, 6))
+        svc.digest_repo.get_by_week.assert_awaited_with(WEEK, KEY)
+
+    async def test_orders_by_live_composite_not_snapshot(self):
+        a, b = _paper("a"), _paper("b")
+        svc = _service(
+            weeks=[(WEEK, 2)],
+            digest=_digest([_entry(a, composite=99.0), _entry(b, composite=10.0)]),
+            papers=[a, b],
+            scores=[_score(a, method=40, feasibility=40, demand=20), _score(b)],
+            states=[],
+        )
+        out = await svc.get_feed(_user())
+        assert [i.paper.arxiv_id for i in out.items] == ["b", "a"]
+        assert out.items[0].scores.composite == 81.5
+
+    async def test_filters_category_min_score_and_dismissed(self):
+        a, b, c = _paper("a", ["cs.CV"]), _paper("b"), _paper("c")
+        svc = _service(
+            weeks=[(WEEK, 3)],
+            digest=_digest([_entry(a), _entry(b), _entry(c)]),
+            papers=[a, b, c],
+            scores=[_score(a), _score(b, method=10, feasibility=10, demand=20), _score(c)],
+            states=[_state(c, "dismissed")],
+        )
+        assert [i.paper.arxiv_id for i in (await svc.get_feed(_user())).items] == ["a", "b"]
+        assert [
+            i.paper.arxiv_id for i in (await svc.get_feed(_user(), categories=["cs.LG"])).items
+        ] == ["b"]
+        assert [i.paper.arxiv_id for i in (await svc.get_feed(_user(), min_score=40)).items] == [
+            "a"
+        ]
+        with_dismissed = await svc.get_feed(_user(), include_dismissed=True)
+        assert [i.paper.arxiv_id for i in with_dismissed.items] == ["a", "c", "b"]
+        assert with_dismissed.items[1].state.state == "dismissed"
+
+    async def test_pagination_total_is_post_filter(self):
+        papers = [_paper(str(i)) for i in range(5)]
+        svc = _service(
+            weeks=[(WEEK, 5)],
+            digest=_digest([_entry(p) for p in papers]),
+            papers=papers,
+            scores=[_score(p) for p in papers],
+            states=[_state(papers[0], "dismissed")],
+        )
+        out = await svc.get_feed(_user(), offset=1, limit=2)
+        assert out.total == 4 and len(out.items) == 2 and out.offset == 1 and out.limit == 2
+
+    async def test_skips_entries_with_missing_rows(self):
+        a, b = _paper("a"), _paper("b")
+        svc = _service(
+            weeks=[(WEEK, 2)],
+            digest=_digest([_entry(a), _entry(b), {"garbage": True}]),
+            papers=[a, b],
+            scores=[_score(a)],
+            states=[],
+        )
+        out = await svc.get_feed(_user())
+        assert [i.paper.arxiv_id for i in out.items] == ["a"]
+
+    async def test_compute_profile_ranks_matches_first(self):
+        fits, big = _paper("fits"), _paper("big")
+        svc = _service(
+            weeks=[(WEEK, 2)],
+            digest=_digest([_entry(fits), _entry(big)]),
+            papers=[fits, big],
+            scores=[
+                _score(fits, method=50, feasibility=75, demand=20, feas_level=3),
+                _score(big, method=100, feasibility=100, demand=85, feas_level=1),
+            ],
+            states=[],
+        )
+        user = _user({"feed_profile": {"categories": ["cs.LG"], "compute_profile": "laptop"}})
+        out = await svc.get_feed(user)
+        assert [i.paper.arxiv_id for i in out.items] == ["fits", "big"]
+        assert out.items[0].signals.compute_match is True
+        assert out.items[1].signals.compute_match is False
+        no_profile = await svc.get_feed(_user())
+        assert [i.paper.arxiv_id for i in no_profile.items] == ["big", "fits"]
+        assert no_profile.items[0].signals.compute_match is None
+
+    async def test_keyword_tie_break(self):
+        kw, other = _paper("kw", title="Sparse attention"), _paper("other", title="Plain")
+        svc = _service(
+            weeks=[(WEEK, 2)],
+            digest=_digest([_entry(kw), _entry(other)]),
+            papers=[kw, other],
+            scores=[_score(kw, method=50, feasibility=50, demand=55), _score(other)],
+            states=[],
+        )
+        user = _user({"feed_profile": {"keywords": ["ATTENTION"]}})
+        out = await svc.get_feed(user)
+        assert [i.paper.arxiv_id for i in out.items] == ["kw", "other"]
+        assert out.items[0].keyword_match is True
+
+    async def test_categories_available_from_digest(self):
+        p = _paper("1")
+        svc = _service(
+            weeks=[(WEEK, 1)],
+            digest=_digest([_entry(p)]),
+            papers=[p],
+            scores=[_score(p)],
+            states=[],
+        )
+        out = await svc.get_feed(_user())
+        assert out.categories_available == ["cs.AI", "cs.LG"]
