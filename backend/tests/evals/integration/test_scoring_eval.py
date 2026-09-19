@@ -1,8 +1,10 @@
-"""Golden-set accuracy gate for the Stage 2 scoring graph (SPE-272).
+"""Golden-set accuracy gate for the Stage 2 scoring graph (SPE-272, rubric v2 / SPE-293).
 
-Runs the real scoring graph on each seeded golden paper with real nano judgment + real
-retrieval (Semantic Scholar is stubbed -- demand is provisional and NOT graded), then
+Runs the real scoring graph on each seeded golden paper with real TypeSafe Jev judgments +
+real retrieval (Semantic Scholar is stubbed -- demand is provisional and NOT graded), then
 measures agreement against the hand labels in `tests/evals/fixtures/scoring_scenarios.py`.
+Bands come from each dimension's DERIVED 0-100 score; a calibration report (confidence on
+agreeing vs disagreeing papers) is printed alongside.
 
 The HARD gate is the `implementable` binary, which is robust to adjacent-band noise (a MED
 vs HIGH flip does not change it, since both satisfy `>= MED`) -- see the band-sensitivity
@@ -14,6 +16,8 @@ run's observed agreement, not a guess. Run:
 
     just inteval-seed              # ingests the golden papers once (idempotent)
     just inteval -k scoring -s     # -s surfaces the per-dimension diagnostics
+
+Requires `TYPESAFE_API_KEY`; `EVAL_TYPESAFE_MODEL` overrides the configured Jev model.
 """
 
 from __future__ import annotations
@@ -25,7 +29,7 @@ import pytest
 
 from src.clients.semantic_scholar_client import CitationMetrics
 from src.config import get_settings
-from src.factories.client_factories import get_llm_client
+from src.factories.client_factories import get_typesafe_client
 from src.factories.service_factories import get_ingest_service, get_search_service
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.scoring_repository import ScoringRepository
@@ -59,24 +63,23 @@ def _stub_semantic_scholar() -> AsyncMock:
 
 
 def _build_scoring_context(session, model: str) -> ScoringContext:
-    """A production-shaped ScoringContext with real nano LLM + real services, S2 stubbed."""
+    """A production-shaped ScoringContext with real Jev + real services, S2 stubbed."""
     return ScoringContext(
-        llm_client=get_llm_client(model=model),
+        typesafe_client=get_typesafe_client(model=model),
         semantic_scholar_client=_stub_semantic_scholar(),
         ingest_service=get_ingest_service(session),
         search_service=get_search_service(session),
         paper_repository=PaperRepository(session),
         scoring_repository=ScoringRepository(session),
         db_session=session,
-        strong_model=model,
         rubric_version=RUBRIC_VERSION,
     )
 
 
 def _band(state: dict, key: str) -> Band | None:
-    """Bucket a dimension result's 0-100 score into its band; None if the dim soft-failed."""
+    """Bucket a dimension's derived 0-100 score into its band; None if the dim soft-failed."""
     result = state.get(key)
-    return score_to_band(result.score) if result is not None else None
+    return score_to_band(result.derived_score()) if result is not None else None
 
 
 def _predicted_implementable(state: dict) -> bool | None:
@@ -86,8 +89,33 @@ def _predicted_implementable(state: dict) -> bool | None:
     gate = state.get("data_availability_result")
     if method is None or feasibility is None or gate is None:
         return None
-    data_pass = gate.score == 100
+    data_pass = gate.level == 1
     return data_pass and _BAND_RANK[method] >= _MED_RANK and _BAND_RANK[feasibility] >= _MED_RANK
+
+
+def _describe(record: dict) -> str:
+    """One diagnostic line per paper: per-dimension band, expected level, confidence, and
+    the atomic judgments -- what to read when tuning questions or combine rules."""
+    state = record["state"]
+    scenario = record["scenario"]
+    parts = [f"[scoring-eval]   {scenario.id}"]
+    for dim in ("method_clarity", "resource_feasibility", "data_availability"):
+        result = state.get(f"{dim}_result")
+        if result is None:
+            parts.append(f"{dim}=soft-failed")
+            continue
+        golden = getattr(scenario, dim)
+        judgments = " ".join(
+            f"{j.key}={j.probabilities.get('yes', j.answer)}"
+            if j.kind == "noul"
+            else f"{j.key}={j.answer}"
+            for j in result.judgments
+        )
+        parts.append(
+            f"{dim}: pred={result.band()} gold={golden} expected={result.expected:.2f} "
+            f"conf={result.confidence:.2f} [{judgments}]"
+        )
+    return " | ".join(parts)
 
 
 @pytest.fixture(scope="session")
@@ -96,8 +124,9 @@ async def scoring_results(session_factory) -> list[dict]:
 
     Reads the four `*_result` off the returned graph state directly -- no DB round-trip
     (the run is rolled back). Scenarios whose paper did not seed are marked unscored.
+    Per-paper Jev input tokens are collected for the cost report.
     """
-    model = os.environ.get("EVAL_LLM_MODEL") or get_settings().scoring_strong_model
+    model = os.environ.get("EVAL_TYPESAFE_MODEL") or get_settings().typesafe_model
     graph = build_scoring_graph()
 
     records: list[dict] = []
@@ -113,7 +142,17 @@ async def scoring_results(session_factory) -> list[dict]:
                     {"arxiv_id": scenario.arxiv_id, "rubric_version": RUBRIC_VERSION},
                     {"configurable": {"context": context}},
                 )
-                records.append({"scenario": scenario, "scored": True, "state": state})
+                tokens = sum(
+                    (state.get(k) or {}).get("input_tokens") or 0
+                    for k in (
+                        "method_clarity_usage",
+                        "resource_feasibility_usage",
+                        "data_availability_usage",
+                    )
+                )
+                records.append(
+                    {"scenario": scenario, "scored": True, "state": state, "input_tokens": tokens}
+                )
             except Exception as exc:  # noqa: BLE001 -- a bad paper skips, not fails the suite
                 records.append(
                     {"scenario": scenario, "scored": False, "state": None, "error": str(exc)}
@@ -151,6 +190,7 @@ def test_implementable_agreement(scoring_results: list[dict]) -> None:
             matches += 1
         else:
             mismatches.append(f"{record['scenario'].id}(gold={golden}, pred={predicted})")
+            print(_describe(record))
 
     agreement = matches / total if total else 0.0
     summary = (
@@ -201,3 +241,43 @@ def test_dimension_band_agreement_report(
         f"adjacent-tolerant {adjacent}/{total} = {adj_pct:.1%}"
     )
     assert total > 0, f"No papers produced a {dimension} band (all soft-failed?)."
+
+
+def test_calibration_report(scoring_results: list[dict]) -> None:
+    """DIAGNOSTIC (not gated): is Jev less confident when it disagrees with the labels?
+
+    Per paper, confidence = the minimum over the three judged dimensions (the weakest
+    link decides whether the card deserves a low-confidence marker). Reports the mean
+    confidence on papers whose `implementable` prediction agrees vs disagrees with the
+    label, plus per-dimension means and total Jev input tokens. Run with `-s` to see it.
+    """
+    agree: list[float] = []
+    disagree: list[float] = []
+    per_dim: dict[str, list[float]] = {
+        "method_clarity": [],
+        "resource_feasibility": [],
+        "data_availability": [],
+    }
+    total_tokens = 0
+    for record in _scored(scoring_results):
+        state = record["state"]
+        total_tokens += record.get("input_tokens") or 0
+        results = {dim: state.get(f"{dim}_result") for dim in per_dim}
+        if any(r is None for r in results.values()):
+            continue
+        for dim, result in results.items():
+            per_dim[dim].append(result.confidence)
+        conf = min(r.confidence for r in results.values())
+        predicted = _predicted_implementable(state)
+        (agree if predicted == record["scenario"].implementable else disagree).append(conf)
+
+    def _mean(xs: list[float]) -> str:
+        return f"{sum(xs) / len(xs):.2f} (n={len(xs)})" if xs else "n/a"
+
+    print(
+        f"[scoring-eval] calibration: mean min-confidence agree {_mean(agree)}, "
+        f"disagree {_mean(disagree)}; per-dimension "
+        + ", ".join(f"{dim} {_mean(v)}" for dim, v in per_dim.items())
+        + f"; total Jev input tokens {total_tokens}"
+    )
+    assert agree or disagree, "No gradable papers for the calibration report."

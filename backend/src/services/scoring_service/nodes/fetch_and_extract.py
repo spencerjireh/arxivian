@@ -1,10 +1,16 @@
-"""fetch_and_extract node: ensure full text, then build extracted_spans via retrieval.
+"""fetch_and_extract node: ensure full text, then build the Jev request inputs.
 
-Extraction is per-dimension SEMANTIC retrieval scoped to the paper's own chunks (not a
-keyword scan): extraction recall directly bounds the two LLM judgments, and Stage 2 runs on
-survivors only, so recall matters more than shaving a call. Hard-fails (raises) when there
-is no usable full text -- a paper cannot be scored from nothing, so Celery should retry
-rather than persist an empty row.
+Two kinds of input feed the dimension nodes:
+
+- `extracted_spans`: per-kind SEMANTIC retrieval scoped to the paper's own chunks
+  (pseudocode / compute / dataset probes) plus `code_mentions` found by regex over the
+  raw text. These double as the stored evidence spans.
+- `sections`: abstract / method / experiments / appendix headings split from
+  `paper.raw_text` (`utils.section_splitter`), the targeted state Jev judges over.
+
+Hard-fails (raises) when there is no usable full text -- a paper cannot be scored from
+nothing, so Celery should retry rather than persist an empty row. Commits after ingest so
+a later rate-limit abort in a dimension node does not roll back the ingested paper.
 """
 
 from __future__ import annotations
@@ -16,6 +22,7 @@ from langchain_core.runnables import RunnableConfig
 from src.exceptions import ScoringError
 from src.schemas.scoring_state import PaperScoreState
 from src.utils.logger import get_logger
+from src.utils.section_splitter import code_mentions, extract_sections
 
 if TYPE_CHECKING:
     from src.services.scoring_service.context import ScoringContext
@@ -54,12 +61,22 @@ async def fetch_and_extract_node(state: PaperScoreState, config: RunnableConfig)
 
     paper_id = str(paper.id)
 
+    # Ingest ran inside this session; make it durable before the Jev calls so a
+    # TypeSafe rate-limit abort (re-raised to the task for retry) keeps the full text.
+    await context.db_session.commit()
+
     extracted_spans: dict[str, list[str]] = {}
     for kind, probe in DIMENSION_PROBES.items():
         results = await context.search_service.retrieve_within_paper(
             query=probe, paper_id=paper_id, top_k=SPANS_PER_DIMENSION
         )
         extracted_spans[kind] = [r.chunk_text for r in results]
+
+    raw_text = paper.raw_text or ""
+    if not raw_text:
+        log.warning("scoring_raw_text_missing", arxiv_id=arxiv_id, paper_id=paper_id)
+    extracted_spans["code_mentions"] = code_mentions(raw_text)
+    sections = extract_sections(raw_text, abstract=paper.abstract or "")
 
     paper_meta = {
         "title": paper.title,
@@ -72,9 +89,11 @@ async def fetch_and_extract_node(state: PaperScoreState, config: RunnableConfig)
         arxiv_id=arxiv_id,
         paper_id=paper_id,
         spans={k: len(v) for k, v in extracted_spans.items()},
+        section_chars={k: len(v) for k, v in sections.items()},
     )
     return {
         "paper_id": paper_id,
         "paper_meta": paper_meta,
         "extracted_spans": extracted_spans,
+        "sections": sections,
     }

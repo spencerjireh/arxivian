@@ -1,7 +1,7 @@
 """Unit tests for the Settings model-allowlist guard (SPE-282).
 
-The guard fails fast at construction if `default_llm_model` / `scoring_strong_model` (and
-`structured_output_model` when set) are not all in `ALLOWED_LLM_MODELS`, instead of crashing
+The guard fails fast at construction if `default_llm_model` (and `structured_output_model`
+when set) are not all in `ALLOWED_LLM_MODELS`, instead of crashing
 later with an `InvalidModelError` deep in a Celery task. Init kwargs outrank env/.env in
 pydantic-settings, so these constructions are deterministic regardless of the ambient env.
 """
@@ -20,33 +20,22 @@ def _settings(**overrides) -> Settings:
 
 
 class TestModelAllowlistGuard:
-    def test_raises_when_scoring_model_not_allowed(self):
-        with pytest.raises(RuntimeError) as exc:
-            _settings(
-                allowed_llm_models="openai/gpt-4o-mini",
-                default_llm_model="openai/gpt-4o-mini",
-                structured_output_model=None,
-                scoring_strong_model="openai/gpt-5-nano",
-            )
-        message = str(exc.value)
-        assert "scoring_strong_model" in message
-        assert "ALLOWED_LLM_MODELS" in message
-
     def test_raises_when_default_model_not_allowed(self):
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError) as exc:
             _settings(
                 allowed_llm_models="openai/gpt-4o-mini",
                 default_llm_model="openai/gpt-5-nano",
                 structured_output_model=None,
-                scoring_strong_model="openai/gpt-4o-mini",
             )
+        message = str(exc.value)
+        assert "default_llm_model" in message
+        assert "ALLOWED_LLM_MODELS" in message
 
     def test_passes_when_all_referenced_models_allowed(self):
         settings = _settings(
             allowed_llm_models="openai/gpt-5-nano,openai/gpt-4o-mini",
             default_llm_model="openai/gpt-5-nano",
             structured_output_model="openai/gpt-5-nano",
-            scoring_strong_model="openai/gpt-5-nano",
         )
         assert settings.default_llm_model == "openai/gpt-5-nano"
 
@@ -57,7 +46,6 @@ class TestModelAllowlistGuard:
             allowed_llm_models="openai/gpt-4o-mini",
             default_llm_model="openai/gpt-4o-mini",
             structured_output_model="",
-            scoring_strong_model="openai/gpt-4o-mini",
         )
         assert settings.structured_output_model == ""
 
@@ -67,5 +55,18 @@ class TestModelAllowlistGuard:
                 allowed_llm_models="openai/gpt-4o-mini",
                 default_llm_model="openai/gpt-4o-mini",
                 structured_output_model="openai/gpt-5-nano",
-                scoring_strong_model="openai/gpt-4o-mini",
             )
+
+
+class TestTypeSafeSettings:
+    def test_defaults(self):
+        settings = _settings(
+            allowed_llm_models="openai/gpt-4o-mini",
+            default_llm_model="openai/gpt-4o-mini",
+            structured_output_model=None,
+        )
+        assert settings.typesafe_model == "jev-1.13.0"
+        assert settings.typesafe_timeout_seconds == 60
+        assert settings.arxiv_crawl_pause_seconds == 3
+        # The Jev model is not a LiteLLM model and must not be subject to the allowlist.
+        assert not hasattr(settings, "scoring_strong_model")

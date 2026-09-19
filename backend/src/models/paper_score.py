@@ -1,7 +1,10 @@
 """Paper scoring models for the implementability scoring pipeline.
 
-`PaperScore` holds the global per-dimension sub-scores for a paper under a rubric version
-(no stored composite -- the user-weighted composite is computed at read time).
+`PaperScore` holds the global per-dimension judgments for a paper under a rubric version
+(no stored composite -- the user-weighted composite is computed at read time). Under
+rubric v2 the source of truth is `dimensions` (level distributions + atomic judgments
+from TypeSafe Jev); the four `*_score` integers are DERIVED denormalizations kept for
+the digest query and ranking.
 `ScoreEvidence` holds the first-class quoted spans / external hits that justify each
 sub-score, powering the auditable UI breakdown. See `docs/design/scoring-pipeline.md` and
 `docs/design/scoring-rubric.md`.
@@ -31,15 +34,26 @@ class PaperScore(Base):
     )
     rubric_version: Mapped[str] = mapped_column(String(20), server_default="v1")
 
-    # Per-dimension sub-scores, 0-100. Nullable so a paper can be partially scored -- demand
-    # stays null until Semantic Scholar lands (Phase 1); data availability uses 0/100 as its
-    # gate flag. No code_gap_score in v1 (added in v1.1 alongside the github_search node).
+    # Derived per-dimension 0-100 values (`DimensionScore.derived_score()`), recomputable
+    # from `dimensions`. Nullable so a paper can be partially scored (a soft-failed
+    # dimension persists NULL). Data availability is 0/100 as its gate flag. No
+    # code_gap_score in v1 (added in v1.1 alongside the github_search node).
     method_clarity_score: Mapped[int | None] = mapped_column(Integer)
     resource_feasibility_score: Mapped[int | None] = mapped_column(Integer)
     data_availability_score: Mapped[int | None] = mapped_column(Integer)
     demand_score: Mapped[int | None] = mapped_column(Integer)
 
-    # Per-dimension audit metadata ({dimension: {reasoning, model}}); NOT the queryable number.
+    # v2: {dimension: DimensionScore JSON} -- level, max_level, expected, probabilities
+    # (string keys), confidence, judgments, evidence, reasoning. Read via
+    # `DimensionScore.from_jsonb`.
+    dimensions: Mapped[dict | None] = mapped_column(JSONB)
+    # v2: PaperAttributes JSON (code_released, task_type, model_family judgments).
+    attributes: Mapped[dict | None] = mapped_column(JSONB)
+    # Jev model id echoed by the server, and summed input tokens across the requests.
+    model: Mapped[str | None] = mapped_column(String(50))
+    input_tokens: Mapped[int | None] = mapped_column(Integer)
+
+    # v1 audit metadata ({dimension: {reasoning, model}}); no longer written under v2.
     details: Mapped[dict | None] = mapped_column(JSONB)
 
     created_at: Mapped[datetime] = mapped_column(

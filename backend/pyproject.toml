@@ -36,6 +36,9 @@ dependencies = [
     
     # arXiv
     "arxiv>=2.1.3",
+
+    # TypeSafe Jev (Stage 2 scoring judgments)
+    "typesafe-sdk>=0.7.0",
     
     # Utilities
     "python-multipart>=0.0.12",

@@ -35,6 +35,7 @@ def triage_settings():
         triage_categories=["cs.LG"],
         triage_lookback_days=7,
         triage_max_per_category=100,
+        arxiv_crawl_pause_seconds=0,
     )
 
 
@@ -135,6 +136,7 @@ class TestTriageNewPapersTask:
             triage_categories=["cs.LG", "cs.CV"],
             triage_lookback_days=7,
             triage_max_per_category=100,
+            arxiv_crawl_pause_seconds=0,
         )
         # 2401.001 is cross-listed in both categories.
         crawl = {
@@ -180,3 +182,33 @@ class TestScorePaperTask:
 
         assert result == summary
         mock_run.assert_awaited_once_with("2401.001")
+
+    @pytest.mark.parametrize("retry_after,countdown", [(120.0, 120), (5.0, 60), (None, 60)])
+    def test_rate_limit_retries_after_server_hint(self, retry_after, countdown):
+        from celery.exceptions import Retry
+
+        from src.exceptions import TypeSafeRateLimitError
+        from src.tasks import score_tasks
+
+        error = TypeSafeRateLimitError(retry_after=retry_after)
+        score_tasks.score_paper_task.push_request(id="test-task-id", retries=0)
+        try:
+            with (
+                patch.object(score_tasks, "_run", AsyncMock(side_effect=error)),
+                patch.object(score_tasks.score_paper_task, "retry", side_effect=Retry()) as retry,
+            ):
+                with pytest.raises(Retry):
+                    score_tasks.score_paper_task.run(arxiv_id="2401.001")
+        finally:
+            score_tasks.score_paper_task.pop_request()
+
+        retry.assert_called_once()
+        assert retry.call_args.kwargs["countdown"] == countdown
+        assert retry.call_args.kwargs["exc"] is error
+
+    def test_autoretry_only_for_transient_errors(self):
+        from src.exceptions import ScoringError, TypeSafeConnectionError
+        from src.tasks import score_tasks
+
+        assert score_tasks.score_paper_task.autoretry_for == (ScoringError, TypeSafeConnectionError)
+        assert score_tasks.score_paper_task.retry_backoff == 120

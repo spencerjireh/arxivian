@@ -144,8 +144,14 @@ class TestDateFilteredSearchConfig:
     """Verify the search is configured correctly for date-filtered queries."""
 
     @pytest.mark.asyncio
-    async def test_search_uses_scan_limit(self, client: ArxivClient):
-        """arxiv.Search should use _DATE_FILTER_SCAN_LIMIT as max_results."""
+    @pytest.mark.parametrize(
+        "max_results,expected_scan",
+        [(5, 15), (100, 300), (500, _DATE_FILTER_SCAN_LIMIT)],
+    )
+    async def test_search_scan_limit_scales_with_request(
+        self, client: ArxivClient, max_results: int, expected_scan: int
+    ):
+        """The scan cap is 3x the request, never above _DATE_FILTER_SCAN_LIMIT (SPE-283)."""
         captured_search: list[arxiv.Search] = []
 
         def capture_search(search: arxiv.Search):
@@ -155,12 +161,12 @@ class TestDateFilteredSearchConfig:
         with patch.object(client.client, "results", side_effect=capture_search):
             await client.search_papers(
                 query="nlp",
-                max_results=5,
+                max_results=max_results,
                 start_date="2026-02-14",
             )
 
         assert len(captured_search) == 1
-        assert captured_search[0].max_results == _DATE_FILTER_SCAN_LIMIT
+        assert captured_search[0].max_results == expected_scan
 
     @pytest.mark.asyncio
     async def test_search_sorted_by_date_descending(self, client: ArxivClient):

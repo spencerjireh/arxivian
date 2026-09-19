@@ -16,6 +16,7 @@ from src.models.digest import Digest
 from src.models.paper_score import PaperScore
 from src.repositories.digest_repository import DigestRepository
 from src.repositories.paper_repository import PaperRepository
+from src.schemas.scoring_state import RUBRIC_VERSION
 from src.tasks.digest_tasks import _category_key, _week_start, build_digest_for_week
 
 
@@ -30,7 +31,7 @@ async def _make_scored_paper(
     db_session.add(
         PaperScore(
             paper_id=paper.id,
-            rubric_version="v1",
+            rubric_version=RUBRIC_VERSION,
             method_clarity_score=method,
             resource_feasibility_score=feasibility,
             data_availability_score=data,

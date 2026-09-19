@@ -287,6 +287,63 @@ class SemanticScholarRateLimitError(SemanticScholarError):
         self.retry_after = retry_after
 
 
+class TypeSafeError(ExternalServiceError):
+    """Raised when the TypeSafe (Jev) API returns an error.
+
+    Carries the upstream HTTP status and request id so a failed scoring judgment can be
+    traced in the TypeSafe console. Non-retryable by default (4xx other than 429).
+    """
+
+    def __init__(
+        self,
+        message: str,
+        status: Optional[int] = None,
+        request_id: Optional[str] = None,
+        details: Optional[dict[str, Any]] = None,
+    ):
+        details = details or {}
+        if status is not None:
+            details["typesafe_status"] = status
+        if request_id is not None:
+            details["request_id"] = request_id
+        super().__init__(service_name="TypeSafe", message=message, details=details)
+        self.error_code = "TYPESAFE_ERROR"
+        self.status = status
+        self.request_id = request_id
+
+
+class TypeSafeRateLimitError(TypeSafeError):
+    """Raised when the TypeSafe API returns 429 rate limit exceeded.
+
+    `retry_after` is in seconds (the SDK reports milliseconds; may be absent).
+    """
+
+    def __init__(
+        self,
+        message: str = "TypeSafe API rate limit exceeded",
+        retry_after: Optional[float] = None,
+        request_id: Optional[str] = None,
+        details: Optional[dict[str, Any]] = None,
+    ):
+        details = details or {}
+        if retry_after is not None:
+            details["retry_after"] = retry_after
+        super().__init__(message=message, status=429, request_id=request_id, details=details)
+        self.error_code = "TYPESAFE_RATE_LIMIT"
+        self.retry_after = retry_after
+
+
+class TypeSafeConnectionError(TypeSafeError):
+    """Raised when the TypeSafe API cannot be reached or times out (after SDK retries).
+
+    Transient by nature: the scoring task retries these with backoff.
+    """
+
+    def __init__(self, message: str, details: Optional[dict[str, Any]] = None):
+        super().__init__(message=message, details=details)
+        self.error_code = "TYPESAFE_CONNECTION_ERROR"
+
+
 class ScoringError(Exception):
     """Raised when the Stage 2 scoring graph cannot score a paper.
 

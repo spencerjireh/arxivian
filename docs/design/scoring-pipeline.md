@@ -5,7 +5,7 @@ arXiv submissions and produces an evidence-backed implementability score per pap
 doc is the implementation blueprint; it is grounded in the existing
 `services/agent_service/` scaffolding so the new graph reads as native to the codebase.
 
-**Status:** In progress -- Phase 0 is shipped (the `PaperScoreState` / `DimensionScore` schemas, the v1 rubric + LLM prompts, a labeled golden set, and the DB tables via migration `019`). The Stage 1 triage task and the Stage 2 scoring graph are Phase 1.
+**Status:** Phase 1 shipped and running dark (Stage 1 triage, the Stage 2 scoring graph, `build_digest_task`, the golden-set eval gate). As of 2026-09-19 (SPE-286, rubric **v2**) Stage 2 judgments come from **TypeSafe Jev** instead of gpt-5-nano: each judged dimension is a set of atomic typed questions combined in code, and the stored score is a distribution over levels plus the atomic judgments (migration `020`). Nano remains only in Stage 1 triage. See `docs/design/scoring-rubric.md` for the v2 rubric.
 **Author:** Spencer Jireh
 **Date:** July 2026
 **Related:** `proposal.md` (direction pitch), `docs/product/feed-prd.md` (product),
@@ -58,19 +58,19 @@ recall. See the deferral decision below.
   (`spikes/github-code-gap/`) and real usage prove recall clears the bar. This also means
   v1 has **zero GitHub dependency** and only one soft external API (Semantic Scholar). Do
   not ship any "no existing code" claim in the product until code gap is actually weighted.
-- **Only 2 of the (v1) 4 dimensions are LLM calls.** Demand is a Semantic Scholar lookup and
-  data availability is largely extraction. Only **method clarity** and **resource
-  feasibility** are genuinely LLM-judged. (Code gap, when it lands in v1.1, is a GitHub
-  search plus a light match-judge -- see the deferral above.) The two LLM dimensions use a
-  stronger model by passing an explicit `model=` override to `generate_structured` -- the
-  per-call param already exists on `LiteLLMClient`, but **nothing auto-escalates**;
-  `ScoringContext` carries the strong-model id (e.g. `openai/gpt-4o-mini` from the
-  allowlist) and the nodes pass it. Everything else stays on the cheap/free default. Caveat:
-  the cheap default provider (`nvidia_nim/openai/gpt-oss-120b`) satisfies `response_format`
-  via prompt-injected JSON, not native schema-constrained decoding, so structured-score
-  reliability on the cheap path must be validated -- another reason the eval gate matters.
-  The real throughput bottleneck is external API rate limits (Semantic Scholar in v1;
-  GitHub once code gap lands), not tokens.
+- **Judgments are typed, not generated (v2).** Demand is a Semantic Scholar lookup; the
+  other three dimensions are **TypeSafe Jev** judgments (System One model: typed answers
+  with calibrated probabilities, no text generation). Method clarity is four Nouls combined
+  by a Poisson-binomial; resource feasibility is one ordinal Score over five compute tiers;
+  data availability is one Choice regrouped into the gate. Code owns candidate finding
+  (section split + retrieval probes) and combination; Jev only selects and grades. This
+  replaced the v1 design (two gpt-5-nano structured calls + a keyword gate) after the
+  2026-08-09 dry run showed nano under-rating famous papers by a band with no usable
+  uncertainty, and the `jevexperiments` spike showed Jev's low confidence was informative
+  in every observed case. `ScoringContext` carries a `TypeSafeClient`; there is no LLM
+  client in Stage 2 and no nano fallback. The throughput bottleneck remains external API
+  rate limits (Semantic Scholar, TypeSafe 429s handled by the task retry policy), not tokens
+  (~5-15k Jev input tokens per paper).
 - **Stage 1 is a batch task, not a graph.** A single classification call over batched
   abstracts needs no LangGraph. It also must NOT reuse `ingest_papers_task` -- Stage 1
   runs on title + abstract only, via a metadata-only crawl distinct from the
@@ -153,15 +153,16 @@ START
                                extract candidate evidence spans: pseudocode blocks,
                                compute mentions, dataset mentions
  -> [FAN-OUT: 4 parallel dimension nodes (v1), each writes a DISTINCT state key]
-     score_method_clarity      LLM-judged from extracted evidence                (weight: high)
-     score_resource_feasibility LLM-judged compute extraction -> normalized      (weight: high)
-     score_data_availability   extraction -> gate flag                           (gate)
-     score_demand              semantic_scholar tool: citation velocity          (weight: medium)
-     [v1.1] score_code_gap     github_search tool: API + light LLM match-judge   (deferred)
+     score_method_clarity      Jev: 4 clarity Nouls -> Poisson-binomial level dist  (weight: high)
+                               + product attributes (code_released, task_type, model_family)
+     score_resource_feasibility Jev: compute_tier Score (5 levels) + 2 aux Nouls     (weight: high)
+     score_data_availability   Jev: data_access Choice -> PASS/FAIL gate            (gate)
+     score_demand              semantic_scholar client: citation velocity           (weight: medium)
+     [v1.1] score_code_gap     github_search tool: API + light match-judge          (deferred)
  -> [FAN-IN]
- -> compose_and_persist        assemble sub-scores + evidence; persist
-                               paper_scores + score_evidence; GLOBAL sub-scores
-                               only (no user-weighted composite here)
+ -> compose_and_persist        derived 0-100 columns + full distributions (JSONB) +
+                               attributes + evidence; persist paper_scores +
+                               score_evidence; GLOBAL sub-scores only
  -> END
 ```
 
@@ -178,25 +179,30 @@ join node runs once after all complete), `add_edge("compose_and_persist", END)`,
 
 ### Rubric
 
-| Dimension | Ships in | Weight | Signal source | LLM? |
+| Dimension | Ships in | Weight | Signal source | Judge |
 |---|---|---|---|---|
-| Method clarity | v1 | High | Pseudocode/algorithm blocks, stated hyperparameters, specified architecture | Yes (stronger model) |
-| Resource feasibility | v1 | High | Compute requirements extracted from full text -> normalized | Yes (stronger model) |
-| Data availability | v1 | Gate | Public datasets vs. proprietary/clinical; disqualifying if inaccessible | Extraction |
+| Method clarity | v1 (v2 shape) | High | method + experiments sections, pseudocode spans | Jev: 4 Nouls |
+| Resource feasibility | v1 (v2 shape) | High | experiments section, compute spans | Jev: 1 Score + 2 Nouls |
+| Data availability | v1 (v2 shape) | Gate | abstract, dataset spans | Jev: 1 Choice |
 | Demand | v1 | Medium | Citation velocity via Semantic Scholar | No (API) |
 | Code gap | **v1.1** | Highest (when weighted) | GitHub code/README search for title + arXiv ID; repo stars/issue health | Light (match judge) |
 
 Full-rubric weights match `proposal.md` Section 5.1. **Code gap is deferred to v1.1** (see
 the deferral decision above): in v1 it is absent, then reintroduced as an unweighted
-evidence chip before becoming the highest-weighted signal. Because only method clarity and
-resource feasibility are stronger-model LLM calls, the per-paper LLM cost in v1 is two
-structured calls; the rest are API lookups or cheap extraction.
+evidence chip before becoming the highest-weighted signal. Per paper, Stage 2 makes three
+Jev requests (one per judged node; the attributes ride on the method-clarity request) and
+one Semantic Scholar lookup.
 
 ### State schema
 
 `PaperScoreState` is a TypedDict (mirroring `AgentState`). Each parallel dimension writes
-a **distinct key**, so the last-write-wins merge (no reducers, matching house style) never
-collides. Dimension payloads are Pydantic `BaseModel`s carried in the dict.
+**distinct keys** (`<dim>_result`, `<dim>_usage`, plus `attributes_result` on the
+method-clarity node), so the last-write-wins merge (no reducers, matching house style)
+never collides. Dimension payloads are `DimensionScore` models: `level`, `max_level`,
+`expected`, `probabilities`, `confidence`, `judgments`, `evidence`, `reasoning`, with
+`derived_score()` producing the 0-100 ranking value. `fetch_and_extract` also writes
+`sections` (abstract / method / experiments / appendix headings from `paper.raw_text` via
+`utils/section_splitter.py`) and `extracted_spans` (retrieval probes + `code_mentions`).
 
 ```python
 class DimensionScore(BaseModel):
@@ -224,36 +230,44 @@ last-write-wins convention used everywhere but `messages` in `AgentState`.)
 ### Node convention
 
 Same as `agent_service` nodes: `async def <name>_node(state, config) -> dict` returning a
-partial state dict; dependencies pulled from `config["configurable"]["context"]`.
-`evaluate_batch_node` is the closest template (short-circuit guards + one
-`generate_structured` call). The scoring graph does NOT use `get_stream_writer` or
-`stream_mode="custom"` (no token streaming) and needs **no checkpointer** (no HITL
-interrupts) -- compile it once in `main.py` lifespan alongside `app.state.agent_graph`.
+partial state dict; dependencies pulled from `config["configurable"]["context"]`. The
+scoring graph does NOT use `get_stream_writer` or `stream_mode="custom"` (no token
+streaming) and needs **no checkpointer** (no HITL interrupts) -- it is compiled once per
+Celery worker (`tasks/score_tasks.py`).
+
+Failure policy: a TypeSafe rate-limit or connection error is **re-raised** (aborting the
+graph so `score_paper_task` retries the paper after `retry_after`); any other error
+soft-fails the node to `None` so the rest of the paper still scores.
 
 ```python
-async def score_method_clarity_node(state: PaperScoreState, config: RunnableConfig) -> dict:
+async def score_data_availability_node(state: PaperScoreState, config: RunnableConfig) -> dict:
     context = config["configurable"]["context"]
-    spans = state["extracted_spans"]
-    result = await context.llm_client.generate_structured(
-        messages=[...],
-        response_format=DimensionScore,
-        model=context.strong_model,   # stronger model for the 2 judgment dimensions
+    payload = {"abstract": state["sections"]["abstract"],
+               "dataset_spans": state["extracted_spans"]["dataset"]}
+    result = await context.typesafe_client.ask(
+        payload, {"data_access": q.DATA_ACCESS}, request_name="data_availability"
     )
-    return {"method_clarity_result": result}
+    dimension = combine_data_availability(result.choices["data_access"], q.GATE_PASS_OPTIONS, evidence)
+    return {"data_availability_result": dimension, "data_availability_usage": {...}}
 ```
 
 ---
 
 ## New Clients and Tools
 
-Two external signals do not exist in the codebase today (no GitHub or Semantic Scholar
-client -- confirmed). **Only the Semantic Scholar client ships in v1**; the GitHub client
-is v1.1 (it belongs to the deferred code-gap dimension). They are the highest-value and
-highest-risk parts of the build, which is exactly why the riskier one (GitHub) is deferred
-behind the spike.
+Stage 2 depends on two external services in v1: Semantic Scholar (demand) and TypeSafe
+(the Jev judgments). The GitHub client is v1.1 (it belongs to the deferred code-gap
+dimension) and is gated behind the spike.
 
 ### Clients
 
+- `clients/typesafe_client.py` (**v2**) -- thin wrapper over `typesafe_sdk`'s
+  `AsyncTypeSafeClient.system_one`: one `ask(state, questions, request_name)` per node,
+  opening a fresh SDK client per call (Celery runs each task on its own event loop),
+  `RetryPolicy(max_retries=2, timeout=None)`, SDK errors mapped to `TypeSafeError` /
+  `TypeSafeRateLimitError` (`retry_after` seconds) / `TypeSafeConnectionError`, answers
+  normalized into plain dataclasses, `input_tokens` logged per request. Settings:
+  `TYPESAFE_API_KEY`, `TYPESAFE_MODEL` (pinned `jev-1.13.0`), `TYPESAFE_TIMEOUT_SECONDS`.
 - `clients/semantic_scholar_client.py` (**v1**) -- lookup by arXiv ID -> citation count and
   velocity. Backoff-aware + net-new Redis cache (see the pattern note below). S2 is the one
   external API v1 depends on; it is far gentler than GitHub code search.
@@ -346,17 +360,17 @@ Two bets are unproven and cheap to test before any schema is committed:
 
 ---
 
-## Files Summary (future implementation)
+## Files Summary
 
-| Area | New / changed | Phase |
+| Area | Files | Status |
 |---|---|---|
-| Tasks | `tasks/triage_tasks.py` (Stage 1), `tasks/score_tasks.py` (Stage 2 driver), `tasks/scheduled_tasks.py` (extend: weekly crawl + `build_digest_task`) | v1 |
-| Scoring graph | `services/scoring_service/` (builder, 4 dimension nodes, context), `schemas/scoring_state.py` | v1 |
-| Clients | `clients/semantic_scholar_client.py` | v1 |
-| Tools | `services/agent_service/tools/semantic_scholar.py`, `tools/constants.py` | v1 |
-| Crawl | metadata-only path on `clients/arxiv_client.py` | v1 |
-| DB | migrations for `paper_scores`, `score_evidence`, `user_paper_states`, `digests`; extend the `preferences` JSONB on `users` | v1 |
-| Lifespan | compile scoring graph in `main.py` alongside `agent_graph` | v1 |
+| Tasks | `tasks/triage_tasks.py` (Stage 1), `tasks/score_tasks.py` (Stage 2 driver, rate-limit-safe retry policy), `tasks/digest_tasks.py` (`build_digest_task`) | shipped |
+| Scoring graph | `services/scoring_service/` (builder, `questions.py`, `judgments.py`, `nodes/`, context), `schemas/scoring_state.py` | shipped (v2) |
+| Sections | `utils/section_splitter.py` (heading split, positional fallbacks, code mentions over `paper.raw_text`) | shipped (v2) |
+| Clients | `clients/typesafe_client.py`, `clients/semantic_scholar_client.py` | shipped |
+| Tools | `services/agent_service/tools/semantic_scholar.py` | shipped |
+| DB | migrations `019_add_scoring_tables`, `020_add_score_dimensions` (`dimensions`, `attributes`, `model`, `input_tokens` on `paper_scores`) | shipped |
+| Eval | `tests/evals/integration/test_scoring_eval.py` (implementable gate + calibration report), `tests/evals/fixtures/scoring_scenarios.py` | shipped |
 | Code gap | `clients/github_client.py`, `.../tools/github_search.py`, `score_code_gap` node | **v1.1** |
 
 ---
@@ -381,7 +395,8 @@ Two bets are unproven and cheap to test before any schema is committed:
 | GitHub search recall (v1.1) | Gated by the `spikes/github-code-gap/` spike before build; search arXiv IDs + title variants + author repos; surface the raw results in evidence so misses are visible. |
 | S2 rate limits (v1); GitHub rate limits (v1.1, the real bottleneck) | Net-new Redis cache + backoff from day one (reuse the `embeddings_client.py` backoff pattern; add the cache, which does not yet exist in any client). |
 | Code-gap staleness (v1.1) | "As of `<date>`" stamp + re-score/decay policy; unweighted chip first. |
-| Cheap-model misjudgment | Route the 2 judgment dimensions to a stronger model; golden-set gate. |
+| Judgment quality | Typed Jev judgments with calibrated confidence; golden-set gate plus a calibration report; low-confidence marker in the product rather than a hidden number. |
+| TypeSafe rate limits / outages | SDK retries; `score_paper_task` retries after `retry_after` and never storms; no nano fallback by design (Stage 2 waits). |
 
 ---
 

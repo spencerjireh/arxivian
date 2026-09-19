@@ -33,18 +33,26 @@ class ScoringRepository:
         paper_id: str,
         rubric_version: str,
         scores: dict[str, int | None],
-        details: dict[str, Any],
+        dimensions: dict[str, Any],
         evidence: list[dict[str, Any]],
+        attributes: dict[str, Any] | None = None,
+        model: str | None = None,
+        input_tokens: int | None = None,
+        details: dict[str, Any] | None = None,
     ) -> PaperScore:
         """Insert or update the `(paper_id, rubric_version)` score and replace its evidence.
 
         Args:
             paper_id: UUID string of the paper.
             rubric_version: Rubric revision these scores encode.
-            scores: Per-dimension columns, e.g. {"method_clarity_score": 80, ...}. None
-                values persist as NULL (a soft-failed dimension).
-            details: Per-dimension audit metadata stored in the JSONB `details` column.
+            scores: Derived per-dimension columns, e.g. {"method_clarity_score": 80, ...}.
+                None values persist as NULL (a soft-failed dimension).
+            dimensions: {dimension: DimensionScore JSON} -- the v2 source of truth.
             evidence: Rows to (re)create, each {dimension, kind, text, source}.
+            attributes: PaperAttributes JSON (product chips), if judged.
+            model: Jev model id echoed by the server.
+            input_tokens: Summed input tokens across the paper's Jev requests.
+            details: Legacy v1 audit metadata; None under v2.
 
         Returns:
             The persisted PaperScore (flushed, not committed -- the caller owns commit).
@@ -64,6 +72,10 @@ class ScoringRepository:
             score = PaperScore(
                 paper_id=pid,
                 rubric_version=rubric_version,
+                dimensions=dimensions,
+                attributes=attributes,
+                model=model,
+                input_tokens=input_tokens,
                 details=details,
                 **scores,
             )
@@ -72,6 +84,10 @@ class ScoringRepository:
             score = existing
             for column, value in scores.items():
                 setattr(score, column, value)
+            score.dimensions = dimensions
+            score.attributes = attributes
+            score.model = model
+            score.input_tokens = input_tokens
             score.details = details
             # Clear old evidence first; delete-orphan removes the rows on flush.
             score.evidence = []

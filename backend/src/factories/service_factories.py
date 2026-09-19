@@ -23,6 +23,7 @@ from src.factories.client_factories import (
     get_llm_client,
     get_arxiv_client,
     get_semantic_scholar_client,
+    get_typesafe_client,
 )
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.chunk_repository import ChunkRepository
@@ -115,19 +116,17 @@ def get_ingest_service(db_session: AsyncSession, ingested_by: str | None = None)
 def get_scoring_context(db_session: AsyncSession) -> ScoringContext:
     """Build a ScoringContext for one Stage 2 scoring run.
 
-    Not cached -- request/task-scoped db session. The LLM client is pinned to
-    `scoring_strong_model` so the two judge dimensions use it without a per-call override.
+    Not cached -- request/task-scoped db session. All Stage 2 judgments go through the
+    TypeSafe Jev client (`typesafe_model`); no LLM client is involved.
     """
-    settings = get_settings()
     return ScoringContext(
-        llm_client=get_llm_client(model=settings.scoring_strong_model),
+        typesafe_client=get_typesafe_client(),
         semantic_scholar_client=get_semantic_scholar_client(),
         ingest_service=get_ingest_service(db_session),
         search_service=get_search_service(db_session),
         paper_repository=PaperRepository(db_session),
         scoring_repository=ScoringRepository(db_session),
         db_session=db_session,
-        strong_model=settings.scoring_strong_model,
         rubric_version=RUBRIC_VERSION,
     )
 
