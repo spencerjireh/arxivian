@@ -151,7 +151,8 @@ Provisional band mapping (to be recalibrated against the real S2 velocity distri
 | `LOW` | little uptake |
 
 Evidence (`kind="citation"`): citation count + velocity from the S2 lookup. A soft-failed
-lookup (no key, 429) persists NULL and counts as 0 in the provisional composite (SPE-284).
+lookup (no key, 429) persists NULL; the composite excludes it and renormalizes the remaining
+weights (SPE-284), so a failed lookup does not read as low demand.
 
 ## Product attributes (not ranking signals)
 
@@ -177,6 +178,9 @@ scores:
 composite = gate * (0.35 * method_clarity + 0.35 * resource_feasibility + 0.30 * demand)
 where gate = 0 if data_availability == FAIL else 1
 ```
+
+NULL sub-scores (a soft-failed lookup) are excluded and the remaining weights renormalize to
+1 (`compute_composite` in `schemas/digest.py`); all-NULL is 0.
 
 The golden set's binary **`implementable`** flag is the label the agreement gate measures
 against. Rule:
