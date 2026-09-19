@@ -1,10 +1,11 @@
 """Feed router -- the ranked weekly digest as cards (FEED-DIGEST-1/2)."""
 
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Query
 
 from src.dependencies import CurrentUserRequired, FeedServiceDep
+from src.exceptions import InvalidParameterError
 from src.schemas.feed import FeedResponse
 
 router = APIRouter()
@@ -22,6 +23,8 @@ async def get_feed(
     limit: int = Query(20, ge=1, le=100),
 ) -> FeedResponse:
     """One page of ranked paper cards for a digest week (default: the newest built week)."""
+    if week is not None and week > datetime.now(timezone.utc).date():
+        raise InvalidParameterError("week", week.isoformat(), "week must not be in the future")
     return await feed_service.get_feed(
         user,
         week=week,

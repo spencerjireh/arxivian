@@ -90,3 +90,8 @@ class TestGetFeed:
     )
     def test_rejects_bad_query(self, client, query):
         assert client.get(f"/api/v1/feed?{query}").status_code == 422
+
+    def test_future_week_is_400(self, client, mock_feed_service):
+        resp = client.get("/api/v1/feed?week=2999-01-01")
+        assert resp.status_code == 400
+        mock_feed_service.get_feed.assert_not_awaited()
