@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     semantic_scholar_api_key: str = ""
     semantic_scholar_cache_ttl_seconds: int = 604800  # 7 days
 
+    # TypeSafe Jev -- the Stage 2 scoring judgment engine (method clarity, resource
+    # feasibility, data availability, product attributes). Key is required for scoring;
+    # the client is only constructed inside the scoring task, never at import.
+    typesafe_api_key: str = ""
+    typesafe_model: str = "jev-1.13.0"
+    typesafe_timeout_seconds: int = 60
+
     # Search configuration
     default_top_k: int = 3
     rrf_k: int = 60
@@ -101,13 +108,12 @@ class Settings(BaseSettings):
     triage_categories: list[str] = ["cs.LG", "cs.CL", "cs.CV", "cs.AI"]
     triage_lookback_days: int = 7
     triage_max_per_category: int = 100
+    # Pause between per-category arXiv crawls so the weekly triage does not trip arXiv's
+    # rate limit (SPE-283). The arxiv.Client keeps its own per-page delay on top.
+    arxiv_crawl_pause_seconds: int = 3
 
     # Stage 3 digest -- weekly cached ranking snapshot. Runs after triage+scoring settle.
     digest_schedule_cron: str = "0 8 * * 1"  # Weekly Monday 8am UTC (2h after triage)
-
-    # Stage 2 scoring -- model for the two LLM-judged dimensions (method clarity,
-    # resource feasibility). Must be in allowed_llm_models.
-    scoring_strong_model: str = "openai/gpt-5-nano"
 
     # Helper methods
     def get_allowed_models_list(self) -> list[str]:
@@ -122,7 +128,7 @@ class Settings(BaseSettings):
     def _check_referenced_models_allowed(self) -> "Settings":
         """Fail fast at startup if a referenced LLM model is not in ALLOWED_LLM_MODELS.
 
-        The default/structured/scoring models must all be in the allowlist, or
+        The default/structured models must both be in the allowlist, or
         `get_llm_client()` raises `InvalidModelError` deep inside a Celery task at runtime
         (the SPE-282 env-drift bug). This turns that into a clear boot-time error in every
         entrypoint (web, worker, beat, shell), since each builds `Settings` at import.
@@ -133,7 +139,6 @@ class Settings(BaseSettings):
         allowed = self.get_allowed_models_list()
         referenced = {
             "default_llm_model": self.default_llm_model,
-            "scoring_strong_model": self.scoring_strong_model,
         }
         if self.structured_output_model:
             referenced["structured_output_model"] = self.structured_output_model

@@ -13,6 +13,7 @@ Stage 2 ingests the full text and creates the paper row itself.
 See `docs/design/scoring-pipeline.md` -> "Stage 1 -- Cheap Triage".
 """
 
+import asyncio
 import hashlib
 from collections.abc import Sequence
 from datetime import datetime, timedelta, timezone
@@ -71,7 +72,11 @@ def triage_new_papers_task() -> dict[str, Any]:
         # Crawl each category, deduping globally by arxiv_id (first-seen category wins, so
         # cross-listed papers are triaged and enqueued once).
         candidates: dict[str, dict[str, Any]] = {}
-        for category in settings.triage_categories:
+        for i, category in enumerate(settings.triage_categories):
+            if i > 0:
+                # Pace the crawl so back-to-back category scans do not trip arXiv's
+                # rate limit (SPE-283); the arxiv.Client keeps its own per-page delay.
+                await asyncio.sleep(settings.arxiv_crawl_pause_seconds)
             papers = await arxiv_client.search_papers(
                 query="",
                 categories=[category],

@@ -6,6 +6,7 @@ from src.config import Settings, get_settings
 from src.clients.arxiv_client import ArxivClient
 from src.clients.embeddings_client import JinaEmbeddingsClient
 from src.clients.semantic_scholar_client import SemanticScholarClient
+from src.clients.typesafe_client import TypeSafeClient
 from src.clients.base_llm_client import BaseLLMClient
 from src.clients.litellm_client import LiteLLMClient
 from src.exceptions import InvalidModelError
@@ -54,6 +55,34 @@ def get_semantic_scholar_client() -> SemanticScholarClient:
     return SemanticScholarClient(
         api_key=settings.semantic_scholar_api_key,
         cache_ttl_seconds=settings.semantic_scholar_cache_ttl_seconds,
+    )
+
+
+@lru_cache(maxsize=1)
+def _default_typesafe_client() -> TypeSafeClient:
+    settings = get_settings()
+    return TypeSafeClient(
+        api_key=settings.typesafe_api_key,
+        model=settings.typesafe_model,
+        timeout_seconds=settings.typesafe_timeout_seconds,
+    )
+
+
+def get_typesafe_client(model: str | None = None) -> TypeSafeClient:
+    """
+    Get the TypeSafe Jev client for Stage 2 scoring judgments.
+
+    Cached for the configured default model; a `model` override (evals) builds a fresh
+    instance. Raises `TypeSafeError` when `TYPESAFE_API_KEY` is unset, so never call this
+    at import time -- only from the scoring task / eval fixtures.
+    """
+    if model is None:
+        return _default_typesafe_client()
+    settings = get_settings()
+    return TypeSafeClient(
+        api_key=settings.typesafe_api_key,
+        model=model,
+        timeout_seconds=settings.typesafe_timeout_seconds,
     )
 
 

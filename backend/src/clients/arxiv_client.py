@@ -299,8 +299,9 @@ class ArxivClient:
 
         if has_date_filter:
             # Lazy iteration: sort by date descending, scan up to the limit,
-            # stop early once past the target window.
-            fetch_count = _DATE_FILTER_SCAN_LIMIT
+            # stop early once past the target window. The scan cap scales with the
+            # request so a small crawl does not page through 500 results (SPE-283).
+            fetch_count = min(_DATE_FILTER_SCAN_LIMIT, max(max_results * 3, 1))
             sort_by = arxiv.SortCriterion.SubmittedDate
             sort_order = arxiv.SortOrder.Descending
         else:
@@ -402,7 +403,9 @@ class ArxivClient:
         """
         log.debug("arxiv fetch by ids", count=len(arxiv_ids))
 
-        search = arxiv.Search(id_list=arxiv_ids)
+        # Cap the page to the request: without it a single-ID lookup (the scoring
+        # ingest path) asks arXiv for a 100-result page (SPE-283).
+        search = arxiv.Search(id_list=arxiv_ids, max_results=len(arxiv_ids))
 
         # Use retry-enabled helper
         raw_results = await self._execute_search(search)

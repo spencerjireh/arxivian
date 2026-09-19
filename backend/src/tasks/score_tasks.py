@@ -5,6 +5,12 @@ the scoring graph (`fetch_and_extract` -> 4 dimension nodes -> `compose_and_pers
 persists `paper_scores` + `score_evidence`. The graph is compiled once per worker; each task
 builds a fresh `ScoringContext` on its own async DB session (the FastAPI lifespan does not run
 in the Celery worker). Takes only `arxiv_id` -- Stage 2 ingests the full text itself.
+
+Retry policy (SPE-283 / SPE-292): no blanket autoretry. `ScoringError` (no usable full
+text -- the way an arXiv 429 or PDF failure during ingest surfaces) and TypeSafe
+connection errors autoretry with a long jittered backoff (120 s factor, 600 s cap) so a
+rate-limit cannot snowball across the survivor fan-out. A TypeSafe 429 retries after the
+server's `retry_after` (at least 60 s). Any other error fails the task.
 """
 
 from functools import lru_cache
@@ -14,6 +20,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from src.celery_app import celery_app
 from src.database import AsyncSessionLocal
+from src.exceptions import ScoringError, TypeSafeConnectionError, TypeSafeRateLimitError
 from src.factories.service_factories import get_scoring_context
 from src.schemas.scoring_state import RUBRIC_VERSION
 from src.services.scoring_service.scoring_graph_builder import build_scoring_graph
@@ -55,12 +62,16 @@ async def _run(arxiv_id: str) -> dict[str, Any]:
     }
 
 
+# Minimum wait before retrying a TypeSafe rate limit when the server sends no Retry-After.
+RATE_LIMIT_MIN_COUNTDOWN_SECONDS = 60
+
+
 @celery_app.task(
     bind=True,
     name="src.tasks.score_tasks.score_paper_task",
     max_retries=3,
-    autoretry_for=(Exception,),
-    retry_backoff=True,
+    autoretry_for=(ScoringError, TypeSafeConnectionError),
+    retry_backoff=120,
     retry_backoff_max=600,
     retry_jitter=True,
 )
@@ -74,9 +85,22 @@ def score_paper_task(self, arxiv_id: str) -> dict[str, Any]:
 
     Returns:
         Summary dict: which dimensions were scored (soft-failed ones are False). Raises
-        (triggering Celery autoretry) only on hard failures such as no usable full text.
+        only on hard failures: no usable full text / TypeSafe connection errors (autoretry
+        with long backoff), a TypeSafe rate limit (retry after `retry_after`), or a
+        non-retryable TypeSafe API error (task fails).
     """
     log.info("score_paper_received", task_id=self.request.id, arxiv_id=arxiv_id)
-    result = run_async(_run(arxiv_id))
+    try:
+        result = run_async(_run(arxiv_id))
+    except TypeSafeRateLimitError as e:
+        countdown = max(int(e.retry_after or 0), RATE_LIMIT_MIN_COUNTDOWN_SECONDS)
+        log.warning(
+            "score_paper_rate_limited",
+            task_id=self.request.id,
+            arxiv_id=arxiv_id,
+            countdown=countdown,
+            retries=self.request.retries,
+        )
+        raise self.retry(exc=e, countdown=countdown)
     log.info("score_paper_done", task_id=self.request.id, arxiv_id=arxiv_id, result=result)
     return result
