@@ -78,6 +78,7 @@ class ConversationListItem(BaseModel):
     created_at: datetime
     updated_at: datetime
     last_query: str | None = Field(None, description="Preview of last user message")
+    arxiv_id: str | None = Field(None, description="Paper this thread is scoped to, if any")
 
 
 class ConversationListResponse(BaseModel):
@@ -96,6 +97,7 @@ class ConversationDetailResponse(BaseModel):
     title: str | None = None
     created_at: datetime
     updated_at: datetime
+    arxiv_id: str | None = Field(None, description="Paper this thread is scoped to, if any")
     turns: list[ConversationTurnResponse]
 
 

@@ -51,7 +51,7 @@ from src.schemas.stream import (
 from src.schemas.common import SourceInfo
 from src.utils.logger import get_logger
 from src.services.title_service import generate_title
-from .context import AgentContext
+from .context import AgentContext, ScopedPaper
 
 log = get_logger(__name__)
 
@@ -147,11 +147,13 @@ class AgentService:
         user_id: UUID | None = None,
         daily_ingests: int | None = None,
         usage_counter_repo: UsageCounterRepository | None = None,
+        scoped_paper: ScopedPaper | None = None,
     ):
         self.graph = graph
         self.redis = redis
         self.ingest_service = ingest_service
         self.usage_counter_repo = usage_counter_repo
+        self.scoped_paper = scoped_paper
         self.context = AgentContext(
             llm_client=llm_client,
             search_service=search_service,
@@ -169,10 +171,15 @@ class AgentService:
             user_id=user_id,
             daily_ingests=daily_ingests,
             usage_counter_repo=usage_counter_repo,
+            scoped_paper=scoped_paper,
         )
         self.conversation_repo = conversation_repo
         self.conversation_window = conversation_window
         self.user_id = user_id
+
+    def _scoped_paper_uuid(self) -> UUID | None:
+        """The scoped paper's id for persisting on a newly created conversation."""
+        return UUID(self.scoped_paper.paper_id) if self.scoped_paper else None
 
     # ------------------------------------------------------------------
     # Stream consumption: translates LangGraph astream events to SSE
@@ -594,6 +601,7 @@ class AgentService:
                             },
                         ),
                         user_id=self.user_id,
+                        paper_id=self._scoped_paper_uuid(),
                     )
                     turn_number = partial_turn.turn_number
                     await self.conversation_repo.commit()
@@ -605,6 +613,7 @@ class AgentService:
                         session_id,
                         self._build_turn_data(query, final_state, tracker),
                         user_id=self.user_id,
+                        paper_id=self._scoped_paper_uuid(),
                     )
                     turn_number = turn.turn_number
 
@@ -807,6 +816,7 @@ class AgentService:
                 session_id,
                 self._build_turn_data(synthetic_query, final_state, tracker),
                 user_id=self.user_id,
+                paper_id=self._scoped_paper_uuid(),
             )
             turn_number = turn.turn_number
 

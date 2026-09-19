@@ -23,13 +23,19 @@ class ConversationRepository:
         """Flush and commit the current transaction."""
         await self.session.commit()
 
-    async def get_or_create(self, session_id: str, user_id: Optional[UUID] = None) -> Conversation:
+    async def get_or_create(
+        self,
+        session_id: str,
+        user_id: Optional[UUID] = None,
+        paper_id: Optional[UUID] = None,
+    ) -> Conversation:
         """
         Get existing conversation or create new one.
 
         Args:
             session_id: Unique session identifier
             user_id: Optional user ID to associate with the conversation
+            paper_id: Optional paper scope, set only when the conversation is created
 
         Returns:
             Conversation instance
@@ -42,7 +48,7 @@ class ConversationRepository:
         conv = result.scalar_one_or_none()
 
         if not conv:
-            conv = Conversation(session_id=session_id, user_id=user_id)
+            conv = Conversation(session_id=session_id, user_id=user_id, paper_id=paper_id)
             self.session.add(conv)
             await self.session.flush()
             await self.session.refresh(conv)
@@ -88,7 +94,11 @@ class ConversationRepository:
         return turns[::-1]
 
     async def save_turn(
-        self, session_id: str, turn: TurnData, user_id: Optional[UUID] = None
+        self,
+        session_id: str,
+        turn: TurnData,
+        user_id: Optional[UUID] = None,
+        paper_id: Optional[UUID] = None,
     ) -> ConversationTurn:
         """
         Save a conversation turn with optimistic retry.
@@ -99,6 +109,7 @@ class ConversationRepository:
             session_id: Session identifier
             turn: TurnData with turn information
             user_id: Optional user ID to associate with new conversation
+            paper_id: Optional paper scope, applied only when the conversation is created
 
         Returns:
             Created ConversationTurn
@@ -122,7 +133,7 @@ class ConversationRepository:
                 conv = result.scalar_one_or_none()
 
                 if not conv:
-                    conv = Conversation(session_id=session_id, user_id=user_id)
+                    conv = Conversation(session_id=session_id, user_id=user_id, paper_id=paper_id)
                     self.session.add(conv)
                     await self.session.flush()
 
@@ -388,7 +399,11 @@ class ConversationRepository:
         return result.scalar_one() or 0
 
     async def get_all(
-        self, offset: int = 0, limit: int = 20, user_id: Optional[UUID] = None
+        self,
+        offset: int = 0,
+        limit: int = 20,
+        user_id: Optional[UUID] = None,
+        paper_id: Optional[UUID] = None,
     ) -> Tuple[List[Conversation], int]:
         """
         Get paginated list of conversations with turn counts.
@@ -397,6 +412,7 @@ class ConversationRepository:
             offset: Number of conversations to skip
             limit: Maximum conversations to return
             user_id: Optional user ID to filter by ownership
+            paper_id: Optional paper scope filter (threads for one paper)
 
         Returns:
             Tuple of (list of Conversations, total count)
@@ -414,6 +430,9 @@ class ConversationRepository:
         if user_id is not None:
             count_query = count_query.where(Conversation.user_id == user_id)
             list_query = list_query.where(Conversation.user_id == user_id)
+        if paper_id is not None:
+            count_query = count_query.where(Conversation.paper_id == paper_id)
+            list_query = list_query.where(Conversation.paper_id == paper_id)
 
         # Get total count
         count_result = await self.session.execute(count_query)

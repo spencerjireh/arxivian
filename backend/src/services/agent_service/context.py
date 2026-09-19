@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -81,6 +82,21 @@ class ConversationFormatter:
         return "\n".join(parts)
 
 
+@dataclass(frozen=True)
+class ScopedPaper:
+    """The one paper a conversation is narrowed to (paper-scoped chat, SPE-277)."""
+
+    paper_id: str
+    arxiv_id: str
+    title: str
+
+
+# Tools that only make sense over the whole corpus; hidden in a paper-scoped conversation.
+CORPUS_ONLY_TOOLS: frozenset[str] = frozenset(
+    {"list_papers", "propose_ingest", "arxiv_search", "ingest_papers"}
+)
+
+
 class AgentContext:
     """Context object passed to all LangGraph nodes."""
 
@@ -105,10 +121,12 @@ class AgentContext:
         user_id: UUID | None = None,
         daily_ingests: int | None = None,
         usage_counter_repo: UsageCounterRepository | None = None,
+        scoped_paper: ScopedPaper | None = None,
     ):
         self.llm_client = llm_client
         self.search_service = search_service
         self.ingest_service = ingest_service
+        self.scoped_paper = scoped_paper
         self.conversation_formatter = conversation_formatter or ConversationFormatter()
         self.guardrail_threshold = guardrail_threshold
         self.top_k = top_k
@@ -123,27 +141,31 @@ class AgentContext:
             self.tool_registry = tool_registry
         else:
             self.tool_registry = ToolRegistry(session=db_session)
-            # Register default tools
+            scoped = scoped_paper is not None
+            # Register default tools. In a paper-scoped conversation the corpus-level
+            # tools (CORPUS_ONLY_TOOLS) are left out and retrieval stays inside the paper.
             self.tool_registry.register(
                 RetrieveChunksTool(
                     search_service=search_service,
                     default_top_k=top_k * 2,
                     min_score=min_score,
+                    paper_id=scoped_paper.paper_id if scoped_paper else None,
                 )
             )
-            if ingest_service:
+            if ingest_service and not scoped:
                 self.tool_registry.register(ListPapersTool(ingest_service=ingest_service))
             if paper_repository:
-                self.tool_registry.register(
-                    ProposeIngestTool(
-                        paper_repository=paper_repository,
-                        daily_ingests=daily_ingests,
-                        usage_counter_repo=usage_counter_repo,
-                        user_id=user_id,
+                if not scoped:
+                    self.tool_registry.register(
+                        ProposeIngestTool(
+                            paper_repository=paper_repository,
+                            daily_ingests=daily_ingests,
+                            usage_counter_repo=usage_counter_repo,
+                            user_id=user_id,
+                        )
                     )
-                )
                 self.tool_registry.register(ExploreCitationsTool(paper_repository=paper_repository))
-            if arxiv_client:
+            if arxiv_client and not scoped:
                 self.tool_registry.register(ArxivSearchTool(arxiv_client=arxiv_client))
             if semantic_scholar_client:
                 self.tool_registry.register(

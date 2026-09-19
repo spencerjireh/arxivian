@@ -31,14 +31,31 @@ const SETTING_KEYS: readonly SettingKey[] = [
   'guardrail_threshold', 'max_retrieval_attempts', 'conversation_window',
 ] as const
 
-export function useChat(sessionId: string | null) {
+export interface UseChatOptions {
+  /** Paper-scoped chat (SPE-277): sent as `arxiv_id` on the first turn. */
+  arxivId?: string
+  /** Called with the new session id instead of navigating to /chat/:id. */
+  onSessionCreated?: (sessionId: string) => void
+}
+
+/**
+ * Chat state + streaming for one conversation.
+ *
+ * The streaming UI state lives in the global `useChatStore`, so only one chat surface may
+ * be mounted at a time (the global chat page or one scoped panel). A scoped panel must
+ * abort its stream on unmount.
+ */
+export function useChat(sessionId: string | null, options: UseChatOptions = {}) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const abortControllerRef = useRef<AbortController | null>(null)
   const streamingMessageIdRef = useRef<string | null>(null)
   const hasAddedGeneratingStep = useRef(false)
+  const optionsRef = useRef(options)
+  optionsRef.current = options
+  const scope = options.arxivId
 
-  const { messages, setMessages, loadFromHistory, clearMessages } = useMessageCache(sessionId)
+  const { messages, setMessages, loadFromHistory, clearMessages } = useMessageCache(sessionId, scope)
 
   // Get store actions (these are stable references)
   const setStreaming = useChatStore((s) => s.setStreaming)
@@ -124,23 +141,29 @@ export function useChat(sessionId: string | null) {
       }
 
       if (metadata.session_id && sessionId === null) {
-        const currentMessages = queryClient.getQueryData<Message[]>(chatKeys.messages(null)) ?? []
+        const draftKey = chatKeys.messages(null, scope)
+        const currentMessages = queryClient.getQueryData<Message[]>(draftKey) ?? []
 
         const updatedMessages = currentMessages.map((msg) =>
           msg.id === placeholderId ? assistantMessage : msg
         )
 
         queryClient.setQueryData(chatKeys.messages(metadata.session_id), updatedMessages)
-        queryClient.setQueryData(chatKeys.messages(null), [])
+        queryClient.setQueryData(draftKey, [])
         queryClient.invalidateQueries({ queryKey: conversationKeys.lists() })
 
-        navigate(`/chat/${metadata.session_id}`, { replace: true })
+        const onSessionCreated = optionsRef.current.onSessionCreated
+        if (onSessionCreated) {
+          onSessionCreated(metadata.session_id)
+        } else {
+          navigate(`/chat/${metadata.session_id}`, { replace: true })
+        }
       } else {
         setMessages((prev) => prev.map((msg) => (msg.id === placeholderId ? assistantMessage : msg)))
         queryClient.invalidateQueries({ queryKey: conversationKeys.lists() })
       }
     },
-    [setMessages, sessionId, queryClient, navigate]
+    [setMessages, sessionId, scope, queryClient, navigate]
   )
 
   const handleStreamError = useCallback(
@@ -196,6 +219,9 @@ export function useChat(sessionId: string | null) {
       const request: StreamRequest = {
         query,
         session_id: sessionId ?? undefined,
+      }
+      if (optionsRef.current.arxivId) {
+        request.arxiv_id = optionsRef.current.arxivId
       }
 
       for (const key of SETTING_KEYS) {

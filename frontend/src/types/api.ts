@@ -13,6 +13,8 @@ export interface IngestConfirmation {
 
 export interface StreamRequest {
   query?: string
+  /** Paper-scoped chat: narrow the conversation to one ingested paper (first turn only). */
+  arxiv_id?: string
   provider?: LLMProvider
   model?: string
   top_k?: number
@@ -191,6 +193,7 @@ export interface ConversationTurnResponse {
 
 export interface ConversationListItem {
   session_id: string
+  arxiv_id?: string | null
   title?: string
   turn_count: number
   created_at: string
@@ -207,6 +210,7 @@ export interface ConversationListResponse {
 
 export interface ConversationDetailResponse {
   session_id: string
+  arxiv_id?: string | null
   title?: string
   created_at: string
   updated_at: string

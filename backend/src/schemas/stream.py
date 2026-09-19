@@ -24,6 +24,12 @@ class StreamRequest(BaseModel):
 
     query: str | None = Field(None, min_length=1, description="Question to ask")
 
+    # Paper-scoped chat (SPE-277): narrows retrieval to one ingested paper and hides the
+    # corpus-level tools. Persisted on the conversation, so only the first turn needs it.
+    arxiv_id: str | None = Field(
+        None, description="Scope this conversation to one ingested paper (arXiv id)"
+    )
+
     # LLM Provider Selection
     provider: Literal["openai", "nvidia_nim"] | None = Field(
         None, description="LLM provider to use. Uses system default if not specified."

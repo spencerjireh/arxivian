@@ -9,7 +9,7 @@ from langchain_core.runnables import RunnableConfig
 from src.schemas.langgraph_state import AgentState, ClassificationResult, ToolCall
 from src.utils.logger import get_logger
 from ..context import AgentContext
-from ..prompts import get_classify_and_route_prompt
+from ..prompts import get_classify_and_route_prompt, scoped_paper_note
 from ..security import scan_for_injection
 
 log = get_logger(__name__)
@@ -134,6 +134,11 @@ async def classify_and_route_node(state: AgentState, config: RunnableConfig) -> 
         conversation_context=conversation_context,
         is_rewrite=is_rewrite,
         prior_scope_score=prior_scope_score,
+        scope_note=(
+            scoped_paper_note(context.scoped_paper.arxiv_id, context.scoped_paper.title)
+            if context.scoped_paper
+            else None
+        ),
     )
 
     log.debug(

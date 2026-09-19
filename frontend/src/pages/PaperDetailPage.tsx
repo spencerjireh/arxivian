@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { usePaperScore } from '../api/scores'
 import { useClearPaperState, useSetPaperState } from '../api/paperState'
@@ -9,11 +9,28 @@ import PaperHeader from '../components/paper/PaperHeader'
 import PaperNotFound from '../components/paper/PaperNotFound'
 import PendingScoreState from '../components/paper/PendingScoreState'
 import ScoreBreakdown from '../components/paper/ScoreBreakdown'
+import ScopedChatPanel from '../components/paper/ScopedChatPanel'
 import { getUserMessage } from '../lib/errors'
 import type { PaperLifecycleState } from '../types/api'
 
 export default function PaperDetailPage() {
   const { arxivId = '' } = useParams<{ arxivId: string }>()
+  const [search, setSearchParams] = useSearchParams()
+  const chatSessionId = search.get('session')
+  const setChatSession = useCallback(
+    (sessionId: string | null) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          if (sessionId) next.set('session', sessionId)
+          else next.delete('session')
+          return next
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
   const { data, isLoading, error, pollTimedOut, restartPolling } = usePaperScore(arxivId)
   const setState = useSetPaperState()
   const clearState = useClearPaperState()
@@ -66,18 +83,25 @@ export default function PaperDetailPage() {
     body = <PendingScoreState timedOut={pollTimedOut} onRetry={restartPolling} />
   } else {
     body = (
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-        <PaperHeader
-          paper={detail.paper}
-          state={detail.state}
-          onSave={onSave}
-          onDismiss={onDismiss}
-          onImplementing={onImplementing}
-          pending={pending}
+      <div className="max-w-7xl mx-auto px-6 py-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="space-y-6 min-w-0">
+          <PaperHeader
+            paper={detail.paper}
+            state={detail.state}
+            onSave={onSave}
+            onDismiss={onDismiss}
+            onImplementing={onImplementing}
+            pending={pending}
+          />
+          <AttributeChips attributes={detail.attributes} />
+          <ScoreBreakdown detail={detail} />
+        </div>
+        <ScopedChatPanel
+          arxivId={arxivId}
+          paperTitle={detail.paper.title}
+          sessionId={chatSessionId}
+          onSessionChange={setChatSession}
         />
-        <AttributeChips attributes={detail.attributes} />
-        <ScoreBreakdown detail={detail} />
-        <section id="chat" aria-label="Scoped chat" />
       </div>
     )
   }

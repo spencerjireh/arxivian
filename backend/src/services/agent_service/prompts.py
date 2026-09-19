@@ -162,6 +162,7 @@ def get_classify_and_route_prompt(
     conversation_context: str = "",
     is_rewrite: bool = False,
     prior_scope_score: int | None = None,
+    scope_note: str | None = None,
 ) -> tuple[str, str]:
     """Generate the merged classify-and-route prompt.
 
@@ -175,6 +176,7 @@ def get_classify_and_route_prompt(
         conversation_context: Formatted conversation history
         is_rewrite: True on rewrite loops (iteration > 0) -- skip scope assessment
         prior_scope_score: Scope score from initial classification (carried forward on rewrite)
+        scope_note: Paper-scoped chat note (which paper, which tools are unavailable)
 
     Returns:
         Tuple of (system_prompt, user_prompt)
@@ -199,6 +201,9 @@ def get_classify_and_route_prompt(
             f"Skip scope assessment -- use scope_score={prior_scope_score or 100}. "
             f"Focus on selecting the best tools for the rewritten query."
         )
+
+    if scope_note:
+        user_parts.append(f"[SCOPE] {scope_note}")
 
     if topic_context:
         user_parts.append(topic_context)
@@ -326,3 +331,12 @@ class PromptBuilder:
     def build(self) -> tuple[str, str]:
         """Build the final system and user prompts."""
         return self._system, "\n\n".join(self._user_parts)
+
+
+def scoped_paper_note(arxiv_id: str, title: str) -> str:
+    """The routing note for a paper-scoped conversation (SPE-277)."""
+    return (
+        f"This conversation is scoped to paper {arxiv_id} ('{title}'). Route questions about "
+        f"its content to retrieve_chunks, which only searches this paper. arxiv_search, "
+        f"list_papers and propose_ingest are unavailable here."
+    )

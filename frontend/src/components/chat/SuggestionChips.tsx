@@ -1,10 +1,20 @@
 import { BookOpen, Search, Lightbulb, GitCompare } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import clsx from 'clsx'
+
+export interface Suggestion {
+  icon: LucideIcon
+  title: string
+  prompt: string
+}
 
 interface SuggestionChipsProps {
   onSelect: (prompt: string) => void
+  suggestions?: Suggestion[]
+  columns?: 1 | 2
 }
 
-const SUGGESTIONS = [
+const SUGGESTIONS: Suggestion[] = [
   {
     icon: BookOpen,
     title: 'Summarize a paper',
@@ -27,10 +37,14 @@ const SUGGESTIONS = [
   },
 ]
 
-export default function SuggestionChips({ onSelect }: SuggestionChipsProps) {
+export default function SuggestionChips({
+  onSelect,
+  suggestions = SUGGESTIONS,
+  columns = 2,
+}: SuggestionChipsProps) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-xl">
-      {SUGGESTIONS.map((suggestion, index) => (
+    <div className={clsx('grid gap-3 w-full max-w-xl', columns === 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1')}>
+      {suggestions.map((suggestion, index) => (
         <button
           key={index}
           style={{ '--stagger-index': index } as React.CSSProperties}

@@ -532,9 +532,7 @@ class TestConversationRepositoryUserFiltering:
         saved = await repo.save_turn(session_id, turn_data, user_id=test_user_1.id)
 
         # User 2 attempts to clear -- should no-op
-        await repo.clear_pending_confirmation(
-            session_id, saved.turn_number, user_id=test_user_2.id
-        )
+        await repo.clear_pending_confirmation(session_id, saved.turn_number, user_id=test_user_2.id)
         await db_session.flush()
 
         # Pending confirmation should still be set
@@ -543,18 +541,14 @@ class TestConversationRepositoryUserFiltering:
         assert pending.pending_confirmation is not None
 
         # Owner clears successfully
-        await repo.clear_pending_confirmation(
-            session_id, saved.turn_number, user_id=test_user_1.id
-        )
+        await repo.clear_pending_confirmation(session_id, saved.turn_number, user_id=test_user_1.id)
         await db_session.flush()
 
         pending = await repo.get_pending_turn(session_id, user_id=test_user_1.id)
         assert pending is None
 
     @pytest.mark.asyncio
-    async def test_update_title_filters_by_user_id(
-        self, db_session, test_user_1, test_user_2
-    ):
+    async def test_update_title_filters_by_user_id(self, db_session, test_user_1, test_user_2):
         """Verify update_title no-ops when user_id does not match."""
         repo = ConversationRepository(session=db_session)
 
@@ -579,9 +573,7 @@ class TestConversationRepositoryUserFiltering:
         assert conv.title == "My Title"
 
     @pytest.mark.asyncio
-    async def test_get_turn_count_filters_by_user_id(
-        self, db_session, test_user_1, test_user_2
-    ):
+    async def test_get_turn_count_filters_by_user_id(self, db_session, test_user_1, test_user_2):
         """Verify get_turn_count returns 0 when user_id does not match."""
         repo = ConversationRepository(session=db_session)
 
@@ -627,3 +619,57 @@ class TestConversationRepositoryUserFiltering:
         # Conversation is gone
         conv = await repo.get_by_session_id(session_id)
         assert conv is None
+
+
+class TestConversationPaperScope:
+    """SPE-277: the paper scope is set on creation only and filters listing."""
+
+    @pytest.mark.asyncio
+    async def test_save_turn_sets_scope_on_create_only(
+        self, db_session, created_user, sample_paper_data
+    ):
+        from src.repositories.paper_repository import PaperRepository
+        from src.schemas.conversation import TurnData
+
+        paper = await PaperRepository(db_session).create(
+            {**sample_paper_data, "arxiv_id": "scope-1"}
+        )
+        other = await PaperRepository(db_session).create(
+            {**sample_paper_data, "arxiv_id": "scope-2"}
+        )
+        repo = ConversationRepository(db_session)
+        turn = TurnData(user_query="q", agent_response="a", provider="openai", model="m")
+
+        await repo.save_turn("scoped-session", turn, user_id=created_user.id, paper_id=paper.id)
+        await repo.save_turn("scoped-session", turn, user_id=created_user.id, paper_id=other.id)
+
+        conv = await repo.get_by_session_id("scoped-session", user_id=created_user.id)
+        assert conv is not None and conv.paper_id == paper.id
+
+        await repo.save_turn("plain-session", turn, user_id=created_user.id)
+        scoped, total = await repo.get_all(user_id=created_user.id, paper_id=paper.id)
+        assert total == 1 and scoped[0].session_id == "scoped-session"
+        everything, total_all = await repo.get_all(user_id=created_user.id)
+        assert total_all == 2
+
+    @pytest.mark.asyncio
+    async def test_deleting_the_paper_unscopes_the_thread(
+        self, db_session, created_user, sample_paper_data
+    ):
+        from sqlalchemy import delete
+
+        from src.models.paper import Paper
+        from src.repositories.paper_repository import PaperRepository
+
+        paper = await PaperRepository(db_session).create(
+            {**sample_paper_data, "arxiv_id": "scope-3"}
+        )
+        repo = ConversationRepository(db_session)
+        conv = await repo.get_or_create("s3", user_id=created_user.id, paper_id=paper.id)
+        assert conv.paper_id == paper.id
+
+        await db_session.execute(delete(Paper).where(Paper.id == paper.id))
+        await db_session.flush()
+        await db_session.refresh(conv)
+
+        assert conv.paper_id is None

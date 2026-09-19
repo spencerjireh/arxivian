@@ -117,6 +117,24 @@ class ConflictError(BaseAPIException):
         super().__init__(message, status_code=409, error_code="CONFLICT")
 
 
+class PaperNotIngestedError(ConflictError):
+    """Raised when a paper-scoped chat targets a paper with no ingested full text."""
+
+    def __init__(self, arxiv_id: str):
+        super().__init__(f"Paper {arxiv_id} is not ingested yet")
+        self.error_code = "PAPER_NOT_INGESTED"
+        self.details = {"arxiv_id": arxiv_id}
+
+
+class ScopeMismatchError(ConflictError):
+    """Raised when a request names a different paper than the conversation is scoped to."""
+
+    def __init__(self, session_id: str, arxiv_id: str):
+        super().__init__(f"Conversation {session_id} is scoped to a different paper")
+        self.error_code = "SCOPE_MISMATCH"
+        self.details = {"session_id": session_id, "arxiv_id": arxiv_id}
+
+
 # ============================================================================
 # Business Logic Errors (422)
 # ============================================================================
