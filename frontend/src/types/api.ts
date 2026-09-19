@@ -380,3 +380,68 @@ export interface UserPaperListResponse {
   limit: number
   items: UserPaperListItem[]
 }
+
+// Paper score detail (Phase 2, SPE-276)
+
+export type ScoreBand = 'LOW' | 'MED' | 'HIGH'
+export type JudgmentKind = 'noul' | 'choice' | 'score'
+export type EvidenceKind = 'pseudocode' | 'compute' | 'dataset' | 'citation' | 'code'
+
+export interface Judgment {
+  key: string
+  kind: JudgmentKind
+  answer: string | number | boolean
+  probabilities: Record<string, number>
+  confidence: number
+  legend: string[] | null
+}
+
+export interface EvidenceSpan {
+  kind: EvidenceKind | string
+  text: string
+  source: string | null
+}
+
+export interface DimensionDetail {
+  dimension: ScoreDimension
+  band: ScoreBand
+  score: number
+  level: number
+  max_level: number
+  expected: number
+  probabilities: Record<string, number>
+  confidence: number
+  judgments: Judgment[]
+  evidence: EvidenceSpan[]
+  reasoning: string
+}
+
+export interface PaperAttributes {
+  code_released: Judgment | null
+  task_type: Judgment | null
+  model_family: Judgment | null
+  code_evidence: EvidenceSpan[]
+}
+
+export interface PaperScoreDetail {
+  paper: FeedPaper
+  rubric_version: string
+  scored_at: string
+  scores: FeedScores
+  verdict: string
+  signals: FeedSignals
+  low_confidence: ScoreDimension[]
+  state: PaperState | null
+  attributes: PaperAttributes
+  dimensions: DimensionDetail[]
+}
+
+export interface PaperScorePending {
+  status: 'pending'
+  arxiv_id: string
+  task_id: string | null
+}
+
+export type PaperScoreResult =
+  | { status: 'ready'; detail: PaperScoreDetail }
+  | { status: 'pending'; task_id: string | null }

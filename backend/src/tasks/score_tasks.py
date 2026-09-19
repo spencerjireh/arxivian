@@ -16,9 +16,11 @@ server's `retry_after` (at least 60 s). Any other error fails the task.
 from functools import lru_cache
 from typing import Any
 
+import redis
 from langgraph.graph.state import CompiledStateGraph
 
 from src.celery_app import celery_app
+from src.config import get_settings
 from src.database import AsyncSessionLocal
 from src.exceptions import ScoringError, TypeSafeConnectionError, TypeSafeRateLimitError
 from src.factories.service_factories import get_scoring_context
@@ -28,6 +30,25 @@ from src.tasks.utils import run_async
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
+
+
+def ondemand_lock_key(arxiv_id: str) -> str:
+    """Redis key that dedupes on-demand scoring requests for one paper (SPE-276)."""
+    return f"score:ondemand:{arxiv_id}"
+
+
+def release_ondemand_lock(arxiv_id: str) -> None:
+    """Best-effort release of the on-demand lock; the key's TTL is the backstop."""
+    try:
+        client = redis.Redis.from_url(
+            get_settings().redis_url, socket_connect_timeout=2, socket_timeout=2
+        )
+        try:
+            client.delete(ondemand_lock_key(arxiv_id))
+        finally:
+            client.close()
+    except Exception as e:
+        log.warning("ondemand_lock_release_failed", arxiv_id=arxiv_id, error=str(e))
 
 
 @lru_cache(maxsize=1)
@@ -101,6 +122,11 @@ def score_paper_task(self, arxiv_id: str) -> dict[str, Any]:
             countdown=countdown,
             retries=self.request.retries,
         )
+        # Keep the on-demand lock: the retry is the same task, polls must not enqueue another.
         raise self.retry(exc=e, countdown=countdown)
+    except Exception:
+        release_ondemand_lock(arxiv_id)
+        raise
+    release_ondemand_lock(arxiv_id)
     log.info("score_paper_done", task_id=self.request.id, arxiv_id=arxiv_id, result=result)
     return result

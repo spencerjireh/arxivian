@@ -4,12 +4,14 @@ import { useMutation, useQueryClient, type InfiniteData, type QueryClient, type 
 import { toast } from 'sonner'
 import { apiDelete, apiPut } from './client'
 import { feedKeys } from './feed'
-import type { FeedParams, FeedResponse, PaperState, SetPaperStateBody } from '../types/api'
+import { scoreKeys } from './scores'
+import type { FeedParams, FeedResponse, PaperScoreResult, PaperState, SetPaperStateBody } from '../types/api'
 
 type FeedData = InfiniteData<FeedResponse>
 
 interface Snapshot {
   previousFeeds: [QueryKey, FeedData | undefined][]
+  previousScore: PaperScoreResult | undefined
 }
 
 function feedParamsOf(key: QueryKey): FeedParams {
@@ -50,12 +52,24 @@ export function applyStateToCaches(
     })
   }
 
-  return { previousFeeds }
+  const scoreKey = scoreKeys.detail(arxivId)
+  const previousScore = queryClient.getQueryData<PaperScoreResult>(scoreKey)
+  if (previousScore?.status === 'ready') {
+    queryClient.setQueryData<PaperScoreResult>(scoreKey, {
+      status: 'ready',
+      detail: { ...previousScore.detail, state: nextState },
+    })
+  }
+
+  return { previousFeeds, previousScore }
 }
 
-function restore(queryClient: QueryClient, snapshot?: Snapshot) {
+function restore(queryClient: QueryClient, arxivId: string, snapshot?: Snapshot) {
   for (const [key, data] of snapshot?.previousFeeds ?? []) {
     queryClient.setQueryData(key, data)
+  }
+  if (snapshot?.previousScore) {
+    queryClient.setQueryData(scoreKeys.detail(arxivId), snapshot.previousScore)
   }
 }
 
@@ -88,8 +102,8 @@ export function useSetPaperState() {
       }
       return applyStateToCaches(queryClient, arxivId, optimistic)
     },
-    onError: (_err, _vars, context) => {
-      restore(queryClient, context)
+    onError: (_err, { arxivId }, context) => {
+      restore(queryClient, arxivId, context)
     },
     onSuccess: (_data, { arxivId, body }) => {
       if (body.state === 'dismissed') {
@@ -98,8 +112,9 @@ export function useSetPaperState() {
         })
       }
     },
-    onSettled: () => {
+    onSettled: (_data, _err, { arxivId }) => {
       queryClient.invalidateQueries({ queryKey: feedKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: scoreKeys.detail(arxivId) })
     },
   })
 }
@@ -113,11 +128,12 @@ export function useClearPaperState() {
       await queryClient.cancelQueries({ queryKey: feedKeys.lists() })
       return applyStateToCaches(queryClient, arxivId, null)
     },
-    onError: (_err, _vars, context) => {
-      restore(queryClient, context)
+    onError: (_err, { arxivId }, context) => {
+      restore(queryClient, arxivId, context)
     },
-    onSettled: () => {
+    onSettled: (_data, _err, { arxivId }) => {
       queryClient.invalidateQueries({ queryKey: feedKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: scoreKeys.detail(arxivId) })
     },
   })
 }

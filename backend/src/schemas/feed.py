@@ -168,6 +168,64 @@ class UserPaperStateRequest(BaseModel):
         return self
 
 
+class EvidenceItem(BaseModel):
+    """One quoted span from `score_evidence`."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    kind: str
+    text: str
+    source: str | None = None
+
+
+class DimensionDetail(BaseModel):
+    """One rubric dimension for the breakdown: distribution, judgments, and its evidence."""
+
+    dimension: str
+    band: Literal["LOW", "MED", "HIGH"]
+    score: int
+    level: int
+    max_level: int
+    expected: float
+    probabilities: dict[int, float]
+    confidence: float
+    judgments: list[Judgment]
+    evidence: list[EvidenceItem]
+    reasoning: str
+
+
+class PaperAttributesDetail(BaseModel):
+    """Product attributes (chips) plus the code-mention spans behind `code_released`."""
+
+    code_released: Judgment | None = None
+    task_type: Judgment | None = None
+    model_family: Judgment | None = None
+    code_evidence: list[EvidenceItem] = Field(default_factory=list)
+
+
+class PaperScoreDetailResponse(BaseModel):
+    """GET /papers/{arxiv_id}/score when the paper is scored."""
+
+    paper: FeedPaper
+    rubric_version: str
+    scored_at: datetime
+    scores: FeedScores
+    verdict: str
+    signals: FeedSignals
+    low_confidence: list[str]
+    state: UserPaperStateResponse | None
+    attributes: PaperAttributesDetail
+    dimensions: list[DimensionDetail]
+
+
+class ScorePendingResponse(BaseModel):
+    """GET /papers/{arxiv_id}/score (202) while ingest + scoring runs on demand."""
+
+    status: Literal["pending"] = "pending"
+    arxiv_id: str
+    task_id: str | None = None
+
+
 class UserPaperListItem(BaseModel):
     paper: FeedPaper
     state: UserPaperStateResponse
@@ -318,3 +376,49 @@ def resolve_weights(raw: dict[str, float] | None) -> CompositeWeights:
         return CompositeWeights.model_validate(raw)
     except ValidationError:
         return DEFAULT_WEIGHTS
+
+
+def build_dimension_details(
+    dims: dict[str, DimensionScore], evidence_rows: list[Any]
+) -> list[DimensionDetail]:
+    """Breakdown rows in rubric order, each paired with its `score_evidence` spans."""
+    by_dimension: dict[str, list[EvidenceItem]] = {}
+    for row in evidence_rows:
+        by_dimension.setdefault(row.dimension, []).append(EvidenceItem.model_validate(row))
+
+    details: list[DimensionDetail] = []
+    for name in DIMENSION_ORDER:
+        dim = dims.get(name)
+        if dim is None:
+            continue
+        details.append(
+            DimensionDetail(
+                dimension=name,
+                band=dim.band(),
+                score=dim.derived_score(),
+                level=dim.level,
+                max_level=dim.max_level,
+                expected=dim.expected,
+                probabilities=dim.probabilities,
+                confidence=dim.confidence,
+                judgments=dim.judgments,
+                evidence=by_dimension.get(name, []),
+                reasoning=dim.reasoning,
+            )
+        )
+    return details
+
+
+def build_attributes_detail(
+    attributes: dict[str, Any] | None, evidence_rows: list[Any]
+) -> PaperAttributesDetail:
+    return PaperAttributesDetail(
+        code_released=attribute(attributes, "code_released"),
+        task_type=attribute(attributes, "task_type"),
+        model_family=attribute(attributes, "model_family"),
+        code_evidence=[
+            EvidenceItem.model_validate(row)
+            for row in evidence_rows
+            if row.dimension == "code_released"
+        ],
+    )

@@ -14,6 +14,7 @@ const LandingPage = lazy(() => import('./pages/LandingPage'))
 const PricingPage = lazy(() => import('./pages/PricingPage'))
 const LibraryPage = lazy(() => import('./pages/LibraryPage'))
 const FeedPage = lazy(() => import('./pages/FeedPage'))
+const PaperDetailPage = lazy(() => import('./pages/PaperDetailPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
@@ -74,6 +75,7 @@ export const routes: RouteObject[] = [
     errorElement: <RouteErrorPage />,
     children: [
       { path: '/feed', element: <Lazy component={FeedPage} /> },
+      { path: '/papers/:arxivId', element: <Lazy component={PaperDetailPage} /> },
       { path: '/chat', element: <Lazy component={ChatPage} /> },
       { path: '/chat/:sessionId', element: <Lazy component={ChatPage} /> },
       { path: '/library', element: <Lazy component={LibraryPage} /> },

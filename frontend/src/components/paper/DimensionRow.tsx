@@ -1,0 +1,78 @@
+import { useState } from 'react'
+import { AlertCircle, ChevronDown } from 'lucide-react'
+import clsx from 'clsx'
+import Chip from '../ui/Chip'
+import { AnimatedCollapse } from '../ui/AnimatedCollapse'
+import DistributionBar from './DistributionBar'
+import EvidenceList from './EvidenceList'
+import JudgmentList from './JudgmentList'
+import { DIMENSION_LABELS, LEVEL_LABELS, isLowConfidence } from '../../lib/scoring'
+import type { DimensionDetail } from '../../types/api'
+
+interface DimensionRowProps {
+  dimension: DimensionDetail
+  defaultOpen?: boolean
+}
+
+const bandTone = { LOW: 'neutral', MED: 'accent', HIGH: 'success' } as const
+
+/** One rubric dimension: band, score, confidence, level distribution, and its evidence. */
+export default function DimensionRow({ dimension, defaultOpen = false }: DimensionRowProps) {
+  const [open, setOpen] = useState(defaultOpen)
+  const low = isLowConfidence(dimension.confidence)
+  const labels = LEVEL_LABELS[dimension.dimension]
+  const panelId = `dimension-${dimension.dimension}`
+
+  return (
+    <div className="border border-stone-200 rounded-xl bg-white">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-controls={panelId}
+        className="w-full text-left px-5 py-4 flex flex-col gap-3"
+      >
+        <div className="flex items-center gap-3">
+          <span className="font-display text-lg text-stone-900 flex-1">
+            {DIMENSION_LABELS[dimension.dimension]}
+          </span>
+          <Chip tone={bandTone[dimension.band]} size="md">{dimension.band}</Chip>
+          <span className="font-mono text-sm text-stone-700 tabular-nums">{dimension.score}/100</span>
+          <span className="font-mono text-xs text-stone-400 tabular-nums">
+            {Math.round(dimension.confidence * 100)}% conf.
+          </span>
+          {low && (
+            <Chip tone="warning" size="sm" icon={<AlertCircle className="w-3 h-3" strokeWidth={1.5} />}>
+              Low confidence
+            </Chip>
+          )}
+          <ChevronDown
+            className={clsx('w-4 h-4 text-stone-400 transition-transform', open && 'rotate-180')}
+            strokeWidth={1.5}
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <DistributionBar
+            probabilities={dimension.probabilities}
+            level={dimension.level}
+            maxLevel={dimension.max_level}
+            labels={labels}
+            className="flex-1"
+          />
+          <span className="text-xs text-stone-500 whitespace-nowrap">
+            {labels?.[dimension.level] ?? `Level ${dimension.level}`}
+          </span>
+        </div>
+      </button>
+      <AnimatedCollapse isOpen={open}>
+        <div id={panelId} className="px-5 pb-5 space-y-5 border-t border-stone-100 pt-4">
+          {dimension.reasoning && (
+            <p className="text-sm text-stone-600">{dimension.reasoning}</p>
+          )}
+          <JudgmentList judgments={dimension.judgments} />
+          <EvidenceList evidence={dimension.evidence} />
+        </div>
+      </AnimatedCollapse>
+    </div>
+  )
+}

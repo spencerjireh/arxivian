@@ -240,3 +240,75 @@ class TestGetFeed:
         )
         out = await svc.get_feed(_user())
         assert out.categories_available == ["cs.AI", "cs.LG"]
+
+
+def _evidence(dimension, kind, text):
+    return SimpleNamespace(dimension=dimension, kind=kind, text=text, source="raw_text")
+
+
+@pytest.mark.unit
+class TestGetScoreDetail:
+    def _service_for(self, paper, score, state=None):
+        svc = _service(weeks=[], digest=None, papers=[], scores=[], states=[])
+        svc.paper_repo.get_by_arxiv_id = AsyncMock(return_value=paper)
+        svc.scoring_repo.get_by_paper_id = AsyncMock(return_value=score)
+        svc.state_repo.get = AsyncMock(return_value=state)
+        return svc
+
+    async def test_none_when_missing_unprocessed_or_unscored(self):
+        paper = _paper("x")
+        paper.pdf_processed = True
+        svc = self._service_for(None, None)
+        assert await svc.get_score_detail(_user(), "x") is None
+
+        unprocessed = _paper("x")
+        unprocessed.pdf_processed = False
+        svc = self._service_for(unprocessed, _score(unprocessed))
+        assert await svc.get_score_detail(_user(), "x") is None
+
+        svc = self._service_for(paper, None)
+        assert await svc.get_score_detail(_user(), "x") is None
+        svc.scoring_repo.get_by_paper_id.assert_awaited_once_with(
+            paper.id, "v2", with_evidence=True
+        )
+
+    async def test_builds_ordered_breakdown_with_partitioned_evidence(self):
+        paper = _paper("x")
+        paper.pdf_processed = True
+        score = _score(paper, feas_level=2)
+        score.rubric_version = "v2"
+        score.attributes = {
+            "code_released": {
+                "key": "code_released",
+                "kind": "noul",
+                "answer": True,
+                "probabilities": {"yes": 0.9, "no": 0.1},
+                "confidence": 0.9,
+                "legend": None,
+            }
+        }
+        score.evidence = [
+            _evidence("resource_feasibility", "compute", "8 GPUs"),
+            _evidence("method_clarity", "pseudocode", "Algorithm 1"),
+            _evidence("code_released", "code", "github.com/x/y"),
+        ]
+        svc = self._service_for(paper, score, state=_state(paper, "saved"))
+
+        out = await svc.get_score_detail(_user(), "x")
+        assert out is not None
+        assert [d.dimension for d in out.dimensions] == [
+            "method_clarity",
+            "resource_feasibility",
+            "data_availability",
+        ]
+        assert out.dimensions[0].evidence[0].text == "Algorithm 1"
+        assert out.dimensions[1].evidence[0].kind == "compute"
+        assert out.dimensions[2].evidence == []
+        assert out.dimensions[0].probabilities == {0: 0.0, 1: 0.0, 2: 0.0, 3: 1.0, 4: 0.0}
+        assert out.dimensions[1].band == "MED" and out.dimensions[1].score == 50
+        assert out.attributes.code_released is not None
+        assert out.attributes.code_released.answer is True
+        assert [e.text for e in out.attributes.code_evidence] == ["github.com/x/y"]
+        assert out.signals.code_released is True
+        assert out.state is not None and out.state.state == "saved"
+        assert out.scores.composite == 81.5
