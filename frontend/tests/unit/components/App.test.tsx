@@ -28,6 +28,9 @@ vi.mock('../../../src/pages/FeedPage', () => ({
 vi.mock('../../../src/pages/PaperDetailPage', () => ({
   default: () => <h1>Paper detail stub</h1>,
 }))
+vi.mock('../../../src/pages/OnboardingPage', () => ({
+  default: () => <h1>Onboarding stub</h1>,
+}))
 
 // Eagerly resolve the App module (and all transitive non-mocked imports)
 // before any test runs, so the first test doesn't pay the cold-start cost
@@ -101,5 +104,16 @@ describe('App routes', () => {
     )
 
     expect(await screen.findByRole('heading', { name: /Paper detail stub/ })).toBeInTheDocument()
+  })
+
+  it('renders OnboardingPage at /onboarding outside the sidebar layout', async () => {
+    const router = createMemoryRouter(routes, {
+      initialEntries: ['/onboarding'],
+    })
+
+    render(<RouterProvider router={router} />)
+
+    expect(await screen.findByRole('heading', { name: /Onboarding stub/ })).toBeInTheDocument()
+    expect(screen.queryByText('New conversation')).not.toBeInTheDocument()
   })
 })

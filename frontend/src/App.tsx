@@ -5,6 +5,7 @@ import { AuthenticateWithRedirectCallback } from '@clerk/clerk-react'
 import { Loader2 } from 'lucide-react'
 import Layout from './components/layout/Layout'
 import ProtectedRoute from './components/auth/ProtectedRoute'
+import OnboardingGate from './components/auth/OnboardingGate'
 import RouteErrorPage from './pages/RouteErrorPage'
 
 const ChatPage = lazy(() => import('./pages/ChatPage'))
@@ -15,6 +16,7 @@ const PricingPage = lazy(() => import('./pages/PricingPage'))
 const LibraryPage = lazy(() => import('./pages/LibraryPage'))
 const FeedPage = lazy(() => import('./pages/FeedPage'))
 const PaperDetailPage = lazy(() => import('./pages/PaperDetailPage'))
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
@@ -67,9 +69,20 @@ export const routes: RouteObject[] = [
   },
   // Protected routes
   {
+    path: '/onboarding',
     element: (
       <ProtectedRoute>
-        <Layout />
+        <Lazy component={OnboardingPage} />
+      </ProtectedRoute>
+    ),
+    errorElement: <RouteErrorPage />,
+  },
+  {
+    element: (
+      <ProtectedRoute>
+        <OnboardingGate>
+          <Layout />
+        </OnboardingGate>
       </ProtectedRoute>
     ),
     errorElement: <RouteErrorPage />,
