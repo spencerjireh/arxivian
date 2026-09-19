@@ -7,6 +7,7 @@ from src.tasks import (
     triage_tasks,
     score_tasks,
     digest_tasks,
+    demand_tasks,
     tracing,
     signals,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "triage_tasks",
     "score_tasks",
     "digest_tasks",
+    "demand_tasks",
     "tracing",
     "signals",
 ]

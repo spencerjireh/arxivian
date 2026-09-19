@@ -142,6 +142,51 @@ class ScoringRepository:
         rows = (await self.session.execute(stmt)).scalars().all()
         return {row.paper_id: row for row in rows}
 
+    async def list_missing_demand(
+        self, *, rubric_version: str, limit: int
+    ) -> list[tuple[PaperScore, Paper]]:
+        """Scores whose demand lookup soft-failed (NULL), oldest first, joined to the paper."""
+        stmt = (
+            select(PaperScore, Paper)
+            .join(Paper, PaperScore.paper_id == Paper.id)
+            .where(
+                PaperScore.rubric_version == rubric_version,
+                PaperScore.demand_score.is_(None),
+            )
+            .order_by(PaperScore.updated_at)
+            .limit(limit)
+        )
+        rows = (await self.session.execute(stmt)).all()
+        return [(row[0], row[1]) for row in rows]
+
+    async def set_demand(
+        self,
+        score: PaperScore,
+        *,
+        demand_score: int,
+        dimension: dict[str, Any],
+        evidence: list[dict[str, Any]],
+    ) -> PaperScore:
+        """Fill in the demand dimension on an existing score (backfill after a soft-fail).
+
+        Replaces the `dimensions["demand"]` payload, sets the derived column, and appends
+        the citation evidence rows. Other dimensions and their evidence are untouched.
+        """
+        score.demand_score = demand_score
+        score.dimensions = {**(score.dimensions or {}), "demand": dimension}
+        for e in evidence:
+            score.evidence.append(
+                ScoreEvidence(
+                    dimension=e["dimension"],
+                    kind=e["kind"],
+                    text=e["text"],
+                    source=e.get("source"),
+                )
+            )
+        await self.session.flush()
+        log.info("paper_score_demand_backfilled", paper_id=str(score.paper_id), demand=demand_score)
+        return score
+
     async def list_scores_for_digest(
         self,
         *,

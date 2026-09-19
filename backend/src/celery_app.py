@@ -72,4 +72,8 @@ celery_app.conf.beat_schedule = {
         "task": "src.tasks.digest_tasks.build_digest_task",
         "schedule": crontab(**parse_cron(settings.digest_schedule_cron)),
     },
+    "daily-demand-backfill": {
+        "task": "src.tasks.demand_tasks.backfill_demand_task",
+        "schedule": crontab(**parse_cron(settings.demand_backfill_schedule_cron)),
+    },
 }

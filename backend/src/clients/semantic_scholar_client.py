@@ -11,8 +11,10 @@ recomputed fresh, and any Redis failure falls through to the live API rather tha
 breaking scoring.
 """
 
+import asyncio
 import json
 import logging
+import random
 from datetime import datetime, timezone
 from typing import Any, Literal
 
@@ -100,9 +102,15 @@ class CitationMetrics(BaseModel):
 class SemanticScholarClient:
     """Client for the Semantic Scholar Graph API (citation metrics by arXiv ID)."""
 
-    def __init__(self, api_key: str = "", cache_ttl_seconds: int = 604800):
+    def __init__(
+        self,
+        api_key: str = "",
+        cache_ttl_seconds: int = 604800,
+        min_interval_ms: int = 1500,
+    ):
         self.api_key = api_key
         self.cache_ttl_seconds = cache_ttl_seconds
+        self.min_interval_ms = min_interval_ms
         self.base_url = "https://api.semanticscholar.org"
         self._redis: aioredis.Redis | None = None
 
@@ -143,6 +151,38 @@ class SemanticScholarClient:
             log.warning("s2_cache_set_failed", arxiv_id=arxiv_id, error=str(e))
 
     # ------------------------------------------------------------------
+    # Cross-worker rate gate (fail-open)
+    # ------------------------------------------------------------------
+
+    _SLOT_KEY = "s2:ratelimit:slot"
+    _SLOT_MAX_WAIT_SECONDS = 30.0
+
+    async def _acquire_slot(self) -> None:
+        """Wait until this process may make the next Semantic Scholar request.
+
+        One Redis key with a TTL of ``min_interval_ms`` is the slot: whoever sets it (NX)
+        owns the next request; everyone else sleeps for the remaining TTL and tries again.
+        Any Redis error falls through to the request (fail-open, like the cache) -- the
+        tenacity backoff still handles a 429.
+        """
+        if self.min_interval_ms <= 0:
+            return
+        deadline = asyncio.get_running_loop().time() + self._SLOT_MAX_WAIT_SECONDS
+        try:
+            redis = self._get_redis()
+            while True:
+                if await redis.set(self._SLOT_KEY, "1", nx=True, px=self.min_interval_ms):
+                    return
+                ttl_ms = await redis.pttl(self._SLOT_KEY)
+                wait = (ttl_ms if ttl_ms and ttl_ms > 0 else self.min_interval_ms) / 1000.0
+                if asyncio.get_running_loop().time() + wait > deadline:
+                    log.warning("s2_slot_wait_exceeded", wait=wait)
+                    return
+                await asyncio.sleep(wait + random.uniform(0.0, 0.1))
+        except Exception as e:
+            log.warning("s2_slot_unavailable", error=str(e))
+
+    # ------------------------------------------------------------------
     # HTTP fetch (backoff-aware)
     # ------------------------------------------------------------------
 
@@ -178,6 +218,7 @@ class SemanticScholarClient:
         headers = {"x-api-key": self.api_key} if self.api_key else {}
 
         log.debug("s2_fetch", arxiv_id=arxiv_id)
+        await self._acquire_slot()
 
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.get(url, params=params, headers=headers)

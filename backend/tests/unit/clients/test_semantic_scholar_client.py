@@ -20,7 +20,8 @@ from src.exceptions import SemanticScholarError, SemanticScholarRateLimitError
 
 @pytest.fixture
 def client() -> SemanticScholarClient:
-    return SemanticScholarClient(api_key="test-key", cache_ttl_seconds=100)
+    # min_interval_ms=0 disables the cross-worker slot gate (no Redis in unit tests).
+    return SemanticScholarClient(api_key="test-key", cache_ttl_seconds=100, min_interval_ms=0)
 
 
 # ------------------------------------------------------------------
@@ -282,3 +283,58 @@ class TestGetCitationMetricsCache:
         # Set failure is swallowed; metrics still returned
         assert metrics.found is True
         assert metrics.demand_band in {"HIGH", "MED", "LOW"}
+
+
+# ------------------------------------------------------------------
+# _acquire_slot (cross-worker rate gate)
+# ------------------------------------------------------------------
+
+
+class TestAcquireSlot:
+    def _gated(self, redis: AsyncMock) -> SemanticScholarClient:
+        gated = SemanticScholarClient(api_key="", cache_ttl_seconds=100, min_interval_ms=1500)
+        gated._redis = redis
+        return gated
+
+    async def test_disabled_when_interval_zero(self, client: SemanticScholarClient) -> None:
+        with patch.object(client, "_get_redis") as get_redis:
+            await client._acquire_slot()
+        get_redis.assert_not_called()
+
+    async def test_acquires_free_slot_without_sleeping(self) -> None:
+        redis = AsyncMock()
+        redis.set.return_value = True
+        gated = self._gated(redis)
+        with patch("src.clients.semantic_scholar_client.asyncio.sleep") as sleep:
+            await gated._acquire_slot()
+        redis.set.assert_awaited_once_with("s2:ratelimit:slot", "1", nx=True, px=1500)
+        sleep.assert_not_called()
+
+    async def test_waits_for_the_ttl_when_slot_is_taken(self) -> None:
+        redis = AsyncMock()
+        redis.set.side_effect = [None, True]
+        redis.pttl.return_value = 800
+        gated = self._gated(redis)
+        with patch("src.clients.semantic_scholar_client.asyncio.sleep", new=AsyncMock()) as sleep:
+            await gated._acquire_slot()
+        assert redis.set.await_count == 2
+        waited = sleep.await_args.args[0]
+        assert 0.8 <= waited <= 0.9
+
+    async def test_redis_error_fails_open(self) -> None:
+        redis = AsyncMock()
+        redis.set.side_effect = ConnectionError("down")
+        gated = self._gated(redis)
+        await gated._acquire_slot()  # no raise
+
+    async def test_fetch_acquires_slot_before_request(self) -> None:
+        gated = SemanticScholarClient(api_key="", cache_ttl_seconds=100, min_interval_ms=1500)
+        resp = _mock_response(json_data={"citationCount": 1, "year": 2024})
+        ctx = _patch_http(resp)
+        try:
+            gated._fetch.retry.stop = stop_after_attempt(1)
+            with patch.object(gated, "_acquire_slot", new=AsyncMock()) as acquire:
+                await gated._fetch("2401.00001")
+        finally:
+            ctx.stop()
+        acquire.assert_awaited_once()

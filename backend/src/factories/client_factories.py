@@ -55,6 +55,7 @@ def get_semantic_scholar_client() -> SemanticScholarClient:
     return SemanticScholarClient(
         api_key=settings.semantic_scholar_api_key,
         cache_ttl_seconds=settings.semantic_scholar_cache_ttl_seconds,
+        min_interval_ms=settings.semantic_scholar_min_interval_ms,
     )
 
 

@@ -270,9 +270,12 @@ dimension) and is gated behind the spike.
   `TYPESAFE_API_KEY`, `TYPESAFE_MODEL` (pinned `jev-1.13.0`), `TYPESAFE_TIMEOUT_SECONDS`.
 - `clients/semantic_scholar_client.py` (**v1**) -- lookup by arXiv ID -> citation count and
   velocity. Backoff-aware + net-new Redis cache (see the pattern note below). S2 is the one
-  external API v1 depends on; it is far gentler than GitHub code search. Without
-  `SEMANTIC_SCHOLAR_API_KEY` the keyless pool 429s and demand soft-fails to NULL (SPE-284);
-  the composite excludes NULL sub-scores and renormalizes the remaining weights.
+  external API v1 depends on; it is far gentler than GitHub code search. It runs keyless:
+  a Redis slot gate (`SEMANTIC_SCHOLAR_MIN_INTERVAL_MS`) spaces requests across all
+  workers so the shared ~1 req/s pool is never burst, a lookup that still 429s soft-fails
+  to NULL (the composite renormalizes over the present sub-scores), and the nightly
+  `backfill_demand_task` retries NULL rows (SPE-284). Weekly volume (~100 lookups, cached
+  7 days) is about 1% of the keyless budget, so no API key is requested.
 - `clients/github_client.py` (**v1.1**) -- GitHub code/repo search for arXiv ID, title
   variants, and author repos. Returns hits (repo, stars, last commit, README snippet).
   **Backoff-aware + Redis-cached** -- copy the tenacity `Retry-After`-aware backoff pattern
