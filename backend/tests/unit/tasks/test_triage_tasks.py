@@ -1,7 +1,7 @@
 """Unit tests for Stage 1 triage and the Stage 2 driver task."""
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch, MagicMock
 
 import pytest
 
@@ -175,13 +175,60 @@ class TestScorePaperTask:
         summary = {"status": "scored", "arxiv_id": "2401.001"}
         score_tasks.score_paper_task.push_request(id="test-task-id")
         try:
-            with patch.object(score_tasks, "_run", AsyncMock(return_value=summary)) as mock_run:
+            with (
+                patch.object(score_tasks, "_run", AsyncMock(return_value=summary)) as mock_run,
+                patch.object(score_tasks, "release_ondemand_lock") as release,
+            ):
                 result = score_tasks.score_paper_task._orig_run(arxiv_id="2401.001")
         finally:
             score_tasks.score_paper_task.pop_request()
 
         assert result == summary
         mock_run.assert_awaited_once_with("2401.001")
+        release.assert_called_once_with("2401.001")
+
+    def test_releases_lock_on_hard_failure_but_not_on_rate_limit_retry(self):
+        from celery.exceptions import Retry
+
+        from src.exceptions import TypeSafeError, TypeSafeRateLimitError
+        from src.tasks import score_tasks
+
+        score_tasks.score_paper_task.push_request(id="test-task-id", retries=0)
+        try:
+            with (
+                patch.object(score_tasks, "_run", AsyncMock(side_effect=TypeSafeError("boom"))),
+                patch.object(score_tasks, "release_ondemand_lock") as release,
+            ):
+                with pytest.raises(TypeSafeError):
+                    score_tasks.score_paper_task._orig_run(arxiv_id="2401.001")
+            release.assert_called_once_with("2401.001")
+
+            with (
+                patch.object(
+                    score_tasks,
+                    "_run",
+                    AsyncMock(side_effect=TypeSafeRateLimitError(retry_after=1)),
+                ),
+                patch.object(score_tasks, "release_ondemand_lock") as release,
+                patch.object(score_tasks.score_paper_task, "retry", side_effect=Retry()),
+            ):
+                with pytest.raises(Retry):
+                    score_tasks.score_paper_task.run(arxiv_id="2401.001")
+            release.assert_not_called()
+        finally:
+            score_tasks.score_paper_task.pop_request()
+
+    def test_release_lock_swallows_redis_errors(self):
+        from src.tasks import score_tasks
+
+        with patch.object(score_tasks.redis.Redis, "from_url", side_effect=OSError("down")):
+            score_tasks.release_ondemand_lock("2401.001")  # no raise
+
+        client = MagicMock()
+        with patch.object(score_tasks.redis.Redis, "from_url", return_value=client):
+            score_tasks.release_ondemand_lock("2401.001")
+        client.delete.assert_called_once_with("score:ondemand:2401.001")
+        client.close.assert_called_once()
 
     @pytest.mark.parametrize("retry_after,countdown", [(120.0, 120), (5.0, 60), (None, 60)])
     def test_rate_limit_retries_after_server_hint(self, retry_after, countdown):
@@ -195,6 +242,7 @@ class TestScorePaperTask:
         try:
             with (
                 patch.object(score_tasks, "_run", AsyncMock(side_effect=error)),
+                patch.object(score_tasks, "release_ondemand_lock"),
                 patch.object(score_tasks.score_paper_task, "retry", side_effect=Retry()) as retry,
             ):
                 with pytest.raises(Retry):

@@ -1,0 +1,34 @@
+import { Loader2, Clock } from 'lucide-react'
+import Button from '../ui/Button'
+
+interface PendingScoreStateProps {
+  timedOut: boolean
+  onRetry: () => void
+}
+
+/** Shown while the backend ingests and scores the paper on demand (202). */
+export default function PendingScoreState({ timedOut, onRetry }: PendingScoreStateProps) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 text-center" role="status">
+      <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center mb-3">
+        {timedOut ? (
+          <Clock className="w-5 h-5 text-stone-400" strokeWidth={1.5} />
+        ) : (
+          <Loader2 className="w-5 h-5 animate-spin text-stone-400" strokeWidth={1.5} />
+        )}
+      </div>
+      {timedOut ? (
+        <>
+          <p className="text-sm font-medium text-stone-700">Still scoring this paper.</p>
+          <p className="text-sm text-stone-400 mt-1 mb-4">Full-text scoring can take a few minutes on a busy queue.</p>
+          <Button variant="secondary" size="sm" onClick={onRetry}>Check again</Button>
+        </>
+      ) : (
+        <>
+          <p className="text-sm font-medium text-stone-700">Ingesting and scoring this paper.</p>
+          <p className="text-sm text-stone-400 mt-1">This usually takes a minute or two.</p>
+        </>
+      )}
+    </div>
+  )
+}

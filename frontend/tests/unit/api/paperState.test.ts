@@ -56,6 +56,22 @@ describe('applyStateToCaches', () => {
   })
 })
 
+describe('applyStateToCaches (score detail)', () => {
+  it('patches a ready score detail and leaves pending untouched', async () => {
+    const { scoreKeys } = await import('../../../src/api/scores')
+    const { makePaperScoreDetail } = await import('../../fixtures/scores')
+    const { queryClient } = setup()
+    queryClient.setQueryData(scoreKeys.detail('a'), { status: 'ready', detail: makePaperScoreDetail() })
+    queryClient.setQueryData(scoreKeys.detail('b'), { status: 'pending', task_id: null })
+    const next = { state: 'saved' as const, repo_url: null, dismissal_reason: null, updated_at: 'x' }
+    const snap = applyStateToCaches(queryClient, 'a', next)
+    expect(queryClient.getQueryData<{ status: string; detail: { state: unknown } }>(scoreKeys.detail('a'))?.detail.state).toEqual(next)
+    expect(snap.previousScore?.status).toBe('ready')
+    applyStateToCaches(queryClient, 'b', next)
+    expect(queryClient.getQueryData(scoreKeys.detail('b'))).toEqual({ status: 'pending', task_id: null })
+  })
+})
+
 describe('useSetPaperState', () => {
   it('is optimistic and rolls back on error', async () => {
     const { queryClient, wrapper } = setup()

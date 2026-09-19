@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     typesafe_model: str = "jev-1.13.0"
     typesafe_timeout_seconds: int = 60
 
+    # On-demand scoring (paper detail, SPE-276): Redis lock TTL that dedupes repeated
+    # GET /papers/{id}/score polls into one score_paper_task per paper.
+    ondemand_score_lock_seconds: int = 1800
+
     # Search configuration
     default_top_k: int = 3
     rrf_k: int = 60

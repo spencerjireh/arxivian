@@ -329,6 +329,15 @@ compute-profile match (`laptop` needs feasibility level >= 3, `single_gpu` >= 2,
 stated"), `single_gpu` (level >= 2), `code_released` (the authors' own statement; never a
 "no code" claim). Dimensions with confidence < 0.5 are flagged, not hidden.
 
+**Paper detail (SPE-276):** `GET /papers/{arxiv_id}/score` returns every dimension's level
+distribution, atomic judgments and its `score_evidence` spans (the canonical display source;
+`dimensions[*].evidence` is a subset). A paper that is not yet scored is scored on demand:
+the endpoint enqueues `score_paper_task` (which ingests the full text itself) behind a Redis
+`SET NX` lock keyed on the arXiv id, so repeated polls share one task, and answers 202 until
+the score exists. The task releases the lock on completion or hard failure; a rate-limit
+retry keeps it. Because digest membership keys on `paper_scores.created_at`, an on-demand
+score joins the feed only after the next `build_digest_task`.
+
 **Store-evidence-not-numbers** is the governing rule: sub-scores and their supporting
 spans are first-class, which makes both the UI breakdown trustworthy and the rubric
 tunable (reweighting = arithmetic over stored sub-scores, never a re-extraction).

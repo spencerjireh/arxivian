@@ -25,7 +25,10 @@ from src.schemas.feed import (
     FeedItem,
     FeedPaper,
     FeedResponse,
+    PaperScoreDetailResponse,
     UserPaperStateResponse,
+    build_attributes_detail,
+    build_dimension_details,
     build_scores,
     build_signals,
     build_verdict,
@@ -136,6 +139,36 @@ class FeedService:
             offset=offset,
             limit=limit,
             items=items[offset : offset + limit],
+        )
+
+    async def get_score_detail(self, user: User, arxiv_id: str) -> PaperScoreDetailResponse | None:
+        """The full breakdown for one paper, or None when it is not ingested or not scored."""
+        paper = await self.paper_repo.get_by_arxiv_id(arxiv_id)
+        if paper is None or not paper.pdf_processed:
+            return None
+        score = await self.scoring_repo.get_by_paper_id(
+            paper.id, self.rubric_version, with_evidence=True
+        )
+        if score is None:
+            return None
+
+        profile = FeedProfile.from_user(user)
+        dims = parse_dimensions(score.dimensions)
+        state_row = await self.state_repo.get(user.id, paper.id)
+        evidence_rows = list(score.evidence)
+        return PaperScoreDetailResponse(
+            paper=FeedPaper.model_validate(paper),
+            rubric_version=score.rubric_version,
+            scored_at=score.updated_at,
+            scores=build_scores(score, resolve_weights(profile.weights)),
+            verdict=build_verdict(dims, score.attributes),
+            signals=build_signals(dims, score.attributes, profile.compute_profile),
+            low_confidence=low_confidence_dimensions(dims),
+            state=(
+                UserPaperStateResponse.model_validate(state_row) if state_row is not None else None
+            ),
+            attributes=build_attributes_detail(score.attributes, evidence_rows),
+            dimensions=build_dimension_details(dims, evidence_rows),
         )
 
     async def _enrich(self, user: User, ranking: list[dict]) -> list[FeedItem]:

@@ -162,3 +162,60 @@ async def test_feed_end_to_end(db_session, sample_paper_data, created_user):
     assert [i.paper.arxiv_id for i in page.items] == ["f-fits", "f-top"]
     assert page.items[0].signals.compute_match is True
     assert fits.id is not None
+
+
+@pytest.mark.asyncio
+async def test_score_detail_partitions_evidence(db_session, sample_paper_data, created_user):
+    paper = await _scored(
+        db_session,
+        sample_paper_data,
+        "f-detail",
+        scores=(80, 50, 100, 55),
+        feas_level=2,
+        categories=["cs.LG"],
+    )
+    await ScoringRepository(db_session).upsert_score(
+        paper_id=str(paper.id),
+        rubric_version=RUBRIC_VERSION,
+        scores={
+            "method_clarity_score": 80,
+            "resource_feasibility_score": 50,
+            "data_availability_score": 100,
+            "demand_score": 55,
+        },
+        dimensions={
+            "method_clarity": _dim("method_clarity", 3, 4, [_noul("algorithm_given", 0.9)]),
+            "resource_feasibility": _dim("resource_feasibility", 2, 4),
+        },
+        evidence=[
+            {
+                "dimension": "method_clarity",
+                "kind": "pseudocode",
+                "text": "Algorithm 1",
+                "source": "s",
+            },
+            {
+                "dimension": "code_released",
+                "kind": "code",
+                "text": "github.com/x",
+                "source": "raw_text",
+            },
+        ],
+        attributes={"code_released": _noul("code_released", 0.8)},
+    )
+    service = FeedService(
+        digest_repo=DigestRepository(db_session),
+        scoring_repo=ScoringRepository(db_session),
+        paper_repo=PaperRepository(db_session),
+        state_repo=UserPaperStateRepository(db_session),
+        category_key="cs.LG",
+    )
+
+    detail = await service.get_score_detail(created_user, "f-detail")
+    assert detail is not None
+    assert [d.dimension for d in detail.dimensions] == ["method_clarity", "resource_feasibility"]
+    assert detail.dimensions[0].evidence[0].text == "Algorithm 1"
+    assert detail.dimensions[1].evidence == []
+    assert [e.text for e in detail.attributes.code_evidence] == ["github.com/x"]
+    assert detail.dimensions[0].probabilities[3] == 1.0
+    assert await service.get_score_detail(created_user, "nope") is None

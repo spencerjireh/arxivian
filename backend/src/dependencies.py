@@ -59,6 +59,7 @@ log = get_logger(__name__)
 
 # Type aliases for cleaner router signatures
 DbSession = Annotated[AsyncSession, Depends(get_db)]
+SettingsDep = Annotated[Settings, Depends(get_settings)]
 
 # Client dependencies (singletons)
 ArxivClientDep = Annotated[ArxivClient, Depends(get_arxiv_client)]

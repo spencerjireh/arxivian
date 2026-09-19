@@ -2,7 +2,8 @@
 
 import type { ScoreDimension } from '../types/api'
 
-export type ScoreBand = 'LOW' | 'MED' | 'HIGH'
+export type { ScoreBand } from '../types/api'
+import type { ScoreBand } from '../types/api'
 
 /** LOW [0,40) - MED [40,70) - HIGH [70,100] */
 export function bandFor(score: number): ScoreBand {
@@ -22,4 +23,43 @@ export const DIMENSION_LABELS: Record<ScoreDimension, string> = {
   resource_feasibility: 'Resource feasibility',
   data_availability: 'Data availability',
   demand: 'Demand',
+}
+
+/** Human labels per level, in level order (0..max_level). */
+export const LEVEL_LABELS: Record<ScoreDimension, string[]> = {
+  method_clarity: ['0 criteria', '1 criterion', '2 criteria', '3 criteria', '4 criteria'],
+  resource_feasibility: ['Cluster', 'Multi-GPU node', 'Datacenter GPU', 'Consumer GPU', 'Laptop / CPU'],
+  data_availability: ['Fail', 'Pass'],
+  demand: ['Low', 'Medium', 'High'],
+}
+
+export const EVIDENCE_KIND_LABELS: Record<string, string> = {
+  pseudocode: 'Pseudocode and algorithm spans',
+  compute: 'Compute mentions',
+  dataset: 'Dataset mentions',
+  citation: 'Citation signal',
+  code: 'Code mentions',
+}
+
+export const JUDGMENT_LABELS: Record<string, string> = {
+  algorithm_given: 'Algorithm or equations given',
+  architecture_specified: 'Architecture specified',
+  hyperparameters_stated: 'Hyperparameters stated',
+  training_procedure_described: 'Training procedure described',
+  compute_tier: 'Compute tier',
+  compute_stated: 'Compute stated',
+  pretrained_weights_released: 'Pretrained weights released',
+  data_access: 'Data access',
+  code_released: 'Code released',
+  task_type: 'Task type',
+  model_family: 'Model family',
+}
+
+export function judgmentLabel(key: string): string {
+  return JUDGMENT_LABELS[key] ?? key.replace(/_/g, ' ')
+}
+
+export function formatAnswer(answer: string | number | boolean): string {
+  if (typeof answer === 'boolean') return answer ? 'Yes' : 'No'
+  return String(answer)
 }
