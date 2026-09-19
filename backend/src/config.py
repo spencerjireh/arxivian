@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     # (the client's backoff path handles 429s either way).
     semantic_scholar_api_key: str = ""
     semantic_scholar_cache_ttl_seconds: int = 604800  # 7 days
+    # Keyless Semantic Scholar shares a ~1 req/s pool; this gate spaces our calls across
+    # every worker (Redis slot) so concurrent scoring tasks cannot burst into 429s (SPE-284).
+    semantic_scholar_min_interval_ms: int = 1500
+    # Nightly backfill of demand for scores whose S2 lookup soft-failed to NULL.
+    demand_backfill_schedule_cron: str = "0 4 * * *"  # Daily at 4am UTC
+    demand_backfill_batch_size: int = 200
 
     # TypeSafe Jev -- the Stage 2 scoring judgment engine (method clarity, resource
     # feasibility, data availability, product attributes). Key is required for scoring;

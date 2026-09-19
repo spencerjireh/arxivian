@@ -87,3 +87,47 @@ async def test_list_weeks(db_session):
     assert await repo.list_weeks("cs.LG") == [(date(2026, 8, 10), 1), (date(2026, 8, 3), 2)]
     assert await repo.list_weeks("cs.CV") == [(date(2026, 8, 10), 0)]
     assert await repo.list_weeks("nope") == []
+
+
+@pytest.mark.asyncio
+async def test_list_missing_demand_and_set_demand(db_session, sample_paper_data):
+    repo = ScoringRepository(db_session)
+    paper = await PaperRepository(db_session).create({**sample_paper_data, "arxiv_id": "d-null"})
+    await repo.upsert_score(
+        paper_id=str(paper.id),
+        rubric_version=RUBRIC_VERSION,
+        scores={
+            "method_clarity_score": 80,
+            "resource_feasibility_score": 80,
+            "data_availability_score": 100,
+            "demand_score": None,
+        },
+        dimensions={"method_clarity": {"dimension": "method_clarity"}},
+        evidence=[
+            {"dimension": "method_clarity", "kind": "pseudocode", "text": "x", "source": "s"}
+        ],
+    )
+    await _scored(db_session, sample_paper_data, "d-full")
+
+    missing = await repo.list_missing_demand(rubric_version=RUBRIC_VERSION, limit=10)
+    assert [p.arxiv_id for _, p in missing] == ["d-null"]
+
+    score, _ = missing[0]
+    score = await repo.get_by_paper_id(score.paper_id, RUBRIC_VERSION, with_evidence=True)
+    assert score is not None
+    await repo.set_demand(
+        score,
+        demand_score=55,
+        dimension={"dimension": "demand", "level": 1},
+        evidence=[{"dimension": "demand", "kind": "citation", "text": "3/mo", "source": "S2"}],
+    )
+
+    reloaded = await repo.get_by_paper_id(score.paper_id, RUBRIC_VERSION, with_evidence=True)
+    assert reloaded is not None
+    assert reloaded.demand_score == 55
+    assert reloaded.dimensions == {
+        "method_clarity": {"dimension": "method_clarity"},
+        "demand": {"dimension": "demand", "level": 1},
+    }
+    assert sorted(e.dimension for e in reloaded.evidence) == ["demand", "method_clarity"]
+    assert await repo.list_missing_demand(rubric_version=RUBRIC_VERSION, limit=10) == []

@@ -142,6 +142,12 @@ class TestCeleryAppConfiguration:
         daily_ingest = celery_app.conf.beat_schedule["daily-ingest"]
         assert daily_ingest["task"] == "src.tasks.scheduled_tasks.daily_ingest_task"
 
+    def test_beat_schedule_contains_daily_demand_backfill(self):
+        from src.celery_app import celery_app
+
+        entry = celery_app.conf.beat_schedule["daily-demand-backfill"]
+        assert entry["task"] == "src.tasks.demand_tasks.backfill_demand_task"
+
     def test_beat_schedule_contains_daily_cleanup(self):
         """Verify beat schedule contains daily cleanup task."""
         from src.celery_app import celery_app
