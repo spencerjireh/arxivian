@@ -25,8 +25,8 @@ EXPOSE 8000
 # Development stage (includes dev dependencies for testing)
 FROM base AS development
 
-# Install all dependencies including dev (pytest, ruff, etc.)
-RUN uv sync --frozen --no-editable --extra dev
+# Install all dependencies including the default `dev` group (pytest, ruff, ty)
+RUN uv sync --frozen --no-editable
 
 # Copy application code (will be overridden by volume mount in dev)
 COPY . .
