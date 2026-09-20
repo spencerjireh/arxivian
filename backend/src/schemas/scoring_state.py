@@ -132,7 +132,7 @@ class DimensionScore(BaseModel):
             return 100 if self.level == 1 else 0
         if self.dimension == "demand":
             return DEMAND_LEVEL_TO_SCORE[self.level]
-        return int(round(self.expected / self.max_level * 100))
+        return round(self.expected / self.max_level * 100)
 
     def band(self) -> Band:
         return score_to_band(self.derived_score())

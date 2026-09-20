@@ -8,9 +8,9 @@ export default function FeedProfileSection() {
   const update = useUpdateFeedProfile()
 
   return (
-    <div className="bg-white border border-stone-200 rounded-xl p-6">
-      <h2 className="font-display text-lg font-semibold text-stone-900 mb-1">Feed profile</h2>
-      <p className="text-xs text-stone-400 mb-4">
+    <div className="rounded-xl border border-stone-200 bg-white p-6">
+      <h2 className="font-display mb-1 text-lg font-semibold text-stone-900">Feed profile</h2>
+      <p className="mb-4 text-xs text-stone-400">
         Categories, compute setup and keywords that shape your weekly digest
       </p>
       <FeedProfileForm

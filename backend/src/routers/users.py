@@ -2,10 +2,10 @@
 
 from fastapi import APIRouter
 
+from src.dependencies import CurrentUserRequired, TierPolicyDep, UsageCounterRepoDep, UserRepoDep
 from src.models.user import User
 from src.repositories.usage_counter_repository import UsageCounterRepository
 from src.schemas.users import FeedProfile, MeResponse, UpdatePreferencesRequest, UserPreferences
-from src.dependencies import CurrentUserRequired, TierPolicyDep, UsageCounterRepoDep, UserRepoDep
 from src.tiers import TierPolicy
 from src.utils.logger import get_logger
 

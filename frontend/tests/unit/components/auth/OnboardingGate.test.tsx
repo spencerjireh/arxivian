@@ -5,8 +5,13 @@ import OnboardingGate from '../../../../src/components/auth/OnboardingGate'
 import { useUserStore } from '../../../../src/stores/userStore'
 
 const base = {
-  id: 'u', email: null, first_name: null, last_name: null, tier: 'free' as const,
-  daily_chat_limit: null, chats_used_today: 0,
+  id: 'u',
+  email: null,
+  first_name: null,
+  last_name: null,
+  tier: 'free' as const,
+  daily_chat_limit: null,
+  chats_used_today: 0,
 }
 
 function renderAt(path: string) {
@@ -22,7 +27,7 @@ function renderAt(path: string) {
         }
       />
     </Routes>,
-    { initialEntries: [path] },
+    { initialEntries: [path] }
   )
 }
 
@@ -61,7 +66,7 @@ describe('OnboardingGate', () => {
           }
         />
       </Routes>,
-      { initialEntries: ['/onboarding'] },
+      { initialEntries: ['/onboarding'] }
     )
     expect(screen.getByText('onboarding page')).toBeInTheDocument()
   })

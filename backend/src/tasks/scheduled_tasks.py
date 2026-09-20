@@ -1,7 +1,7 @@
 """Scheduled background tasks."""
 
 import hashlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from src.celery_app import celery_app
@@ -19,7 +19,7 @@ STAGGER_SECONDS = 30
 
 def _deterministic_task_id(user_id: str, query: str) -> str:
     """Generate a deterministic task ID from date, user, and query."""
-    key = f"{datetime.now(timezone.utc).date().isoformat()}:{user_id}:{query}"
+    key = f"{datetime.now(UTC).date().isoformat()}:{user_id}:{query}"
     return hashlib.sha256(key.encode()).hexdigest()[:32]
 
 

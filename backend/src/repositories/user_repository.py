@@ -1,7 +1,7 @@
 """Repository for User model operations."""
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
+
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,7 +17,7 @@ class UserRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_by_id(self, user_id: str) -> Optional[User]:
+    async def get_by_id(self, user_id: str) -> User | None:
         """Get user by UUID."""
         log.debug("query user by id", user_id=user_id)
         result = await self.session.execute(select(User).where(User.id == user_id))
@@ -25,7 +25,7 @@ class UserRepository:
         log.debug("query result", found=user is not None)
         return user
 
-    async def get_by_clerk_id(self, clerk_id: str) -> Optional[User]:
+    async def get_by_clerk_id(self, clerk_id: str) -> User | None:
         """Get user by Clerk ID."""
         log.debug("query user by clerk_id", clerk_id=clerk_id)
         result = await self.session.execute(select(User).where(User.clerk_id == clerk_id))
@@ -36,10 +36,10 @@ class UserRepository:
     async def create(
         self,
         clerk_id: str,
-        email: Optional[str] = None,
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
-        profile_image_url: Optional[str] = None,
+        email: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        profile_image_url: str | None = None,
     ) -> User:
         """
         Create a new user.
@@ -52,7 +52,7 @@ class UserRepository:
             first_name=first_name,
             last_name=last_name,
             profile_image_url=profile_image_url,
-            last_login_at=datetime.now(timezone.utc),
+            last_login_at=datetime.now(UTC),
         )
         self.session.add(user)
         await self.session.flush()
@@ -63,10 +63,10 @@ class UserRepository:
     async def get_or_create(
         self,
         clerk_id: str,
-        email: Optional[str] = None,
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
-        profile_image_url: Optional[str] = None,
+        email: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        profile_image_url: str | None = None,
     ) -> tuple[User, bool]:
         """
         Get existing user or create a new one.
@@ -108,10 +108,10 @@ class UserRepository:
     async def update_on_login(
         self,
         user: User,
-        email: Optional[str] = None,
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
-        profile_image_url: Optional[str] = None,
+        email: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        profile_image_url: str | None = None,
     ) -> User:
         """
         Update user's last login time and sync profile data from Clerk.
@@ -119,8 +119,8 @@ class UserRepository:
         Caller is responsible for committing the transaction.
         """
         update_data = {
-            "last_login_at": datetime.now(timezone.utc),
-            "updated_at": datetime.now(timezone.utc),
+            "last_login_at": datetime.now(UTC),
+            "updated_at": datetime.now(UTC),
         }
 
         # Only update fields if they have values (to preserve existing data)
@@ -154,7 +154,7 @@ class UserRepository:
         Returns:
             Updated user
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         await self.session.execute(
             update(User)
             .where(User.id == user.id)
@@ -181,7 +181,7 @@ class UserRepository:
         Returns:
             Updated user
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         await self.session.execute(
             update(User)
             .where(User.id == user.id)

@@ -10,7 +10,13 @@ function renderCard(item = makeFeedItem(), pendingAction = null) {
   const onDismiss = vi.fn()
   const onImplementing = vi.fn()
   renderWithProviders(
-    <FeedCard item={item} onSave={onSave} onDismiss={onDismiss} onImplementing={onImplementing} pendingAction={pendingAction} />,
+    <FeedCard
+      item={item}
+      onSave={onSave}
+      onDismiss={onDismiss}
+      onImplementing={onImplementing}
+      pendingAction={pendingAction}
+    />
   )
   return { onSave, onDismiss, onImplementing }
 }
@@ -55,18 +61,30 @@ describe('FeedCard', () => {
   })
 
   it('reflects saved and shipped states', () => {
-    renderCard(makeFeedItem({ state: { state: 'saved', repo_url: null, dismissal_reason: null, updated_at: 'x' } }))
+    renderCard(
+      makeFeedItem({
+        state: { state: 'saved', repo_url: null, dismissal_reason: null, updated_at: 'x' },
+      })
+    )
     expect(screen.getByRole('button', { name: 'Saved' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('shows a shipped chip with the repo link instead of actions', () => {
     renderCard(
       makeFeedItem({
-        state: { state: 'shipped', repo_url: 'https://github.com/x/y', dismissal_reason: null, updated_at: 'x' },
-      }),
+        state: {
+          state: 'shipped',
+          repo_url: 'https://github.com/x/y',
+          dismissal_reason: null,
+          updated_at: 'x',
+        },
+      })
     )
     expect(screen.getByText('Shipped')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Repo/ })).toHaveAttribute('href', 'https://github.com/x/y')
+    expect(screen.getByRole('link', { name: /Repo/ })).toHaveAttribute(
+      'href',
+      'https://github.com/x/y'
+    )
     expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument()
   })
 })

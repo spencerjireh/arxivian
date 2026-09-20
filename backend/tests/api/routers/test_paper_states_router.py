@@ -1,6 +1,6 @@
 """Tests for the per-user paper state endpoints."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import Mock
 
 import pytest
@@ -11,7 +11,7 @@ def _state_row(state="saved", repo_url=None, dismissal_reason=None):
     row.state = state
     row.repo_url = repo_url
     row.dismissal_reason = dismissal_reason
-    row.updated_at = datetime(2026, 8, 5, tzinfo=timezone.utc)
+    row.updated_at = datetime(2026, 8, 5, tzinfo=UTC)
     return row
 
 

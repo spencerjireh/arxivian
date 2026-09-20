@@ -15,10 +15,18 @@ const OPTIONS: { value: ComputeProfile; label: string; detail: string; icon: typ
 ]
 
 /** Declared compute reality; the feed ranks papers that fit it first. */
-export default function ComputeProfilePicker({ value, onChange, error }: ComputeProfilePickerProps) {
+export default function ComputeProfilePicker({
+  value,
+  onChange,
+  error,
+}: ComputeProfilePickerProps) {
   return (
     <div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="radiogroup" aria-label="Compute profile">
+      <div
+        className="grid grid-cols-1 gap-2 sm:grid-cols-3"
+        role="radiogroup"
+        aria-label="Compute profile"
+      >
         {OPTIONS.map(({ value: v, label, detail, icon: Icon }) => {
           const selected = value === v
           return (
@@ -29,16 +37,18 @@ export default function ComputeProfilePicker({ value, onChange, error }: Compute
               aria-checked={selected}
               onClick={() => onChange(v)}
               className={clsx(
-                'text-left rounded-lg border px-4 py-3 flex items-start gap-3 transition-colors duration-150',
+                'flex items-start gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150',
                 selected
-                  ? 'bg-stone-900 border-stone-900 text-white'
-                  : 'bg-white border-stone-200 text-stone-700 hover:border-stone-300',
+                  ? 'border-stone-900 bg-stone-900 text-white'
+                  : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300'
               )}
             >
-              <Icon className="w-5 h-5 shrink-0 mt-0.5" strokeWidth={1.5} />
+              <Icon className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={1.5} />
               <span>
                 <span className="block text-sm font-medium">{label}</span>
-                <span className={clsx('block text-xs', selected ? 'text-stone-300' : 'text-stone-500')}>
+                <span
+                  className={clsx('block text-xs', selected ? 'text-stone-300' : 'text-stone-500')}
+                >
                   {detail}
                 </span>
               </span>

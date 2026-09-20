@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react'
+import { Routes, Route } from 'react-router-dom'
 import { mockAuth } from '../../mocks/clerk'
 import { renderWithProviders } from '../../helpers/renderWithProviders'
-import { Routes, Route } from 'react-router-dom'
 import LandingPage from '../../../src/pages/LandingPage'
 
 vi.mock('@clerk/clerk-react', () => import('../../mocks/clerk'))
@@ -44,7 +44,7 @@ describe('LandingPage', () => {
         <Route path="/" element={<LandingPage />} />
         <Route path="/feed" element={<div data-testid="feed-page">Feed</div>} />
       </Routes>,
-      { initialEntries: ['/'] },
+      { initialEntries: ['/'] }
     )
 
     await waitFor(() => {

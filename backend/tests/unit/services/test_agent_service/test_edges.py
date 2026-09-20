@@ -1,17 +1,17 @@
 """Tests for edge routing functions."""
 
 from src.schemas.langgraph_state import (
-    ClassificationResult,
     BatchEvaluation,
+    ClassificationResult,
     ToolCall,
     ToolExecution,
 )
 from src.services.agent_service.edges import (
     route_after_classify,
-    route_after_executor,
     route_after_eval,
+    route_after_executor,
 )
-from src.services.agent_service.tools import RETRIEVE_CHUNKS, EXPLORE_CITATIONS, SEMANTIC_SCHOLAR
+from src.services.agent_service.tools import EXPLORE_CITATIONS, RETRIEVE_CHUNKS, SEMANTIC_SCHOLAR
 
 
 class TestRouteAfterClassify:
@@ -170,6 +170,7 @@ class TestRouteAfterExecutor:
             ],
         }
         assert route_after_executor(state) == "classify"
+
 
 class TestRouteAfterEval:
     """Tests for route_after_eval edge function."""

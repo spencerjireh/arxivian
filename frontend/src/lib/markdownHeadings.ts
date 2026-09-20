@@ -1,5 +1,5 @@
-import type { Components } from 'react-markdown'
 import { createElement, type ReactNode } from 'react'
+import type { Components } from 'react-markdown'
 
 /** GitHub-style heading slug so a document's own `[text](#slug)` links resolve. */
 function slugify(text: string): string {

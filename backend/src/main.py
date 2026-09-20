@@ -1,28 +1,29 @@
 """FastAPI application entry point."""
 
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from src.config import get_settings
-from src.database import engine, init_db, AsyncSessionLocal
-
-from src.services.agent_service.graph_builder import build_graph
-
-# Import routers
-from src.routers import (
-    health,
-    stream,
-    papers,
-    conversations,
-    ops,
-    users,
-    webhooks,
-    feed,
-    paper_states,
-)
+from src.database import AsyncSessionLocal, engine, init_db
 
 # Import middleware
 from src.middleware import logging_middleware, maintenance_middleware, register_exception_handlers
+
+# Import routers
+from src.routers import (
+    conversations,
+    feed,
+    health,
+    ops,
+    paper_states,
+    papers,
+    stream,
+    users,
+    webhooks,
+)
+from src.services.agent_service.graph_builder import build_graph
 from src.utils.logger import configure_logging, get_logger
 
 settings = get_settings()

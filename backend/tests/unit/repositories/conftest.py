@@ -1,8 +1,9 @@
 """Shared pytest fixtures for repository tests."""
 
-import pytest
-from unittest.mock import AsyncMock, Mock
 from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 
 @pytest.fixture

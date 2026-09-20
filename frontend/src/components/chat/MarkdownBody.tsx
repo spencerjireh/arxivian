@@ -2,7 +2,7 @@ import ReactMarkdown, { type Components } from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { remarkPlugins, rehypePlugins } from '../../lib/markdown/config'
-import { markdownComponents } from '../../lib/markdown/components'
+import { codeText, markdownComponents } from '../../lib/markdown/components'
 import { preprocessLatex } from '../../lib/markdown/preprocessors'
 import ErrorBoundary from '../ui/ErrorBoundary'
 import 'katex/dist/katex.min.css'
@@ -17,18 +17,21 @@ const components: Components = {
     const { children, className, node, ...rest } = props
     const match = /language-(\w+)/.exec(className || '')
     return node?.position && match ? (
-      <div className="my-4 rounded-lg overflow-hidden">
+      <div className="my-4 overflow-hidden rounded-lg">
         <SyntaxHighlighter
-          style={oneDark as { [key: string]: React.CSSProperties }}
+          style={oneDark}
           language={match[1]}
           PreTag="div"
           customStyle={{ margin: 0, borderRadius: '0.75rem', fontSize: '0.875rem' }}
         >
-          {String(children).replace(/\n$/, '')}
+          {codeText(children)}
         </SyntaxHighlighter>
       </div>
     ) : (
-      <code className="bg-stone-100 text-stone-800 px-1.5 py-0.5 rounded text-sm font-mono" {...rest}>
+      <code
+        className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-sm text-stone-800"
+        {...rest}
+      >
         {children}
       </code>
     )
@@ -39,7 +42,7 @@ const components: Components = {
 export default function MarkdownBody({ content }: MarkdownBodyProps) {
   return (
     <ErrorBoundary
-      fallback={<pre className="text-sm text-stone-500 whitespace-pre-wrap">{content}</pre>}
+      fallback={<pre className="text-sm whitespace-pre-wrap text-stone-500">{content}</pre>}
     >
       <ReactMarkdown
         remarkPlugins={remarkPlugins}

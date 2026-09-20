@@ -33,7 +33,10 @@ export function makeFeedItem(overrides: Partial<FeedItem> = {}): FeedItem {
   }
 }
 
-export function makeFeedResponse(items: FeedItem[], overrides: Partial<FeedResponse> = {}): FeedResponse {
+export function makeFeedResponse(
+  items: FeedItem[],
+  overrides: Partial<FeedResponse> = {}
+): FeedResponse {
   return {
     week_start: '2026-08-03',
     available_weeks: [{ week_start: '2026-08-03', paper_count: items.length }],

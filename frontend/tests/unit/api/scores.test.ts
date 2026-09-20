@@ -1,14 +1,20 @@
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
-import type { ReactNode } from 'react'
 import { ApiError } from '../../../src/api/client'
-import { fetchPaperScore, usePaperScore, SCORE_POLL_INTERVAL_MS, SCORE_POLL_TIMEOUT_MS } from '../../../src/api/scores'
+import {
+  fetchPaperScore,
+  usePaperScore,
+  SCORE_POLL_INTERVAL_MS,
+  SCORE_POLL_TIMEOUT_MS,
+} from '../../../src/api/scores'
 import { makePaperScoreDetail } from '../../fixtures/scores'
+import type { ReactNode } from 'react'
 
 const apiGet = vi.fn()
 vi.mock('../../../src/api/client', async () => {
-  const actual = await vi.importActual<typeof import('../../../src/api/client')>('../../../src/api/client')
+  const actual =
+    await vi.importActual<typeof import('../../../src/api/client')>('../../../src/api/client')
   return { ...actual, apiGet: (...args: unknown[]) => apiGet(...args) }
 })
 
@@ -66,7 +72,7 @@ describe('usePaperScore', () => {
       })
       expect(apiGet.mock.calls.length).toBe(callsAtTimeout)
 
-      await act(async () => {
+      act(() => {
         result.current.restartPolling()
       })
       await waitFor(() => expect(apiGet.mock.calls.length).toBeGreaterThan(callsAtTimeout))

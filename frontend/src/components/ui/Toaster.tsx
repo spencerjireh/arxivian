@@ -9,8 +9,7 @@ export default function Toaster() {
       toastOptions={{
         unstyled: true,
         classNames: {
-          toast:
-            'flex items-start gap-3 w-[356px] rounded-lg px-4 py-3 shadow-md border',
+          toast: 'flex items-start gap-3 w-[356px] rounded-lg px-4 py-3 shadow-md border',
           title: 'font-display text-sm font-semibold',
           description: 'text-xs mt-0.5 leading-relaxed',
           error:

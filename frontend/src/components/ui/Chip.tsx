@@ -36,7 +36,7 @@ export default function Chip({
         'inline-flex items-center gap-1 rounded-full font-medium whitespace-nowrap',
         toneClasses[tone],
         sizeClasses[size],
-        className,
+        className
       )}
       {...props}
     >

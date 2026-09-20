@@ -1,5 +1,5 @@
-import type { DimensionDetail, PaperScoreDetail } from '../../src/types/api'
 import { makeFeedItem } from './feed'
+import type { DimensionDetail, PaperScoreDetail } from '../../src/types/api'
 
 export function makeDimension(overrides: Partial<DimensionDetail> = {}): DimensionDetail {
   return {
@@ -42,16 +42,63 @@ export function makePaperScoreDetail(overrides: Partial<PaperScoreDetail> = {}):
     low_confidence: [],
     state: null,
     attributes: {
-      code_released: { key: 'code_released', kind: 'noul', answer: true, probabilities: { yes: 0.8, no: 0.2 }, confidence: 0.8, legend: null },
-      task_type: { key: 'task_type', kind: 'choice', answer: 'machine translation', probabilities: {}, confidence: 0.7, legend: null },
-      model_family: { key: 'model_family', kind: 'choice', answer: 'transformer', probabilities: {}, confidence: 0.9, legend: null },
-      code_evidence: [{ kind: 'code', text: 'https://github.com/tensorflow/tensor2tensor', source: 'raw_text' }],
+      code_released: {
+        key: 'code_released',
+        kind: 'noul',
+        answer: true,
+        probabilities: { yes: 0.8, no: 0.2 },
+        confidence: 0.8,
+        legend: null,
+      },
+      task_type: {
+        key: 'task_type',
+        kind: 'choice',
+        answer: 'machine translation',
+        probabilities: {},
+        confidence: 0.7,
+        legend: null,
+      },
+      model_family: {
+        key: 'model_family',
+        kind: 'choice',
+        answer: 'transformer',
+        probabilities: {},
+        confidence: 0.9,
+        legend: null,
+      },
+      code_evidence: [
+        { kind: 'code', text: 'https://github.com/tensorflow/tensor2tensor', source: 'raw_text' },
+      ],
     },
     dimensions: [
       makeDimension(),
-      makeDimension({ dimension: 'resource_feasibility', band: 'MED', score: 50, level: 2, confidence: 0.6 }),
-      makeDimension({ dimension: 'data_availability', band: 'HIGH', score: 100, level: 1, max_level: 1, probabilities: { '0': 0.05, '1': 0.95 }, confidence: 0.95, evidence: [] }),
-      makeDimension({ dimension: 'demand', band: 'HIGH', score: 85, level: 2, max_level: 2, probabilities: { '0': 0, '1': 0, '2': 1 }, confidence: 1, evidence: [] }),
+      makeDimension({
+        dimension: 'resource_feasibility',
+        band: 'MED',
+        score: 50,
+        level: 2,
+        confidence: 0.6,
+      }),
+      makeDimension({
+        dimension: 'data_availability',
+        band: 'HIGH',
+        score: 100,
+        level: 1,
+        max_level: 1,
+        probabilities: { '0': 0.05, '1': 0.95 },
+        confidence: 0.95,
+        evidence: [],
+      }),
+      makeDimension({
+        dimension: 'demand',
+        band: 'HIGH',
+        score: 85,
+        level: 2,
+        max_level: 2,
+        probabilities: { '0': 0, '1': 0, '2': 1 },
+        confidence: 1,
+        evidence: [],
+      }),
     ],
     ...overrides,
   }

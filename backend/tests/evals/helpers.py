@@ -11,6 +11,7 @@ from langchain_core.messages import HumanMessage
 
 from src.schemas.langgraph_state import AgentState
 from src.services.agent_service.tools import ToolResult
+
 from .fixtures.canned_data import CITATION_RESULTS
 
 

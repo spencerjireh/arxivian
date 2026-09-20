@@ -1,9 +1,14 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
-import type { ReactNode } from 'react'
-import { buildFeedQuery, feedKeys, normalizeFeedParams, useInfiniteFeed } from '../../../src/api/feed'
+import {
+  buildFeedQuery,
+  feedKeys,
+  normalizeFeedParams,
+  useInfiniteFeed,
+} from '../../../src/api/feed'
 import { makeFeedItem, makeFeedResponse } from '../../fixtures/feed'
+import type { ReactNode } from 'react'
 
 const apiGet = vi.fn()
 vi.mock('../../../src/api/client', () => ({
@@ -20,14 +25,21 @@ function createWrapper() {
 describe('feed api', () => {
   it('normalizes params so equal filters share a key', () => {
     expect(normalizeFeedParams({ week: undefined, category: '', min_score: undefined })).toEqual({})
-    expect(feedKeys.list({ category: 'cs.LG' })).toEqual(feedKeys.list({ category: 'cs.LG', week: '' }))
+    expect(feedKeys.list({ category: 'cs.LG' })).toEqual(
+      feedKeys.list({ category: 'cs.LG', week: '' })
+    )
     expect(normalizeFeedParams({ include_dismissed: false })).toEqual({})
   })
 
   it('builds the query string', () => {
     expect(buildFeedQuery({}, 0)).toBe('/feed?offset=0&limit=20')
-    expect(buildFeedQuery({ week: '2026-08-03', category: 'cs.LG', min_score: 40, include_dismissed: true }, 20)).toBe(
-      '/feed?offset=20&limit=20&week=2026-08-03&category=cs.LG&min_score=40&include_dismissed=true',
+    expect(
+      buildFeedQuery(
+        { week: '2026-08-03', category: 'cs.LG', min_score: 40, include_dismissed: true },
+        20
+      )
+    ).toBe(
+      '/feed?offset=20&limit=20&week=2026-08-03&category=cs.LG&min_score=40&include_dismissed=true'
     )
   })
 

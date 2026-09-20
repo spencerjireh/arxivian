@@ -1,5 +1,4 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-
 import ErrorBoundary from '../../../../src/components/ui/ErrorBoundary'
 
 function ThrowingChild({ shouldThrow }: { shouldThrow: boolean }) {
@@ -41,12 +40,14 @@ describe('ErrorBoundary', () => {
 
   it('calls render-prop fallback with error and reset function', () => {
     render(
-      <ErrorBoundary fallback={({ error, resetErrorBoundary }) => (
-        <div>
-          <p>{error.message}</p>
-          <button onClick={resetErrorBoundary}>reset</button>
-        </div>
-      )}>
+      <ErrorBoundary
+        fallback={({ error, resetErrorBoundary }) => (
+          <div>
+            <p>{error.message}</p>
+            <button onClick={resetErrorBoundary}>reset</button>
+          </div>
+        )}
+      >
         <ThrowingChild shouldThrow={true} />
       </ErrorBoundary>
     )

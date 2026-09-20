@@ -17,8 +17,9 @@ Design notes:
   which makes test fakes awkward, and the combine rules only need the numbers.
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import Any
 
 from typesafe_sdk import (
     AsyncTypeSafeClient,

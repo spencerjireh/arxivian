@@ -39,7 +39,7 @@ from src.utils.chunking_service import ChunkingService
 from src.utils.pdf_parser import PDFParser
 
 # ---------------------------------------------------------------------------
-# Clients (singletons)
+# Client singletons
 # ---------------------------------------------------------------------------
 
 

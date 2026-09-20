@@ -147,13 +147,14 @@ inteval *args:
 # Code Quality
 # =============================================================================
 
-# Run Python linter
+# Run Python linter (src, tests and migrations are all gated)
 lint:
-    docker compose --profile dev exec app uv run ruff check src/
+    docker compose --profile dev exec app uv run ruff check src/ tests/ alembic/
+    docker compose --profile dev exec app uv run ruff format --check src/ tests/ alembic/
 
 # Run Python formatter
 format:
-    docker compose --profile dev exec app uv run ruff format src/
+    docker compose --profile dev exec app uv run ruff format src/ tests/ alembic/
 
 # Run Python type checker
 typecheck:
@@ -164,8 +165,13 @@ check: lint typecheck
 
 # Auto-fix Python lint and formatting issues
 fix:
-    docker compose --profile dev exec app uv run ruff format src/
-    docker compose --profile dev exec app uv run ruff check src/ --fix
+    docker compose --profile dev exec app uv run ruff format src/ tests/ alembic/
+    docker compose --profile dev exec app uv run ruff check src/ tests/ alembic/ --fix
+
+# Report likely-dead backend code (vulture; not a gate -- decorator-registered routes,
+# tasks and ORM columns are false positives, so read it, do not trust it)
+deadcode:
+    docker compose --profile dev exec app uvx vulture src/ --min-confidence 60 --exclude src/routers,src/tasks,src/models
 
 # Run frontend linting
 lint-frontend:

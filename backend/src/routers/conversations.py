@@ -4,15 +4,15 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query
 
+from src.dependencies import ConversationRepoDep, CurrentUserRequired, PaperRepoDep
+from src.exceptions import ResourceNotFoundError
 from src.schemas.conversation import (
+    ConversationDetailResponse,
     ConversationListItem,
     ConversationListResponse,
-    ConversationDetailResponse,
     ConversationTurnResponse,
     DeleteConversationResponse,
 )
-from src.dependencies import ConversationRepoDep, DbSession, CurrentUserRequired, PaperRepoDep
-from src.exceptions import ResourceNotFoundError
 
 router = APIRouter()
 
@@ -138,7 +138,6 @@ async def get_conversation(
 async def delete_conversation(
     session_id: str,
     conversation_repo: ConversationRepoDep,
-    db: DbSession,
     current_user: CurrentUserRequired,
 ) -> DeleteConversationResponse:
     """

@@ -13,12 +13,32 @@ const useChatMock = vi.fn()
 vi.mock('../../../../src/hooks/useChat', () => ({
   useChat: (...args: unknown[]) => {
     useChatMock(...args)
-    return { messages, sendMessage, cancelStream, retryMessage: vi.fn(), loadFromHistory: vi.fn(), clearMessages }
+    return {
+      messages,
+      sendMessage,
+      cancelStream,
+      retryMessage: vi.fn(),
+      loadFromHistory: vi.fn(),
+      clearMessages,
+    }
   },
 }))
 vi.mock('../../../../src/api/conversations', () => ({
   usePaperConversations: () => ({
-    data: { total: 1, offset: 0, limit: 30, conversations: [{ session_id: 's1', title: 'Earlier thread', turn_count: 2, created_at: '', updated_at: '' }] },
+    data: {
+      total: 1,
+      offset: 0,
+      limit: 30,
+      conversations: [
+        {
+          session_id: 's1',
+          title: 'Earlier thread',
+          turn_count: 2,
+          created_at: '',
+          updated_at: '',
+        },
+      ],
+    },
   }),
   useConversation: () => ({ data: undefined }),
 }))
@@ -34,9 +54,17 @@ describe('ScopedChatPanel', () => {
   it('passes the scope to useChat and seeds prompts that send immediately', () => {
     const onSessionChange = vi.fn()
     renderWithProviders(
-      <ScopedChatPanel arxivId="2401.00001" paperTitle="T" sessionId={null} onSessionChange={onSessionChange} />,
+      <ScopedChatPanel
+        arxivId="2401.00001"
+        paperTitle="T"
+        sessionId={null}
+        onSessionChange={onSessionChange}
+      />
     )
-    expect(useChatMock).toHaveBeenCalledWith(null, expect.objectContaining({ arxivId: '2401.00001', onSessionCreated: onSessionChange }))
+    expect(useChatMock).toHaveBeenCalledWith(
+      null,
+      expect.objectContaining({ arxivId: '2401.00001', onSessionCreated: onSessionChange })
+    )
     fireEvent.click(screen.getByRole('button', { name: /Explain the core method/ }))
     expect(sendMessage).toHaveBeenCalledWith('Explain the core method of this paper.')
     expect(screen.getByRole('button', { name: /minimal repo/ })).toBeInTheDocument()
@@ -46,7 +74,12 @@ describe('ScopedChatPanel', () => {
   it('switches threads through the picker and aborts the stream on unmount', () => {
     const onSessionChange = vi.fn()
     const { unmount } = renderWithProviders(
-      <ScopedChatPanel arxivId="2401.00001" paperTitle="T" sessionId="s1" onSessionChange={onSessionChange} />,
+      <ScopedChatPanel
+        arxivId="2401.00001"
+        paperTitle="T"
+        sessionId="s1"
+        onSessionChange={onSessionChange}
+      />
     )
     fireEvent.change(screen.getByLabelText('Thread'), { target: { value: '' } })
     expect(onSessionChange).toHaveBeenCalledWith(null)
@@ -59,9 +92,16 @@ describe('ScopedChatPanel', () => {
   it('renders messages instead of prompts when the thread has content', () => {
     messages = [{ id: 'u1', role: 'user', content: 'What is it?', createdAt: new Date() }]
     renderWithProviders(
-      <ScopedChatPanel arxivId="2401.00001" paperTitle="T" sessionId="s1" onSessionChange={vi.fn()} />,
+      <ScopedChatPanel
+        arxivId="2401.00001"
+        paperTitle="T"
+        sessionId="s1"
+        onSessionChange={vi.fn()}
+      />
     )
     expect(screen.getByText('What is it?')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Explain the core method/ })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Explain the core method/ })
+    ).not.toBeInTheDocument()
   })
 })

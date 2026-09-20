@@ -1,9 +1,8 @@
 // Read-side helpers for score presentation (mirrors backend `schemas/scoring_state.py` bands).
 
-import type { ScoreDimension } from '../types/api'
+import type { ScoreDimension, ScoreBand } from '../types/api'
 
 export type { ScoreBand } from '../types/api'
-import type { ScoreBand } from '../types/api'
 
 /** LOW [0,40) - MED [40,70) - HIGH [70,100] */
 export function bandFor(score: number): ScoreBand {
@@ -28,7 +27,13 @@ export const DIMENSION_LABELS: Record<ScoreDimension, string> = {
 /** Human labels per level, in level order (0..max_level). */
 export const LEVEL_LABELS: Record<ScoreDimension, string[]> = {
   method_clarity: ['0 criteria', '1 criterion', '2 criteria', '3 criteria', '4 criteria'],
-  resource_feasibility: ['Cluster', 'Multi-GPU node', 'Datacenter GPU', 'Consumer GPU', 'Laptop / CPU'],
+  resource_feasibility: [
+    'Cluster',
+    'Multi-GPU node',
+    'Datacenter GPU',
+    'Consumer GPU',
+    'Laptop / CPU',
+  ],
   data_availability: ['Fail', 'Pass'],
   demand: ['Low', 'Medium', 'High'],
 }

@@ -19,7 +19,7 @@ if (import.meta.env.VITE_MAINTENANCE_MODE === 'true') {
   root.render(
     <StrictMode>
       <MaintenanceScreen />
-    </StrictMode>,
+    </StrictMode>
   )
 } else {
   const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
@@ -51,14 +51,12 @@ if (import.meta.env.VITE_MAINTENANCE_MODE === 'true') {
     <StrictMode>
       <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
         <QueryClientProvider client={queryClient}>
-          <ErrorBoundary
-            fallback={(props) => <PageErrorFallback {...props} />}
-          >
+          <ErrorBoundary fallback={(props) => <PageErrorFallback {...props} />}>
             <App />
           </ErrorBoundary>
           <Toaster />
         </QueryClientProvider>
       </ClerkProvider>
-    </StrictMode>,
+    </StrictMode>
   )
 }

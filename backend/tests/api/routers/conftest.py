@@ -1,12 +1,12 @@
 """Shared pytest fixtures for router integration tests."""
 
-import pytest
 import uuid
+from collections.abc import AsyncGenerator
 from contextlib import ExitStack, asynccontextmanager
-from datetime import datetime, timezone
-from typing import AsyncGenerator
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -144,9 +144,9 @@ def mock_user():
     user.tier = "free"
     user.profile_image_url = None
     user.preferences = {}
-    user.created_at = datetime.now(timezone.utc)
-    user.updated_at = datetime.now(timezone.utc)
-    user.last_login_at = datetime.now(timezone.utc)
+    user.created_at = datetime.now(UTC)
+    user.updated_at = datetime.now(UTC)
+    user.last_login_at = datetime.now(UTC)
     return user
 
 
@@ -216,6 +216,7 @@ def overrides(
     Maps FastAPI providers to the mock fixtures so that a test can still take a fixture
     by name and configure it before the request.
     """
+    from src.config import get_settings
     from src.database import get_db
     from src.dependencies import (
         enforce_chat_limit,
@@ -230,7 +231,6 @@ def overrides(
         get_user_repository,
     )
     from src.factories import get_embeddings_client
-    from src.config import get_settings
 
     async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
         yield mock_db_session
@@ -255,8 +255,8 @@ def overrides(
 
 def _build_client(overrides: dict, mock_user=None):
     """TestClient with the shared overrides; with `mock_user`, auth is bypassed too."""
-    from src.main import app
     from src.dependencies import get_current_user_required, get_tier_policy, verify_api_key
+    from src.main import app
     from src.tiers import get_policy
 
     app.dependency_overrides.update(overrides)
@@ -297,7 +297,7 @@ def sample_task_execution():
         task_exec.task_type = "ingest"
         task_exec.status = status
         task_exec.error_message = error_message
-        task_exec.created_at = datetime.now(timezone.utc)
+        task_exec.created_at = datetime.now(UTC)
         task_exec.completed_at = completed_at
         return task_exec
 
@@ -315,15 +315,15 @@ def sample_paper(mock_user):
     paper.authors = ["Author One", "Author Two"]
     paper.abstract = "This is a test abstract."
     paper.categories = ["cs.LG", "cs.AI"]
-    paper.published_date = datetime(2023, 1, 1, tzinfo=timezone.utc)
+    paper.published_date = datetime(2023, 1, 1, tzinfo=UTC)
     paper.pdf_url = "https://arxiv.org/pdf/2301.00001.pdf"
     paper.pdf_processed = True
-    paper.pdf_processing_date = datetime(2023, 1, 2, tzinfo=timezone.utc)
+    paper.pdf_processing_date = datetime(2023, 1, 2, tzinfo=UTC)
     paper.parser_used = "marker"
     paper.raw_text = "Raw text content of the paper."
     paper.sections = [{"name": "Introduction", "text": "Intro text."}]
-    paper.created_at = datetime.now(timezone.utc)
-    paper.updated_at = datetime.now(timezone.utc)
+    paper.created_at = datetime.now(UTC)
+    paper.updated_at = datetime.now(UTC)
     return paper
 
 
@@ -337,8 +337,8 @@ def sample_conversation(mock_user):
     conv.paper_id = None
     conv.title = None
     conv.turns = []
-    conv.created_at = datetime.now(timezone.utc)
-    conv.updated_at = datetime.now(timezone.utc)
+    conv.created_at = datetime.now(UTC)
+    conv.updated_at = datetime.now(UTC)
     return conv
 
 
@@ -359,7 +359,7 @@ def sample_conversation_turn(sample_conversation):
     turn.sources = []
     turn.reasoning_steps = []
     turn.citations = None
-    turn.created_at = datetime.now(timezone.utc)
+    turn.created_at = datetime.now(UTC)
     return turn
 
 

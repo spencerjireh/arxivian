@@ -1,8 +1,7 @@
 """Global exception handler for consistent error responses."""
 
 import traceback
-from datetime import datetime, timezone
-from typing import Union
+from datetime import UTC, datetime
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -17,7 +16,7 @@ from src.utils.logger import get_logger, get_request_id
 log = get_logger(__name__)
 
 
-async def base_exception_handler(request: Request, exc: BaseAPIException) -> JSONResponse:
+async def base_exception_handler(_request: Request, exc: BaseAPIException) -> JSONResponse:
     """Handle custom API exceptions."""
     log.error(
         "api exception",
@@ -34,7 +33,7 @@ async def base_exception_handler(request: Request, exc: BaseAPIException) -> JSO
             details=exc.details,
         ),
         request_id=get_request_id(),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     return JSONResponse(
@@ -44,7 +43,7 @@ async def base_exception_handler(request: Request, exc: BaseAPIException) -> JSO
 
 
 async def validation_exception_handler(
-    request: Request, exc: Union[RequestValidationError, PydanticValidationError]
+    _request: Request, exc: RequestValidationError | PydanticValidationError
 ) -> JSONResponse:
     """Handle Pydantic validation errors from request parsing."""
     log.warning("validation error", errors=exc.errors())
@@ -60,7 +59,7 @@ async def validation_exception_handler(
             details={"errors": errors},
         ),
         request_id=get_request_id(),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     return JSONResponse(
@@ -69,7 +68,7 @@ async def validation_exception_handler(
     )
 
 
-async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError) -> JSONResponse:
+async def sqlalchemy_exception_handler(_request: Request, exc: SQLAlchemyError) -> JSONResponse:
     """Handle SQLAlchemy database errors."""
     log.error("database error", error=str(exc), traceback=traceback.format_exc())
 
@@ -81,7 +80,7 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError) -
             message=db_error.message,
         ),
         request_id=get_request_id(),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     return JSONResponse(
@@ -90,7 +89,7 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError) -
     )
 
 
-async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+async def generic_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
     """Handle unexpected exceptions."""
     log.critical(
         "unhandled exception",
@@ -105,7 +104,7 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
             message="An unexpected error occurred",
         ),
         request_id=get_request_id(),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     return JSONResponse(

@@ -26,11 +26,7 @@ const tiers = [
     price: '$0',
     period: 'during beta',
     description: 'For people who read a lot of papers.',
-    features: [
-      'Everything in Free',
-      'Unlimited paper chat turns',
-      'Priority support',
-    ],
+    features: ['Everything in Free', 'Unlimited paper chat turns', 'Priority support'],
     highlighted: true,
   },
 ] as const
@@ -44,32 +40,35 @@ const comparisonRows = [
 export default function PricingPage() {
   const { isSignedIn } = useAuth()
   const me = useUserStore((state) => state.me)
-  const [comparisonRef, comparisonInView] = useInView<HTMLDivElement>({ once: true, margin: '-40px' })
+  const [comparisonRef, comparisonInView] = useInView<HTMLDivElement>({
+    once: true,
+    margin: '-40px',
+  })
 
   const userTier = me?.tier ?? 'free'
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9] flex flex-col paper-grain">
+    <div className="paper-grain flex min-h-screen flex-col bg-[#FAFAF9]">
       <PublicHeader />
 
       {/* Hero */}
-      <section className="px-4 sm:px-6 lg:px-8 pt-20 pb-8 text-center">
+      <section className="px-4 pt-20 pb-8 text-center sm:px-6 lg:px-8">
         <div>
           <p
             style={{ '--stagger-index': 0 } as React.CSSProperties}
-            className="text-sm text-stone-500 uppercase tracking-wider font-medium mb-4 animate-stagger"
+            className="animate-stagger mb-4 text-sm font-medium tracking-wider text-stone-500 uppercase"
           >
             Pricing
           </p>
           <h1
             style={{ '--stagger-index': 1 } as React.CSSProperties}
-            className="font-display text-4xl sm:text-5xl text-stone-900 tracking-tight mb-4 animate-stagger"
+            className="font-display animate-stagger mb-4 text-4xl tracking-tight text-stone-900 sm:text-5xl"
           >
             Simple, transparent pricing
           </h1>
           <p
             style={{ '--stagger-index': 2 } as React.CSSProperties}
-            className="text-lg text-stone-500 max-w-xl mx-auto animate-stagger"
+            className="animate-stagger mx-auto max-w-xl text-lg text-stone-500"
           >
             Pro access is free while we are in beta. No credit card required.
           </p>
@@ -77,8 +76,8 @@ export default function PricingPage() {
       </section>
 
       {/* Tier cards */}
-      <section className="px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+      <section className="px-4 pb-16 sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-3xl grid-cols-1 gap-6 md:grid-cols-2">
           {tiers.map((tier, index) => {
             const isPro = tier.name === 'Pro'
             return (
@@ -86,32 +85,30 @@ export default function PricingPage() {
                 key={tier.name}
                 style={{ '--stagger-index': index + 3 } as React.CSSProperties}
                 className={clsx(
-                  'bg-white border rounded-xl p-6 flex flex-col animate-stagger',
+                  'animate-stagger flex flex-col rounded-xl border bg-white p-6',
                   isPro ? 'border-stone-900 ring-1 ring-stone-900' : 'border-stone-200'
                 )}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-display text-lg font-semibold text-stone-900">
-                    {tier.name}
-                  </h3>
+                <div className="mb-1 flex items-center gap-2">
+                  <h3 className="font-display text-lg font-semibold text-stone-900">{tier.name}</h3>
                   {isPro && (
-                    <span className="text-[10px] font-mono font-medium uppercase tracking-wider text-white bg-stone-900 px-1.5 py-0.5 rounded">
+                    <span className="rounded bg-stone-900 px-1.5 py-0.5 font-mono text-[10px] font-medium tracking-wider text-white uppercase">
                       Beta
                     </span>
                   )}
                 </div>
-                <div className="flex items-baseline gap-1 mb-1">
+                <div className="mb-1 flex items-baseline gap-1">
                   <span className="font-display text-3xl font-semibold text-stone-900">
                     {tier.price}
                   </span>
                   <span className="text-sm text-stone-400">/ {tier.period}</span>
                 </div>
-                <p className="text-sm text-stone-500 mb-6">{tier.description}</p>
+                <p className="mb-6 text-sm text-stone-500">{tier.description}</p>
 
-                <ul className="space-y-2.5 mb-8 flex-1">
+                <ul className="mb-8 flex-1 space-y-2.5">
                   {tier.features.map((feature) => (
                     <li key={feature} className="flex items-center gap-2 text-sm text-stone-700">
-                      <Check className="w-4 h-4 text-stone-400 shrink-0" strokeWidth={2} />
+                      <Check className="h-4 w-4 shrink-0 text-stone-400" strokeWidth={2} />
                       {feature}
                     </li>
                   ))}
@@ -119,7 +116,12 @@ export default function PricingPage() {
 
                 {isPro ? (
                   <a href="mailto:email@spencerjireh.com?subject=Arxivian Pro Beta Access">
-                    <Button variant="primary" size="md" className="w-full" leftIcon={<Mail className="w-4 h-4" strokeWidth={1.5} />}>
+                    <Button
+                      variant="primary"
+                      size="md"
+                      className="w-full"
+                      leftIcon={<Mail className="h-4 w-4" strokeWidth={1.5} />}
+                    >
                       Contact us
                     </Button>
                   </a>
@@ -145,11 +147,11 @@ export default function PricingPage() {
       </section>
 
       {/* Comparison table */}
-      <section className="px-4 sm:px-6 lg:px-8 pb-24">
-        <div ref={comparisonRef} className="max-w-2xl mx-auto">
+      <section className="px-4 pb-24 sm:px-6 lg:px-8">
+        <div ref={comparisonRef} className="mx-auto max-w-2xl">
           <h2
             className={clsx(
-              'font-display text-xl font-semibold text-stone-900 text-center mb-8',
+              'font-display mb-8 text-center text-xl font-semibold text-stone-900',
               comparisonInView ? 'animate-fade-in-up' : 'opacity-0'
             )}
           >
@@ -158,7 +160,7 @@ export default function PricingPage() {
 
           <div
             className={clsx(
-              'bg-white border border-stone-200 rounded-xl overflow-hidden',
+              'overflow-hidden rounded-xl border border-stone-200 bg-white',
               comparisonInView ? 'animate-fade-in-up' : 'opacity-0'
             )}
             style={comparisonInView ? { animationDelay: '50ms' } : undefined}
@@ -166,20 +168,21 @@ export default function PricingPage() {
             {/* Header */}
             <div className="grid grid-cols-3 border-b border-stone-100 px-5 py-3">
               <div className="text-sm font-medium text-stone-500">Feature</div>
-              <div className="text-sm font-medium text-stone-500 text-center">Free</div>
-              <div className="text-sm font-medium text-stone-900 text-center">Pro</div>
+              <div className="text-center text-sm font-medium text-stone-500">Free</div>
+              <div className="text-center text-sm font-medium text-stone-900">Pro</div>
             </div>
             {/* Rows */}
             {comparisonRows.map((row, i) => (
               <div
                 key={row.feature}
-                className={clsx('grid grid-cols-3 px-5 py-3.5', i < comparisonRows.length - 1 && 'border-b border-stone-50')}
+                className={clsx(
+                  'grid grid-cols-3 px-5 py-3.5',
+                  i < comparisonRows.length - 1 && 'border-b border-stone-50'
+                )}
               >
                 <div className="text-sm text-stone-700">{row.feature}</div>
-                <div className="text-sm text-stone-500 text-center">{row.free}</div>
-                <div className="text-sm text-stone-900 text-center">
-                  {row.pro}
-                </div>
+                <div className="text-center text-sm text-stone-500">{row.free}</div>
+                <div className="text-center text-sm text-stone-900">{row.pro}</div>
               </div>
             ))}
           </div>

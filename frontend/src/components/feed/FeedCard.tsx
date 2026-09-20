@@ -33,18 +33,18 @@ export default function FeedCard({
 
   return (
     <article
-      className="bg-white border border-stone-200 rounded-xl p-5 transition-colors hover:border-stone-300"
+      className="rounded-xl border border-stone-200 bg-white p-5 transition-colors hover:border-stone-300"
       data-testid={`feed-card-${id}`}
     >
-      <div className="flex items-start justify-between gap-4 mb-2">
+      <div className="mb-2 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <Link
             to={`/papers/${encodeURIComponent(id)}`}
-            className="font-display text-lg font-semibold text-stone-900 leading-snug line-clamp-2 hover:underline"
+            className="font-display line-clamp-2 text-lg leading-snug font-semibold text-stone-900 hover:underline"
           >
             {paper.title}
           </Link>
-          <p className="text-sm text-stone-500 truncate mt-1">
+          <p className="mt-1 truncate text-sm text-stone-500">
             {formatAuthors(paper.authors)}
             {paper.categories[0] && (
               <>
@@ -68,7 +68,7 @@ export default function FeedCard({
 
       <SignalChips signals={signals} />
 
-      <div className="flex items-center justify-between pt-3 mt-3 border-t border-stone-100">
+      <div className="mt-3 flex items-center justify-between border-t border-stone-100 pt-3">
         <CardActions
           state={state}
           onSave={() => onSave(id)}
@@ -80,10 +80,10 @@ export default function FeedCard({
           href={paper.pdf_url}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-stone-500 hover:text-stone-700 transition-colors"
+          className="inline-flex items-center gap-1 text-xs text-stone-500 transition-colors hover:text-stone-700"
         >
           PDF
-          <ExternalLink className="w-3 h-3" strokeWidth={1.5} />
+          <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
         </a>
       </div>
     </article>

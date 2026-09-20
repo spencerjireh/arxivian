@@ -12,7 +12,13 @@ interface FeedListProps {
 }
 
 /** Single column; a dismissed card collapses out (the cache updater removes it). */
-export default function FeedList({ items, onSave, onDismiss, onImplementing, pendingFor }: FeedListProps) {
+export default function FeedList({
+  items,
+  onSave,
+  onDismiss,
+  onImplementing,
+  pendingFor,
+}: FeedListProps) {
   const reduceMotion = useReducedMotion()
   return (
     <div className="max-w-3xl space-y-4">

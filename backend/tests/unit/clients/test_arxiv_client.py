@@ -1,12 +1,12 @@
 """Tests for ArxivClient date-filtered search."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import arxiv
 import pytest
 
-from src.clients.arxiv_client import ArxivClient, _DATE_FILTER_SCAN_LIMIT
+from src.clients.arxiv_client import _DATE_FILTER_SCAN_LIMIT, ArxivClient
 
 
 def _make_result(
@@ -28,7 +28,7 @@ def _make_result(
 
 
 def _utc(year: int, month: int, day: int) -> datetime:
-    return datetime(year, month, day, tzinfo=timezone.utc)
+    return datetime(year, month, day, tzinfo=UTC)
 
 
 # Papers spanning Feb 8-16, sorted descending (like arXiv would return).
@@ -86,8 +86,7 @@ class TestDateFilteredSearchEarlyTermination:
     async def test_collects_up_to_max_results(self, client: ArxivClient):
         """When max_results is reached, stop even if more papers are in range."""
         all_in_range = [
-            _make_result(f"2602.0000{i}", _utc(2026, 2, 15 - i), f"Paper {i}")
-            for i in range(5)
+            _make_result(f"2602.0000{i}", _utc(2026, 2, 15 - i), f"Paper {i}") for i in range(5)
         ]
 
         with patch.object(client.client, "results", return_value=iter(all_in_range)):
@@ -101,9 +100,7 @@ class TestDateFilteredSearchEarlyTermination:
         assert len(results) == 2
 
     @pytest.mark.asyncio
-    async def test_skips_papers_after_end_date_without_stopping(
-        self, client: ArxivClient
-    ):
+    async def test_skips_papers_after_end_date_without_stopping(self, client: ArxivClient):
         """Papers newer than end_date are skipped but don't trigger early stop."""
         papers = [
             _make_result("2602.99010", _utc(2026, 2, 20), "Too new"),
@@ -145,7 +142,7 @@ class TestDateFilteredSearchConfig:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "max_results,expected_scan",
+        ("max_results", "expected_scan"),
         [(5, 15), (100, 300), (500, _DATE_FILTER_SCAN_LIMIT)],
     )
     async def test_search_scan_limit_scales_with_request(

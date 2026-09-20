@@ -1,15 +1,15 @@
 """Tests for IngestService - meaningful logic tests only."""
 
 import uuid
-import pytest
-from unittest.mock import Mock
 from contextlib import asynccontextmanager
+from unittest.mock import Mock
 
+import pytest
 from sqlalchemy.exc import OperationalError
 
-from src.services.ingest_service import IngestService
+from src.exceptions import EmbeddingServiceError, InsufficientChunksError, PDFProcessingError
 from src.schemas.ingest import IngestRequest
-from src.exceptions import PDFProcessingError, InsufficientChunksError, EmbeddingServiceError
+from src.services.ingest_service import IngestService
 
 TEST_USER_ID = str(uuid.uuid4())
 
@@ -38,9 +38,7 @@ class TestIngestPapersErrorHandling:
         )
 
     @pytest.mark.asyncio
-    async def test_ingest_papers_handles_arxiv_failure(
-        self, ingest_service, mock_arxiv_client
-    ):
+    async def test_ingest_papers_handles_arxiv_failure(self, ingest_service, mock_arxiv_client):
         """Verify failed status on arxiv error."""
         mock_arxiv_client.search_papers.side_effect = Exception("API error")
         request = IngestRequest(query="test")
@@ -96,9 +94,7 @@ class TestIngestByIds:
         )
 
     @pytest.mark.asyncio
-    async def test_ingest_by_ids_handles_arxiv_failure(
-        self, ingest_service, mock_arxiv_client
-    ):
+    async def test_ingest_by_ids_handles_arxiv_failure(self, ingest_service, mock_arxiv_client):
         """Verify errors collected on arxiv failure."""
         mock_arxiv_client.get_papers_by_ids.side_effect = Exception("API error")
 

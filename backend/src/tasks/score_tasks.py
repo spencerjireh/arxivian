@@ -123,7 +123,7 @@ def score_paper_task(self, arxiv_id: str) -> dict[str, Any]:
             retries=self.request.retries,
         )
         # Keep the on-demand lock: the retry is the same task, polls must not enqueue another.
-        raise self.retry(exc=e, countdown=countdown)
+        raise self.retry(exc=e, countdown=countdown) from e
     except Exception:
         release_ondemand_lock(arxiv_id)
         raise

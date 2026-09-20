@@ -9,7 +9,7 @@ Scheduled after `weekly-triage` so scored papers exist. Follows the `daily_inges
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,7 +55,7 @@ async def build_digest_for_week(
     category_key = _category_key(categories)
 
     week_start = _week_start(now.date())
-    start_dt = datetime(week_start.year, week_start.month, week_start.day, tzinfo=timezone.utc)
+    start_dt = datetime(week_start.year, week_start.month, week_start.day, tzinfo=UTC)
     end_dt = start_dt + timedelta(days=7)
 
     rows = await ScoringRepository(session).list_scores_for_digest(
@@ -112,7 +112,7 @@ def build_digest_task() -> dict[str, Any]:
             result = await build_digest_for_week(
                 session,
                 categories=settings.triage_categories,
-                now=datetime.now(timezone.utc),
+                now=datetime.now(UTC),
             )
             await session.commit()
         return {"status": "completed", **result}

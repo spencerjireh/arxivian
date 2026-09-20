@@ -50,13 +50,22 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
   return headers
 }
 
+/** Pull a human-readable message out of a parsed error body, if it has one. */
+export function errorMessageFrom(parsed: unknown): string | undefined {
+  if (typeof parsed !== 'object' || parsed === null) return undefined
+  const body = parsed as { detail?: unknown; message?: unknown }
+  if (typeof body.detail === 'string') return body.detail
+  if (typeof body.message === 'string') return body.message
+  return undefined
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const errorBody = await response.text()
     let message = errorBody
     try {
-      const parsed = JSON.parse(errorBody)
-      message = parsed.detail || parsed.message || errorBody
+      const parsed: unknown = JSON.parse(errorBody)
+      message = errorMessageFrom(parsed) ?? errorBody
     } catch {
       // Keep original text if not JSON
     }
@@ -68,7 +77,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
   if (response.status === 204) {
     return undefined as T
   }
-  return response.json()
+  return response.json() as Promise<T>
 }
 
 export async function apiGet<T>(path: string): Promise<T> {

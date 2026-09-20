@@ -1,6 +1,6 @@
-import type { Message } from '../../types/api'
 import ChatMessage from './ChatMessage'
 import { useAutoScroll } from '../../hooks/useAutoScroll'
+import type { Message } from '../../types/api'
 
 interface ChatMessagesProps {
   messages: Message[]
@@ -20,7 +20,11 @@ export default function ChatMessages({ messages, onRetry, compact = false }: Cha
   return (
     <div className="flex-1 overflow-y-auto">
       {/* pb-48: reserves space for the absolutely-positioned ChatInput + settings drawer (see ChatPage.tsx) */}
-      <div className={compact ? 'px-4 pt-4 pb-6 space-y-4' : 'max-w-5xl mx-auto px-6 pt-8 pb-48 space-y-6'}>
+      <div
+        className={
+          compact ? 'space-y-4 px-4 pt-4 pb-6' : 'mx-auto max-w-5xl space-y-6 px-6 pt-8 pb-48'
+        }
+      >
         {messages.map((message, index) => {
           // For errored assistant messages, find the preceding user query for retry
           let retryQuery: string | undefined

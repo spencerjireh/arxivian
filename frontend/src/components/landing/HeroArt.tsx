@@ -14,7 +14,7 @@ const GLYPHS = [
 export default function HeroArt({ className }: { className?: string }) {
   return (
     <svg
-      className={clsx('absolute inset-0 w-full h-full pointer-events-none', className)}
+      className={clsx('pointer-events-none absolute inset-0 h-full w-full', className)}
       aria-hidden="true"
       preserveAspectRatio="none"
       viewBox="0 0 100 100"

@@ -67,7 +67,7 @@ async def test_list_for_user_filters_and_paginates(db_session, sample_paper_data
     repo = UserPaperStateRepository(db_session)
     papers = [await _paper(db_session, sample_paper_data, f"s-{i}") for i in range(4)]
     states = ["saved", "saved", "shipped", "dismissed"]
-    for paper, state in zip(papers, states):
+    for paper, state in zip(papers, states, strict=False):
         await repo.upsert(
             user_id=created_user.id,
             paper_id=paper.id,

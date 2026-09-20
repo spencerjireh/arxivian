@@ -22,12 +22,21 @@ vi.mock('../../../src/api/paperState', () => ({
 }))
 vi.mock('../../../src/components/paper/ScopedChatPanel', () => ({
   default: ({ arxivId, sessionId }: { arxivId: string; sessionId: string | null }) => (
-    <div data-testid="scoped-chat">{arxivId}:{sessionId ?? 'new'}</div>
+    <div data-testid="scoped-chat">
+      {arxivId}:{sessionId ?? 'new'}
+    </div>
   ),
 }))
 
 function scoreState(overrides: Record<string, unknown>) {
-  return { data: undefined, isLoading: false, error: null, pollTimedOut: false, restartPolling, ...overrides }
+  return {
+    data: undefined,
+    isLoading: false,
+    error: null,
+    pollTimedOut: false,
+    restartPolling,
+    ...overrides,
+  }
 }
 
 function renderPage(path = '/papers/2401.00001') {
@@ -35,7 +44,7 @@ function renderPage(path = '/papers/2401.00001') {
     <Routes>
       <Route path="/papers/:arxivId" element={<PaperDetailPage />} />
     </Routes>,
-    { initialEntries: [path] },
+    { initialEntries: [path] }
   )
 }
 
@@ -58,7 +67,9 @@ describe('PaperDetailPage', () => {
     const { unmount } = renderPage()
     expect(screen.getByText(/Ingesting and scoring/)).toBeInTheDocument()
     unmount()
-    mockUsePaperScore.mockReturnValue(scoreState({ data: { status: 'pending', task_id: 't1' }, pollTimedOut: true }))
+    mockUsePaperScore.mockReturnValue(
+      scoreState({ data: { status: 'pending', task_id: 't1' }, pollTimedOut: true })
+    )
     renderPage()
     fireEvent.click(screen.getByRole('button', { name: 'Check again' }))
     expect(restartPolling).toHaveBeenCalled()
@@ -71,7 +82,9 @@ describe('PaperDetailPage', () => {
   })
 
   it('renders the header, chips and four dimension rows when ready', () => {
-    mockUsePaperScore.mockReturnValue(scoreState({ data: { status: 'ready', detail: makePaperScoreDetail() } }))
+    mockUsePaperScore.mockReturnValue(
+      scoreState({ data: { status: 'ready', detail: makePaperScoreDetail() } })
+    )
     renderPage()
     expect(screen.getByRole('heading', { name: 'Attention Is All You Need' })).toBeInTheDocument()
     expect(screen.getByText('machine translation')).toBeInTheDocument()
@@ -81,12 +94,17 @@ describe('PaperDetailPage', () => {
   })
 
   it('save and dismiss mutate with the route arXiv id', () => {
-    mockUsePaperScore.mockReturnValue(scoreState({ data: { status: 'ready', detail: makePaperScoreDetail() } }))
+    mockUsePaperScore.mockReturnValue(
+      scoreState({ data: { status: 'ready', detail: makePaperScoreDetail() } })
+    )
     renderPage()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(setMutateAsync).toHaveBeenCalledWith({ arxivId: '2401.00001', body: { state: 'saved' } })
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
-    expect(setMutateAsync).toHaveBeenCalledWith({ arxivId: '2401.00001', body: { state: 'dismissed' } })
+    expect(setMutateAsync).toHaveBeenCalledWith({
+      arxivId: '2401.00001',
+      body: { state: 'dismissed' },
+    })
   })
 
   it('mounts the scoped chat panel only when ready, with the session from the URL', () => {
@@ -94,7 +112,9 @@ describe('PaperDetailPage', () => {
     const { unmount } = renderPage()
     expect(screen.queryByTestId('scoped-chat')).not.toBeInTheDocument()
     unmount()
-    mockUsePaperScore.mockReturnValue(scoreState({ data: { status: 'ready', detail: makePaperScoreDetail() } }))
+    mockUsePaperScore.mockReturnValue(
+      scoreState({ data: { status: 'ready', detail: makePaperScoreDetail() } })
+    )
     renderPage('/papers/2401.00001?session=abc')
     expect(screen.getByTestId('scoped-chat')).toHaveTextContent('2401.00001:abc')
   })

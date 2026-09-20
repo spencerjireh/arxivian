@@ -13,22 +13,52 @@ interface SignalChipsProps {
  */
 export default function SignalChips({ signals, size = 'sm' }: SignalChipsProps) {
   const iconClass = 'w-3 h-3'
-  const chips: { key: string; label: string; icon: React.ReactNode; tone: 'neutral' | 'success' | 'accent' }[] = []
+  const chips: {
+    key: string
+    label: string
+    icon: React.ReactNode
+    tone: 'neutral' | 'success' | 'accent'
+  }[] = []
 
   if (signals.pseudocode_present) {
-    chips.push({ key: 'pseudocode', label: 'Pseudocode present', icon: <Code2 className={iconClass} strokeWidth={1.5} />, tone: 'neutral' })
+    chips.push({
+      key: 'pseudocode',
+      label: 'Pseudocode present',
+      icon: <Code2 className={iconClass} strokeWidth={1.5} />,
+      tone: 'neutral',
+    })
   }
   if (signals.public_datasets) {
-    chips.push({ key: 'datasets', label: 'Public datasets', icon: <Database className={iconClass} strokeWidth={1.5} />, tone: 'neutral' })
+    chips.push({
+      key: 'datasets',
+      label: 'Public datasets',
+      icon: <Database className={iconClass} strokeWidth={1.5} />,
+      tone: 'neutral',
+    })
   }
   if (signals.single_gpu) {
-    chips.push({ key: 'gpu', label: '1 GPU', icon: <Cpu className={iconClass} strokeWidth={1.5} />, tone: 'neutral' })
+    chips.push({
+      key: 'gpu',
+      label: '1 GPU',
+      icon: <Cpu className={iconClass} strokeWidth={1.5} />,
+      tone: 'neutral',
+    })
   }
   if (signals.code_released) {
-    chips.push({ key: 'code', label: 'Code released', icon: <GitBranch className={iconClass} strokeWidth={1.5} />, tone: 'success' })
+    chips.push({
+      key: 'code',
+      label: 'Code released',
+      icon: <GitBranch className={iconClass} strokeWidth={1.5} />,
+      tone: 'success',
+    })
   }
   if (signals.compute_match === true) {
-    chips.push({ key: 'fits', label: 'Fits your compute', icon: <Zap className={iconClass} strokeWidth={1.5} />, tone: 'accent' })
+    chips.push({
+      key: 'fits',
+      label: 'Fits your compute',
+      icon: <Zap className={iconClass} strokeWidth={1.5} />,
+      tone: 'accent',
+    })
   }
 
   if (chips.length === 0) return null

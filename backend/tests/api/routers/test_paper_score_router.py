@@ -1,6 +1,6 @@
 """Tests for GET /api/v1/papers/{arxiv_id}/score (detail + on-demand scoring)."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -22,11 +22,11 @@ def _detail():
             title="T",
             authors=["A"],
             categories=["cs.LG"],
-            published_date=datetime(2023, 1, 1, tzinfo=timezone.utc),
+            published_date=datetime(2023, 1, 1, tzinfo=UTC),
             pdf_url="https://arxiv.org/pdf/2301.00001.pdf",
         ),
         rubric_version="v2",
-        scored_at=datetime(2026, 8, 4, tzinfo=timezone.utc),
+        scored_at=datetime(2026, 8, 4, tzinfo=UTC),
         scores=FeedScores(
             method_clarity=80,
             resource_feasibility=80,
@@ -60,8 +60,8 @@ def _detail():
 
 
 def _use_redis(mock_redis):
-    from src.main import app
     from src.dependencies import get_redis
+    from src.main import app
 
     app.dependency_overrides[get_redis] = lambda: mock_redis
 

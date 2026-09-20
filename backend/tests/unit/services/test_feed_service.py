@@ -1,7 +1,7 @@
 """Tests for FeedService.get_feed over mocked repositories."""
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -37,7 +37,7 @@ def _paper(arxiv_id, categories=("cs.LG",), title="T", abstract="A"):
         authors=["A"],
         abstract=abstract,
         categories=list(categories),
-        published_date=datetime(2026, 8, 1, tzinfo=timezone.utc),
+        published_date=datetime(2026, 8, 1, tzinfo=UTC),
         pdf_url=f"https://arxiv.org/pdf/{arxiv_id}.pdf",
     )
 
@@ -55,7 +55,7 @@ def _score(paper, *, method=80, feasibility=80, demand=85, feas_level=3):
             "data_availability": _dim("data_availability", 1, 1),
         },
         attributes=None,
-        updated_at=datetime(2026, 8, 4, tzinfo=timezone.utc),
+        updated_at=datetime(2026, 8, 4, tzinfo=UTC),
     )
 
 
@@ -65,7 +65,7 @@ def _state(paper, state):
         state=state,
         repo_url=None,
         dismissal_reason=None,
-        updated_at=datetime(2026, 8, 5, tzinfo=timezone.utc),
+        updated_at=datetime(2026, 8, 5, tzinfo=UTC),
     )
 
 

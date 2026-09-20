@@ -1,13 +1,13 @@
 """Integration tests for ConversationRepository."""
 
-import pytest
 import uuid
+
+import pytest
 
 from src.exceptions import ForbiddenError
 from src.models.user import User
 from src.repositories.conversation_repository import ConversationRepository
 from src.schemas.conversation import TurnData
-
 
 # =============================================================================
 # User Fixtures for Ownership Tests
@@ -546,7 +546,7 @@ class TestConversationPaperScope:
         await repo.save_turn("plain-session", turn, user_id=created_user.id)
         scoped, total = await repo.get_all(user_id=created_user.id, paper_id=paper.id)
         assert total == 1 and scoped[0].session_id == "scoped-session"
-        everything, total_all = await repo.get_all(user_id=created_user.id)
+        _everything, total_all = await repo.get_all(user_id=created_user.id)
         assert total_all == 2
 
     @pytest.mark.asyncio

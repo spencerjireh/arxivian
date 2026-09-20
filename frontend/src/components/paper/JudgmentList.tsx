@@ -14,11 +14,15 @@ export default function JudgmentList({ judgments }: JudgmentListProps) {
       {judgments.map((j) => (
         <div key={j.key} className="contents">
           <dt className="text-stone-600">{judgmentLabel(j.key)}</dt>
-          <dd className="text-stone-900 font-medium text-right">{formatAnswer(j.answer)}</dd>
-          <dd className="font-mono text-xs text-stone-400 text-right inline-flex items-center gap-1 justify-end">
+          <dd className="text-right font-medium text-stone-900">{formatAnswer(j.answer)}</dd>
+          <dd className="inline-flex items-center justify-end gap-1 text-right font-mono text-xs text-stone-400">
             {Math.round(j.confidence * 100)}%
             {isLowConfidence(j.confidence) && (
-              <AlertCircle className="w-3 h-3 text-amber-700" strokeWidth={1.5} aria-label="Low confidence" />
+              <AlertCircle
+                className="h-3 w-3 text-amber-700"
+                strokeWidth={1.5}
+                aria-label="Low confidence"
+              />
             )}
           </dd>
         </div>

@@ -55,13 +55,13 @@ export default function LibraryPage() {
   ]
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex flex-1 flex-col overflow-hidden">
       {/* Page header */}
       <div className="px-6 pt-6 pb-4">
         <div className="flex items-center gap-3">
           <h1 className="font-display text-2xl font-semibold text-stone-900">Library</h1>
           {data && (
-            <span className="text-sm text-stone-400 font-mono">
+            <span className="font-mono text-sm text-stone-400">
               {total} paper{total !== 1 ? 's' : ''}
             </span>
           )}
@@ -69,7 +69,7 @@ export default function LibraryPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="px-6 pb-4 flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 px-6 pb-4">
         <input
           type="text"
           value={categoryInput}
@@ -78,7 +78,7 @@ export default function LibraryPage() {
           className={clsx(selectClass, 'w-48')}
         />
 
-        <div className="inline-flex rounded-lg overflow-hidden border border-stone-200">
+        <div className="inline-flex overflow-hidden rounded-lg border border-stone-200">
           {processedOptions.map(({ value, label }) => (
             <button
               key={value}
@@ -119,32 +119,31 @@ export default function LibraryPage() {
       <div className="flex-1 overflow-y-auto px-6 pb-6">
         {isLoading ? (
           <div className="flex items-center justify-center py-24">
-            <Loader2 className="w-6 h-6 animate-spin text-stone-300" strokeWidth={1.5} />
+            <Loader2 className="h-6 w-6 animate-spin text-stone-300" strokeWidth={1.5} />
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-24">
-            <div className="w-12 h-12 rounded-full bg-[var(--color-error-soft)] flex items-center justify-center mb-3">
-              <AlertCircle className="w-5 h-5 text-[var(--color-error)]" strokeWidth={1.5} />
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-error-soft)]">
+              <AlertCircle className="h-5 w-5 text-[var(--color-error)]" strokeWidth={1.5} />
             </div>
             <p className="text-sm text-stone-500">{getUserMessage(error)}</p>
           </div>
         ) : !data || data.papers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24">
-            <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center mb-3">
-              <BookOpen className="w-5 h-5 text-stone-400" strokeWidth={1.5} />
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-stone-100">
+              <BookOpen className="h-5 w-5 text-stone-400" strokeWidth={1.5} />
             </div>
-            <p className="text-sm font-medium text-stone-700">No papers in the knowledge base yet</p>
-            <p className="text-sm text-stone-400 mt-1">
+            <p className="text-sm font-medium text-stone-700">
+              No papers in the knowledge base yet
+            </p>
+            <p className="mt-1 text-sm text-stone-400">
               Papers will appear here once ingested via chat
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {data.papers.map((paper) => (
-              <PaperCard
-                key={paper.arxiv_id}
-                paper={paper}
-              />
+              <PaperCard key={paper.arxiv_id} paper={paper} />
             ))}
           </div>
         )}
@@ -152,13 +151,13 @@ export default function LibraryPage() {
 
       {/* Pagination */}
       {hasPages && (
-        <div className="px-6 py-3 border-t border-stone-200 flex items-center justify-between">
+        <div className="flex items-center justify-between border-t border-stone-200 px-6 py-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setOffset(Math.max(0, offset - LIMIT))}
             disabled={!hasPrev}
-            leftIcon={<ChevronLeft className="w-4 h-4" strokeWidth={1.5} />}
+            leftIcon={<ChevronLeft className="h-4 w-4" strokeWidth={1.5} />}
           >
             Previous
           </Button>
@@ -170,7 +169,7 @@ export default function LibraryPage() {
             size="sm"
             onClick={() => setOffset(offset + LIMIT)}
             disabled={!hasNext}
-            rightIcon={<ChevronRight className="w-4 h-4" strokeWidth={1.5} />}
+            rightIcon={<ChevronRight className="h-4 w-4" strokeWidth={1.5} />}
           >
             Next
           </Button>

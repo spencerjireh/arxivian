@@ -4,6 +4,7 @@ from typing import ClassVar
 
 from src.services.search_service import SearchService
 from src.utils.logger import get_logger
+
 from .base import BaseTool, ToolResult
 
 log = get_logger(__name__)

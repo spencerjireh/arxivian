@@ -4,12 +4,12 @@ import asyncio
 import threading
 
 from celery.signals import (
+    task_failure,
+    task_prerun,
+    task_success,
     worker_process_init,
     worker_process_shutdown,
     worker_shutdown,
-    task_prerun,
-    task_success,
-    task_failure,
 )
 
 from src.utils.logger import get_logger
@@ -34,7 +34,7 @@ def get_worker_loop() -> asyncio.AbstractEventLoop | None:
 
 
 @worker_process_init.connect
-def _on_worker_process_init(**kwargs) -> None:
+def _on_worker_process_init(**_kwargs) -> None:
     """Create a persistent event loop for the worker process."""
     global _worker_loop, _worker_loop_thread
 
@@ -51,7 +51,7 @@ def _on_worker_process_init(**kwargs) -> None:
 
 
 @worker_process_shutdown.connect
-def _on_worker_process_shutdown(**kwargs) -> None:
+def _on_worker_process_shutdown(**_kwargs) -> None:
     """Close the persistent event loop on worker shutdown."""
     global _worker_loop, _worker_loop_thread
 
@@ -72,7 +72,7 @@ def _on_worker_process_shutdown(**kwargs) -> None:
 
 
 @worker_shutdown.connect
-def _on_worker_shutdown(**kwargs) -> None:
+def _on_worker_shutdown(**_kwargs) -> None:
     """Flush and shutdown Langfuse client on worker shutdown."""
     from src.tasks.tracing import shutdown_task_langfuse
 
@@ -97,9 +97,9 @@ def _update_task_execution_status(
     to avoid disrupting task execution.
     """
     try:
-        from src.tasks.utils import run_async
         from src.database import AsyncSessionLocal
         from src.repositories.task_execution_repository import TaskExecutionRepository
+        from src.tasks.utils import run_async
 
         async def _do_update():
             async with AsyncSessionLocal() as session:
@@ -118,18 +118,18 @@ def _update_task_execution_status(
 
 
 @task_prerun.connect
-def _on_task_prerun(task_id, **kwargs) -> None:
+def _on_task_prerun(task_id, **_kwargs) -> None:
     """Mark task as started in the database."""
     _update_task_execution_status(task_id, "started")
 
 
 @task_success.connect
-def _on_task_success(sender, **kwargs) -> None:
+def _on_task_success(sender, **_kwargs) -> None:
     """Mark task as success in the database."""
     _update_task_execution_status(sender.request.id, "success")
 
 
 @task_failure.connect
-def _on_task_failure(task_id, exception, **kwargs) -> None:
+def _on_task_failure(task_id, exception, **_kwargs) -> None:
     """Mark task as failure in the database with error message."""
     _update_task_execution_status(task_id, "failure", error_message=str(exception))

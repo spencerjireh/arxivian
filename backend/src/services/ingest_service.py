@@ -1,25 +1,24 @@
 """Service for ingesting papers from arXiv."""
 
 import tempfile
-import os
+from pathlib import Path
 from time import time
-from typing import List, Optional
 
 from sqlalchemy.exc import OperationalError
 
-from src.schemas.ingest import IngestRequest, IngestResponse, PaperError, PaperResult
 from src.clients.arxiv_client import ArxivClient, ArxivPaper
 from src.clients.embeddings_client import JinaEmbeddingsClient
-from src.utils.pdf_parser import PDFParser
-from src.utils.chunking_service import ChunkingService
-from src.repositories.paper_repository import PaperRepository
-from src.repositories.chunk_repository import ChunkRepository
-from src.utils.logger import get_logger
 from src.exceptions import (
     EmbeddingServiceError,
     InsufficientChunksError,
     PDFProcessingError,
 )
+from src.repositories.chunk_repository import ChunkRepository
+from src.repositories.paper_repository import PaperRepository
+from src.schemas.ingest import IngestRequest, IngestResponse, PaperError, PaperResult
+from src.utils.chunking_service import ChunkingService
+from src.utils.logger import get_logger
+from src.utils.pdf_parser import PDFParser
 
 log = get_logger(__name__)
 
@@ -35,7 +34,7 @@ class IngestService:
         chunking_service: ChunkingService,
         paper_repository: PaperRepository,
         chunk_repository: ChunkRepository,
-        ingested_by: Optional[str] = None,
+        ingested_by: str | None = None,
     ):
         self.arxiv_client = arxiv_client
         self.pdf_parser = pdf_parser
@@ -66,8 +65,8 @@ class IngestService:
         papers_fetched = 0
         papers_processed = 0
         chunks_created = 0
-        errors: List[PaperError] = []
-        paper_results: List[PaperResult] = []
+        errors: list[PaperError] = []
+        paper_results: list[PaperResult] = []
 
         try:
             # Search arXiv for papers
@@ -130,7 +129,7 @@ class IngestService:
 
     async def _process_single_paper(
         self, paper_meta: ArxivPaper, force_reprocess: bool
-    ) -> Optional[PaperResult]:
+    ) -> PaperResult | None:
         """
         Process a single paper: download, parse, chunk, and embed.
 
@@ -151,7 +150,7 @@ class IngestService:
 
         # Download and parse PDF (outside transaction - no DB operations)
         with tempfile.TemporaryDirectory() as temp_dir:
-            pdf_path = os.path.join(temp_dir, f"{arxiv_id}.pdf")
+            pdf_path = str(Path(temp_dir) / f"{arxiv_id}.pdf")
 
             if not paper_meta.pdf_url:
                 raise PDFProcessingError(arxiv_id=arxiv_id, stage="download", message="No PDF URL")
@@ -160,7 +159,7 @@ class IngestService:
                 await self.arxiv_client.download_pdf(pdf_url=paper_meta.pdf_url, save_path=pdf_path)
                 log.debug("pdf downloaded", arxiv_id=arxiv_id)
             except Exception as e:
-                raise PDFProcessingError(arxiv_id=arxiv_id, stage="download", message=str(e))
+                raise PDFProcessingError(arxiv_id=arxiv_id, stage="download", message=str(e)) from e
 
             # Parse PDF (now raises PDFProcessingError on failure)
             parsed = await self.pdf_parser.parse_pdf(pdf_path, arxiv_id=arxiv_id)
@@ -190,7 +189,7 @@ class IngestService:
             raise EmbeddingServiceError(
                 message=f"Failed to generate embeddings for {arxiv_id}",
                 details={"arxiv_id": arxiv_id, "error": str(e)},
-            )
+            ) from e
 
         # Database operations wrapped in savepoint for atomic rollback
         async with session.begin_nested():
@@ -246,7 +245,7 @@ class IngestService:
             paper_title = str(paper.title)
 
             chunks_data = []
-            for chunk, embedding in zip(chunks, embeddings):
+            for chunk, embedding in zip(chunks, embeddings, strict=False):
                 chunks_data.append(
                     {
                         "paper_id": paper_id,
@@ -273,7 +272,7 @@ class IngestService:
         )
 
     async def ingest_by_ids(
-        self, arxiv_ids: List[str], force_reprocess: bool = False
+        self, arxiv_ids: list[str], force_reprocess: bool = False
     ) -> IngestResponse:
         """
         Ingest specific papers by arXiv ID.
@@ -291,8 +290,8 @@ class IngestService:
         papers_fetched = 0
         papers_processed = 0
         chunks_created = 0
-        errors: List[PaperError] = []
-        paper_results: List[PaperResult] = []
+        errors: list[PaperError] = []
+        paper_results: list[PaperResult] = []
 
         try:
             papers = await self.arxiv_client.get_papers_by_ids(arxiv_ids)

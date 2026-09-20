@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { GitBranch, ChevronRight } from 'lucide-react'
-import type { CitationsEventData } from '../../types/api'
 import { AnimatedCollapse } from '../ui/AnimatedCollapse'
+import type { CitationsEventData } from '../../types/api'
 
 interface CitationTreeProps {
   citations: CitationsEventData
@@ -15,44 +15,42 @@ export default function CitationTree({ citations }: CitationTreeProps) {
   }
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-stone-50/80 overflow-hidden">
+    <div className="overflow-hidden rounded-xl border border-stone-200 bg-stone-50/80">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         aria-expanded={isExpanded}
-        className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-stone-100/60 transition-colors duration-150"
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-150 hover:bg-stone-100/60"
       >
-        <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
-          <GitBranch className="w-4 h-4 text-amber-600" strokeWidth={1.5} />
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-amber-50">
+          <GitBranch className="h-4 w-4 text-amber-600" strokeWidth={1.5} />
         </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-xs font-mono text-stone-400">{citations.arxiv_id}</span>
+        <div className="min-w-0 flex-1">
+          <div className="mb-0.5 flex items-center gap-2">
+            <span className="font-mono text-xs text-stone-400">{citations.arxiv_id}</span>
             <span className="text-xs text-stone-300">|</span>
             <span className="text-xs text-stone-500">
-              {citations.reference_count} {citations.reference_count === 1 ? 'reference' : 'references'}
+              {citations.reference_count}{' '}
+              {citations.reference_count === 1 ? 'reference' : 'references'}
             </span>
           </div>
-          <p className="text-sm text-stone-700 leading-snug truncate">{citations.title}</p>
+          <p className="truncate text-sm leading-snug text-stone-700">{citations.title}</p>
         </div>
 
-        <div
-          className="flex-shrink-0 text-stone-300 chevron-rotate"
-          data-expanded={isExpanded}
-        >
-          <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
+        <div className="chevron-rotate flex-shrink-0 text-stone-300" data-expanded={isExpanded}>
+          <ChevronRight className="h-4 w-4" strokeWidth={1.5} />
         </div>
       </button>
 
       <AnimatedCollapse isOpen={isExpanded}>
-        <div className="px-4 pb-4 pt-1">
-          <div className="ml-11 border-l-2 border-stone-200 pl-3 space-y-1.5">
+        <div className="px-4 pt-1 pb-4">
+          <div className="ml-11 space-y-1.5 border-l-2 border-stone-200 pl-3">
             {citations.references.map((ref, index) => (
               <div
                 key={`${citations.arxiv_id}-ref-${index}`}
-                className="text-sm text-stone-600 leading-relaxed flex items-start gap-2"
+                className="flex items-start gap-2 text-sm leading-relaxed text-stone-600"
               >
-                <span className="text-xs font-mono text-stone-400 mt-0.5 shrink-0">
+                <span className="mt-0.5 shrink-0 font-mono text-xs text-stone-400">
                   {index + 1}.
                 </span>
                 <span>{ref}</span>

@@ -32,18 +32,18 @@ export default function ScoreBadge({
         'inline-flex items-center gap-1.5 rounded-lg font-mono tabular-nums',
         size === 'lg' ? 'px-3 py-1.5 text-xl' : 'px-2 py-0.5 text-sm',
         bandClasses[band],
-        className,
+        className
       )}
       aria-label={`Score ${rounded} of 100, ${band.toLowerCase()}`}
       data-band={band}
     >
       <span className="font-semibold">{rounded}</span>
-      <span className={clsx('uppercase tracking-wide', size === 'lg' ? 'text-xs' : 'text-[10px]')}>
+      <span className={clsx('tracking-wide uppercase', size === 'lg' ? 'text-xs' : 'text-[10px]')}>
         {band}
       </span>
       {lowConfidence && (
         <AlertCircle
-          className={size === 'lg' ? 'w-4 h-4' : 'w-3 h-3'}
+          className={size === 'lg' ? 'h-4 w-4' : 'h-3 w-3'}
           strokeWidth={1.5}
           aria-label={lowConfidenceTitle}
         >

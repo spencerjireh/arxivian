@@ -163,7 +163,7 @@ class TestDataAvailabilityNode:
 
 
 class TestDemandNode:
-    @pytest.mark.parametrize("band,expected", [("HIGH", 85), ("MED", 55), ("LOW", 20)])
+    @pytest.mark.parametrize(("band", "expected"), [("HIGH", 85), ("MED", 55), ("LOW", 20)])
     @pytest.mark.asyncio
     async def test_band_to_score(self, context, make_config, band, expected):
         context.semantic_scholar_client.get_citation_metrics.return_value = CitationMetrics(

@@ -148,9 +148,7 @@ class TestEmbedBatch:
 
             client._embed_batch.retry.stop = stop_after_attempt(1)
             with pytest.raises(EmbeddingRateLimitError) as exc_info:
-                await client._embed_batch(
-                    batch=["text"], task="retrieval.passage", batch_num=2
-                )
+                await client._embed_batch(batch=["text"], task="retrieval.passage", batch_num=2)
 
         assert exc_info.value.retry_after == 30.0
         assert "batch 2" in str(exc_info.value)
@@ -168,9 +166,7 @@ class TestEmbedBatch:
 
             client._embed_batch.retry.stop = stop_after_attempt(1)
             with pytest.raises(EmbeddingRateLimitError) as exc_info:
-                await client._embed_batch(
-                    batch=["text"], task="retrieval.passage", batch_num=1
-                )
+                await client._embed_batch(batch=["text"], task="retrieval.passage", batch_num=1)
 
         assert exc_info.value.retry_after is None
 
@@ -198,9 +194,7 @@ class TestEmbedDocuments:
         assert call_sizes == [50, 50, 20]
         assert len(result) == 120
 
-    async def test_preserves_succeeded_batches(
-        self, client: JinaEmbeddingsClient
-    ) -> None:
+    async def test_preserves_succeeded_batches(self, client: JinaEmbeddingsClient) -> None:
         """Batch 1 succeeds, batch 2 fails -- batch 1 is not re-sent."""
         batch_1_embeddings = [[0.1] * 1024] * 50
 

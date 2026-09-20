@@ -13,21 +13,23 @@ repos:
     hooks:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
+        exclude: package-lock\.json$|uv\.lock$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.9
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: [--fix]
-        files: ^backend/
+        files: ^backend/(src|tests|alembic)/
       - id: ruff-format
-        files: ^backend/
+        files: ^backend/(src|tests|alembic)/
 
   - repo: local
     hooks:
-      - id: eslint-frontend
-        name: eslint (frontend)
-        entry: bash -c 'cd frontend && npm run lint'
+      # eslint --fix + prettier on the staged frontend files only (config in package.json)
+      - id: lint-staged-frontend
+        name: lint-staged (frontend)
+        entry: bash -c 'cd frontend && npx lint-staged'
         language: system
-        files: ^frontend/src/.*\.(ts|tsx)$
+        files: ^frontend/.*\.(ts|tsx|css|md|json)$
         pass_filenames: false

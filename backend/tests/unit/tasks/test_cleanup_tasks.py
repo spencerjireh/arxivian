@@ -1,9 +1,10 @@
 """Unit tests for cleanup background tasks."""
 
-import pytest
-from datetime import datetime, timedelta, timezone
-from unittest.mock import patch, Mock, AsyncMock
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 
 class TestCleanupTask:
@@ -25,8 +26,9 @@ class TestCleanupTask:
 
     def test_deletes_conversations_in_batches(self, mock_settings_30_days):
         """Verify the task deletes conversations using batched deletes."""
-        from src.tasks.cleanup_tasks import cleanup_task
         import uuid
+
+        from src.tasks.cleanup_tasks import cleanup_task
 
         mock_session = AsyncMock()
         mock_session.commit = AsyncMock()
@@ -42,7 +44,7 @@ class TestCleanupTask:
         mock_session.execute = AsyncMock(
             side_effect=[
                 conv_batch_result,  # SELECT conv ids batch 1
-                None,               # DELETE conv batch 1
+                None,  # DELETE conv batch 1
                 conv_empty_result,  # SELECT conv ids batch 2 (empty, stop)
             ]
         )
@@ -80,7 +82,7 @@ class TestCleanupTask:
 
         # Verify the cutoff date is approximately 7 days ago
         cutoff_date = datetime.fromisoformat(result["cutoff_date"])
-        expected_cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+        expected_cutoff = datetime.now(UTC) - timedelta(days=7)
 
         # Allow 1 minute tolerance for test execution time
         assert abs((cutoff_date - expected_cutoff).total_seconds()) < 60
@@ -136,8 +138,9 @@ class TestCleanupTask:
 
     def test_commits_per_batch(self, mock_settings_30_days):
         """Verify commit is called after each batch deletion."""
-        from src.tasks.cleanup_tasks import cleanup_task
         import uuid
+
+        from src.tasks.cleanup_tasks import cleanup_task
 
         mock_session = AsyncMock()
         mock_session.commit = AsyncMock()
@@ -155,11 +158,11 @@ class TestCleanupTask:
         mock_session.execute = AsyncMock(
             side_effect=[
                 batch1,  # SELECT conv batch 1
-                None,    # DELETE conv batch 1
+                None,  # DELETE conv batch 1
                 batch2,  # SELECT conv batch 2
-                None,    # DELETE conv batch 2
-                empty,   # SELECT conv batch 3 (empty)
-                empty,   # SELECT exec batch 1 (empty)
+                None,  # DELETE conv batch 2
+                empty,  # SELECT conv batch 3 (empty)
+                empty,  # SELECT exec batch 1 (empty)
             ]
         )
 

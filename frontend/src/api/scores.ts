@@ -16,7 +16,7 @@ export const scoreKeys = {
 
 export async function fetchPaperScore(arxivId: string): Promise<PaperScoreResult> {
   const data = await apiGet<PaperScoreDetail | PaperScorePending>(
-    `/papers/${encodeURIComponent(arxivId)}/score`,
+    `/papers/${encodeURIComponent(arxivId)}/score`
   )
   if ('status' in data && data.status === 'pending') {
     return { status: 'pending', task_id: data.task_id }

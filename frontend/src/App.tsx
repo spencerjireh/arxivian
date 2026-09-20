@@ -1,12 +1,12 @@
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
-import type { RouteObject } from 'react-router-dom'
 import { AuthenticateWithRedirectCallback } from '@clerk/clerk-react'
 import { Loader2 } from 'lucide-react'
 import Layout from './components/layout/Layout'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import OnboardingGate from './components/auth/OnboardingGate'
 import RouteErrorPage from './pages/RouteErrorPage'
+import type { RouteObject } from 'react-router-dom'
 
 const SignInPage = lazy(() => import('./pages/SignInPage'))
 const SignUpPage = lazy(() => import('./pages/SignUpPage'))
@@ -22,13 +22,17 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 
 function PageFallback() {
   return (
-    <div className="flex items-center justify-center h-screen">
-      <Loader2 className="w-6 h-6 animate-spin text-stone-300" strokeWidth={1.5} />
+    <div className="flex h-screen items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-stone-300" strokeWidth={1.5} />
     </div>
   )
 }
 
-function Lazy({ component: Component }: { component: React.LazyExoticComponent<() => React.JSX.Element> }) {
+function Lazy({
+  component: Component,
+}: {
+  component: React.LazyExoticComponent<() => React.JSX.Element>
+}) {
   return (
     <Suspense fallback={<PageFallback />}>
       <Component />

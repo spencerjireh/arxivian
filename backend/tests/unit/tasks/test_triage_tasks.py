@@ -1,7 +1,7 @@
 """Unit tests for Stage 1 triage and the Stage 2 driver task."""
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
@@ -124,7 +124,7 @@ class TestTriageNewPapersTask:
         batch2 = TriageBatchResult(results=[_verdict(f"2401.{i:03d}", True) for i in range(20, 25)])
 
         with patch("src.tasks.triage_tasks.TRIAGE_BATCH_SIZE", 20):
-            result, apply_async, generate = _run_triage(
+            result, _apply_async, generate = _run_triage(
                 {"cs.LG": papers}, [batch1, batch2], triage_settings
             )
 
@@ -230,7 +230,7 @@ class TestScorePaperTask:
         client.delete.assert_called_once_with("score:ondemand:2401.001")
         client.close.assert_called_once()
 
-    @pytest.mark.parametrize("retry_after,countdown", [(120.0, 120), (5.0, 60), (None, 60)])
+    @pytest.mark.parametrize(("retry_after", "countdown"), [(120.0, 120), (5.0, 60), (None, 60)])
     def test_rate_limit_retries_after_server_hint(self, retry_after, countdown):
         from celery.exceptions import Retry
 

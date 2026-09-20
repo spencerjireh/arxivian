@@ -2,13 +2,13 @@ import { useCallback, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { streamChat, StreamAbortError, StreamError } from '../api/stream'
-import type { StreamCallbacks } from '../api/stream'
 import { conversationKeys } from '../api/conversations'
 import { useChatStore } from '../stores/chatStore'
 import { useUserStore } from '../stores/userStore'
 import { generateMessageId } from '../utils/id'
 import { useMessageCache, chatKeys } from './useMessageCache'
 import { getErrorTreatment } from '../lib/errorMapping'
+import type { StreamCallbacks } from '../api/stream'
 import type {
   Message,
   MessageError,
@@ -110,7 +110,7 @@ export function useChat(sessionId: string | null, options: UseChatOptions) {
           prev.map((msg) => (msg.id === placeholderId ? assistantMessage : msg))
         )
       }
-      queryClient.invalidateQueries({ queryKey: conversationKeys.lists() })
+      void queryClient.invalidateQueries({ queryKey: conversationKeys.lists() })
     },
     [setMessages, sessionId, scope, queryClient]
   )
@@ -203,7 +203,7 @@ export function useChat(sessionId: string | null, options: UseChatOptions) {
         handleStreamError(code, message)
       } finally {
         abortControllerRef.current = null
-        useUserStore.getState().fetchMe()
+        void useUserStore.getState().fetchMe()
       }
     },
     [

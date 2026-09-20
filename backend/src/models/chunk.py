@@ -6,10 +6,11 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import String, Text, Integer, TIMESTAMP, ForeignKey, Index, func, Computed
-from sqlalchemy.dialects.postgresql import UUID, TSVECTOR
-from sqlalchemy.orm import Mapped, mapped_column
 from pgvector.sqlalchemy import Vector
+from sqlalchemy import TIMESTAMP, Computed, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import TSVECTOR, UUID
+from sqlalchemy.orm import Mapped, mapped_column
+
 from src.database import Base
 
 

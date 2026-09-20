@@ -24,7 +24,9 @@ describe('chatStore', () => {
   })
 
   it('setSources updates sources', () => {
-    const sources = [{ arxiv_id: '123', title: 'Test', authors: [], pdf_url: '', relevance_score: 0.9 }]
+    const sources = [
+      { arxiv_id: '123', title: 'Test', authors: [], pdf_url: '', relevance_score: 0.9 },
+    ]
     useChatStore.getState().setSources(sources)
     expect(useChatStore.getState().sources).toEqual(sources)
   })
@@ -33,7 +35,9 @@ describe('chatStore', () => {
     useChatStore.getState().setStreaming(true)
     useChatStore.getState().appendStreamingContent('some content')
     useChatStore.getState().setStatus('processing')
-    useChatStore.getState().setSources([{ arxiv_id: '1', title: 't', authors: [], pdf_url: '', relevance_score: 1 }])
+    useChatStore
+      .getState()
+      .setSources([{ arxiv_id: '1', title: 't', authors: [], pdf_url: '', relevance_score: 1 }])
 
     useChatStore.getState().resetStreamingState()
 

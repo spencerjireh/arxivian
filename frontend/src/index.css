@@ -5,7 +5,9 @@
   font-weight: 400;
   font-display: swap;
   src: url('/fonts/cormorant-garamond-400-latin.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
   font-family: 'Cormorant Garamond';
@@ -13,7 +15,9 @@
   font-weight: 400;
   font-display: swap;
   src: url('/fonts/cormorant-garamond-400-italic-latin.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
   font-family: 'Cormorant Garamond';
@@ -21,7 +25,9 @@
   font-weight: 500;
   font-display: swap;
   src: url('/fonts/cormorant-garamond-500-latin.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
   font-family: 'Cormorant Garamond';
@@ -29,7 +35,9 @@
   font-weight: 600;
   font-display: swap;
   src: url('/fonts/cormorant-garamond-600-latin.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
   font-family: 'DM Sans';
@@ -37,10 +45,12 @@
   font-weight: 100 1000;
   font-display: swap;
   src: url('/fonts/dm-sans-latin.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /*
  * Elegant Minimal Design System
@@ -56,31 +66,31 @@
   --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
 
   /* Refined color palette - warm neutrals */
-  --color-white: #FFFFFF;
-  --color-cream: #FAFAF9;
-  --color-stone-50: #F5F5F4;
-  --color-stone-100: #E7E5E4;
-  --color-stone-200: #D6D3D1;
-  --color-stone-300: #A8A29E;
-  --color-stone-400: #78716C;
-  --color-stone-500: #57534E;
-  --color-stone-600: #44403C;
+  --color-white: #ffffff;
+  --color-cream: #fafaf9;
+  --color-stone-50: #f5f5f4;
+  --color-stone-100: #e7e5e4;
+  --color-stone-200: #d6d3d1;
+  --color-stone-300: #a8a29e;
+  --color-stone-400: #78716c;
+  --color-stone-500: #57534e;
+  --color-stone-600: #44403c;
   --color-stone-700: #292524;
-  --color-stone-800: #1C1917;
-  --color-stone-900: #0C0A09;
+  --color-stone-800: #1c1917;
+  --color-stone-900: #0c0a09;
 
   /* Accent - refined terracotta */
-  --color-accent: #B45309;
-  --color-accent-soft: #FEF3C7;
-  --color-accent-muted: #D97706;
+  --color-accent: #b45309;
+  --color-accent-soft: #fef3c7;
+  --color-accent-muted: #d97706;
 
   /* Status colors - muted and elegant */
-  --color-success: #15803D;
-  --color-success-soft: #DCFCE7;
-  --color-error: #B91C1C;
-  --color-error-soft: #FEE2E2;
-  --color-info: #0369A1;
-  --color-info-soft: #E0F2FE;
+  --color-success: #15803d;
+  --color-success-soft: #dcfce7;
+  --color-error: #b91c1c;
+  --color-error-soft: #fee2e2;
+  --color-info: #0369a1;
+  --color-info-soft: #e0f2fe;
 
   /* Spacing scale */
   --space-xs: 0.25rem;
@@ -165,7 +175,7 @@ body {
 }
 
 /* Custom range input styling */
-input[type="range"] {
+input[type='range'] {
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
@@ -173,13 +183,13 @@ input[type="range"] {
   height: 24px;
 }
 
-input[type="range"]::-webkit-slider-track {
+input[type='range']::-webkit-slider-track {
   height: 4px;
   background: var(--color-stone-200);
   border-radius: 2px;
 }
 
-input[type="range"]::-webkit-slider-thumb {
+input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   margin-top: -6px;
@@ -190,17 +200,17 @@ input[type="range"]::-webkit-slider-thumb {
   transition: transform var(--transition-fast);
 }
 
-input[type="range"]:hover::-webkit-slider-thumb {
+input[type='range']:hover::-webkit-slider-thumb {
   transform: scale(1.1);
 }
 
-input[type="range"]::-moz-range-track {
+input[type='range']::-moz-range-track {
   height: 4px;
   background: var(--color-stone-200);
   border-radius: 2px;
 }
 
-input[type="range"]::-moz-range-thumb {
+input[type='range']::-moz-range-thumb {
   border: none;
   height: 16px;
   width: 16px;
@@ -211,13 +221,23 @@ input[type="range"]::-moz-range-thumb {
 /* CSS animation utilities (replaces framer-motion in simple cases) */
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in {
@@ -237,7 +257,7 @@ input[type="range"]::-moz-range-thumb {
 .chevron-rotate {
   transition: transform 0.15s ease-out;
 }
-.chevron-rotate[data-expanded="true"] {
+.chevron-rotate[data-expanded='true'] {
   transform: rotate(90deg);
 }
 
@@ -290,7 +310,9 @@ input[type="range"]::-moz-range-thumb {
 
 /* Card hover effect (simple CSS transition) */
 .card-hover {
-  transition: background-color var(--transition-base), border-color var(--transition-base);
+  transition:
+    background-color var(--transition-base),
+    border-color var(--transition-base);
 }
 
 .card-hover:hover {
@@ -318,7 +340,7 @@ input[type="range"]::-moz-range-thumb {
   position: relative;
 }
 .paper-grain::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 600'%3E%3Cfilter id='a'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23a)'/%3E%3C/svg%3E");
@@ -333,7 +355,7 @@ input[type="range"]::-moz-range-thumb {
 .hero-vignette {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 70% 60% at 50% 40%, #FDFCFA 0%, #FAFAF9 40%, #F0EEEB 100%);
+  background: radial-gradient(ellipse 70% 60% at 50% 40%, #fdfcfa 0%, #fafaf9 40%, #f0eeeb 100%);
   pointer-events: none;
   z-index: 0;
 }

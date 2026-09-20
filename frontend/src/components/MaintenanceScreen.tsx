@@ -7,20 +7,20 @@ import logoIcon from '../assets/logo-icon.png'
  */
 export default function MaintenanceScreen() {
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center bg-[#FAFAF9] px-6 text-center">
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-[#FAFAF9] px-6 text-center">
       <div className="max-w-md">
-        <img src={logoIcon} alt="Arxivian" className="w-12 h-12 mx-auto mb-8" />
-        <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-5">Arxivian</p>
+        <img src={logoIcon} alt="Arxivian" className="mx-auto mb-8 h-12 w-12" />
+        <p className="mb-5 text-xs tracking-[0.2em] text-stone-400 uppercase">Arxivian</p>
         <h1
-          className="text-4xl sm:text-5xl text-stone-800 mb-6 leading-tight"
+          className="mb-6 text-4xl leading-tight text-stone-800 sm:text-5xl"
           style={{ fontFamily: 'var(--font-display)' }}
         >
           We&rsquo;re rebuilding
           <br />
           something better
         </h1>
-        <div className="w-12 h-px bg-stone-300 mx-auto mb-6" />
-        <p className="text-stone-500 leading-relaxed">
+        <div className="mx-auto mb-6 h-px w-12 bg-stone-300" />
+        <p className="leading-relaxed text-stone-500">
           Arxivian is being reimagined as a ranked feed of the papers most worth turning into
           software. We&rsquo;ll be back shortly.
         </p>

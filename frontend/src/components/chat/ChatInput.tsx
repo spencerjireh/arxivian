@@ -76,7 +76,11 @@ export default function ChatInput({
 
   const buttonMotion = shouldReduceMotion
     ? { initial: false as const, exit: undefined, transition: { duration: 0 } }
-    : { initial: { scale: 0.8, opacity: 0 }, exit: { scale: 0.8, opacity: 0 }, transition: transitions.fast }
+    : {
+        initial: { scale: 0.8, opacity: 0 },
+        exit: { scale: 0.8, opacity: 0 },
+        transition: transitions.fast,
+      }
 
   return (
     <div className={clsx(!isCentered && 'chat-input-fade relative z-10')}>
@@ -86,8 +90,8 @@ export default function ChatInput({
             className={clsx(
               'rounded-xl border transition-[background-color,border-color,box-shadow] duration-200',
               hasContent || isFocused
-                ? 'bg-white border-amber-700/25 shadow-sm'
-                : 'bg-stone-50 border-stone-200',
+                ? 'border-amber-700/25 bg-white shadow-sm'
+                : 'border-stone-200 bg-stone-50'
             )}
           >
             <textarea
@@ -101,13 +105,13 @@ export default function ChatInput({
               rows={1}
               disabled={isStreaming}
               className={clsx(
-                'w-full px-4 pt-3 pb-1.5 text-stone-800 bg-transparent rounded-t-xl',
-                'resize-none placeholder:text-stone-400 outline-none',
-                'disabled:opacity-60 disabled:cursor-not-allowed',
+                'w-full rounded-t-xl bg-transparent px-4 pt-3 pb-1.5 text-stone-800',
+                'resize-none outline-none placeholder:text-stone-400',
+                'disabled:cursor-not-allowed disabled:opacity-60',
                 'transition-colors duration-200',
                 isOverflowing
-                  ? 'overflow-y-auto scrollbar-thin scrollbar-thumb-stone-300 scrollbar-track-transparent'
-                  : 'overflow-hidden',
+                  ? 'scrollbar-thin scrollbar-thumb-stone-300 scrollbar-track-transparent overflow-y-auto'
+                  : 'overflow-hidden'
               )}
               style={{ minHeight: '36px', maxHeight: `${MAX_HEIGHT}px` }}
             />
@@ -115,7 +119,7 @@ export default function ChatInput({
             <div className="flex items-center justify-between px-2.5 pb-2.5">
               <div className="flex items-center gap-2">
                 {lineCount > 1 && (isFocused || query) && (
-                  <span className="text-xs text-stone-400 pointer-events-none">
+                  <span className="pointer-events-none text-xs text-stone-400">
                     {lineCount} lines
                   </span>
                 )}
@@ -130,10 +134,10 @@ export default function ChatInput({
                     onClick={onCancel}
                     {...buttonMotion}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="w-8 h-8 flex items-center justify-center bg-red-500 text-white hover:bg-red-600 rounded-lg transition-colors"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 text-white transition-colors hover:bg-red-600"
                     aria-label="Cancel"
                   >
-                    <X className="w-4 h-4" strokeWidth={2} />
+                    <X className="h-4 w-4" strokeWidth={2} />
                   </motion.button>
                 ) : (
                   <motion.button
@@ -142,10 +146,10 @@ export default function ChatInput({
                     disabled={!hasContent}
                     {...buttonMotion}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="w-8 h-8 flex items-center justify-center bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-700 text-white transition-colors hover:bg-amber-800 disabled:cursor-not-allowed disabled:opacity-40"
                     aria-label="Send"
                   >
-                    <ArrowUp className="w-4 h-4" strokeWidth={2} />
+                    <ArrowUp className="h-4 w-4" strokeWidth={2} />
                   </motion.button>
                 )}
               </AnimatePresence>

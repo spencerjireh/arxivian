@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.user import User
 from src.repositories.conversation_repository import ConversationRepository
 from src.schemas.stream import MetadataEventData
+
 from .helpers import consume_stream
 from .scenarios import MULTI_TURN_SCENARIOS
 
@@ -51,9 +52,7 @@ async def test_multi_turn_persistence(
 
     # Verify turn content
     for i, turn in enumerate(sorted(conversation.turns, key=lambda t: t.turn_number)):
-        assert turn.user_query == scenario.turns[i], (
-            f"Turn {i} query mismatch: {turn.user_query}"
-        )
+        assert turn.user_query == scenario.turns[i], f"Turn {i} query mismatch: {turn.user_query}"
         assert len(turn.agent_response) > 0, f"Turn {i} should have a response"
 
 
@@ -88,9 +87,7 @@ async def test_session_id_preserved_across_turns(
         turn_numbers.append(meta.turn_number)
 
     # Turn numbers should increment
-    assert turn_numbers[0] < turn_numbers[1], (
-        f"Turn numbers should increment: {turn_numbers}"
-    )
+    assert turn_numbers[0] < turn_numbers[1], f"Turn numbers should increment: {turn_numbers}"
 
     # Verify in DB
     conv_repo = ConversationRepository(db_session)

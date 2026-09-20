@@ -5,7 +5,7 @@ from .logging import logging_middleware
 from .maintenance import maintenance_middleware
 
 __all__ = [
-    "register_exception_handlers",
     "logging_middleware",
     "maintenance_middleware",
+    "register_exception_handlers",
 ]

@@ -1,7 +1,7 @@
 """Tests for SemanticScholarClient: velocity/band helpers, fetch, and fail-open cache."""
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -30,7 +30,7 @@ def client() -> SemanticScholarClient:
 
 
 class TestComputeVelocity:
-    _now = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    _now = datetime(2024, 1, 1, tzinfo=UTC)
 
     def test_basic_velocity(self) -> None:
         # ~12 months elapsed, 120 citations -> ~10/month

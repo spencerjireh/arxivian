@@ -13,14 +13,20 @@ describe('WeekSelector', () => {
     const onChange = vi.fn()
     render(<WeekSelector weeks={weeks} value="2026-08-03" onChange={onChange} />)
     const options = screen.getAllByRole('option').map((o) => o.textContent)
-    expect(options).toEqual(['Week of Aug 10 (1 paper)', 'Week of Aug 3 (12 papers)', 'Week of Jul 27 (5 papers)'])
+    expect(options).toEqual([
+      'Week of Aug 10 (1 paper)',
+      'Week of Aug 3 (12 papers)',
+      'Week of Jul 27 (5 papers)',
+    ])
     fireEvent.change(screen.getByLabelText('Digest week'), { target: { value: '2026-07-27' } })
     expect(onChange).toHaveBeenCalledWith('2026-07-27')
   })
 
   it('steps older / newer and disables at the ends', () => {
     const onChange = vi.fn()
-    const { rerender } = render(<WeekSelector weeks={weeks} value="2026-08-03" onChange={onChange} />)
+    const { rerender } = render(
+      <WeekSelector weeks={weeks} value="2026-08-03" onChange={onChange} />
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Older week' }))
     expect(onChange).toHaveBeenLastCalledWith('2026-07-27')
     fireEvent.click(screen.getByRole('button', { name: 'Newer week' }))
@@ -34,7 +40,7 @@ describe('WeekSelector', () => {
 })
 
 describe('FeedFilterBar', () => {
-  function renderBar(props: Partial<React.ComponentProps<typeof FeedFilterBar>> = {}) {
+  function mountBar(props: Partial<React.ComponentProps<typeof FeedFilterBar>> = {}) {
     const onChange = vi.fn()
     render(
       <FeedFilterBar
@@ -44,13 +50,13 @@ describe('FeedFilterBar', () => {
         includeDismissed={false}
         onChange={onChange}
         {...props}
-      />,
+      />
     )
     return onChange
   }
 
   it('changes category, min score and dismissed independently', () => {
-    const onChange = renderBar()
+    const onChange = mountBar()
     fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'cs.LG' } })
     expect(onChange).toHaveBeenLastCalledWith({ category: 'cs.LG' })
     fireEvent.click(screen.getByRole('button', { name: '70+' }))
@@ -63,9 +69,13 @@ describe('FeedFilterBar', () => {
 
   it('shows Clear filters only when something is set and clears everything', () => {
     expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument()
-    const onChange = renderBar({ category: 'cs.LG', minScore: 40 })
+    const onChange = mountBar({ category: 'cs.LG', minScore: 40 })
     expect(screen.getByRole('button', { name: '40+' })).toHaveAttribute('aria-pressed', 'true')
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
-    expect(onChange).toHaveBeenLastCalledWith({ category: undefined, minScore: undefined, includeDismissed: false })
+    expect(onChange).toHaveBeenLastCalledWith({
+      category: undefined,
+      minScore: undefined,
+      includeDismissed: false,
+    })
   })
 })

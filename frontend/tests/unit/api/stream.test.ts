@@ -1,5 +1,5 @@
+import { streamChat, StreamAbortError } from '../../../src/api/stream'
 import type { EventSourceMessage } from '@microsoft/fetch-event-source'
-import { streamChat, StreamAbortError, StreamError } from '../../../src/api/stream'
 import type { StreamCallbacks } from '../../../src/api/stream'
 import type { StreamRequest } from '../../../src/types/api'
 
@@ -84,7 +84,7 @@ describe('streamChat', () => {
   it('dispatches callbacks for each event type', async () => {
     const fes = await getFESMock()
 
-    fes.mockImplementation(async (_url, config) => {
+    fes.mockImplementation((_url, config) => {
       const { onmessage } = config as FESConfig
       const events: { event: string; data: string }[] = [
         { event: 'status', data: JSON.stringify({ step: 'routing', message: 'Routing query' }) },
@@ -103,13 +103,22 @@ describe('streamChat', () => {
           }),
         },
         { event: 'error', data: JSON.stringify({ error: 'oops' }) },
-        { event: 'citations', data: JSON.stringify({ arxiv_id: '1234', title: 't', reference_count: 0, references: [] }) },
+        {
+          event: 'citations',
+          data: JSON.stringify({
+            arxiv_id: '1234',
+            title: 't',
+            reference_count: 0,
+            references: [],
+          }),
+        },
         { event: 'done', data: '{}' },
       ]
 
       for (const ev of events) {
-        onmessage?.({ id: '', event: ev.event, data: ev.data } as EventSourceMessage)
+        onmessage?.({ id: '', event: ev.event, data: ev.data })
       }
+      return Promise.resolve()
     })
 
     const callbacks: StreamCallbacks = {
@@ -140,11 +149,12 @@ describe('streamChat', () => {
   it('skips empty events gracefully', async () => {
     const fes = await getFESMock()
 
-    fes.mockImplementation(async (_url, config) => {
+    fes.mockImplementation((_url, config) => {
       const { onmessage } = config as FESConfig
       // Empty event name and missing data -- should be skipped
-      onmessage?.({ id: '', event: '', data: '' } as EventSourceMessage)
-      onmessage?.({ id: '', event: 'content', data: '' } as EventSourceMessage)
+      onmessage?.({ id: '', event: '', data: '' })
+      onmessage?.({ id: '', event: 'content', data: '' })
+      return Promise.resolve()
     })
 
     const callbacks: StreamCallbacks = { onContent: vi.fn() }
@@ -157,20 +167,19 @@ describe('streamChat', () => {
     const fes = await getFESMock()
     const networkError = new Error('Network failure')
 
-    fes.mockImplementation(async (_url, config) => {
+    fes.mockImplementation((_url, config) => {
       const { onerror } = config as FESConfig
       // onerror wraps the error as StreamError and re-throws
       onerror?.(networkError)
+      return Promise.resolve()
     })
 
     const callbacks: StreamCallbacks = { onError: vi.fn() }
 
-    const promise = streamChat(baseRequest, callbacks)
-    await expect(promise).rejects.toThrow(StreamError)
-    await promise.catch((err) => {
-      expect(err).toBeInstanceOf(StreamError)
-      expect(err.code).toBe('CONNECTION_ERROR')
-      expect(err.message).toBe('Network failure')
+    await expect(streamChat(baseRequest, callbacks)).rejects.toMatchObject({
+      name: 'StreamError',
+      code: 'CONNECTION_ERROR',
+      message: 'Network failure',
     })
     // onerror no longer calls callbacks.onError (handled by runStream catch)
     expect(callbacks.onError).not.toHaveBeenCalled()

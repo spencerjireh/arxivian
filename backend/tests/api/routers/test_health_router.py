@@ -1,7 +1,6 @@
 """Tests for health check router."""
 
 
-
 class TestHealthEndpoint:
     """Tests for GET /api/v1/health endpoint."""
 

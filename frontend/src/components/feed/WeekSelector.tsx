@@ -26,7 +26,7 @@ export default function WeekSelector({ weeks, value, onChange }: WeekSelectorPro
         disabled={!older}
         onClick={() => older && onChange(older.week_start)}
       >
-        <ChevronLeft className="w-4 h-4" strokeWidth={1.5} />
+        <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
       </Button>
       <select
         aria-label="Digest week"
@@ -36,7 +36,8 @@ export default function WeekSelector({ weeks, value, onChange }: WeekSelectorPro
       >
         {sorted.map((w) => (
           <option key={w.week_start} value={w.week_start}>
-            Week of {formatWeek(w.week_start)} ({w.paper_count} paper{w.paper_count !== 1 ? 's' : ''})
+            Week of {formatWeek(w.week_start)} ({w.paper_count} paper
+            {w.paper_count !== 1 ? 's' : ''})
           </option>
         ))}
       </select>
@@ -47,7 +48,7 @@ export default function WeekSelector({ weeks, value, onChange }: WeekSelectorPro
         disabled={!newer}
         onClick={() => newer && onChange(newer.week_start)}
       >
-        <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
+        <ChevronRight className="h-4 w-4" strokeWidth={1.5} />
       </Button>
     </div>
   )

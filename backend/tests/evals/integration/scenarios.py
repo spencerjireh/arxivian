@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 
 from ..fixtures.scoring_scenarios import SCORING_SCENARIOS
 
-
 # ---------------------------------------------------------------------------
 # Seed papers (ingested once via `just inteval-seed`)
 # ---------------------------------------------------------------------------

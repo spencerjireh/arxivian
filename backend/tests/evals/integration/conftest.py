@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import os
+from pathlib import Path
 
 import litellm
 import pytest
@@ -21,7 +21,6 @@ from src.services.agent_service import AgentService
 from src.services.agent_service.context import ScopedPaper
 from src.services.agent_service.graph_builder import build_graph
 
-
 # ---------------------------------------------------------------------------
 # Auto-apply inteval marker
 # ---------------------------------------------------------------------------
@@ -29,7 +28,7 @@ from src.services.agent_service.graph_builder import build_graph
 
 def pytest_collection_modifyitems(items: list) -> None:
     """Auto-apply inteval marker to all tests in this directory."""
-    this_dir = os.path.dirname(__file__)
+    this_dir = str(Path(__file__).parent)
     for item in items:
         if str(item.fspath).startswith(this_dir):
             item.add_marker(pytest.mark.inteval)
@@ -54,7 +53,7 @@ def db_engine():
         echo=False,
         pool_pre_ping=True,
     )
-    yield engine
+    return engine
     # No teardown -- test-db is ephemeral via docker compose
 
 
@@ -67,9 +66,7 @@ def session_factory(db_engine):
 async def seed_user(session_factory) -> User:
     """Get or create the integration eval test user."""
     async with session_factory() as session:
-        result = await session.execute(
-            select(User).where(User.clerk_id == "inteval_test_user")
-        )
+        result = await session.execute(select(User).where(User.clerk_id == "inteval_test_user"))
         user = result.scalar_one_or_none()
         if user is None:
             user = User(clerk_id="inteval_test_user", email="inteval@test.local")

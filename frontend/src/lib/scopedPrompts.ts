@@ -17,6 +17,7 @@ export const SCOPED_PROMPTS: Suggestion[] = [
   {
     icon: AlertTriangle,
     title: 'What are the risky parts to reproduce',
-    prompt: 'What are the riskiest parts of reproducing this paper, and how would I de-risk each one?',
+    prompt:
+      'What are the riskiest parts of reproducing this paper, and how would I de-risk each one?',
   },
 ]

@@ -42,8 +42,8 @@ export default function ScoreBreakdown({ detail }: ScoreBreakdownProps) {
         ))}
       </div>
       {detail.attributes.code_evidence.length > 0 && (
-        <div className="border border-stone-200 rounded-xl bg-white px-5 py-4">
-          <h3 className="font-display text-lg text-stone-900 mb-3">Code released by the authors</h3>
+        <div className="rounded-xl border border-stone-200 bg-white px-5 py-4">
+          <h3 className="font-display mb-3 text-lg text-stone-900">Code released by the authors</h3>
           <EvidenceList evidence={detail.attributes.code_evidence} />
         </div>
       )}

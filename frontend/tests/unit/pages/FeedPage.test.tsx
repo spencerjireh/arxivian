@@ -54,7 +54,7 @@ describe('FeedPage', () => {
 
   it('shows the empty state', () => {
     mockUseInfiniteFeed.mockReturnValue(
-      feedState({ data: { pages: [makeFeedResponse([])], pageParams: [0] } }),
+      feedState({ data: { pages: [makeFeedResponse([])], pageParams: [0] } })
     )
     renderWithProviders(<FeedPage />, { initialEntries: ['/feed'] })
     expect(screen.getByText('No papers scored for this week yet')).toBeInTheDocument()
@@ -62,30 +62,41 @@ describe('FeedPage', () => {
 
   it('renders cards, the week label and passes URL params to the hook', () => {
     mockUseInfiniteFeed.mockReturnValue(
-      feedState({ data: { pages: [makeFeedResponse([makeFeedItem()])], pageParams: [0] } }),
+      feedState({ data: { pages: [makeFeedResponse([makeFeedItem()])], pageParams: [0] } })
     )
-    renderWithProviders(<FeedPage />, { initialEntries: ['/feed?week=2026-08-03&min_score=40&category=cs.LG'] })
+    renderWithProviders(<FeedPage />, {
+      initialEntries: ['/feed?week=2026-08-03&min_score=40&category=cs.LG'],
+    })
     expect(screen.getByText('Week of Aug 3')).toBeInTheDocument()
     expect(screen.getByText('1 paper')).toBeInTheDocument()
     expect(screen.getByText('Attention Is All You Need')).toBeInTheDocument()
-    expect(mockUseInfiniteFeed).toHaveBeenCalledWith({ week: '2026-08-03', min_score: 40, category: 'cs.LG' })
+    expect(mockUseInfiniteFeed).toHaveBeenCalledWith({
+      week: '2026-08-03',
+      min_score: 40,
+      category: 'cs.LG',
+    })
   })
 
   it('dismiss and save call the mutation with the arXiv id', () => {
     mockUseInfiniteFeed.mockReturnValue(
-      feedState({ data: { pages: [makeFeedResponse([makeFeedItem()])], pageParams: [0] } }),
+      feedState({ data: { pages: [makeFeedResponse([makeFeedItem()])], pageParams: [0] } })
     )
     renderWithProviders(<FeedPage />, { initialEntries: ['/feed'] })
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
-    expect(setMutateAsync).toHaveBeenCalledWith({ arxivId: '2401.00001', body: { state: 'dismissed' } })
+    expect(setMutateAsync).toHaveBeenCalledWith({
+      arxivId: '2401.00001',
+      body: { state: 'dismissed' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(setMutateAsync).toHaveBeenCalledWith({ arxivId: '2401.00001', body: { state: 'saved' } })
   })
 
   it('save on a saved paper clears the state', () => {
-    const saved = makeFeedItem({ state: { state: 'saved', repo_url: null, dismissal_reason: null, updated_at: 'x' } })
+    const saved = makeFeedItem({
+      state: { state: 'saved', repo_url: null, dismissal_reason: null, updated_at: 'x' },
+    })
     mockUseInfiniteFeed.mockReturnValue(
-      feedState({ data: { pages: [makeFeedResponse([saved])], pageParams: [0] } }),
+      feedState({ data: { pages: [makeFeedResponse([saved])], pageParams: [0] } })
     )
     renderWithProviders(<FeedPage />, { initialEntries: ['/feed'] })
     fireEvent.click(screen.getByRole('button', { name: 'Saved' }))
@@ -99,7 +110,7 @@ describe('FeedPage', () => {
         data: { pages: [makeFeedResponse([makeFeedItem()], { total: 5 })], pageParams: [0] },
         hasNextPage: true,
         fetchNextPage,
-      }),
+      })
     )
     renderWithProviders(<FeedPage />, { initialEntries: ['/feed'] })
     fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
@@ -120,7 +131,7 @@ describe('FeedPage', () => {
           ],
           pageParams: [0],
         },
-      }),
+      })
     )
     function LocationProbe() {
       const { search } = useLocation()
@@ -128,16 +139,26 @@ describe('FeedPage', () => {
     }
     renderWithProviders(
       <Routes>
-        <Route path="/feed" element={<><FeedPage /><LocationProbe /></>} />
+        <Route
+          path="/feed"
+          element={
+            <>
+              <FeedPage />
+              <LocationProbe />
+            </>
+          }
+        />
       </Routes>,
-      { initialEntries: ['/feed'] },
+      { initialEntries: ['/feed'] }
     )
     fireEvent.change(screen.getByLabelText('Digest week'), { target: { value: '2026-07-27' } })
     expect(screen.getByTestId('search').textContent).toBe('?week=2026-07-27')
     fireEvent.click(screen.getByRole('button', { name: '70+' }))
     expect(screen.getByTestId('search').textContent).toBe('?week=2026-07-27&min_score=70')
     fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'cs.LG' } })
-    expect(screen.getByTestId('search').textContent).toBe('?week=2026-07-27&min_score=70&category=cs.LG')
+    expect(screen.getByTestId('search').textContent).toBe(
+      '?week=2026-07-27&min_score=70&category=cs.LG'
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
     expect(screen.getByTestId('search').textContent).toBe('?week=2026-07-27')
   })
@@ -145,13 +166,20 @@ describe('FeedPage', () => {
   it('merges profile categories into the category options', () => {
     useUserStore.setState({
       me: {
-        id: 'u', email: null, first_name: null, last_name: null, tier: 'free',
-        daily_chat_limit: null, chats_used_today: 0,
-        preferences: { feed_profile: { categories: ['stat.ML'], compute_profile: 'laptop', keywords: [] } },
+        id: 'u',
+        email: null,
+        first_name: null,
+        last_name: null,
+        tier: 'free',
+        daily_chat_limit: null,
+        chats_used_today: 0,
+        preferences: {
+          feed_profile: { categories: ['stat.ML'], compute_profile: 'laptop', keywords: [] },
+        },
       },
     })
     mockUseInfiniteFeed.mockReturnValue(
-      feedState({ data: { pages: [makeFeedResponse([makeFeedItem()])], pageParams: [0] } }),
+      feedState({ data: { pages: [makeFeedResponse([makeFeedItem()])], pageParams: [0] } })
     )
     renderWithProviders(<FeedPage />, { initialEntries: ['/feed'] })
     const options = screen.getAllByRole('option').map((o) => o.textContent)
