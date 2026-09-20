@@ -68,6 +68,9 @@ class UserPaperStateRepository:
             row.repo_url = repo_url
             row.dismissal_reason = dismissal_reason
         await self.session.flush()
+        # `updated_at` has `onupdate=func.now()`, so the update path leaves it expired; an
+        # async session cannot lazy-load it later (MissingGreenlet), so reload it now.
+        await self.session.refresh(row)
         log.info(
             "user_paper_state_upserted",
             user_id=str(user_id),
