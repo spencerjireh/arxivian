@@ -117,18 +117,19 @@ class UserPaperStateResponse(BaseModel):
 
 
 class FeedItem(BaseModel):
-    """One ranked card."""
+    """One card. The feed only emits scored papers; the library also carries papers whose
+    score is missing (rubric bump, ops delete), so the score-derived fields are optional."""
 
     paper: FeedPaper
-    scores: FeedScores
-    verdict: str
-    signals: FeedSignals
+    scores: FeedScores | None = None
+    verdict: str | None = None
+    signals: FeedSignals | None = None
     low_confidence: list[str] = Field(
         default_factory=list, description="Dimensions whose confidence is below the threshold"
     )
     keyword_match: bool = False
     state: UserPaperStateResponse | None = None
-    scored_at: datetime
+    scored_at: datetime | None = None
 
 
 class AvailableWeek(BaseModel):
@@ -226,16 +227,13 @@ class ScorePendingResponse(BaseModel):
     task_id: str | None = None
 
 
-class UserPaperListItem(BaseModel):
-    paper: FeedPaper
-    state: UserPaperStateResponse
+class LibraryResponse(BaseModel):
+    """The caller's papers grouped by lifecycle state, newest update first. Dismissed
+    papers are feedback, not library entries, and are left out."""
 
-
-class UserPaperListResponse(BaseModel):
-    total: int
-    offset: int
-    limit: int
-    items: list[UserPaperListItem]
+    saved: list[FeedItem]
+    implementing: list[FeedItem]
+    shipped: list[FeedItem]
 
 
 # ---------------------------------------------------------------------------------------

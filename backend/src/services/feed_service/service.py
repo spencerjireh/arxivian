@@ -14,7 +14,10 @@ from datetime import date
 
 from pydantic import ValidationError
 
+from src.models.paper import Paper
+from src.models.paper_score import PaperScore
 from src.models.user import User
+from src.models.user_paper_state import UserPaperState
 from src.repositories.digest_repository import DigestRepository
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.scoring_repository import ScoringRepository
@@ -25,6 +28,7 @@ from src.schemas.feed import (
     FeedItem,
     FeedPaper,
     FeedResponse,
+    LibraryResponse,
     PaperScoreDetailResponse,
     UserPaperStateResponse,
     build_attributes_detail,
@@ -107,7 +111,7 @@ class FeedService:
         if category_set:
             items = [i for i in items if category_set & set(i.paper.categories)]
         if min_score is not None:
-            items = [i for i in items if i.scores.composite >= min_score]
+            items = [i for i in items if _composite(i) >= min_score]
         if not include_dismissed:
             items = [i for i in items if i.state is None or i.state.state != "dismissed"]
 
@@ -115,13 +119,13 @@ class FeedService:
         if profile.compute_profile is not None or profile.keywords:
             items.sort(
                 key=lambda i: (
-                    -(1 if i.signals.compute_match else 0),
+                    -(1 if i.signals is not None and i.signals.compute_match else 0),
                     -(1 if i.keyword_match else 0),
-                    -i.scores.composite,
+                    -_composite(i),
                 )
             )
         else:
-            items.sort(key=lambda i: -i.scores.composite)
+            items.sort(key=lambda i: -_composite(i))
 
         log.info(
             "feed_page_built",
@@ -186,9 +190,6 @@ class FeedService:
         states = await self.state_repo.get_many(user.id, paper_ids)
 
         profile = FeedProfile.from_user(user)
-        weights = resolve_weights(profile.weights)
-        keywords = [k.lower() for k in profile.keywords]
-
         items: list[FeedItem] = []
         for entry in entries:
             pid = uuid.UUID(entry.paper_id)
@@ -197,24 +198,58 @@ class FeedService:
             if paper is None or score is None:
                 log.warning("feed_entry_skipped", paper_id=entry.paper_id, arxiv_id=entry.arxiv_id)
                 continue
-
-            dims = parse_dimensions(score.dimensions)
-            haystack = f"{paper.title} {paper.abstract}".lower()
-            state_row = states.get(pid)
-            items.append(
-                FeedItem(
-                    paper=FeedPaper.model_validate(paper),
-                    scores=build_scores(score, weights),
-                    verdict=build_verdict(dims, score.attributes),
-                    signals=build_signals(dims, score.attributes, profile.compute_profile),
-                    low_confidence=low_confidence_dimensions(dims),
-                    keyword_match=any(k in haystack for k in keywords),
-                    state=(
-                        UserPaperStateResponse.model_validate(state_row)
-                        if state_row is not None
-                        else None
-                    ),
-                    scored_at=score.updated_at,
-                )
-            )
+            items.append(self._build_item(paper, score, states.get(pid), profile))
         return items
+
+    async def get_library(self, user: User) -> LibraryResponse:
+        """The caller's saved / implementing / shipped papers as cards (SPE-296). A paper
+        without a current score still appears, with the score-derived fields empty."""
+        rows = await self.state_repo.list_for_user(user.id)
+        scores = await self.scoring_repo.get_by_paper_ids(
+            [paper.id for _, paper in rows], self.rubric_version
+        )
+        profile = FeedProfile.from_user(user)
+        groups: dict[str, list[FeedItem]] = {"saved": [], "implementing": [], "shipped": []}
+        for state_row, paper in rows:
+            groups[state_row.state].append(
+                self._build_item(paper, scores.get(paper.id), state_row, profile)
+            )
+        log.info(
+            "library_built",
+            user_id=str(user.id),
+            **{state: len(items) for state, items in groups.items()},
+        )
+        return LibraryResponse(**groups)
+
+    @staticmethod
+    def _build_item(
+        paper: Paper,
+        score: PaperScore | None,
+        state_row: UserPaperState | None,
+        profile: FeedProfile,
+    ) -> FeedItem:
+        """One card from the live rows; personalization (weights, compute match, keyword
+        tie-break) is applied here at read time."""
+        state = UserPaperStateResponse.model_validate(state_row) if state_row is not None else None
+        haystack = f"{paper.title} {paper.abstract}".lower()
+        keyword_match = any(k.lower() in haystack for k in profile.keywords)
+        if score is None:
+            return FeedItem(
+                paper=FeedPaper.model_validate(paper), keyword_match=keyword_match, state=state
+            )
+        dims = parse_dimensions(score.dimensions)
+        return FeedItem(
+            paper=FeedPaper.model_validate(paper),
+            scores=build_scores(score, resolve_weights(profile.weights)),
+            verdict=build_verdict(dims, score.attributes),
+            signals=build_signals(dims, score.attributes, profile.compute_profile),
+            low_confidence=low_confidence_dimensions(dims),
+            keyword_match=keyword_match,
+            state=state,
+            scored_at=score.updated_at,
+        )
+
+
+def _composite(item: FeedItem) -> float:
+    """Sort/filter key; an unscored card sorts last."""
+    return item.scores.composite if item.scores is not None else -1.0

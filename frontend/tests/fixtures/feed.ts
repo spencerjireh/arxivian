@@ -1,4 +1,4 @@
-import type { FeedItem, FeedResponse } from '../../src/types/api'
+import type { FeedItem, FeedResponse, LibraryResponse } from '../../src/types/api'
 
 export function makeFeedItem(overrides: Partial<FeedItem> = {}): FeedItem {
   return {
@@ -47,4 +47,8 @@ export function makeFeedResponse(
     items,
     ...overrides,
   }
+}
+
+export function makeLibraryResponse(overrides: Partial<LibraryResponse> = {}): LibraryResponse {
+  return { saved: [], implementing: [], shipped: [], ...overrides }
 }

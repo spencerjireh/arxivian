@@ -5,6 +5,8 @@ from unittest.mock import Mock
 
 import pytest
 
+from src.schemas.feed import FeedItem, FeedPaper, LibraryResponse, UserPaperStateResponse
+
 
 def _state_row(state="saved", repo_url=None, dismissal_reason=None):
     row = Mock()
@@ -94,21 +96,23 @@ class TestDeletePaperState:
 
 
 @pytest.mark.api
-class TestListMyPapers:
+class TestGetLibrary:
     def test_requires_auth(self, unauthenticated_client):
-        assert unauthenticated_client.get("/api/v1/users/me/papers").status_code == 401
+        assert unauthenticated_client.get("/api/v1/users/me/library").status_code == 401
 
-    def test_lists(self, client, mock_state_repo, sample_paper, mock_user):
-        mock_state_repo.list_for_user.return_value = ([(_state_row("saved"), sample_paper)], 1)
-        resp = client.get("/api/v1/users/me/papers?state=saved&limit=10")
+    def test_returns_grouped_cards(self, client, mock_feed_service, sample_paper, mock_user):
+        item = FeedItem(
+            paper=FeedPaper.model_validate(sample_paper),
+            state=UserPaperStateResponse.model_validate(_state_row("shipped")),
+        )
+        mock_feed_service.get_library.return_value = LibraryResponse(
+            saved=[], implementing=[], shipped=[item]
+        )
+        resp = client.get("/api/v1/users/me/library")
         assert resp.status_code == 200
         body = resp.json()
-        assert body["total"] == 1
-        assert body["items"][0]["paper"]["arxiv_id"] == "2301.00001"
-        assert body["items"][0]["state"]["state"] == "saved"
-        mock_state_repo.list_for_user.assert_awaited_once_with(
-            mock_user.id, state="saved", offset=0, limit=10
-        )
-
-    def test_rejects_unknown_state(self, client):
-        assert client.get("/api/v1/users/me/papers?state=archived").status_code == 422
+        assert body["saved"] == [] and body["implementing"] == []
+        assert body["shipped"][0]["paper"]["arxiv_id"] == "2301.00001"
+        assert body["shipped"][0]["state"]["state"] == "shipped"
+        assert body["shipped"][0]["scores"] is None
+        mock_feed_service.get_library.assert_awaited_once_with(mock_user)

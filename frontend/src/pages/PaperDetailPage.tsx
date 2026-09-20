@@ -44,8 +44,10 @@ export default function PaperDetailPage() {
     void fn().finally(() => setPending(null))
   }, [])
   const transition = useCallback(
-    (state: PaperLifecycleState) =>
-      run(state, () => setState.mutateAsync({ arxivId, body: { state } }).catch(() => undefined)),
+    (state: PaperLifecycleState, repo_url?: string) =>
+      run(state, () =>
+        setState.mutateAsync({ arxivId, body: { state, repo_url } }).catch(() => undefined)
+      ),
     [run, setState, arxivId]
   )
   const onSave = useCallback(() => {
@@ -60,6 +62,7 @@ export default function PaperDetailPage() {
     () => transition(current === 'implementing' ? 'saved' : 'implementing'),
     [current, transition]
   )
+  const onShip = useCallback((repoUrl: string) => transition('shipped', repoUrl), [transition])
 
   let body: React.ReactNode
   if (isLoading) {
@@ -91,6 +94,7 @@ export default function PaperDetailPage() {
             onSave={onSave}
             onDismiss={onDismiss}
             onImplementing={onImplementing}
+            onShip={onShip}
             pending={pending}
           />
           <AttributeChips attributes={detail.attributes} />

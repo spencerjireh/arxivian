@@ -8,6 +8,7 @@ interface FeedListProps {
   onSave: (arxivId: string) => void
   onDismiss: (arxivId: string) => void
   onImplementing: (arxivId: string) => void
+  onShip?: (arxivId: string, repoUrl: string) => void
   pendingFor: (arxivId: string) => PendingAction
 }
 
@@ -17,6 +18,7 @@ export default function FeedList({
   onSave,
   onDismiss,
   onImplementing,
+  onShip,
   pendingFor,
 }: FeedListProps) {
   const reduceMotion = useReducedMotion()
@@ -36,6 +38,7 @@ export default function FeedList({
               onSave={onSave}
               onDismiss={onDismiss}
               onImplementing={onImplementing}
+              onShip={onShip}
               pendingAction={pendingFor(item.paper.arxiv_id)}
             />
           </motion.div>

@@ -5,7 +5,11 @@ import { makeFeedItem } from '../../../fixtures/feed'
 
 vi.mock('framer-motion', () => import('../../../mocks/framer-motion'))
 
-function renderCard(item = makeFeedItem(), pendingAction = null) {
+function renderCard(
+  item = makeFeedItem(),
+  pendingAction = null,
+  onShip?: (arxivId: string, repoUrl: string) => void
+) {
   const onSave = vi.fn()
   const onDismiss = vi.fn()
   const onImplementing = vi.fn()
@@ -15,10 +19,18 @@ function renderCard(item = makeFeedItem(), pendingAction = null) {
       onSave={onSave}
       onDismiss={onDismiss}
       onImplementing={onImplementing}
+      onShip={onShip}
       pendingAction={pendingAction}
     />
   )
   return { onSave, onDismiss, onImplementing }
+}
+
+const implementing = {
+  state: 'implementing' as const,
+  repo_url: null,
+  dismissal_reason: null,
+  updated_at: 'x',
 }
 
 describe('FeedCard', () => {
@@ -86,5 +98,40 @@ describe('FeedCard', () => {
       'https://github.com/x/y'
     )
     expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument()
+  })
+
+  it('renders an unscored card with the paper and actions only', () => {
+    renderCard(makeFeedItem({ scores: null, verdict: null, signals: null, scored_at: null }))
+    expect(screen.getByRole('link', { name: 'Attention Is All You Need' })).toBeInTheDocument()
+    expect(screen.getByText('Not scored yet')).toBeInTheDocument()
+    expect(screen.queryByText('Pseudocode present')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
+  })
+
+  it('offers "Mark as shipped" only for an implementing paper when onShip is given', () => {
+    renderCard(makeFeedItem({ state: implementing }))
+    expect(screen.queryByRole('button', { name: 'Mark as shipped' })).not.toBeInTheDocument()
+  })
+
+  it('asks for the repo url and calls onShip with it', () => {
+    const onShip = vi.fn()
+    renderCard(makeFeedItem({ state: implementing }), null, onShip)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mark as shipped' }))
+    const input = screen.getByLabelText('Repository URL')
+    fireEvent.change(input, { target: { value: '  https://github.com/x/y  ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    expect(onShip).toHaveBeenCalledWith('2401.00001', 'https://github.com/x/y')
+    expect(screen.queryByLabelText('Repository URL')).not.toBeInTheDocument()
+  })
+
+  it('cancel closes the repo form without shipping', () => {
+    const onShip = vi.fn()
+    renderCard(makeFeedItem({ state: implementing }), null, onShip)
+    fireEvent.click(screen.getByRole('button', { name: 'Mark as shipped' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByLabelText('Repository URL')).not.toBeInTheDocument()
+    expect(onShip).not.toHaveBeenCalled()
   })
 })

@@ -1,17 +1,15 @@
 """Per-user paper lifecycle state (LIFECYCLE-1): save / dismiss / implementing / shipped."""
 
-from fastapi import APIRouter, Query, Response, status
+from fastapi import APIRouter, Response, status
 
-from src.dependencies import CurrentUserRequired, PaperRepoDep, UserPaperStateRepoDep
-from src.exceptions import ResourceNotFoundError
-from src.schemas.feed import (
-    FeedPaper,
-    PaperState,
-    UserPaperListItem,
-    UserPaperListResponse,
-    UserPaperStateRequest,
-    UserPaperStateResponse,
+from src.dependencies import (
+    CurrentUserRequired,
+    FeedServiceDep,
+    PaperRepoDep,
+    UserPaperStateRepoDep,
 )
+from src.exceptions import ResourceNotFoundError
+from src.schemas.feed import LibraryResponse, UserPaperStateRequest, UserPaperStateResponse
 
 router = APIRouter()
 
@@ -55,25 +53,7 @@ async def delete_paper_state(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/users/me/papers", response_model=UserPaperListResponse)
-async def list_my_papers(
-    user: CurrentUserRequired,
-    state_repo: UserPaperStateRepoDep,
-    state: PaperState | None = Query(None),
-    offset: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
-) -> UserPaperListResponse:
-    """The caller's papers by lifecycle state, newest update first (library read)."""
-    rows, total = await state_repo.list_for_user(user.id, state=state, offset=offset, limit=limit)
-    return UserPaperListResponse(
-        total=total,
-        offset=offset,
-        limit=limit,
-        items=[
-            UserPaperListItem(
-                paper=FeedPaper.model_validate(paper),
-                state=UserPaperStateResponse.model_validate(row),
-            )
-            for row, paper in rows
-        ],
-    )
+@router.get("/users/me/library", response_model=LibraryResponse)
+async def get_library(user: CurrentUserRequired, feed_service: FeedServiceDep) -> LibraryResponse:
+    """The caller's papers grouped by lifecycle state, as feed cards (SPE-296)."""
+    return await feed_service.get_library(user)

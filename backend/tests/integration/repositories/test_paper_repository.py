@@ -116,66 +116,6 @@ class TestPaperRepositoryCRUD:
         assert final_count == initial_count + 2
 
 
-class TestPaperRepositoryFiltering:
-    """Test filtering and pagination."""
-
-    @pytest.mark.asyncio
-    async def test_get_all_pagination(self, db_session, sample_paper_data):
-        """Verify pagination works correctly."""
-        repo = PaperRepository(session=db_session)
-
-        for i in range(5):
-            data = {**sample_paper_data, "arxiv_id": f"2301.{i:05d}"}
-            await repo.create(data)
-
-        papers, total = await repo.get_all(offset=0, limit=2)
-        assert total == 5
-        assert len(papers) == 2
-
-        papers, total = await repo.get_all(offset=2, limit=2)
-        assert total == 5
-        assert len(papers) == 2
-
-        papers, total = await repo.get_all(offset=4, limit=2)
-        assert total == 5
-        assert len(papers) == 1
-
-    @pytest.mark.asyncio
-    async def test_get_all_with_category_filter(self, db_session, sample_paper_data):
-        """Verify category filtering works."""
-        repo = PaperRepository(session=db_session)
-        uid = sample_paper_data["ingested_by"]
-
-        await repo.create(
-            {
-                "arxiv_id": "2301.00001",
-                "ingested_by": uid,
-                "title": "ML Paper",
-                "authors": ["Author"],
-                "abstract": "Abstract",
-                "categories": ["cs.LG"],
-                "published_date": datetime(2023, 1, 1, tzinfo=UTC),
-                "pdf_url": "https://arxiv.org/pdf/2301.00001.pdf",
-            }
-        )
-        await repo.create(
-            {
-                "arxiv_id": "2301.00002",
-                "ingested_by": uid,
-                "title": "AI Paper",
-                "authors": ["Author"],
-                "abstract": "Abstract",
-                "categories": ["cs.AI"],
-                "published_date": datetime(2023, 1, 1, tzinfo=UTC),
-                "pdf_url": "https://arxiv.org/pdf/2301.00002.pdf",
-            }
-        )
-
-        papers, total = await repo.get_all(category_filter="cs.LG")
-        assert total == 1
-        assert papers[0].arxiv_id == "2301.00001"
-
-
 class TestPaperRepositoryProcessing:
     """Test processing-related operations."""
 

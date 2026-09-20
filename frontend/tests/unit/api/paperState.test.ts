@@ -2,10 +2,11 @@ import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider, type InfiniteData } from '@tanstack/react-query'
 import { createElement } from 'react'
 import { feedKeys } from '../../../src/api/feed'
+import { libraryKeys } from '../../../src/api/library'
 import { applyStateToCaches, useSetPaperState } from '../../../src/api/paperState'
-import { makeFeedItem, makeFeedResponse } from '../../fixtures/feed'
+import { makeFeedItem, makeLibraryResponse, makeFeedResponse } from '../../fixtures/feed'
 import type { ReactNode } from 'react'
-import type { FeedResponse } from '../../../src/types/api'
+import type { FeedResponse, LibraryResponse, PaperState } from '../../../src/types/api'
 
 const apiPut = vi.fn()
 const apiDelete = vi.fn()
@@ -71,6 +72,66 @@ describe('applyStateToCaches', () => {
     const data = queryClient.getQueryData<FeedData>(feedKeys.list({}))!
     expect(data.pages[0].items[1].state?.state).toBe('saved')
     expect(data.pages[0].items[0].state).toBeNull()
+  })
+})
+
+function stateOf(state: PaperState['state']): PaperState {
+  return { state, repo_url: null, dismissal_reason: null, updated_at: 'x' }
+}
+
+describe('applyStateToCaches (library)', () => {
+  function seedLibrary(queryClient: QueryClient) {
+    const saved = makeFeedItem({
+      paper: { ...makeFeedItem().paper, arxiv_id: 'a' },
+      state: stateOf('saved'),
+    })
+    const other = makeFeedItem({
+      paper: { ...makeFeedItem().paper, arxiv_id: 'b' },
+      state: stateOf('implementing'),
+    })
+    queryClient.setQueryData(
+      libraryKeys.all,
+      makeLibraryResponse({ saved: [saved], implementing: [other] })
+    )
+  }
+
+  it('moves the card to the group of its new state, newest first', () => {
+    const { queryClient } = setup()
+    seedLibrary(queryClient)
+    applyStateToCaches(queryClient, 'a', stateOf('implementing'))
+
+    const library = queryClient.getQueryData<LibraryResponse>(libraryKeys.all)!
+    expect(library.saved).toEqual([])
+    expect(library.implementing.map((i) => i.paper.arxiv_id)).toEqual(['a', 'b'])
+    expect(library.implementing[0].state?.state).toBe('implementing')
+  })
+
+  it('drops the card on dismiss or clear and ignores unknown papers', () => {
+    const { queryClient } = setup()
+    seedLibrary(queryClient)
+    applyStateToCaches(queryClient, 'a', stateOf('dismissed'))
+    applyStateToCaches(queryClient, 'b', null)
+    applyStateToCaches(queryClient, 'zzz', stateOf('saved'))
+
+    const library = queryClient.getQueryData<LibraryResponse>(libraryKeys.all)!
+    expect(library).toEqual(makeLibraryResponse())
+  })
+
+  it('restores the library on a failed mutation', async () => {
+    const { queryClient, wrapper } = setup()
+    seedLibrary(queryClient)
+    apiPut.mockRejectedValueOnce(new Error('boom'))
+    const { result } = renderHook(() => useSetPaperState(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({ arxivId: 'a', body: { state: 'shipped' } }).catch(() => {})
+    })
+
+    await waitFor(() => {
+      const library = queryClient.getQueryData<LibraryResponse>(libraryKeys.all)!
+      expect(library.saved.map((i) => i.paper.arxiv_id)).toEqual(['a'])
+      expect(library.shipped).toEqual([])
+    })
   })
 })
 

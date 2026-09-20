@@ -2,9 +2,8 @@
 
 import uuid
 from datetime import UTC, datetime
-from typing import Literal
 
-from sqlalchemy import asc, delete, desc, func, or_, select, text, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.paper import Paper
@@ -103,93 +102,6 @@ class PaperRepository:
         """Get total count of papers."""
         result = await self.session.execute(select(func.count()).select_from(Paper))
         return result.scalar_one()
-
-    async def get_all(
-        self,
-        offset: int = 0,
-        limit: int = 20,
-        processed_only: bool | None = None,
-        category_filter: str | None = None,
-        author_filter: str | None = None,
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
-        query: str | None = None,
-        sort_by: Literal["created_at", "published_date", "updated_at"] = "created_at",
-        sort_order: Literal["asc", "desc"] = "desc",
-    ) -> tuple[list[Paper], int]:
-        """
-        Get paginated list of papers with optional filters.
-
-        Args:
-            offset: Number of papers to skip
-            limit: Maximum number of papers to return
-            processed_only: Filter by pdf_processed status
-            category_filter: Filter by category (case-insensitive substring match)
-            author_filter: Filter by author (case-insensitive substring match)
-            start_date: Filter papers published on or after this date
-            end_date: Filter papers published on or before this date
-            query: Search term for title/abstract (case-insensitive)
-            sort_by: Field to sort by
-            sort_order: Sort order (asc or desc)
-
-        Returns:
-            Tuple of (list of papers, total count matching filters)
-        """
-        log.debug(
-            "papers query",
-            offset=offset,
-            limit=limit,
-            processed_only=processed_only,
-            category_filter=category_filter,
-            sort_by=sort_by,
-        )
-
-        stmt = select(Paper)
-        count_stmt = select(func.count()).select_from(Paper)
-
-        def apply_filter(condition):
-            nonlocal stmt, count_stmt
-            stmt = stmt.where(condition)
-            count_stmt = count_stmt.where(condition)
-
-        if processed_only is not None:
-            apply_filter(Paper.pdf_processed == processed_only)
-
-        if category_filter:
-            condition = text(
-                "EXISTS (SELECT 1 FROM jsonb_array_elements_text(papers.categories) AS elem "
-                "WHERE lower(elem) LIKE '%' || lower(:cat_filter) || '%')"
-            ).bindparams(cat_filter=category_filter)
-            apply_filter(condition)
-
-        if author_filter:
-            condition = text(
-                "EXISTS (SELECT 1 FROM jsonb_array_elements_text(papers.authors) AS elem "
-                "WHERE lower(elem) LIKE '%' || lower(:auth_filter) || '%')"
-            ).bindparams(auth_filter=author_filter)
-            apply_filter(condition)
-
-        if start_date:
-            apply_filter(Paper.published_date >= start_date)
-
-        if end_date:
-            apply_filter(Paper.published_date <= end_date)
-
-        if query:
-            pattern = f"%{query}%"
-            apply_filter(or_(Paper.title.ilike(pattern), Paper.abstract.ilike(pattern)))
-
-        total = await self.session.scalar(count_stmt) or 0
-
-        sort_column = getattr(Paper, sort_by)
-        order_func = desc if sort_order == "desc" else asc
-        stmt = stmt.order_by(order_func(sort_column)).offset(offset).limit(limit)
-
-        result = await self.session.execute(stmt)
-        papers = list(result.scalars().all())
-
-        log.debug("papers query result", count=len(papers), total=total)
-        return papers, total
 
     async def delete(self, paper_id: str) -> bool:
         """

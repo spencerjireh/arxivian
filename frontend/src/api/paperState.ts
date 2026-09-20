@@ -10,10 +10,13 @@ import {
 import { toast } from 'sonner'
 import { apiDelete, apiPut } from './client'
 import { feedKeys } from './feed'
+import { libraryKeys } from './library'
 import { scoreKeys } from './scores'
 import type {
   FeedParams,
   FeedResponse,
+  LibraryGroup,
+  LibraryResponse,
   PaperScoreResult,
   PaperState,
   SetPaperStateBody,
@@ -24,6 +27,30 @@ type FeedData = InfiniteData<FeedResponse>
 interface Snapshot {
   previousFeeds: [QueryKey, FeedData | undefined][]
   previousScore: PaperScoreResult | undefined
+  previousLibrary: LibraryResponse | undefined
+}
+
+const LIBRARY_GROUPS: LibraryGroup[] = ['saved', 'implementing', 'shipped']
+
+/** Move the card to the group of its new state; a cleared or dismissed card leaves. */
+function moveLibraryItem(
+  library: LibraryResponse,
+  arxivId: string,
+  nextState: PaperState | null
+): LibraryResponse {
+  const current = LIBRARY_GROUPS.flatMap((g) => library[g]).find(
+    (item) => item.paper.arxiv_id === arxivId
+  )
+  if (!current) return library
+  const next: LibraryResponse = {
+    saved: library.saved.filter((item) => item.paper.arxiv_id !== arxivId),
+    implementing: library.implementing.filter((item) => item.paper.arxiv_id !== arxivId),
+    shipped: library.shipped.filter((item) => item.paper.arxiv_id !== arxivId),
+  }
+  if (nextState && nextState.state !== 'dismissed') {
+    next[nextState.state] = [{ ...current, state: nextState }, ...next[nextState.state]]
+  }
+  return next
 }
 
 function feedParamsOf(key: QueryKey): FeedParams {
@@ -32,8 +59,9 @@ function feedParamsOf(key: QueryKey): FeedParams {
 }
 
 /**
- * Apply a new state (or null) to every cached feed page. A dismissal removes the card from
- * caches that hide dismissed papers and decrements their totals.
+ * Apply a new state (or null) to every cached feed page, the score detail and the library.
+ * A dismissal removes the card from feed caches that hide dismissed papers (decrementing
+ * their totals) and from the library.
  */
 export function applyStateToCaches(
   queryClient: QueryClient,
@@ -74,7 +102,12 @@ export function applyStateToCaches(
     queryClient.setQueryData<PaperScoreResult>(scoreKey, next)
   }
 
-  return { previousFeeds, previousScore }
+  const previousLibrary = queryClient.getQueryData<LibraryResponse>(libraryKeys.all)
+  if (previousLibrary) {
+    queryClient.setQueryData(libraryKeys.all, moveLibraryItem(previousLibrary, arxivId, nextState))
+  }
+
+  return { previousFeeds, previousScore, previousLibrary }
 }
 
 function restore(queryClient: QueryClient, arxivId: string, snapshot?: Snapshot) {
@@ -83,6 +116,9 @@ function restore(queryClient: QueryClient, arxivId: string, snapshot?: Snapshot)
   }
   if (snapshot?.previousScore) {
     queryClient.setQueryData(scoreKeys.detail(arxivId), snapshot.previousScore)
+  }
+  if (snapshot?.previousLibrary) {
+    queryClient.setQueryData(libraryKeys.all, snapshot.previousLibrary)
   }
 }
 
@@ -107,6 +143,7 @@ export function useSetPaperState() {
     mutationFn: putPaperState,
     onMutate: async ({ arxivId, body }) => {
       await queryClient.cancelQueries({ queryKey: feedKeys.lists() })
+      await queryClient.cancelQueries({ queryKey: libraryKeys.all })
       const optimistic: PaperState = {
         state: body.state,
         repo_url: body.repo_url ?? null,
@@ -128,6 +165,7 @@ export function useSetPaperState() {
     onSettled: (_data, _err, { arxivId }) => {
       void queryClient.invalidateQueries({ queryKey: feedKeys.lists() })
       void queryClient.invalidateQueries({ queryKey: scoreKeys.detail(arxivId) })
+      void queryClient.invalidateQueries({ queryKey: libraryKeys.all })
     },
   })
 }
@@ -139,6 +177,7 @@ export function useClearPaperState() {
     mutationFn: deletePaperState,
     onMutate: async ({ arxivId }) => {
       await queryClient.cancelQueries({ queryKey: feedKeys.lists() })
+      await queryClient.cancelQueries({ queryKey: libraryKeys.all })
       return applyStateToCaches(queryClient, arxivId, null)
     },
     onError: (_err, { arxivId }, context) => {
@@ -147,6 +186,7 @@ export function useClearPaperState() {
     onSettled: (_data, _err, { arxivId }) => {
       void queryClient.invalidateQueries({ queryKey: feedKeys.lists() })
       void queryClient.invalidateQueries({ queryKey: scoreKeys.detail(arxivId) })
+      void queryClient.invalidateQueries({ queryKey: libraryKeys.all })
     },
   })
 }

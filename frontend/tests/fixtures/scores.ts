@@ -36,9 +36,9 @@ export function makePaperScoreDetail(overrides: Partial<PaperScoreDetail> = {}):
     paper: item.paper,
     rubric_version: 'v2',
     scored_at: '2026-08-04T00:00:00Z',
-    scores: item.scores,
-    verdict: item.verdict,
-    signals: item.signals,
+    scores: item.scores!,
+    verdict: item.verdict!,
+    signals: item.signals!,
     low_confidence: [],
     state: null,
     attributes: {
