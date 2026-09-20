@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Effective March 8, 2026**
+**Effective September 20, 2026**
 
 This Privacy Notice for Arxivian ("we," "us," or "our"), describes how and why we might access, collect, store, use, and/or share ("process") your personal information when you use our services ("Services"), including when you:
 
@@ -138,9 +138,9 @@ _In Short: We may share information in specific situations described in this sec
 The third parties we may share personal information with are as follows:
 
 - **Clerk** -- authentication and user management. Subject to [Clerk's Privacy Policy](https://clerk.com/legal/privacy).
-- **OpenAI** -- language model inference for generating responses. Your conversation messages are sent to OpenAI's API for processing. Subject to [OpenAI's Privacy Policy](https://openai.com/policies/privacy-policy).
-- **TypeSafe** -- typed judgment model used to score papers. Only paper text is sent, never your data. Subject to TypeSafe's privacy policy.
-- **Semantic Scholar** -- citation counts for scored papers. Only paper identifiers are sent.
+- **OpenAI** -- language model inference, called through the LiteLLM library. Your chat messages about a paper, the relevant passages of that paper, and (for the weekly triage) paper titles and abstracts are sent to OpenAI's API. Subject to [OpenAI's Privacy Policy](https://openai.com/policies/privacy-policy).
+- **TypeSafe** -- the judgment model (Jev) that scores papers on method clarity, resource feasibility and data availability. Only paper text is sent; no account data. Subject to TypeSafe's privacy policy.
+- **Semantic Scholar** (Allen Institute for AI) -- citation counts for scored papers. Only arXiv identifiers are sent. Subject to the [AI2 Privacy Policy](https://allenai.org/privacy-policy).
 - **Jina AI** -- text embedding service used to convert paper content into vector representations for search and retrieval. Paper text is sent to Jina's API for embedding. Subject to [Jina AI's Privacy Policy](https://jina.ai/legal/#privacy-policy).
 - **Pydantic Logfire** -- application and LLM observability. Request traces, including chat messages and paper text sent to the language model, are stored with Logfire for debugging and quality review. Subject to [Pydantic's Privacy Policy](https://pydantic.dev/legal/privacy).
 - **arXiv** -- paper metadata and content retrieval. We access publicly available papers through arXiv's API.
@@ -153,7 +153,7 @@ We also may need to share your personal information in the following situations:
 
 _In Short: We use cookies set by Clerk for authentication and browser local storage for your preferences. We do not use tracking or analytics cookies._
 
-Arxivian uses cookies set by Clerk for authentication sessions. We also use browser local storage to persist your display and model preferences. We do not use tracking cookies, third-party analytics cookies, or advertising cookies.
+Arxivian uses cookies set by Clerk for authentication sessions. We also use browser local storage to persist interface preferences such as sidebar state and unsent chat drafts. We do not use tracking cookies, third-party analytics cookies, or advertising cookies.
 
 We do not permit third parties or service providers to use online tracking technologies on our Services for analytics or advertising purposes.
 
@@ -165,20 +165,17 @@ _In Short: We offer products, features, or tools powered by artificial intellige
 
 As part of our Services, we offer products, features, or tools powered by artificial intelligence, machine learning, or similar technologies (collectively, "AI Products"). These tools are designed to enhance your experience and provide you with innovative solutions. The terms in this Privacy Notice govern your use of the AI Products within our Services.
 
-**Use of AI Technologies.** We provide the AI Products through third-party service providers ("AI Service Providers"), including OpenAI and NVIDIA AI. As outlined in this Privacy Notice, your input, output, and personal information will be shared with and processed by these AI Service Providers to enable your use of our AI Products for purposes outlined in [What Legal Bases Do We Rely On to Process Your Information?](#3-what-legal-bases-do-we-rely-on-to-process-your-information). You must not use the AI Products in any way that violates the terms or policies of any AI Service Provider.
+**Use of AI Technologies.** We provide the AI Products through third-party service providers ("AI Service Providers"): OpenAI (via LiteLLM) for paper chat and weekly triage, TypeSafe for paper scoring, and Jina AI for text embeddings. Your chat messages and the paper passages they retrieve are processed by OpenAI; paper text is processed by TypeSafe and Jina AI. Your name, email address and other account information are not sent to any AI Service Provider. This processing rests on the legal bases in [What Legal Bases Do We Rely On to Process Your Information?](#3-what-legal-bases-do-we-rely-on-to-process-your-information). You must not use the AI Products in any way that violates the terms or policies of any AI Service Provider.
 
 **Our AI Products.** Our AI Products are designed for the following functions:
 
-- Natural language processing
-- Text analysis
-- Academic paper retrieval and citation exploration
+- Scoring arXiv papers for implementability (typed judgments over the paper's text, with quoted evidence)
+- Weekly triage of new arXiv submissions by title and abstract
+- Answering questions about a single paper from its full text, including its references
 
 **How We Process Your Data Using AI.** All personal information processed using our AI Products is handled in line with our Privacy Notice and our agreement with third parties. This ensures high security and safeguards your personal information throughout the process.
 
-**How to Opt Out.** To opt out of AI-powered features, you can:
-
-- Log in to your account settings and update your user account
-- Contact us using the contact information provided
+**How to Opt Out.** The scored feed and the per-paper chat are the Service; there is no separate opt-out. Paper scoring uses public paper text only and involves no personal information. You can stop using the chat at any time, and you can delete your account from the Settings page, which removes your conversations (see the data retention section below).
 
 ## 7. How Do We Handle Your Social Logins?
 

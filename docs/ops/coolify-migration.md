@@ -1,13 +1,14 @@
 # Coolify Migration Guide
 
-How to move the Arxivian stack from one VPS / Coolify server to another.
+How to move the Arxivian stack from one VPS / Coolify server to another. Deployment
+topology and the relaunch procedure are in `AGENTS.md` (Deployment).
 
 ## What holds state
 
 | Volume | Service | Contents | Critical? |
 |---|---|---|---|
 | `postgres_data` | `db` (pgvector) | Papers, chunks, scores, digests, conversations, users | **Yes** |
-| `redis_data` | `redis` | Celery broker queue, rate-limit counters, Semantic Scholar slot | No -- ephemeral |
+| `redis_data` | `redis` | Celery broker queue + RedBeat schedule, task results, Semantic Scholar cache and slot, on-demand score locks | No -- ephemeral |
 
 Everything else (app, celery-worker, celery-beat, frontend, flower) is **stateless** and rebuilt from images + env vars on deploy.
 
@@ -24,11 +25,13 @@ docker exec <db_container> pg_dump -U arxiv_user -d arxiv_rag -Fc > arxiv_rag.du
 
 ### 2. (Optional) Export Redis
 
-Redis data in this stack is mostly ephemeral:
+Redis data in this stack is ephemeral; normally skip this step.
 
-- DB 0: Celery broker (safe to lose between deploys; queued tasks are re-enqueued by beat)
+- DB 0: Celery broker + RedBeat schedule (losing it drops queued tasks; beat re-registers the schedule on start)
 - DB 1: Celery result backend (safe to lose)
-- DB 2: Embedding cache (rebuilt automatically on next queries)
+- DB 2: Semantic Scholar cache (`s2:paper:*`, 7-day TTL), the request slot, and on-demand score locks (`score:ondemand:*`); all rebuild on demand
+
+Rate-limit counters are in Postgres (`usage_counters`), not Redis. There are no LangGraph checkpoints.
 
 If you want it anyway:
 

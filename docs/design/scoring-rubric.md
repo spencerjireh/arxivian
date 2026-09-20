@@ -6,7 +6,7 @@ dimensions and weights; this one pins what each dimension **asks** and how the a
 to be labeled against. The questions live in code at
 `backend/src/services/scoring_service/questions.py` and the combine rules in
 `backend/src/services/scoring_service/judgments.py`; keep this doc and those files in sync and
-bump `RUBRIC_VERSION` (`backend/src/schemas/scoring_state.py`) when they change.
+bump `RUBRIC_VERSION` (`backend/src/services/scoring_service/state.py`) when they change.
 
 **`rubric_version = "v2"`** (2026-09-19). v1 rows in `paper_scores` stay readable but no
 longer feed the digest. Judge instructions sharpened 2026-09-19 (SPE-295, no version bump:
@@ -61,7 +61,7 @@ numeric agreement across dozens of papers is neither reproducible nor meaningful
 | `HIGH` | 70-100 | strong |
 
 The eval buckets the derived score into these bands (`score_to_band` in
-`schemas/scoring_state.py`) and checks agreement with the hand-labeled band. Data
+`services/scoring_service/state.py`) and checks agreement with the hand-labeled band. Data
 availability is a gate, labeled `PASS` / `FAIL`.
 
 ## Dimensions
@@ -195,7 +195,7 @@ where gate = 0 if data_availability == FAIL else 1
 ```
 
 NULL sub-scores (a soft-failed lookup) are excluded and the remaining weights renormalize to
-1 (`compute_composite` in `schemas/digest.py`); all-NULL is 0.
+1 (`compute_composite` in `services/feed_service/digest.py`); all-NULL is 0.
 
 The golden set's binary **`implementable`** flag is the label the agreement gate measures
 against. Rule:
