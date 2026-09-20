@@ -26,7 +26,7 @@ class TestHealthEndpoint:
         """Test that LLM provider status is included."""
         # Apply mock_settings to the health router (openai/gpt-4o-mini + key set),
         # mirroring test_health_degraded_on_missing_llm_key. Without this the fixture
-        # is inert and the router reads the real default provider (nvidia_nim).
+        # is inert and the router reads the real settings.
         monkeypatch.setattr("src.routers.health.get_settings", lambda: mock_settings)
 
         response = client.get("/api/v1/health")
@@ -58,49 +58,12 @@ class TestHealthEndpoint:
         assert data["services"]["database"]["status"] == "unhealthy"
         assert data["services"]["database"]["message"] == "Service unavailable"
 
-    def test_health_degraded_on_missing_llm_key(
-        self,
-        mock_db_session,
-        mock_paper_repo,
-        mock_chunk_repo,
-        mock_embeddings_client,
-        monkeypatch,
-    ):
+    def test_health_degraded_on_missing_llm_key(self, client, mock_settings, monkeypatch):
         """Test degraded status when LLM API key is missing."""
-        from src.main import app
-        from src.database import get_db
-        from src.dependencies import get_paper_repository, get_chunk_repository
-        from src.factories.client_factories import get_embeddings_client
-        from typing import AsyncGenerator
-        from sqlalchemy.ext.asyncio import AsyncSession
-        from unittest.mock import Mock
-        from fastapi.testclient import TestClient
+        mock_settings.openai_api_key = None
+        monkeypatch.setattr("src.routers.health.get_settings", lambda: mock_settings)
 
-        # Create settings with missing LLM key
-        bad_settings = Mock()
-        bad_settings.default_llm_model = "openai/gpt-4o-mini"
-        bad_settings.allowed_llm_models = "openai/gpt-4o-mini"
-        bad_settings.openai_api_key = None
-        bad_settings.nvidia_nim_api_key = None
-        bad_settings.jina_api_key = "test-key"
-        bad_settings.langfuse_enabled = False
-        bad_settings.get_allowed_models_list = Mock(return_value=["openai/gpt-4o-mini"])
-
-        # Monkeypatch get_settings in the health router module
-        monkeypatch.setattr("src.routers.health.get_settings", lambda: bad_settings)
-
-        async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
-            yield mock_db_session
-
-        app.dependency_overrides[get_db] = override_get_db
-        app.dependency_overrides[get_paper_repository] = lambda: mock_paper_repo
-        app.dependency_overrides[get_chunk_repository] = lambda: mock_chunk_repo
-        app.dependency_overrides[get_embeddings_client] = lambda: mock_embeddings_client
-
-        with TestClient(app, raise_server_exceptions=False) as test_client:
-            response = test_client.get("/api/v1/health")
-
-        app.dependency_overrides.clear()
+        response = client.get("/api/v1/health")
 
         assert response.status_code == 200
         data = response.json()

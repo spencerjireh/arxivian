@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import AsyncMock, Mock, patch, MagicMock
 
 from src.schemas.langgraph_state import ClassificationResult, ToolCall
-from src.services.agent_service.tools import ToolResult, LIST_PAPERS, ARXIV_SEARCH
+from src.services.agent_service.tools import ToolResult, EXPLORE_CITATIONS, SEMANTIC_SCHOLAR
 
 
 class TestExecutorNode:
@@ -22,7 +22,6 @@ class TestExecutorNode:
         # Mock tool without extends_chunks (non-retrieve)
         mock_tool = Mock()
         mock_tool.extends_chunks = False
-        mock_tool.sets_pause = False
         # Override get to return a regular Mock, not an async one
         ctx.tool_registry.get = Mock(return_value=mock_tool)
         return ctx
@@ -36,7 +35,7 @@ class TestExecutorNode:
         return {
             "classification_result": ClassificationResult(
                 intent="execute",
-                tool_calls=[ToolCall(tool_name=LIST_PAPERS, tool_args_json='{"query": "test"}')],
+                tool_calls=[ToolCall(tool_name=EXPLORE_CITATIONS, tool_args_json='{"query": "test"}')],
                 scope_score=90,
                 reasoning="Testing",
             ),
@@ -54,15 +53,15 @@ class TestExecutorNode:
 
         mock_get_writer.return_value = MagicMock()
         mock_exec_context.tool_registry.execute.return_value = ToolResult(
-            success=True, data={"total_count": 5, "papers": []}, tool_name=LIST_PAPERS
+            success=True, data={"total_count": 5, "papers": []}, tool_name=EXPLORE_CITATIONS
         )
 
         result = await executor_node(base_state, exec_config)
 
         assert len(result["tool_history"]) == 1
-        assert result["tool_history"][0].tool_name == LIST_PAPERS
+        assert result["tool_history"][0].tool_name == EXPLORE_CITATIONS
         assert result["tool_history"][0].success is True
-        assert result["last_executed_tools"] == [LIST_PAPERS]
+        assert result["last_executed_tools"] == [EXPLORE_CITATIONS]
 
     @pytest.mark.asyncio
     @patch("src.services.agent_service.nodes.executor.get_stream_writer")
@@ -74,13 +73,13 @@ class TestExecutorNode:
 
         mock_get_writer.return_value = MagicMock()
         mock_exec_context.tool_registry.execute.return_value = ToolResult(
-            success=True, data={"total_count": 5, "papers": []}, tool_name=LIST_PAPERS
+            success=True, data={"total_count": 5, "papers": []}, tool_name=EXPLORE_CITATIONS
         )
 
         result = await executor_node(base_state, exec_config)
 
         assert len(result["tool_outputs"]) == 1
-        assert result["tool_outputs"][0]["tool_name"] == LIST_PAPERS
+        assert result["tool_outputs"][0]["tool_name"] == EXPLORE_CITATIONS
         assert result["tool_outputs"][0]["data"]["total_count"] == 5
 
     @pytest.mark.asyncio
@@ -96,7 +95,7 @@ class TestExecutorNode:
             success=True,
             data={"total_count": 5, "papers": []},
             prompt_text="Formatted output text",
-            tool_name=LIST_PAPERS,
+            tool_name=EXPLORE_CITATIONS,
         )
 
         result = await executor_node(base_state, exec_config)
@@ -114,7 +113,7 @@ class TestExecutorNode:
 
         mock_get_writer.return_value = MagicMock()
         mock_exec_context.tool_registry.execute.return_value = ToolResult(
-            success=True, data={"total_count": 5, "papers": []}, tool_name=LIST_PAPERS
+            success=True, data={"total_count": 5, "papers": []}, tool_name=EXPLORE_CITATIONS
         )
 
         result = await executor_node(base_state, exec_config)
@@ -132,12 +131,12 @@ class TestExecutorNode:
 
         mock_get_writer.return_value = MagicMock()
         mock_exec_context.tool_registry.execute.return_value = ToolResult(
-            success=True, data={"total_count": 3, "papers": ["new"]}, tool_name=LIST_PAPERS
+            success=True, data={"total_count": 3, "papers": ["new"]}, tool_name=EXPLORE_CITATIONS
         )
 
-        # Simulate prior iteration having already produced a list_papers output
+        # Simulate prior iteration having already produced a explore_citations output
         base_state["tool_outputs"] = [
-            {"tool_name": LIST_PAPERS, "data": {"total_count": 5, "papers": ["old"]}}
+            {"tool_name": EXPLORE_CITATIONS, "data": {"total_count": 5, "papers": ["old"]}}
         ]
 
         result = await executor_node(base_state, exec_config)
@@ -155,7 +154,7 @@ class TestExecutorNode:
 
         mock_get_writer.return_value = MagicMock()
         mock_exec_context.tool_registry.execute.return_value = ToolResult(
-            success=False, error="API error", tool_name=LIST_PAPERS
+            success=False, error="API error", tool_name=EXPLORE_CITATIONS
         )
 
         result = await executor_node(base_state, exec_config)
@@ -163,7 +162,7 @@ class TestExecutorNode:
         assert len(result["tool_history"]) == 1
         assert result["tool_history"][0].success is False
         assert result["tool_history"][0].error == "API error"
-        assert result["last_executed_tools"] == [LIST_PAPERS]
+        assert result["last_executed_tools"] == [EXPLORE_CITATIONS]
 
     @pytest.mark.asyncio
     @patch("src.services.agent_service.nodes.executor.get_stream_writer")
@@ -180,7 +179,7 @@ class TestExecutorNode:
         assert len(result["tool_history"]) == 1
         assert result["tool_history"][0].success is False
         assert "Connection timeout" in result["tool_history"][0].error
-        assert result["last_executed_tools"] == [LIST_PAPERS]
+        assert result["last_executed_tools"] == [EXPLORE_CITATIONS]
 
     @pytest.mark.asyncio
     @patch("src.services.agent_service.nodes.executor.get_stream_writer")
@@ -193,8 +192,8 @@ class TestExecutorNode:
             "classification_result": ClassificationResult(
                 intent="execute",
                 tool_calls=[
-                    ToolCall(tool_name=ARXIV_SEARCH, tool_args_json="{}"),
-                    ToolCall(tool_name=LIST_PAPERS, tool_args_json="{}"),
+                    ToolCall(tool_name=SEMANTIC_SCHOLAR, tool_args_json="{}"),
+                    ToolCall(tool_name=EXPLORE_CITATIONS, tool_args_json="{}"),
                 ],
                 scope_score=90,
                 reasoning="Testing parallel",
@@ -206,7 +205,7 @@ class TestExecutorNode:
 
         # First call succeeds, second raises exception
         mock_exec_context.tool_registry.execute.side_effect = [
-            ToolResult(success=True, data={}, tool_name=ARXIV_SEARCH),
+            ToolResult(success=True, data={}, tool_name=SEMANTIC_SCHOLAR),
             RuntimeError("Database error"),
         ]
 
@@ -216,7 +215,7 @@ class TestExecutorNode:
         assert result["tool_history"][0].success is True
         assert result["tool_history"][1].success is False
         assert "Database error" in result["tool_history"][1].error
-        assert set(result["last_executed_tools"]) == {ARXIV_SEARCH, LIST_PAPERS}
+        assert set(result["last_executed_tools"]) == {SEMANTIC_SCHOLAR, EXPLORE_CITATIONS}
 
     @pytest.mark.asyncio
     async def test_returns_empty_without_valid_decision(self, mock_exec_context):
@@ -248,7 +247,6 @@ class TestExecutorNode:
         # Configure mock tool to declare extends_chunks=True
         mock_tool = Mock()
         mock_tool.extends_chunks = True
-        mock_tool.sets_pause = False
         mock_exec_context.tool_registry.get = Mock(return_value=mock_tool)
 
         # Return a dict instead of a list
@@ -289,7 +287,6 @@ class TestExecutorNode:
 
         mock_tool = Mock()
         mock_tool.extends_chunks = True
-        mock_tool.sets_pause = False
         mock_exec_context.tool_registry.get = Mock(return_value=mock_tool)
 
         chunks = [{"chunk_id": "1", "text": "test"}]
@@ -329,7 +326,7 @@ class TestExecutorNode:
             "classification_result": ClassificationResult(
                 intent="execute",
                 tool_calls=[
-                    ToolCall(tool_name=LIST_PAPERS, tool_args_json="not valid json")
+                    ToolCall(tool_name=EXPLORE_CITATIONS, tool_args_json="not valid json")
                 ],
                 scope_score=90,
                 reasoning="Testing",

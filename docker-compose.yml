@@ -71,8 +71,7 @@ services:
       - prod
       - dev
 
-  # Redis for Celery message broker + LangGraph checkpointing
-  # Redis 8 required: includes search module used by langgraph-checkpoint-redis
+  # Redis for the Celery broker, rate limiting, caches and the Semantic Scholar slot gate
   redis:
     image: redis:8-alpine
     ports:

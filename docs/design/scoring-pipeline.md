@@ -112,7 +112,7 @@ New file: `backend/src/tasks/triage_tasks.py::triage_new_papers_task`.
   never touches PDFs.
 - **Batched classification.** Abstracts are batched into a single
   `llm_client.generate_structured(response_format=TriageResult)` call on the cheap/free
-  model (current default `nvidia_nim/openai/gpt-oss-120b`). Batching multiple abstracts
+  model (`DEFAULT_LLM_MODEL`, currently `openai/gpt-5-nano`). Batching multiple abstracts
   per request cuts request count against provider rate limits.
 - **Survivors** enqueue one `score_paper_task` each (deterministic task IDs, following the
   `scheduled_tasks.py::daily_ingest_task` pattern: date + category + arXiv ID). Rejects
@@ -282,7 +282,7 @@ dimension) and is gated behind the spike.
   **Backoff-aware + Redis-cached** -- copy the tenacity `Retry-After`-aware backoff pattern
   from `clients/embeddings_client.py` (`JinaEmbeddingsClient`). Note: that client has the
   backoff/retry pattern but **no cache** -- the Redis cache is net-new here (Redis already
-  runs for Celery/RedBeat/checkpointing, so the infrastructure exists; there is just no
+  runs for Celery/RedBeat/rate limiting, so the infrastructure exists; there is just no
   client-side caching pattern in the repo to copy). GitHub code search is aggressively
   rate-limited; caching and backoff are load-bearing, not optional. Efficacy is gated by
   the code-gap spike (SPE-297 removed the script; seed in `tests/evals/fixtures`) before this client is built.
@@ -293,7 +293,7 @@ dimension) and is gated behind the spike.
   (`services/agent_service/tools/base.py`): `extends_chunks=False`, implement
   `parameters_schema` + `async execute(...) -> ToolResult`; return
   `ToolResult(success, data={...}, prompt_text=<summary>, tool_name=...)` -- copy the
-  `tools/list_papers.py` / `tools/propose_ingest.py` shape. Registration is manual and
+  `tools/explore_citations.py` shape. Registration is manual and
   imperative in `AgentContext.__init__` (no auto-discovery), so wire each new tool there
   (and mirror it in `ScoringContext`); add name constants to `tools/constants.py` to match
   convention, though note existing tools hardcode `name` as a class attr rather than

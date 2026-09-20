@@ -25,7 +25,6 @@ dependencies = [
     "langchain-openai>=0.2.5",
     "langchain-core>=0.3.15",
     "langgraph>=0.2.45",
-    "langgraph-checkpoint-redis>=0.3.0",
     
     # HTTP Client
     "httpx>=0.27.2",
@@ -123,7 +122,7 @@ omit = [
     # App entrypoint and DI wiring - tested via integration/E2E
     "src/main.py",
     "src/dependencies.py",
-    "src/factories/*",
+    "src/factories.py",
     # HTTP layer - tested via API/integration tests
     "src/routers/*",
     "src/middleware/*",
@@ -134,10 +133,8 @@ omit = [
     "src/clients/*",
     # Pure Pydantic schemas with no logic - just data structures
     "src/schemas/errors.py",
-    "src/schemas/feedback.py",
     "src/schemas/health.py",
     "src/schemas/papers.py",
-    "src/schemas/search.py",
     "src/schemas/ops.py",
     # Utils that wrap external libraries - tested via integration
     "src/utils/pdf_parser.py",
@@ -148,11 +145,7 @@ omit = [
     "src/services/agent_service/graph_builder.py",
     "src/services/agent_service/context.py",
     "src/services/agent_service/nodes/generation.py",
-    "src/services/agent_service/nodes/grading.py",
     "src/services/agent_service/nodes/out_of_scope.py",
-    "src/services/agent_service/nodes/retrieval.py",
-    "src/services/agent_service/nodes/rewrite.py",
-    "src/services/agent_service/nodes/router.py",
 ]
 
 [tool.coverage.report]

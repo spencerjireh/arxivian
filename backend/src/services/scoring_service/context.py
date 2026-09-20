@@ -1,7 +1,7 @@
 """Context object passed to all scoring-graph nodes (mirrors `AgentContext`).
 
 Holds the dependencies a scoring run needs. Built per-task from a fresh async DB session
-(see `factories.service_factories.get_scoring_context`) because the scoring graph is driven
+(see `factories.get_scoring_context`) because the scoring graph is driven
 from a Celery worker, not a FastAPI request -- there is no `app.state` to read from.
 """
 

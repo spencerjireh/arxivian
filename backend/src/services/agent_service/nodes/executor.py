@@ -15,27 +15,12 @@ from ..context import AgentContext
 log = get_logger(__name__)
 
 
-_PAPER_SUMMARY_VERBS = {
-    "arxiv_search": "Found",
-    "ingest_papers": "Ingested",
-    "propose_ingest": "Proposed",
-}
-
-
 def _summarize_result(tool_name: str, result: ToolResult) -> str:
     """Create brief summary of tool result including actionable details for the router."""
     if result.success and result.data:
         if isinstance(result.data, list):
             return f"Retrieved {len(result.data)} items"
         if isinstance(result.data, dict):
-            if tool_name in _PAPER_SUMMARY_VERBS:
-                papers = result.data.get("papers", [])
-                if papers:
-                    ids = [p.get("arxiv_id") for p in papers if isinstance(p, dict)]
-                    count = result.data.get("count", result.data.get("papers_processed", len(ids)))
-                    id_list = ", ".join(str(i) for i in ids[:10] if i)
-                    verb = _PAPER_SUMMARY_VERBS[tool_name]
-                    return f"{verb} {count} papers: [{id_list}]"
             if "total_count" in result.data:
                 return f"Found {result.data['total_count']} items"
         return str(result.data)[:200]
@@ -84,11 +69,7 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
 
         writer({"type": "tool_start", "tool_name": tc.tool_name, "args": tool_args})
 
-        result = await context.tool_registry.execute(
-            tc.tool_name,
-            tool_outputs=state.get("tool_outputs", []),
-            **tool_args,
-        )
+        result = await context.tool_registry.execute(tc.tool_name, **tool_args)
 
         log.info(
             "executor tool completed",
@@ -180,16 +161,5 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
     if retrieved_chunks:
         updates["retrieved_chunks"] = retrieved_chunks
         updates["retrieval_attempts"] = state.get("retrieval_attempts", 0) + 1
-
-    # Detect HITL-triggering tools and set pause state
-    for item in results:
-        if isinstance(item, BaseException):
-            continue
-        tool_name, _tool_args, result = item
-        tool = context.tool_registry.get(tool_name)
-        if tool and tool.sets_pause and result.success and result.data:
-            updates["pause_reason"] = f"{tool_name}_confirmation"
-            updates["pause_data"] = result.data
-            break
 
     return updates

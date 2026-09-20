@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-from src.services.agent_service import AgentService
-
 from .helpers import consume_stream
 from .scenarios import RETRIEVAL_SCENARIOS
 
@@ -16,8 +14,9 @@ from .scenarios import RETRIEVAL_SCENARIOS
     RETRIEVAL_SCENARIOS[:2],
     ids=[s.id for s in RETRIEVAL_SCENARIOS[:2]],
 )
-async def test_sse_event_sequence(agent_service: AgentService, scenario):
+async def test_sse_event_sequence(agent_for, scenario):
     """STATUS events appear before CONTENT, METADATA after CONTENT, ends with DONE."""
+    agent_service = await agent_for(scenario.arxiv_id)
     result = await consume_stream(agent_service, scenario.query)
 
     types = result.event_types
@@ -43,12 +42,10 @@ async def test_sse_event_sequence(agent_service: AgentService, scenario):
 
 
 @pytest.mark.inteval
-async def test_sse_no_error_events(agent_service: AgentService):
+async def test_sse_no_error_events(agent_for):
     """A valid in-scope query should produce no ERROR events."""
-    result = await consume_stream(
-        agent_service,
-        "What is the Transformer architecture?",
-    )
+    agent_service = await agent_for("1706.03762")
+    result = await consume_stream(agent_service, "What is the Transformer architecture?")
     assert len(result.error_events) == 0, (
         f"Expected no errors, got: {[e.data for e in result.error_events]}"
     )

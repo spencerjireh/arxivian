@@ -53,21 +53,11 @@ async def health_check(
         default_model = settings.default_llm_model
         provider = default_model.split("/", 1)[0] if "/" in default_model else default_model
 
-        # Check if API key is configured for the provider
-        has_key = False
         if provider == "openai" and settings.openai_api_key:
-            has_key = True
-        elif provider == "nvidia_nim" and settings.nvidia_nim_api_key:
-            has_key = True
-
-        if has_key:
             services["llm"] = ServiceStatus(
                 status="healthy",
                 message=f"LLM provider configured: {provider}",
-                details={
-                    "default_model": default_model,
-                    "allowed_models": settings.get_allowed_models_list(),
-                },
+                details={"default_model": default_model},
             )
         else:
             raise ValueError(f"No API key configured for provider: {provider}")

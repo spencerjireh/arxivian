@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from src.models.conversation import Conversation, ConversationTurn
 from src.schemas.conversation import TurnData
+from src.exceptions import ForbiddenError
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -18,10 +19,6 @@ class ConversationRepository:
 
     def __init__(self, session: AsyncSession):
         self.session = session
-
-    async def commit(self) -> None:
-        """Flush and commit the current transaction."""
-        await self.session.commit()
 
     async def get_or_create(
         self,
@@ -39,13 +36,18 @@ class ConversationRepository:
 
         Returns:
             Conversation instance
+
+        Raises:
+            ForbiddenError: the session id belongs to another user (session ids are
+                unique, so this is a guessed or stale id, not a collision)
         """
         query = select(Conversation).where(Conversation.session_id == session_id)
-        if user_id is not None:
-            query = query.where(Conversation.user_id == user_id)
-
         result = await self.session.execute(query)
         conv = result.scalar_one_or_none()
+
+        if conv is not None and user_id is not None and conv.user_id != user_id:
+            log.warning("conversation_owned_by_other_user", session_id=session_id)
+            raise ForbiddenError("Conversation belongs to another user")
 
         if not conv:
             conv = Conversation(session_id=session_id, user_id=user_id, paper_id=paper_id)
@@ -126,11 +128,12 @@ class ConversationRepository:
                     .where(Conversation.session_id == session_id)
                     .with_for_update()
                 )
-                if user_id is not None:
-                    query = query.where(Conversation.user_id == user_id)
-
                 result = await self.session.execute(query)
                 conv = result.scalar_one_or_none()
+
+                if conv is not None and user_id is not None and conv.user_id != user_id:
+                    log.warning("conversation_owned_by_other_user", session_id=session_id)
+                    raise ForbiddenError("Conversation belongs to another user")
 
                 if not conv:
                     conv = Conversation(session_id=session_id, user_id=user_id, paper_id=paper_id)
@@ -158,9 +161,7 @@ class ConversationRepository:
                     rewritten_query=turn.rewritten_query,
                     sources=turn.sources,
                     reasoning_steps=turn.reasoning_steps,
-                    thinking_steps=turn.thinking_steps,
                     citations=turn.citations,
-                    pending_confirmation=turn.pending_confirmation,
                     provider=turn.provider,
                     model=turn.model,
                 )
@@ -182,58 +183,6 @@ class ConversationRepository:
         # Should never reach here, but satisfy type checker
         raise IntegrityError(
             "Failed to save turn after max retries", None, Exception("max retries")
-        )
-
-    async def get_pending_turn(
-        self, session_id: str, user_id: Optional[UUID] = None
-    ) -> Optional[ConversationTurn]:
-        """Get the latest turn with an active pending_confirmation for a session."""
-        conv_query = select(Conversation.id).where(Conversation.session_id == session_id)
-        if user_id is not None:
-            conv_query = conv_query.where(Conversation.user_id == user_id)
-
-        result = await self.session.execute(
-            select(ConversationTurn)
-            .where(
-                ConversationTurn.conversation_id.in_(conv_query),
-                ConversationTurn.pending_confirmation.isnot(None),
-            )
-            .order_by(ConversationTurn.turn_number.desc())
-            .limit(1)
-        )
-        return result.scalar_one_or_none()
-
-    async def clear_pending_confirmation(
-        self, session_id: str, turn_number: int, user_id: Optional[UUID] = None
-    ) -> None:
-        """Clear the pending_confirmation flag on a turn without updating other fields."""
-        query = select(Conversation).where(Conversation.session_id == session_id)
-        if user_id is not None:
-            query = query.where(Conversation.user_id == user_id)
-
-        result = await self.session.execute(query)
-        conv = result.scalar_one_or_none()
-        if not conv:
-            return
-
-        result = await self.session.execute(
-            select(ConversationTurn)
-            .where(
-                ConversationTurn.conversation_id == conv.id,
-                ConversationTurn.turn_number == turn_number,
-            )
-            .with_for_update()
-        )
-        ct = result.scalar_one_or_none()
-        if not ct:
-            return
-
-        ct.pending_confirmation = None
-        await self.session.flush()
-        log.debug(
-            "pending confirmation cleared",
-            session_id=session_id,
-            turn_number=turn_number,
         )
 
     async def update_title(

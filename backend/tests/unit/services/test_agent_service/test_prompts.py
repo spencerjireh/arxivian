@@ -22,7 +22,7 @@ class TestPromptBuilderToolOutputs:
     def test_grouped_under_header(self):
         builder = PromptBuilder("system")
         builder.with_tool_outputs([
-            self._make_output("arxiv_search", {}, prompt_text="Found 3 papers on transformers"),
+            self._make_output("semantic_scholar", {}, prompt_text="Found 3 papers on transformers"),
         ])
         _, user = builder.build()
         assert user.startswith("Tool results:\n")
@@ -39,7 +39,7 @@ class TestPromptBuilderToolOutputs:
     def test_multiple_under_single_header(self):
         builder = PromptBuilder("system")
         builder.with_tool_outputs([
-            self._make_output("arxiv_search", {}, prompt_text="Paper A"),
+            self._make_output("semantic_scholar", {}, prompt_text="Paper A"),
             self._make_output("explore_citations", {}, prompt_text="Citation B"),
         ])
         _, user = builder.build()
@@ -58,7 +58,7 @@ class TestPromptBuilderToolOutputs:
         builder = PromptBuilder("system")
         data = {"key": "value", "count": 42}
         builder.with_tool_outputs([
-            self._make_output("arxiv_search", data),
+            self._make_output("semantic_scholar", data),
         ])
         _, user = builder.build()
         assert "Tool results:" in user

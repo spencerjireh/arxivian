@@ -10,7 +10,6 @@ from .canned_data import (
     BERT_CHUNKS,
     CONTRADICTORY_CHUNKS,
     IRRELEVANT_CHUNKS,
-    ARXIV_SEARCH_RESULTS,
 )
 
 
@@ -48,13 +47,6 @@ ANSWER_QUALITY_SCENARIOS: list[AnswerQualityScenario] = [
         metrics_override=["answer_relevancy", "faithfulness"],
     ),
     AnswerQualityScenario(
-        id="arxiv_search_outputs",
-        query="Search arXiv for papers about attention mechanisms in NLP",
-        canned_chunks=[],
-        canned_tool_outputs=[{"tool_name": "arxiv_search", "data": ARXIV_SEARCH_RESULTS}],
-        description="Question answered via arxiv_search tool outputs",
-    ),
-    AnswerQualityScenario(
         id="partial_relevance",
         query="Retrieve from our knowledge base the training results and datasets for the Transformer model",
         canned_chunks=TRANSFORMER_CHUNKS[1:2] + IRRELEVANT_CHUNKS,
@@ -70,35 +62,5 @@ ANSWER_QUALITY_SCENARIOS: list[AnswerQualityScenario] = [
             "Answer should acknowledge the discrepancy, not silently pick one."
         ),
         metrics_override=["answer_relevancy", "contextual_relevancy"],
-    ),
-    AnswerQualityScenario(
-        id="tool_failure_recovery",
-        query="Search arXiv for the latest papers on sparse attention mechanisms",
-        canned_chunks=[],
-        canned_tool_outputs=[
-            {
-                "tool_name": "arxiv_search",
-                "data": None,
-                "error": "arXiv API timeout",
-                "success": False,
-            },
-        ],
-        description=(
-            "arxiv_search returns success=False. Agent should handle gracefully "
-            "and inform the user rather than producing a hallucinated answer."
-        ),
-    ),
-    AnswerQualityScenario(
-        id="arxiv_search_no_loop",
-        query="Search arXiv for recent papers on knowledge distillation for LLMs",
-        canned_chunks=[],
-        canned_tool_outputs=[{"tool_name": "arxiv_search", "data": ARXIV_SEARCH_RESULTS}],
-        description=(
-            "arxiv_search-only flow should complete without re-emitting the tool. "
-            "Verifies Fix 3 (prompt + dedup guard) prevents the search loop."
-        ),
-        # Canned results are about attention/BERT, not distillation -- contextual
-        # relevancy will score 0. The real assertion is the iteration guard below.
-        metrics_override=["answer_relevancy"],
     ),
 ]

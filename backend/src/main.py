@@ -11,12 +11,10 @@ from src.services.agent_service.graph_builder import build_graph
 # Import routers
 from src.routers import (
     health,
-    search,
     stream,
     papers,
     conversations,
     ops,
-    feedback,
     users,
     webhooks,
     feed,
@@ -57,28 +55,19 @@ async def lifespan(app: FastAPI):
 
     app.state.redis = aioredis.from_url(settings.redis_url, decode_responses=True)
 
-    # Initialize LangGraph checkpointer (must use Redis DB 0 for RediSearch)
-    from langgraph.checkpoint.redis.aio import AsyncRedisSaver
+    # Compile the agent graph once (singleton for app lifetime; no checkpointer -- every
+    # turn is a single uninterrupted graph run since HITL was removed in Phase 3)
+    app.state.agent_graph = build_graph()
+    log.info("agent graph compiled")
 
-    async with AsyncRedisSaver.from_conn_string(
-        settings.redis_checkpoint_url,
-        ttl={"default_ttl": 60 * 24, "refresh_on_read": False},  # 24h in minutes
-    ) as checkpointer:
-        await checkpointer.asetup()
-        log.info("redis checkpointer initialized", url=settings.redis_checkpoint_url)
+    # Load system user ID (seeded by migration)
+    from src.tiers import init_system_user
 
-        # Compile agent graph once with checkpointer (singleton for app lifetime)
-        app.state.agent_graph = build_graph(checkpointer)
-        log.info("agent graph compiled with checkpointer")
+    async with AsyncSessionLocal() as db:
+        await init_system_user(db)
+    log.info("system user loaded")
 
-        # Load system user ID (seeded by migration)
-        from src.tiers import init_system_user
-
-        async with AsyncSessionLocal() as db:
-            await init_system_user(db)
-        log.info("system user loaded")
-
-        yield
+    yield
 
     # Shutdown Redis (rate-limit client)
     await app.state.redis.aclose()
@@ -129,12 +118,10 @@ app.middleware("http")(logging_middleware)
 
 # Register routers
 app.include_router(health.router, prefix="/api/v1", tags=["Health"])
-app.include_router(search.router, prefix="/api/v1", tags=["Search"])
 app.include_router(stream.router, prefix="/api/v1", tags=["Stream"])
 app.include_router(conversations.router, prefix="/api/v1", tags=["Conversations"])
 app.include_router(papers.router, prefix="/api/v1", tags=["Papers"])
 app.include_router(ops.router, prefix="/api/v1", tags=["Ops"])
-app.include_router(feedback.router, prefix="/api/v1", tags=["Feedback"])
 app.include_router(users.router, prefix="/api/v1", tags=["Users"])
 app.include_router(webhooks.router, prefix="/api/v1", tags=["Webhooks"])
 app.include_router(feed.router, prefix="/api/v1", tags=["Feed"])

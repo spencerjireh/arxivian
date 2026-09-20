@@ -29,8 +29,8 @@ import pytest
 
 from src.clients.semantic_scholar_client import CitationMetrics
 from src.config import get_settings
-from src.factories.client_factories import get_typesafe_client
-from src.factories.service_factories import get_ingest_service, get_search_service
+from src.factories import get_typesafe_client
+from src.factories import get_ingest_service, get_search_service
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.scoring_repository import ScoringRepository
 from src.schemas.scoring_state import RUBRIC_VERSION, Band, score_to_band

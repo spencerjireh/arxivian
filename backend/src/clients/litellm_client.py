@@ -1,8 +1,8 @@
 """LiteLLM-based LLM client with unified multi-provider support.
 
-Routes to any LiteLLM-supported provider via model prefix (e.g. openai/gpt-4o-mini,
-nvidia_nim/meta/llama-3.1-8b-instruct). Langfuse tracing is handled via LiteLLM's
-global callback system configured at startup in main.py.
+Routes to any LiteLLM-supported provider via model prefix (e.g. openai/gpt-5-nano).
+Langfuse tracing is handled via LiteLLM's global callback system configured at startup in
+main.py.
 """
 
 import asyncio
@@ -82,7 +82,7 @@ class LiteLLMClient(BaseLLMClient):
 
     def __init__(
         self,
-        model: str = "nvidia_nim/openai/gpt-oss-120b",
+        model: str = "openai/gpt-5-nano",
         timeout: float = 60.0,
         structured_output_model: str | None = None,
     ):

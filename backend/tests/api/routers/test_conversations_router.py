@@ -1,6 +1,6 @@
 """Tests for conversations router."""
 
-from unittest.mock import Mock
+import pytest
 
 
 class TestConversationsAuthentication:
@@ -8,7 +8,9 @@ class TestConversationsAuthentication:
 
     def test_list_conversations_unauthenticated_returns_401(self, unauthenticated_client):
         """Test that unauthenticated requests return 401."""
-        response = unauthenticated_client.get("/api/v1/conversations")
+        response = unauthenticated_client.get(
+            "/api/v1/conversations", params={"arxiv_id": "2301.00001"}
+        )
 
         assert response.status_code == 401
         data = response.json()
@@ -26,21 +28,27 @@ class TestConversationsAuthentication:
 
         assert response.status_code == 401
 
-    def test_cancel_stream_unauthenticated_returns_401(self, unauthenticated_client):
-        """Test that unauthenticated requests return 401."""
-        response = unauthenticated_client.post("/api/v1/conversations/test-session/cancel")
-
-        assert response.status_code == 401
-
 
 class TestListConversationsEndpoint:
-    """Tests for GET /api/v1/conversations endpoint."""
+    """Tests for GET /api/v1/conversations (always scoped to one paper)."""
+
+    @pytest.fixture(autouse=True)
+    def _paper_exists(self, mock_paper_repo, sample_paper):
+        mock_paper_repo.get_by_arxiv_id.return_value = sample_paper
+
+    def test_missing_arxiv_id_is_422(self, client):
+        assert client.get("/api/v1/conversations").status_code == 422
+
+    def test_unknown_paper_is_404(self, client, mock_paper_repo):
+        mock_paper_repo.get_by_arxiv_id.return_value = None
+        response = client.get("/api/v1/conversations", params={"arxiv_id": "9999.99999"})
+        assert response.status_code == 404
 
     def test_list_conversations_empty(self, client, mock_conversation_repo):
         """Test listing conversations returns empty list."""
         mock_conversation_repo.get_all.return_value = ([], 0)
 
-        response = client.get("/api/v1/conversations")
+        response = client.get("/api/v1/conversations", params={"arxiv_id": "2301.00001"})
 
         assert response.status_code == 200
         data = response.json()
@@ -55,7 +63,7 @@ class TestListConversationsEndpoint:
         """Test listing conversations returns results."""
         mock_conversation_repo.get_all.return_value = ([sample_conversation], 1)
 
-        response = client.get("/api/v1/conversations")
+        response = client.get("/api/v1/conversations", params={"arxiv_id": "2301.00001"})
 
         assert response.status_code == 200
         data = response.json()
@@ -70,7 +78,7 @@ class TestListConversationsEndpoint:
         sample_conversation.turns = [sample_conversation_turn]
         mock_conversation_repo.get_all.return_value = ([sample_conversation], 1)
 
-        response = client.get("/api/v1/conversations")
+        response = client.get("/api/v1/conversations", params={"arxiv_id": "2301.00001"})
 
         assert response.status_code == 200
         data = response.json()
@@ -83,7 +91,7 @@ class TestListConversationsEndpoint:
         sample_conversation.turns = [sample_conversation_turn]
         mock_conversation_repo.get_all.return_value = ([sample_conversation], 1)
 
-        response = client.get("/api/v1/conversations")
+        response = client.get("/api/v1/conversations", params={"arxiv_id": "2301.00001"})
 
         assert response.status_code == 200
         data = response.json()
@@ -93,7 +101,7 @@ class TestListConversationsEndpoint:
         """Test pagination parameters."""
         mock_conversation_repo.get_all.return_value = ([], 100)
 
-        response = client.get("/api/v1/conversations?offset=10&limit=50")
+        response = client.get("/api/v1/conversations?arxiv_id=2301.00001&offset=10&limit=50")
 
         assert response.status_code == 200
         data = response.json()
@@ -102,7 +110,7 @@ class TestListConversationsEndpoint:
 
     def test_list_conversations_invalid_limit(self, client):
         """Test validation error for invalid limit."""
-        response = client.get("/api/v1/conversations?limit=200")
+        response = client.get("/api/v1/conversations?arxiv_id=2301.00001&limit=200")
 
         assert response.status_code == 422
 
@@ -156,9 +164,7 @@ class TestGetConversationEndpoint:
 class TestDeleteConversationEndpoint:
     """Tests for DELETE /api/v1/conversations/{session_id} endpoint."""
 
-    def test_delete_conversation_success(
-        self, client, mock_conversation_repo, sample_conversation
-    ):
+    def test_delete_conversation_success(self, client, mock_conversation_repo, sample_conversation):
         """Test successful conversation deletion."""
         mock_conversation_repo.get_by_session_id.return_value = sample_conversation
         mock_conversation_repo.get_turn_count.return_value = 5
@@ -202,47 +208,3 @@ class TestDeleteConversationEndpoint:
         mock_conversation_repo.get_by_session_id.assert_called_once_with(
             "test-session-123", user_id=mock_user.id
         )
-
-
-class TestCancelStreamEndpoint:
-    """Tests for POST /api/v1/conversations/{session_id}/cancel endpoint."""
-
-    def test_cancel_stream_success(self, client, mock_user):
-        """Test successful stream cancellation."""
-        from src.services.task_registry import task_registry
-
-        # Register a mock task with the same user_id used by the authenticated client
-        mock_task = Mock()
-        task_registry.register("test-session-123", mock_task, user_id=str(mock_user.id))
-
-        response = client.post("/api/v1/conversations/test-session-123/cancel")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["session_id"] == "test-session-123"
-        assert data["cancelled"] is True
-        assert "cancelled successfully" in data["message"]
-
-    def test_cancel_stream_no_active_stream(self, client):
-        """Test cancellation when no stream exists."""
-        response = client.post("/api/v1/conversations/nonexistent/cancel")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["session_id"] == "nonexistent"
-        assert data["cancelled"] is False
-        assert "No active stream" in data["message"]
-
-    def test_cancel_stream_wrong_user_returns_not_cancelled(self, client, mock_user):
-        """Test that cancel returns cancelled=False when user_id does not match."""
-        from src.services.task_registry import task_registry
-
-        mock_task = Mock()
-        task_registry.register("test-session-123", mock_task, user_id="other-user-id")
-
-        response = client.post("/api/v1/conversations/test-session-123/cancel")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["cancelled"] is False
-        mock_task.cancel.assert_not_called()

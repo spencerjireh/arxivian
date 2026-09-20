@@ -2,7 +2,6 @@
 
 from functools import lru_cache
 
-from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,17 +13,16 @@ class Settings(BaseSettings):
     # Database
     postgres_url: str = "postgresql+asyncpg://user:password@localhost:5432/arxiv_rag"
 
-    # LLM Configuration (LiteLLM-format model strings: "provider/model")
+    # LLM Configuration (LiteLLM-format model strings: "provider/model"). One model for
+    # every chat/triage call; there is no per-request model selection (Phase 3).
     default_llm_model: str = "openai/gpt-5-nano"
-    allowed_llm_models: str = "openai/gpt-5-nano,nvidia_nim/openai/gpt-oss-120b,openai/gpt-4o-mini"
     # Model override for structured-output calls (classify_and_route, evaluate_batch, triage).
     # None means use default_llm_model.
     structured_output_model: str | None = "openai/gpt-5-nano"
+    default_temperature: float = 0.3
 
     # Provider API Keys
     openai_api_key: str = ""
-    nvidia_nim_api_key: str | None = None
-    nvidia_nim_api_base: str | None = None
 
     # Embeddings
     jina_api_key: str = ""
@@ -61,9 +59,10 @@ class Settings(BaseSettings):
     chunk_overlap_words: int = 100
     min_chunk_words: int = 100
 
-    # Agent Configuration
-    guardrail_threshold: int = 75
-    max_retrieval_attempts: int = 3
+    # Agent Configuration (paper-scoped chat)
+    guardrail_threshold: int = 75  # scope score below this is answered as out of scope
+    max_iterations: int = 5  # classify -> execute -> evaluate loops per turn
+    conversation_window: int = 5  # previous turns included in the prompt
 
     # Request Lifecycle Configuration
     agent_timeout_seconds: int = 180  # 3 minutes max per request
@@ -71,8 +70,6 @@ class Settings(BaseSettings):
 
     # Redis
     redis_url: str = "redis://redis:6379/2"
-    # RediSearch (used by langgraph-checkpoint-redis) only works on DB 0
-    redis_checkpoint_url: str = "redis://redis:6379/0"
 
     # CORS
     cors_origins: str = (
@@ -123,48 +120,6 @@ class Settings(BaseSettings):
 
     # Stage 3 digest -- weekly cached ranking snapshot. Runs after triage+scoring settle.
     digest_schedule_cron: str = "0 8 * * 1"  # Weekly Monday 8am UTC (2h after triage)
-
-    # Helper methods
-    def get_allowed_models_list(self) -> list[str]:
-        """Get list of all allowed LiteLLM model strings."""
-        return [m.strip() for m in self.allowed_llm_models.split(",") if m.strip()]
-
-    def is_model_allowed(self, model: str) -> bool:
-        """Check if a LiteLLM model string is in the allowed list."""
-        return model in self.get_allowed_models_list()
-
-    @model_validator(mode="after")
-    def _check_referenced_models_allowed(self) -> "Settings":
-        """Fail fast at startup if a referenced LLM model is not in ALLOWED_LLM_MODELS.
-
-        The default/structured models must both be in the allowlist, or
-        `get_llm_client()` raises `InvalidModelError` deep inside a Celery task at runtime
-        (the SPE-282 env-drift bug). This turns that into a clear boot-time error in every
-        entrypoint (web, worker, beat, shell), since each builds `Settings` at import.
-
-        `structured_output_model` is optional -- empty/None means "use the default" -- so it
-        is only checked when set, mirroring `get_llm_client`'s `structured_output_model or None`.
-        """
-        allowed = self.get_allowed_models_list()
-        referenced = {
-            "default_llm_model": self.default_llm_model,
-        }
-        if self.structured_output_model:
-            referenced["structured_output_model"] = self.structured_output_model
-
-        missing = {name: model for name, model in referenced.items() if model not in allowed}
-        if missing:
-            offending = ", ".join(f"{name}={model!r}" for name, model in missing.items())
-            # Raise a plain RuntimeError, not ValueError: pydantic wraps ValueError into a
-            # ValidationError whose repr dumps the whole settings dict (leaking secrets like
-            # postgres_url / API keys into crash logs). RuntimeError propagates cleanly with
-            # only this message.
-            raise RuntimeError(
-                f"LLM model(s) not in ALLOWED_LLM_MODELS {allowed}: {offending}. "
-                "Add them to ALLOWED_LLM_MODELS (see backend/.env.example) or change the "
-                "model setting -- otherwise get_llm_client() crashes at runtime."
-            )
-        return self
 
 
 @lru_cache(maxsize=1)
