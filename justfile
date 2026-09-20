@@ -115,7 +115,7 @@ eval *args:
     trap 'docker compose --profile eval down 2>/dev/null' EXIT
     docker compose --profile eval build eval-runner
     docker compose --profile eval run --rm eval-runner \
-        sh -c "uv sync --frozen --extra dev --extra eval && uv run pytest tests/evals -m eval -v --tb=short {{args}}"
+        sh -c "uv sync --frozen --group eval && uv run pytest tests/evals -m eval -v --tb=short {{args}}"
 
 # =============================================================================
 # Integration Evaluation (real LLM + real DB + real services)
@@ -130,7 +130,7 @@ inteval-seed:
     docker compose --profile inteval build inteval-runner
     docker compose --profile inteval up -d test-db
     docker compose --profile inteval run --rm inteval-runner \
-        sh -c "uv sync --frozen --extra dev --extra eval && uv run alembic upgrade head && uv run python -m tests.evals.integration.seed"
+        sh -c "uv sync --frozen --group eval && uv run alembic upgrade head && uv run python -m tests.evals.integration.seed"
 
 # Run integration evals (requires inteval-seed first).
 # Data persists in test_postgres_data volume; only re-seed after `just clean`.
@@ -141,7 +141,7 @@ inteval *args:
     docker compose --profile inteval build inteval-runner
     docker compose --profile inteval up -d test-db
     docker compose --profile inteval run --rm inteval-runner \
-        sh -c "uv sync --frozen --extra dev --extra eval && uv run alembic upgrade head && uv run pytest tests/evals/integration -m inteval -v --tb=short {{args}}"
+        sh -c "uv sync --frozen --group eval && uv run alembic upgrade head && uv run pytest tests/evals/integration -m inteval -v --tb=short {{args}}"
 
 # =============================================================================
 # Code Quality
