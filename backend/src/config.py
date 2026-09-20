@@ -126,3 +126,5 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Get cached settings instance."""
     return Settings()  # ty: ignore[missing-argument]  # pydantic_settings reads from env
+
+import os  # ruleset probe: unused import, must fail Backend lint
