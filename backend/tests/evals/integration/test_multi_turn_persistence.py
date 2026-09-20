@@ -8,8 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.user import User
 from src.repositories.conversation_repository import ConversationRepository
 from src.schemas.stream import MetadataEventData
-from src.services.agent_service import AgentService
-
 from .helpers import consume_stream
 from .scenarios import MULTI_TURN_SCENARIOS
 
@@ -21,13 +19,14 @@ from .scenarios import MULTI_TURN_SCENARIOS
     ids=[s.id for s in MULTI_TURN_SCENARIOS],
 )
 async def test_multi_turn_persistence(
-    agent_service: AgentService,
+    agent_for,
     db_session: AsyncSession,
     seed_user: User,
     scenario,
 ):
     """Sequential turns via ask_stream() with same session_id are persisted."""
     session_id: str | None = None
+    agent_service = await agent_for(scenario.arxiv_id)
 
     for i, query in enumerate(scenario.turns):
         result = await consume_stream(agent_service, query, session_id=session_id)
@@ -60,18 +59,19 @@ async def test_multi_turn_persistence(
 
 @pytest.mark.inteval
 async def test_session_id_preserved_across_turns(
-    agent_service: AgentService,
+    agent_for,
     db_session: AsyncSession,
     seed_user: User,
 ):
     """Verify turn_number increments and session_id is stable across turns."""
     queries = [
         "What is the BERT model?",
-        "How is it different from GPT-3?",
+        "How is it fine-tuned for downstream tasks?",
     ]
 
     session_id: str | None = None
     turn_numbers: list[int] = []
+    agent_service = await agent_for("1810.04805")
 
     for query in queries:
         result = await consume_stream(agent_service, query, session_id=session_id)

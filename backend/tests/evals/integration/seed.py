@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.config import get_settings
-from src.factories.service_factories import get_ingest_service
+from src.factories import get_ingest_service
 from src.models.user import User
 from src.repositories.paper_repository import PaperRepository
 

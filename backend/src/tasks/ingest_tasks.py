@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 from src.celery_app import celery_app
 from src.database import AsyncSessionLocal
-from src.factories.service_factories import get_ingest_service
+from src.factories import get_ingest_service
 from src.schemas.ingest import IngestRequest
 from src.tasks.utils import run_async
 from src.tasks.tracing import trace_task

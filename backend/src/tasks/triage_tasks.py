@@ -20,7 +20,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from src.celery_app import celery_app
-from src.factories.client_factories import get_arxiv_client, get_llm_client
+from src.factories import get_arxiv_client, get_llm_client
 from src.schemas.triage import TriageBatchResult, TriageResult
 from src.services.scoring_service.triage_prompt import get_triage_batch_prompt
 from src.tasks.score_tasks import score_paper_task

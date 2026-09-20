@@ -9,7 +9,7 @@ from src.schemas.conversation import ConversationMessage
 
 
 # Execution status types
-ExecutionStatus = Literal["running", "paused", "completed", "failed"]
+ExecutionStatus = Literal["running", "completed", "failed"]
 
 
 class ToolCall(BaseModel):
@@ -117,10 +117,6 @@ class AgentState(TypedDict):
     # Tool execution history
     tool_history: list[ToolExecution]
     last_executed_tools: list[str]  # Tool names from current batch (for routing)
-
-    # Pause/resume support (HITL)
-    pause_reason: str | None
-    pause_data: dict | None
 
     # Retrieval tracking
     retrieval_attempts: int

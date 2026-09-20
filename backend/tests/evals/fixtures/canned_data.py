@@ -147,47 +147,6 @@ IRRELEVANT_CHUNKS = [
     ),
 ]
 
-ARXIV_SEARCH_RESULTS = {
-    "total_count": 3,
-    "results": [
-        {
-            "arxiv_id": "1706.03762",
-            "title": "Attention Is All You Need",
-            "authors": "A. Vaswani et al.",
-            "abstract": "The dominant sequence transduction models are based on complex "
-            "recurrent or convolutional neural networks...",
-            "published": "2017-06-12",
-            "pdf_url": "https://arxiv.org/pdf/1706.03762",
-        },
-        {
-            "arxiv_id": "1810.04805",
-            "title": "BERT: Pre-training of Deep Bidirectional Transformers",
-            "authors": "J. Devlin et al.",
-            "abstract": "We introduce a new language representation model called BERT...",
-            "published": "2018-10-11",
-            "pdf_url": "https://arxiv.org/pdf/1810.04805",
-        },
-    ],
-}
-
-LIST_PAPERS_RESULTS = {
-    "total_count": 2,
-    "papers": [
-        {
-            "arxiv_id": "1706.03762",
-            "title": "Attention Is All You Need",
-            "authors": "A. Vaswani et al.",
-            "chunk_count": 15,
-        },
-        {
-            "arxiv_id": "1810.04805",
-            "title": "BERT: Pre-training of Deep Bidirectional Transformers",
-            "authors": "J. Devlin et al.",
-            "chunk_count": 22,
-        },
-    ],
-}
-
 CITATION_RESULTS = {
     "paper_title": "Attention Is All You Need",
     "arxiv_id": "1706.03762",

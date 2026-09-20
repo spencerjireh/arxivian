@@ -3,7 +3,6 @@
 import uuid
 import pytest
 from unittest.mock import Mock
-from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 
 from sqlalchemy.exc import OperationalError
@@ -236,80 +235,3 @@ class TestProcessSinglePaper:
         )
 
         assert result is None
-
-
-class TestListPapersFormatting:
-    """Tests for list_papers response formatting logic."""
-
-    @pytest.fixture
-    def ingest_service(
-        self,
-        mock_arxiv_client,
-        mock_pdf_parser,
-        mock_embeddings_client,
-        mock_chunking_service,
-        mock_paper_repository,
-        mock_chunk_repository,
-    ):
-        return IngestService(
-            arxiv_client=mock_arxiv_client,
-            pdf_parser=mock_pdf_parser,
-            embeddings_client=mock_embeddings_client,
-            chunking_service=mock_chunking_service,
-            paper_repository=mock_paper_repository,
-            chunk_repository=mock_chunk_repository,
-            ingested_by=TEST_USER_ID,
-        )
-
-    @pytest.mark.asyncio
-    async def test_list_papers_truncates_abstract(
-        self, ingest_service, mock_paper_repository
-    ):
-        """Verify 500 char limit with '...'."""
-        mock_paper = Mock()
-        mock_paper.arxiv_id = "2301.00001"
-        mock_paper.title = "Test"
-        mock_paper.authors = ["Author"]
-        mock_paper.abstract = "x" * 600
-        mock_paper.categories = ["cs.LG"]
-        mock_paper.published_date = datetime.now(timezone.utc)
-        mock_paper.pdf_url = "https://example.com"
-
-        mock_paper_repository.get_all.return_value = ([mock_paper], 1)
-
-        papers, _ = await ingest_service.list_papers()
-
-        assert len(papers[0]["abstract"]) == 503  # 500 + "..."
-        assert papers[0]["abstract"].endswith("...")
-
-    @pytest.mark.asyncio
-    async def test_list_papers_formats_dates(
-        self, ingest_service, mock_paper_repository
-    ):
-        """Verify ISO format dates."""
-        mock_paper = Mock()
-        mock_paper.arxiv_id = "2301.00001"
-        mock_paper.title = "Test"
-        mock_paper.authors = ["Author"]
-        mock_paper.abstract = "Abstract"
-        mock_paper.categories = ["cs.LG"]
-        mock_paper.published_date = datetime(2023, 6, 15, 12, 0, 0, tzinfo=timezone.utc)
-        mock_paper.pdf_url = "https://example.com"
-
-        mock_paper_repository.get_all.return_value = ([mock_paper], 1)
-
-        papers, _ = await ingest_service.list_papers()
-
-        assert "2023-06-15" in papers[0]["published_date"]
-
-    @pytest.mark.asyncio
-    async def test_list_papers_uses_first_category(
-        self, ingest_service, mock_paper_repository
-    ):
-        """Verify categories[0] is used for filter."""
-        mock_paper_repository.get_all.return_value = ([], 0)
-
-        await ingest_service.list_papers(categories=["cs.LG", "cs.AI", "stat.ML"])
-
-        call_kwargs = mock_paper_repository.get_all.call_args.kwargs
-        assert call_kwargs["category_filter"] == "cs.LG"

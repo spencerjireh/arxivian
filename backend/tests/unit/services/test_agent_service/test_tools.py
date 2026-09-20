@@ -9,8 +9,6 @@ from src.services.agent_service.tools import (
     ToolResult,
     ToolRegistry,
     RetrieveChunksTool,
-    IngestPapersTool,
-    ArxivSearchTool,
     ExploreCitationsTool,
     SemanticScholarTool,
 )
@@ -26,7 +24,7 @@ class TestRetrieveChunksTool:
 
     @pytest.fixture
     def tool(self, mock_search_service):
-        return RetrieveChunksTool(search_service=mock_search_service, default_top_k=6)
+        return RetrieveChunksTool(search_service=mock_search_service, paper_id="p1", default_top_k=6)
 
     @pytest.mark.asyncio
     async def test_empty_query_returns_error(self, tool):
@@ -42,20 +40,20 @@ class TestRetrieveChunksTool:
 
     @pytest.mark.asyncio
     async def test_top_k_clamped_to_max(self, tool, mock_search_service):
-        mock_search_service.hybrid_search.return_value = []
+        mock_search_service.retrieve_within_paper.return_value = []
 
         await tool.execute(query="test", top_k=100)
 
-        call_args = mock_search_service.hybrid_search.call_args
+        call_args = mock_search_service.retrieve_within_paper.call_args
         assert call_args.kwargs["top_k"] == MAX_TOP_K
 
     @pytest.mark.asyncio
     async def test_top_k_minimum_is_one(self, tool, mock_search_service):
-        mock_search_service.hybrid_search.return_value = []
+        mock_search_service.retrieve_within_paper.return_value = []
 
         await tool.execute(query="test", top_k=0)
 
-        call_args = mock_search_service.hybrid_search.call_args
+        call_args = mock_search_service.retrieve_within_paper.call_args
         assert call_args.kwargs["top_k"] == 1
 
     @pytest.mark.asyncio
@@ -71,7 +69,7 @@ class TestRetrieveChunksTool:
         mock_result.pdf_url = "https://arxiv.org/pdf/2301.00001.pdf"
         mock_result.published_date = "2023-01-01"
 
-        mock_search_service.hybrid_search.return_value = [mock_result]
+        mock_search_service.retrieve_within_paper.return_value = [mock_result]
 
         result = await tool.execute(query="transformers")
 
@@ -82,7 +80,7 @@ class TestRetrieveChunksTool:
 
     @pytest.mark.asyncio
     async def test_exception_handling(self, tool, mock_search_service):
-        mock_search_service.hybrid_search.side_effect = Exception("Database error")
+        mock_search_service.retrieve_within_paper.side_effect = Exception("Database error")
 
         result = await tool.execute(query="test")
 
@@ -92,175 +90,6 @@ class TestRetrieveChunksTool:
     def test_class_variables(self, tool):
         assert tool.extends_chunks is True
         assert "search_service" in tool.required_dependencies
-
-    @pytest.mark.asyncio
-    async def test_min_score_filters_low_relevance(self, mock_search_service):
-        tool = RetrieveChunksTool(
-            search_service=mock_search_service, default_top_k=6, min_score=0.5
-        )
-
-        def _mock_result(score: float) -> Mock:
-            r = Mock()
-            r.chunk_id = f"chunk-{score}"
-            r.chunk_text = "text"
-            r.arxiv_id = "2301.00001"
-            r.title = "Paper"
-            r.authors = []
-            r.section_name = "Intro"
-            r.score = score
-            r.pdf_url = "https://arxiv.org/pdf/2301.00001.pdf"
-            r.published_date = "2023-01-01"
-            return r
-
-        mock_search_service.hybrid_search.return_value = [
-            _mock_result(0.9),
-            _mock_result(0.6),
-            _mock_result(0.3),
-        ]
-
-        result = await tool.execute(query="transformers")
-
-        assert result.success is True
-        assert len(result.data) == 2
-        assert all(c["score"] >= 0.5 for c in result.data)
-
-    def test_min_score_default(self):
-        tool = RetrieveChunksTool(search_service=AsyncMock())
-        assert tool.min_score == 0.5
-
-    @pytest.mark.asyncio
-    async def test_min_score_zero_returns_all(self, mock_search_service):
-        tool = RetrieveChunksTool(
-            search_service=mock_search_service, default_top_k=6, min_score=0.0
-        )
-
-        def _mock_result(score: float) -> Mock:
-            r = Mock()
-            r.chunk_id = f"chunk-{score}"
-            r.chunk_text = "text"
-            r.arxiv_id = "2301.00001"
-            r.title = "Paper"
-            r.authors = []
-            r.section_name = "Intro"
-            r.score = score
-            r.pdf_url = "https://arxiv.org/pdf/2301.00001.pdf"
-            r.published_date = "2023-01-01"
-            return r
-
-        mock_search_service.hybrid_search.return_value = [
-            _mock_result(0.9),
-            _mock_result(0.6),
-            _mock_result(0.3),
-        ]
-
-        result = await tool.execute(query="transformers")
-
-        assert result.success is True
-        assert len(result.data) == 3
-
-
-class TestIngestPapersTool:
-    """Tests for IngestPapersTool."""
-
-    @pytest.fixture
-    def mock_ingest_service(self):
-        return AsyncMock()
-
-    @pytest.fixture
-    def tool(self, mock_ingest_service):
-        return IngestPapersTool(ingest_service=mock_ingest_service)
-
-    @pytest.mark.asyncio
-    async def test_both_query_and_ids_returns_error(self, tool):
-        result = await tool.execute(query="test", arxiv_ids=["2301.00001"])
-        assert result.success is False
-        assert "not both" in result.error.lower()
-
-    @pytest.mark.asyncio
-    async def test_neither_query_nor_ids_returns_error(self, tool):
-        result = await tool.execute()
-        assert result.success is False
-        assert "must provide" in result.error.lower()
-
-    def test_class_variables(self, tool):
-        assert tool.extends_chunks is False
-        assert "ingest_service" in tool.required_dependencies
-
-
-class TestArxivSearchTool:
-    """Tests for ArxivSearchTool."""
-
-    @pytest.fixture
-    def mock_arxiv_client(self):
-        return AsyncMock()
-
-    @pytest.fixture
-    def tool(self, mock_arxiv_client):
-        return ArxivSearchTool(arxiv_client=mock_arxiv_client)
-
-    @pytest.mark.asyncio
-    async def test_empty_query_returns_error(self, tool):
-        result = await tool.execute(query="")
-        assert result.success is False
-        assert "required" in result.error.lower()
-
-    @pytest.mark.asyncio
-    async def test_whitespace_query_returns_error(self, tool):
-        result = await tool.execute(query="   ")
-        assert result.success is False
-        assert "required" in result.error.lower()
-
-    @pytest.mark.asyncio
-    async def test_max_results_clamped_to_10(self, tool, mock_arxiv_client):
-        mock_arxiv_client.search_papers.return_value = []
-
-        await tool.execute(query="test", max_results=20)
-
-        call_args = mock_arxiv_client.search_papers.call_args
-        assert call_args.kwargs["max_results"] == 10
-
-    @pytest.mark.asyncio
-    async def test_max_results_minimum_is_one(self, tool, mock_arxiv_client):
-        mock_arxiv_client.search_papers.return_value = []
-
-        await tool.execute(query="test", max_results=0)
-
-        call_args = mock_arxiv_client.search_papers.call_args
-        assert call_args.kwargs["max_results"] == 1
-
-    @pytest.mark.asyncio
-    async def test_invalid_date_format(self, tool):
-        result = await tool.execute(query="test", start_date="invalid")
-        assert result.success is False
-        assert "Invalid" in result.error
-
-    @pytest.mark.asyncio
-    async def test_zero_results_with_date_filter_includes_message(self, tool, mock_arxiv_client):
-        mock_arxiv_client.search_papers.return_value = []
-
-        result = await tool.execute(
-            query="machine learning", start_date="2026-02-14", end_date="2026-02-14"
-        )
-
-        assert result.success is True
-        assert result.data["count"] == 0
-        assert "message" in result.data
-        assert "no papers matched" in result.data["message"].lower()
-
-    @pytest.mark.asyncio
-    async def test_zero_results_without_date_filter_no_message(self, tool, mock_arxiv_client):
-        mock_arxiv_client.search_papers.return_value = []
-
-        result = await tool.execute(query="machine learning")
-
-        assert result.success is True
-        assert result.data["count"] == 0
-        assert "message" not in result.data
-
-    def test_class_variables(self, tool):
-        assert tool.extends_chunks is False
-        assert "arxiv_client" in tool.required_dependencies
-
 
 class TestExploreCitationsTool:
     """Tests for ExploreCitationsTool."""
@@ -310,159 +139,6 @@ class TestExploreCitationsTool:
     def test_class_variables(self, tool):
         assert tool.extends_chunks is False
         assert "paper_repository" in tool.required_dependencies
-
-
-class TestArxivSearchPromptText:
-    """Tests for arxiv_search prompt text formatting."""
-
-    def test_formats_papers_with_all_fields(self):
-        from src.services.agent_service.tools.arxiv_search import _format_search_results
-
-        data = {
-            "count": 2,
-            "papers": [
-                {
-                    "arxiv_id": "2602.12259",
-                    "title": "Think like a Scientist",
-                    "authors": ["J. Yang", "O. Venkatachalam", "A. Smith", "B. Jones"],
-                    "abstract": "A " * 100,  # 200 chars
-                    "categories": ["cs.AI", "cs.LG"],
-                    "published_date": "2026-02-12T00:00:00",
-                    "pdf_url": "https://arxiv.org/pdf/2602.12259",
-                },
-                {
-                    "arxiv_id": "2602.11111",
-                    "title": "Short Paper",
-                    "authors": ["Solo Author"],
-                    "abstract": "Brief.",
-                    "categories": ["cs.CL"],
-                    "published_date": "2026-02-10T00:00:00",
-                },
-            ],
-        }
-        result = _format_search_results(data)
-
-        assert result.startswith("Found 2 papers:")
-        assert '"Think like a Scientist" by J. Yang, O. Venkatachalam, A. Smith et al.' in result
-        assert "ID: 2602.12259" in result
-        assert "Feb 12, 2026" in result
-        assert "cs.AI, cs.LG" in result
-        # Abstract truncated to 150 chars
-        assert "..." in result
-        # pdf_url should NOT appear
-        assert "pdf" not in result.lower()
-        # Second paper
-        assert '"Short Paper" by Solo Author' in result
-        assert "Brief." in result
-
-    def test_no_papers_returns_message(self):
-        from src.services.agent_service.tools.arxiv_search import _format_search_results
-
-        assert _format_search_results({"count": 0, "papers": []}) == "No papers found."
-
-    def test_no_papers_with_message_returns_that_message(self):
-        from src.services.agent_service.tools.arxiv_search import _format_search_results
-
-        data = {
-            "count": 0,
-            "papers": [],
-            "message": "No papers matched the given date range.",
-        }
-        assert _format_search_results(data) == "No papers matched the given date range."
-
-    def test_missing_fields_handled_gracefully(self):
-        from src.services.agent_service.tools.arxiv_search import _format_search_results
-
-        result = _format_search_results({"count": 1, "papers": [{"title": "Minimal"}]})
-        assert '"Minimal" by Unknown' in result
-
-
-class TestListPapersPromptText:
-    """Tests for list_papers prompt text formatting."""
-
-    def test_formats_knowledge_base_papers(self):
-        from src.services.agent_service.tools.list_papers import _format_list_results
-
-        data = {
-            "total_count": 25,
-            "returned": 2,
-            "papers": [
-                {
-                    "arxiv_id": "1706.03762",
-                    "title": "Attention Is All You Need",
-                    "authors": ["A. Vaswani", "N. Shazeer"],
-                    "abstract": "The dominant sequence models...",
-                    "categories": ["cs.CL"],
-                    "published_date": "2017-06-12T00:00:00",
-                },
-                {
-                    "arxiv_id": "1810.04805",
-                    "title": "BERT",
-                    "authors": ["J. Devlin"],
-                    "abstract": "We introduce BERT.",
-                    "categories": ["cs.CL"],
-                    "published_date": "2018-10-11T00:00:00",
-                },
-            ],
-        }
-        result = _format_list_results(data)
-
-        assert result.startswith("Knowledge base: 25 papers (showing 2):")
-        assert "Attention Is All You Need" in result
-        assert "BERT" in result
-
-    def test_empty_knowledge_base(self):
-        from src.services.agent_service.tools.list_papers import _format_list_results
-
-        assert (
-            _format_list_results({"total_count": 0, "returned": 0, "papers": []})
-            == "No papers in knowledge base."
-        )
-
-
-class TestIngestPromptText:
-    """Tests for ingest prompt text formatting."""
-
-    def test_formats_ingestion_summary(self):
-        from src.services.agent_service.tools.ingest import _format_ingest_summary
-
-        data = {
-            "status": "completed",
-            "papers_fetched": 2,
-            "papers_processed": 2,
-            "chunks_created": 30,
-            "duration_seconds": 5.12,
-            "papers": [
-                {"arxiv_id": "1706.03762", "title": "Attention Is All You Need", "chunks": 15},
-                {"arxiv_id": "1810.04805", "title": "BERT", "chunks": 15},
-            ],
-            "errors": [],
-        }
-        result = _format_ingest_summary(data)
-
-        assert "Ingested 2 papers (30 chunks total):" in result
-        assert '"Attention Is All You Need" [1706.03762] - 15 chunks' in result
-        assert '"BERT" [1810.04805] - 15 chunks' in result
-        assert "Errors" not in result
-
-    def test_formats_with_errors(self):
-        from src.services.agent_service.tools.ingest import _format_ingest_summary
-
-        data = {
-            "status": "completed",
-            "papers_fetched": 2,
-            "papers_processed": 1,
-            "chunks_created": 15,
-            "duration_seconds": 3.0,
-            "papers": [
-                {"arxiv_id": "1706.03762", "title": "Attention Is All You Need", "chunks": 15},
-            ],
-            "errors": [{"arxiv_id": "9999.99999", "error": "PDF download failed"}],
-        }
-        result = _format_ingest_summary(data)
-
-        assert "Errors (1):" in result
-        assert "[9999.99999] PDF download failed" in result
 
 
 class TestExploreCitationsPromptText:

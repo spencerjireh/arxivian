@@ -1,56 +1,26 @@
-"""Tests for StreamRequest model_validator (query vs resume)."""
+"""Tests for StreamRequest (paper-scoped, no knobs)."""
 
 import pytest
 from pydantic import ValidationError
 
-from src.schemas.stream import StreamRequest, IngestConfirmation
+from src.schemas.stream import StreamRequest
 
 
-class TestStreamRequestValidator:
-    """Tests for the exactly_one_of_query_or_resume validator."""
+@pytest.mark.unit
+class TestStreamRequest:
+    def test_query_and_arxiv_id_required(self):
+        req = StreamRequest(query="What is attention?", arxiv_id="2301.00001")
+        assert req.session_id is None
 
-    def test_query_only_is_valid(self):
-        req = StreamRequest(query="What is attention?")
-        assert req.query == "What is attention?"
-        assert req.resume is None
+    def test_missing_arxiv_id_rejected(self):
+        with pytest.raises(ValidationError, match="arxiv_id"):
+            StreamRequest(query="test")
 
-    def test_resume_only_is_valid(self):
-        req = StreamRequest(
-            resume=IngestConfirmation(
-                session_id="sess-1",
-                thread_id="sess-1:0",
-                approved=True,
-                selected_ids=["2301.00001"],
-            )
-        )
-        assert req.query is None
-        assert req.resume is not None
-        assert req.resume.approved is True
+    def test_empty_query_rejected(self):
+        with pytest.raises(ValidationError):
+            StreamRequest(query="", arxiv_id="2301.00001")
 
-    def test_both_query_and_resume_raises(self):
-        with pytest.raises(ValidationError, match="not both"):
-            StreamRequest(
-                query="test",
-                resume=IngestConfirmation(
-                    session_id="sess-1",
-                    thread_id="sess-1:0",
-                    approved=True,
-                    selected_ids=[],
-                ),
-            )
-
-    def test_neither_query_nor_resume_raises(self):
-        with pytest.raises(ValidationError, match="Provide either"):
-            StreamRequest()
-
-    def test_resume_decline_with_empty_selected_ids_is_valid(self):
-        req = StreamRequest(
-            resume=IngestConfirmation(
-                session_id="sess-1",
-                thread_id="sess-1:0",
-                approved=False,
-                selected_ids=[],
-            )
-        )
-        assert req.resume.approved is False
-        assert req.resume.selected_ids == []
+    @pytest.mark.parametrize("knob", ["model", "temperature", "top_k", "resume", "provider"])
+    def test_removed_knobs_are_rejected(self, knob):
+        with pytest.raises(ValidationError, match=knob):
+            StreamRequest(query="q", arxiv_id="2301.00001", **{knob: 1})

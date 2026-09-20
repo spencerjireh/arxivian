@@ -23,7 +23,7 @@ from src.celery_app import celery_app
 from src.config import get_settings
 from src.database import AsyncSessionLocal
 from src.exceptions import ScoringError, TypeSafeConnectionError, TypeSafeRateLimitError
-from src.factories.service_factories import get_scoring_context
+from src.factories import get_scoring_context
 from src.schemas.scoring_state import RUBRIC_VERSION
 from src.services.scoring_service.scoring_graph_builder import build_scoring_graph
 from src.tasks.utils import run_async

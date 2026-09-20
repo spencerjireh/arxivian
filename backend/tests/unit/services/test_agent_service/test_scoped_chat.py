@@ -1,10 +1,10 @@
-"""Tests for paper-scoped chat (SPE-277): scoped retrieval, tool registry, prompts."""
+"""Tests for paper-scoped chat: scoped retrieval, tool registry, prompts."""
 
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from src.services.agent_service.context import CORPUS_ONLY_TOOLS, AgentContext, ScopedPaper
+from src.services.agent_service.context import AgentContext, ScopedPaper
 from src.services.agent_service.prompts import get_classify_and_route_prompt, scoped_paper_note
 from src.services.agent_service.tools import RetrieveChunksTool
 
@@ -29,10 +29,10 @@ def _result(score: float) -> Mock:
 
 @pytest.mark.unit
 class TestScopedRetrieve:
-    async def test_scoped_tool_uses_within_paper_retrieval_without_rrf_filter(self):
+    async def test_uses_within_paper_retrieval_without_rrf_filter(self):
         search = AsyncMock()
         search.retrieve_within_paper.return_value = [_result(0.9), _result(0.2)]
-        tool = RetrieveChunksTool(search_service=search, default_top_k=6, paper_id=SCOPE.paper_id)
+        tool = RetrieveChunksTool(search_service=search, paper_id=SCOPE.paper_id, default_top_k=6)
 
         result = await tool.execute(query="what is the method?")
 
@@ -44,52 +44,34 @@ class TestScopedRetrieve:
         assert len(result.data) == 2  # cosine scores are not filtered by the RRF threshold
         assert "currently viewing" in tool.description
 
-    async def test_unscoped_tool_unchanged(self):
-        search = AsyncMock()
-        search.hybrid_search.return_value = [_result(0.9), _result(0.2)]
-        tool = RetrieveChunksTool(search_service=search, default_top_k=6)
-
-        result = await tool.execute(query="q")
-
-        search.hybrid_search.assert_awaited_once()
-        search.retrieve_within_paper.assert_not_called()
-        assert len(result.data) == 1
-        assert "DEFAULT tool for any content question" in tool.description
+    async def test_empty_query_rejected(self):
+        tool = RetrieveChunksTool(search_service=AsyncMock(), paper_id=SCOPE.paper_id)
+        result = await tool.execute(query="  ")
+        assert result.success is False
 
 
 @pytest.mark.unit
 class TestScopedRegistry:
-    def _context(self, scoped: ScopedPaper | None) -> AgentContext:
+    def _context(self) -> AgentContext:
         return AgentContext(
             llm_client=Mock(),
             search_service=AsyncMock(),
-            ingest_service=Mock(paper_repository=Mock()),
-            arxiv_client=Mock(),
+            scoped_paper=SCOPE,
             semantic_scholar_client=Mock(),
             paper_repository=Mock(),
-            scoped_paper=scoped,
         )
 
-    def test_scoped_registry_hides_corpus_tools(self):
-        names = {t.name for t in self._context(SCOPE).tool_registry}
+    def test_registry_has_only_scoped_tools(self):
+        names = {t.name for t in self._context().tool_registry}
         assert names == {"retrieve_chunks", "explore_citations", "semantic_scholar"}
-        assert not names & CORPUS_ONLY_TOOLS
 
-    def test_unscoped_registry_has_everything(self):
-        names = {t.name for t in self._context(None).tool_registry}
-        assert names >= {
-            "retrieve_chunks",
-            "list_papers",
-            "propose_ingest",
-            "explore_citations",
-            "arxiv_search",
-            "semantic_scholar",
-        }
-
-    def test_scoped_retrieve_tool_carries_paper_id(self):
-        tool = self._context(SCOPE).tool_registry.get("retrieve_chunks")
+    def test_retrieve_tool_carries_paper_id(self):
+        tool = self._context().tool_registry.get("retrieve_chunks")
         assert tool.paper_id == SCOPE.paper_id
-        assert self._context(None).tool_registry.get("retrieve_chunks").paper_id is None
+
+    def test_optional_clients_omitted(self):
+        ctx = AgentContext(llm_client=Mock(), search_service=AsyncMock(), scoped_paper=SCOPE)
+        assert {t.name for t in ctx.tool_registry} == {"retrieve_chunks"}
 
 
 @pytest.mark.unit
@@ -100,7 +82,6 @@ class TestScopedPrompts:
             query="explain the method", tool_schemas=[], scope_note=note
         )
         assert "[SCOPE] This conversation is scoped to paper 2301.00001 ('Attention')" in user
-        assert "arxiv_search, list_papers and propose_ingest are unavailable" in user
 
     def test_no_note_by_default(self):
         _, user = get_classify_and_route_prompt(query="q", tool_schemas=[])

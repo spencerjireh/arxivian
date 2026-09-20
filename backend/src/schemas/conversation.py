@@ -16,17 +16,6 @@ class ConversationMessage(TypedDict):
     content: str
 
 
-class ThinkingStepDict(TypedDict):
-    """Shape of a single persisted thinking step (stored as JSONB)."""
-
-    step: str
-    message: str
-    details: dict | None
-    tool_name: str | None
-    started_at: str
-    completed_at: str
-
-
 @dataclass
 class TurnData:
     """Data for saving a conversation turn."""
@@ -40,9 +29,7 @@ class TurnData:
     rewritten_query: str | None = None
     sources: list[dict] | None = None
     reasoning_steps: list[str] | None = None
-    thinking_steps: list[ThinkingStepDict] | None = None
     citations: dict | None = None
-    pending_confirmation: dict | None = None
 
 
 # API Response Schemas
@@ -61,9 +48,7 @@ class ConversationTurnResponse(BaseModel):
     rewritten_query: str | None = None
     sources: list[dict] | None = None
     reasoning_steps: list[str] | None = None
-    thinking_steps: list[ThinkingStepDict] | None = None
     citations: dict | None = None
-    pending_confirmation: dict | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -106,11 +91,3 @@ class DeleteConversationResponse(BaseModel):
 
     session_id: str
     turns_deleted: int
-
-
-class CancelStreamResponse(BaseModel):
-    """Response after attempting to cancel an active stream."""
-
-    session_id: str
-    cancelled: bool
-    message: str

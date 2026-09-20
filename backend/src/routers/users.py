@@ -20,7 +20,6 @@ async def _build_me(
     user: User, policy: TierPolicy, usage_repo: UsageCounterRepository
 ) -> MeResponse:
     query_count = await usage_repo.get_today_query_count(user.id)
-    ingest_count = await usage_repo.get_today_ingest_count(user.id)
     profile = FeedProfile.from_user(user)
     has_profile = bool((user.preferences or {}).get(FEED_PROFILE_KEY))
 
@@ -32,10 +31,6 @@ async def _build_me(
         tier=user.tier,
         daily_chat_limit=policy.daily_chats,
         chats_used_today=query_count,
-        can_adjust_settings=policy.can_adjust_settings,
-        daily_ingest_limit=policy.daily_ingests,
-        ingests_used_today=ingest_count,
-        can_view_execution_details=policy.can_view_execution_details,
         preferences=UserPreferences(feed_profile=profile if has_profile else None),
         onboarded=profile.onboarded,
     )

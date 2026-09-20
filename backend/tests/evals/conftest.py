@@ -9,17 +9,22 @@ import litellm
 import pytest
 
 from src.clients.litellm_client import LiteLLMClient
-from src.services.agent_service.context import AgentContext, ConversationFormatter
+from src.services.agent_service.context import AgentContext, ConversationFormatter, ScopedPaper
 from src.services.agent_service.graph_builder import build_graph
 from src.services.agent_service.tools import (
     ToolRegistry,
     RetrieveChunksTool,
-    ProposeIngestTool,
-    ListPapersTool,
-    ArxivSearchTool,
     ExploreCitationsTool,
+    SemanticScholarTool,
 )
 from .helpers import ServiceMockBuilder, ServiceMocks
+
+# Every eval turn is scoped to this paper (the canned chunks are from it).
+EVAL_SCOPE = ScopedPaper(
+    paper_id="00000000-0000-0000-0000-000000000001",
+    arxiv_id="1706.03762",
+    title="Attention Is All You Need",
+)
 
 
 def pytest_collection_modifyitems(items: list) -> None:
@@ -45,7 +50,7 @@ def _configure_litellm() -> None:
 
 @pytest.fixture(scope="session")
 def real_llm_client() -> LiteLLMClient:
-    model = os.environ.get("EVAL_LLM_MODEL", "nvidia_nim/openai/gpt-oss-120b")
+    model = os.environ.get("EVAL_LLM_MODEL", "openai/gpt-5-nano")
     return LiteLLMClient(model=model, timeout=120.0)
 
 
@@ -70,16 +75,6 @@ def mock_search_service(service_mocks: ServiceMocks) -> AsyncMock:
 
 
 @pytest.fixture
-def mock_ingest_service(service_mocks: ServiceMocks) -> AsyncMock:
-    return service_mocks.ingest_service
-
-
-@pytest.fixture
-def mock_arxiv_client(service_mocks: ServiceMocks) -> AsyncMock:
-    return service_mocks.arxiv_client
-
-
-@pytest.fixture
 def mock_paper_repository(service_mocks: ServiceMocks) -> AsyncMock:
     return service_mocks.paper_repository
 
@@ -88,31 +83,30 @@ def mock_paper_repository(service_mocks: ServiceMocks) -> AsyncMock:
 def eval_context(
     real_llm_client: LiteLLMClient,
     mock_search_service: AsyncMock,
-    mock_ingest_service: AsyncMock,
-    mock_arxiv_client: AsyncMock,
     mock_paper_repository: AsyncMock,
+    service_mocks: ServiceMocks,
 ) -> AgentContext:
-    """Real LLM + mocked services. Registers all tools so the router sees full schemas."""
+    """Real LLM + mocked services, scoped to EVAL_SCOPE like every production turn."""
     registry = ToolRegistry()
     registry.register(
-        RetrieveChunksTool(search_service=mock_search_service, default_top_k=6)
+        RetrieveChunksTool(
+            search_service=mock_search_service, paper_id=EVAL_SCOPE.paper_id, default_top_k=6
+        )
     )
-    registry.register(ProposeIngestTool(paper_repository=mock_paper_repository))
-    registry.register(ListPapersTool(ingest_service=mock_ingest_service))
-    registry.register(ArxivSearchTool(arxiv_client=mock_arxiv_client))
     registry.register(ExploreCitationsTool(paper_repository=mock_paper_repository))
+    registry.register(
+        SemanticScholarTool(semantic_scholar_client=service_mocks.semantic_scholar_client)
+    )
 
     return AgentContext(
         llm_client=real_llm_client,
         search_service=mock_search_service,
-        ingest_service=mock_ingest_service,
-        arxiv_client=mock_arxiv_client,
+        scoped_paper=EVAL_SCOPE,
         paper_repository=mock_paper_repository,
         tool_registry=registry,
         conversation_formatter=ConversationFormatter(max_turns=5),
         guardrail_threshold=75,
         top_k=1,  # accept a single relevant chunk to avoid rewrite loops
-        max_retrieval_attempts=1,
         max_iterations=2,  # limit graph loops (each makes several slow LLM calls)
         temperature=1,  # reasoning models only support temperature=1
         max_generation_tokens=16000,  # reasoning models use tokens for CoT

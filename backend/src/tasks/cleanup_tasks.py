@@ -10,7 +10,6 @@ from src.celery_app import celery_app
 from src.config import get_settings
 from src.database import AsyncSessionLocal
 from src.models.conversation import Conversation
-from src.models.agent_execution import AgentExecution
 from src.tasks.utils import run_async
 from src.utils.logger import get_logger
 
@@ -62,8 +61,7 @@ async def _batched_delete(
 def cleanup_task() -> dict[str, Any]:
     """Clean up old data based on retention settings.
 
-    Deletes conversations and agent executions older than the
-    configured retention period in batches.
+    Deletes conversations older than the configured retention period in batches.
 
     Returns:
         Dictionary with cleanup results
@@ -77,7 +75,6 @@ def cleanup_task() -> dict[str, Any]:
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=retention_days)
         results = {
             "conversations_deleted": 0,
-            "agent_executions_deleted": 0,
             "cutoff_date": cutoff_date.isoformat(),
         }
 
@@ -87,17 +84,11 @@ def cleanup_task() -> dict[str, Any]:
                 session, Conversation, cutoff_date
             )
 
-            # Delete old agent executions in batches
-            results["agent_executions_deleted"] = await _batched_delete(
-                session, AgentExecution, cutoff_date
-            )
-
         return results
 
     result = run_async(_run())
     log.info(
         "cleanup_task_completed",
         conversations_deleted=result["conversations_deleted"],
-        agent_executions_deleted=result["agent_executions_deleted"],
     )
     return result

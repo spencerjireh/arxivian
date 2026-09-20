@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-from src.services.agent_service import AgentService
-
 from .helpers import consume_stream
 from .scenarios import RETRIEVAL_SCENARIOS
 
@@ -16,7 +14,7 @@ from .scenarios import RETRIEVAL_SCENARIOS
     RETRIEVAL_SCENARIOS,
     ids=[s.id for s in RETRIEVAL_SCENARIOS],
 )
-async def test_retrieval_and_answer_quality(agent_service: AgentService, scenario):
+async def test_retrieval_and_answer_quality(agent_for, scenario):
     """Full pipeline: query -> retrieval -> grading -> generation.
 
     Asserts:
@@ -24,6 +22,7 @@ async def test_retrieval_and_answer_quality(agent_service: AgentService, scenari
       - Expected keywords present in answer
       - Expected source papers appear in SOURCES event
     """
+    agent_service = await agent_for(scenario.arxiv_id)
     result = await consume_stream(agent_service, scenario.query)
 
     # Answer should be non-trivial
@@ -51,12 +50,10 @@ async def test_retrieval_and_answer_quality(agent_service: AgentService, scenari
 
 
 @pytest.mark.inteval
-async def test_out_of_scope_query(agent_service: AgentService):
+async def test_out_of_scope_query(agent_for):
     """Off-topic query should be handled gracefully (no crash, gets DONE)."""
-    result = await consume_stream(
-        agent_service,
-        "What is the best recipe for chocolate cake?",
-    )
+    agent_service = await agent_for("1706.03762")
+    result = await consume_stream(agent_service, "What is the best recipe for chocolate cake?")
 
     # Should still complete without error
     assert result.done_event is not None, "Stream should end with DONE"
