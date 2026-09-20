@@ -1,5 +1,8 @@
 # Agent Graph Refactor: 14 LLM Calls -> 3
 
+> **Status:** Design record (implemented). Phase 3 (SPE-298) narrows the graph further to
+> the paper-scoped case; `CLAUDE.md` describes the current graph.
+
 ## Context
 
 The current agent graph makes ~14 LLM calls for a simple RAG query ("what does paper X say about Y?"), assuming ~10 retrieved chunks graded individually: guardrail(1) + router(1) + grade(10) + generate(1) + rewrite(1) = 14. The grading node alone makes 10 parallel calls (one per retrieved chunk). Community-converged production patterns (Adaptive RAG, CRAG, Adaline Labs research) show that batch-level evaluation + intent-based routing achieves equivalent or better quality at 3-4 calls. This refactor reduces complexity (7 nodes -> 6), cost (~75% fewer LLM calls), and latency while preserving the HITL flow, tool registry, and SSE streaming contract.

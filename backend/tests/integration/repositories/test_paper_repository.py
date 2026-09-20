@@ -179,48 +179,6 @@ class TestPaperRepositoryProcessing:
     """Test processing-related operations."""
 
     @pytest.mark.asyncio
-    async def test_mark_as_processed(self, db_session, sample_paper_data):
-        """Verify marking paper as processed updates all fields."""
-        repo = PaperRepository(session=db_session)
-        paper = await repo.create(sample_paper_data)
-
-        assert paper.pdf_processed is False
-
-        updated = await repo.mark_as_processed(
-            paper_id=str(paper.id),
-            raw_text="Full paper text content...",
-            sections=[{"name": "Introduction", "text": "Intro text"}],
-            parser_used="marker",
-        )
-
-        assert updated is not None
-        assert updated.pdf_processed is True
-        assert updated.raw_text == "Full paper text content..."
-        assert updated.parser_used == "marker"
-        assert updated.pdf_processing_date is not None
-
-    @pytest.mark.asyncio
-    async def test_get_unprocessed_papers(self, db_session, sample_paper_data):
-        """Verify unprocessed papers filter."""
-        repo = PaperRepository(session=db_session)
-
-        unprocessed = await repo.create(sample_paper_data)
-
-        processed_data = {
-            **sample_paper_data,
-            "arxiv_id": "2301.99999",
-            "pdf_processed": True,
-            "pdf_processing_date": datetime.now(timezone.utc),
-            "parser_used": "marker",
-            "raw_text": "Text",
-        }
-        await repo.create(processed_data)
-
-        papers = await repo.get_unprocessed_papers()
-        assert len(papers) == 1
-        assert papers[0].id == unprocessed.id
-
-    @pytest.mark.asyncio
     async def test_get_orphaned_papers(self, db_session, sample_paper_data):
         """Verify orphaned papers detection (papers with no chunks)."""
         repo = PaperRepository(session=db_session)

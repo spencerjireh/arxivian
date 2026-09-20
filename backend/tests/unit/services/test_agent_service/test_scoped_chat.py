@@ -71,12 +71,12 @@ class TestScopedRegistry:
         )
 
     def test_scoped_registry_hides_corpus_tools(self):
-        names = set(self._context(SCOPE).tool_registry.list_tools())
+        names = {t.name for t in self._context(SCOPE).tool_registry}
         assert names == {"retrieve_chunks", "explore_citations", "semantic_scholar"}
         assert not names & CORPUS_ONLY_TOOLS
 
     def test_unscoped_registry_has_everything(self):
-        names = set(self._context(None).tool_registry.list_tools())
+        names = {t.name for t in self._context(None).tool_registry}
         assert names >= {
             "retrieve_chunks",
             "list_papers",

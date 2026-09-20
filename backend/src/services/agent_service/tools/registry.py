@@ -63,24 +63,6 @@ class ToolRegistry:
         """
         return self._tools.get(name)
 
-    def get_required(self, name: str) -> BaseTool:
-        """
-        Get a tool by name, raising if not found.
-
-        Args:
-            name: Tool name
-
-        Returns:
-            Tool instance
-
-        Raises:
-            KeyError: If tool is not registered
-        """
-        tool = self._tools.get(name)
-        if tool is None:
-            raise KeyError(f"Tool '{name}' is not registered")
-        return tool
-
     async def execute(self, name: str, *, tool_outputs: list | None = None, **kwargs) -> ToolResult:
         """
         Execute a tool by name.
@@ -117,15 +99,6 @@ class ToolRegistry:
                 error=f"Tool execution failed: {str(e)}",
                 tool_name=name,
             )
-
-    def list_tools(self) -> list[str]:
-        """
-        List all registered tool names.
-
-        Returns:
-            List of tool names
-        """
-        return list(self._tools.keys())
 
     def get_all_schemas(self) -> list[dict]:
         """

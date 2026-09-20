@@ -59,7 +59,7 @@ Layered: `routers/` -> `services/` -> `repositories/` -> `models/` (async SQLAlc
 - Structured logging via structlog + `get_logger(__name__)` with request ID correlation
 - Clerk JWT auth for users; API key auth (`X-Api-Key`) for ops endpoints
 - Hybrid search: pgvector + full-text with Reciprocal Rank Fusion
-- LLM calls via LiteLLM with model prefix routing (e.g. `openai/gpt-4o-mini`)
+- LLM calls via LiteLLM with model prefix routing (`DEFAULT_LLM_MODEL`, currently `openai/gpt-5-nano`)
 
 ### Frontend (`/frontend/src/`)
 

@@ -33,14 +33,6 @@ class UserRepository:
         log.debug("query result", found=user is not None)
         return user
 
-    async def get_by_email(self, email: str) -> Optional[User]:
-        """Get user by email."""
-        log.debug("query user by email", email=email)
-        result = await self.session.execute(select(User).where(User.email == email))
-        user = result.scalar_one_or_none()
-        log.debug("query result", found=user is not None)
-        return user
-
     async def create(
         self,
         clerk_id: str,
@@ -147,26 +139,6 @@ class UserRepository:
         # Refresh to get updated values
         await self.session.refresh(user)
         log.debug("user login updated", clerk_id=user.clerk_id)
-        return user
-
-    async def update_last_login(self, user: User) -> User:
-        """
-        Update only the user's last login timestamp.
-
-        Caller is responsible for committing the transaction.
-        """
-        now = datetime.now(timezone.utc)
-        await self.session.execute(
-            update(User)
-            .where(User.id == user.id)
-            .values(
-                last_login_at=now,
-                updated_at=now,
-            )
-        )
-        await self.session.flush()
-        await self.session.refresh(user)
-        log.debug("user last_login updated", clerk_id=user.clerk_id)
         return user
 
     async def update_tier(self, user: User, tier: str) -> User:

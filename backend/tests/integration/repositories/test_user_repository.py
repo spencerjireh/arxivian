@@ -85,26 +85,6 @@ class TestUserRepositoryGet:
         assert retrieved is None
 
     @pytest.mark.asyncio
-    async def test_get_by_email_found(self, db_session, created_user):
-        """Verify user is returned when email exists."""
-        repo = UserRepository(session=db_session)
-
-        retrieved = await repo.get_by_email(created_user.email)
-
-        assert retrieved is not None
-        assert retrieved.id == created_user.id
-        assert retrieved.email == created_user.email
-
-    @pytest.mark.asyncio
-    async def test_get_by_email_not_found(self, db_session):
-        """Verify None is returned when email doesn't exist."""
-        repo = UserRepository(session=db_session)
-
-        retrieved = await repo.get_by_email("nonexistent@example.com")
-
-        assert retrieved is None
-
-    @pytest.mark.asyncio
     async def test_get_by_id_found(self, db_session, created_user):
         """Verify user is returned when ID exists."""
         repo = UserRepository(session=db_session)
@@ -205,20 +185,6 @@ class TestUserRepositoryUpdate:
         assert updated_user.email == original_email
         assert updated_user.first_name == original_first_name
         assert updated_user.last_name == "NewLastName"
-
-    @pytest.mark.asyncio
-    async def test_update_last_login_only(self, db_session, created_user):
-        """Verify only last_login timestamp is updated."""
-        repo = UserRepository(session=db_session)
-
-        original_login = created_user.last_login_at
-        original_email = created_user.email
-
-        updated_user = await repo.update_last_login(created_user)
-
-        assert updated_user.last_login_at > original_login
-        assert updated_user.email == original_email
-
 
 class TestUserRepositoryPreferences:
     """Test user preferences operations."""

@@ -495,3 +495,6 @@ monitoring/
 .prometheus/
 
 artifacts/
+
+# Playwright MCP session artifacts
+.playwright-mcp/

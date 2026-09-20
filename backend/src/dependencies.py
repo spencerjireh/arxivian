@@ -9,23 +9,15 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
-from src.clients.arxiv_client import ArxivClient
 from src.clients.embeddings_client import JinaEmbeddingsClient
-from src.clients.semantic_scholar_client import SemanticScholarClient
 from src.services.search_service import SearchService
-from src.services.ingest_service import IngestService
 from src.services.auth_service import get_auth_service
-from src.utils.chunking_service import ChunkingService
-from src.utils.pdf_parser import PDFParser
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.chunk_repository import ChunkRepository
-from src.repositories.search_repository import SearchRepository
 from src.repositories.conversation_repository import ConversationRepository
 from src.repositories.user_repository import UserRepository
 from src.repositories.task_execution_repository import TaskExecutionRepository
 from src.repositories.usage_counter_repository import UsageCounterRepository
-from src.repositories.scoring_repository import ScoringRepository
-from src.repositories.digest_repository import DigestRepository
 from src.repositories.user_paper_state_repository import UserPaperStateRepository
 from src.services.feed_service import FeedService
 from src.models.user import User
@@ -33,7 +25,6 @@ from src.config import Settings, get_settings
 from src.schemas.stream import StreamRequest
 from src.tiers import TierPolicy, get_policy
 from src.exceptions import (
-    AuthenticationError,
     ForbiddenError,
     InvalidApiKeyError,
     MissingTokenError,
@@ -42,15 +33,10 @@ from src.exceptions import (
 
 from src.utils.logger import get_logger
 from src.factories.client_factories import (
-    get_arxiv_client,
     get_embeddings_client,
-    get_semantic_scholar_client,
 )
 from src.factories.service_factories import (
     get_search_service,
-    get_chunking_service,
-    get_pdf_parser,
-    get_ingest_service,
     get_feed_service,
 )
 
@@ -62,20 +48,13 @@ DbSession = Annotated[AsyncSession, Depends(get_db)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
 # Client dependencies (singletons)
-ArxivClientDep = Annotated[ArxivClient, Depends(get_arxiv_client)]
 EmbeddingsClientDep = Annotated[JinaEmbeddingsClient, Depends(get_embeddings_client)]
-SemanticScholarClientDep = Annotated[SemanticScholarClient, Depends(get_semantic_scholar_client)]
 
 
 # Service dependencies
 def get_search_service_dep(db: DbSession) -> SearchService:
     """Get SearchService with database session."""
     return get_search_service(db)
-
-
-def get_ingest_service_dep(db: DbSession) -> IngestService:
-    """Get IngestService with database session."""
-    return get_ingest_service(db)
 
 
 def get_feed_service_dep(db: DbSession) -> FeedService:
@@ -85,9 +64,6 @@ def get_feed_service_dep(db: DbSession) -> FeedService:
 
 SearchServiceDep = Annotated[SearchService, Depends(get_search_service_dep)]
 FeedServiceDep = Annotated[FeedService, Depends(get_feed_service_dep)]
-IngestServiceDep = Annotated[IngestService, Depends(get_ingest_service_dep)]
-ChunkingServiceDep = Annotated[ChunkingService, Depends(get_chunking_service)]
-PDFParserDep = Annotated[PDFParser, Depends(get_pdf_parser)]
 
 
 # Repository dependencies (request-scoped)
@@ -101,11 +77,6 @@ def get_chunk_repository(db: DbSession) -> ChunkRepository:
     return ChunkRepository(db)
 
 
-def get_search_repository(db: DbSession) -> SearchRepository:
-    """Get SearchRepository with database session."""
-    return SearchRepository(db)
-
-
 def get_conversation_repository(db: DbSession) -> ConversationRepository:
     """Get ConversationRepository with database session."""
     return ConversationRepository(db)
@@ -113,7 +84,6 @@ def get_conversation_repository(db: DbSession) -> ConversationRepository:
 
 PaperRepoDep = Annotated[PaperRepository, Depends(get_paper_repository)]
 ChunkRepoDep = Annotated[ChunkRepository, Depends(get_chunk_repository)]
-SearchRepoDep = Annotated[SearchRepository, Depends(get_search_repository)]
 ConversationRepoDep = Annotated[ConversationRepository, Depends(get_conversation_repository)]
 
 
@@ -157,18 +127,8 @@ UsageCounterRepoDep = Annotated[UsageCounterRepository, Depends(get_usage_counte
 
 
 # ============================================================================
-# Feed-pivot repositories (scores, digests, per-user paper state)
+# Feed-pivot repositories (per-user paper state)
 # ============================================================================
-
-
-def get_scoring_repository(db: DbSession) -> ScoringRepository:
-    """Get ScoringRepository with database session."""
-    return ScoringRepository(db)
-
-
-def get_digest_repository(db: DbSession) -> DigestRepository:
-    """Get DigestRepository with database session."""
-    return DigestRepository(db)
 
 
 def get_user_paper_state_repository(db: DbSession) -> UserPaperStateRepository:
@@ -176,8 +136,6 @@ def get_user_paper_state_repository(db: DbSession) -> UserPaperStateRepository:
     return UserPaperStateRepository(db)
 
 
-ScoringRepoDep = Annotated[ScoringRepository, Depends(get_scoring_repository)]
-DigestRepoDep = Annotated[DigestRepository, Depends(get_digest_repository)]
 UserPaperStateRepoDep = Annotated[
     UserPaperStateRepository, Depends(get_user_paper_state_repository)
 ]
@@ -203,25 +161,6 @@ async def _sync_user(authorization: str, db: AsyncSession) -> User:
     return user
 
 
-async def get_current_user_optional(
-    db: DbSession,
-    authorization: Annotated[str | None, Header(alias="Authorization")] = None,
-) -> User | None:
-    """Get current user if authenticated, None otherwise.
-
-    NOT currently wired into any route. Kept intentionally so that future
-    endpoints needing optional auth can use it without re-implementing the
-    pattern. Remove only if the project decides never to support optional auth.
-    """
-    if not authorization:
-        return None
-
-    try:
-        return await _sync_user(authorization, db)
-    except AuthenticationError:
-        return None
-
-
 async def get_current_user_required(
     db: DbSession,
     authorization: Annotated[str | None, Header(alias="Authorization")] = None,
@@ -234,8 +173,6 @@ async def get_current_user_required(
 
 
 # Type aliases for auth dependencies
-# Not wired into any route. Kept for future optional-auth endpoints (see docstring above).
-CurrentUserOptional = Annotated[User | None, Depends(get_current_user_optional)]
 CurrentUserRequired = Annotated[User, Depends(get_current_user_required)]
 
 

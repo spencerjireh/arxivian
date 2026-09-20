@@ -52,9 +52,3 @@ class User(Base):
 
     def __repr__(self):
         return f"<User(clerk_id='{self.clerk_id}', email='{self.email}')>"
-
-    @property
-    def full_name(self) -> str:
-        """Get user's full name."""
-        parts = [self.first_name, self.last_name]
-        return " ".join(p for p in parts if p) or ""

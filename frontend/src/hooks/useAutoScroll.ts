@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react'
 import type { Message } from '../types/api'
 
-export interface AutoScrollOptions {
+interface AutoScrollOptions {
   behavior?: ScrollBehavior
   enabled?: boolean
 }

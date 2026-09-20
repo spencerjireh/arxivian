@@ -18,7 +18,7 @@ export function setAuthTokenGetter(getter: TokenGetter): void {
  * Get the current auth token.
  * Returns null if no token getter is registered or no token is available.
  */
-export async function getAuthToken(): Promise<string | null> {
+async function getAuthToken(): Promise<string | null> {
   if (!authTokenGetter) {
     return null
   }
@@ -76,16 +76,6 @@ export async function apiGet<T>(path: string): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: 'GET',
     headers,
-  })
-  return handleResponse<T>(response)
-}
-
-export async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  const headers = await getAuthHeaders()
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
   })
   return handleResponse<T>(response)
 }

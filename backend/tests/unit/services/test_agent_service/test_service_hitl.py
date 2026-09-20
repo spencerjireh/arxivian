@@ -1,7 +1,7 @@
 """Tests for AgentService ask_stream/resume_stream HITL two-stream flow."""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock
 
 from src.schemas.stream import StreamEventType
 from src.services.agent_service.service import AgentService

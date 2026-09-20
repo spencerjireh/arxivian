@@ -4,7 +4,7 @@ import { useInfiniteQuery, keepPreviousData } from '@tanstack/react-query'
 import { apiGet } from './client'
 import type { FeedParams, FeedResponse } from '../types/api'
 
-export const FEED_PAGE_SIZE = 20
+const FEED_PAGE_SIZE = 20
 
 /** Drop undefined / empty values so equal filters produce equal query keys. */
 export function normalizeFeedParams(params: FeedParams): FeedParams {

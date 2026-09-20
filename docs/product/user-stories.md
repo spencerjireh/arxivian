@@ -1,7 +1,11 @@
 # Arxivian Beta -- User Stories
 
 **Companion to:** `docs/product/beta-prd.md` and `docs/product/feed-prd.md` (the pivot)
-**Last updated:** 2026-07-16
+**Last updated:** 2026-09-20 (status pass; stories not re-audited)
+
+> **Status.** Historical planning record. FEED/ONB/DETAIL-class stories shipped in Phase 2
+> (SPE-273..277); Phase 3 removes global chat, so CHAT/CITE stories apply only to the
+> scoped paper chat. `CLAUDE.md` is the description of the code as built.
 
 Stories are grouped by epic. Each story uses MoSCoW priority (Must/Should/Could) and
 references the backend/frontend files that need changes.
@@ -41,8 +45,8 @@ design in `docs/design/scoring-pipeline.md`.
   CI profile. AC: >=85% agreement on feasibility; no regression. Prerequisite, not a
   follow-on -- the labeled set gates trusting the cheap LLM dimensions.
 - **SCORE-6 (v1.1):** Code-gap dimension -- `github_client` (backoff-aware + Redis cache) +
-  `GithubSearchTool` + `score_code_gap` node, gated on the `spikes/github-code-gap/` recall
-  spike. AC: searches arXiv ID + title variants + author repos; raw hits surfaced as
+  `GithubSearchTool` + `score_code_gap` node, gated on the Phase 4 code-gap recall
+  spike (script removed in SPE-297; seed in `backend/tests/evals/fixtures`). AC: searches arXiv ID + title variants + author repos; raw hits surfaced as
   evidence with an "as of `<date>`" stamp; ships unweighted first, then promoted to the
   highest-weighted signal; add code-gap agreement to the eval gate.
 
@@ -475,9 +479,8 @@ Sentry,
 
 ## Epic: PERF -- Backend Optimization
 
-Based on the existing design document at
-`docs/redis-embedding-cache-ingestion-lock.md`. These reduce API costs and prevent
-redundant work.
+The design doc `docs/redis-embedding-cache-ingestion-lock.md` was never implemented and
+was removed in SPE-297 (git history keeps it). These stories are not scheduled.
 
 ### PERF-1: Redis embedding cache
 
@@ -499,7 +502,7 @@ redundant work.
 
 **Implementation notes:**
 
-- See `docs/redis-embedding-cache-ingestion-lock.md` for the full design.
+- Design: `docs/redis-embedding-cache-ingestion-lock.md` in git history (removed 2026-09-20).
 - Use Redis DB 2 (the general cache) via `app.state.redis`.
 - Store embeddings as bytes (msgpack or raw float32 buffer) for space efficiency.
 
@@ -535,7 +538,7 @@ and processing.
 
 **Implementation notes:**
 
-- See `docs/redis-embedding-cache-ingestion-lock.md` for the full design.
+- Design: `docs/redis-embedding-cache-ingestion-lock.md` in git history (removed 2026-09-20).
 - Use Redis DB 2 via injected client.
 
 **Files likely touched:**
