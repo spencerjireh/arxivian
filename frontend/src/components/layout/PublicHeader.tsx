@@ -29,7 +29,7 @@ export default function PublicHeader() {
             Pricing
           </Link>
           {isSignedIn ? (
-            <Link to="/chat">
+            <Link to="/feed">
               <Button variant="primary" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />}>
                 Go to Chat
               </Button>

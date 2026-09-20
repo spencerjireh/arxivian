@@ -13,27 +13,22 @@ const tiers = [
     name: 'Free',
     price: '$0',
     period: 'forever',
-    description: 'Get started with core research tools.',
+    description: 'The weekly feed, scored and ranked for you.',
     features: [
-      '10 conversations per day',
-      '5 paper ingests per day',
-      'Default settings',
-      'Paper library',
-      'Hybrid search',
+      'Weekly implementability feed',
+      'Per-dimension score breakdown',
+      '10 paper chat turns per day',
+      'Save, dismiss and track papers',
     ],
   },
   {
     name: 'Pro',
     price: '$0',
     period: 'during beta',
-    description: 'Full access for power researchers.',
+    description: 'For people who read a lot of papers.',
     features: [
-      'Generous daily limits',
-      'High-volume ingestion',
-      'Custom model & settings',
-      'Execution details',
-      'Paper library',
-      'Hybrid search',
+      'Everything in Free',
+      'Unlimited paper chat turns',
       'Priority support',
     ],
     highlighted: true,
@@ -41,10 +36,9 @@ const tiers = [
 ] as const
 
 const comparisonRows = [
-  { feature: 'Daily conversations', free: '10', pro: 'Generous' },
-  { feature: 'Daily paper ingests', free: '5', pro: 'Generous' },
-  { feature: 'Settings', free: 'Default settings', pro: 'Custom model & settings' },
-  { feature: 'Execution details', free: 'Hidden', pro: 'Full access' },
+  { feature: 'Weekly feed and score breakdown', free: 'Included', pro: 'Included' },
+  { feature: 'Paper chat turns per day', free: '10', pro: 'Unlimited' },
+  { feature: 'Support', free: 'Community', pro: 'Priority' },
 ] as const
 
 export default function PricingPage() {

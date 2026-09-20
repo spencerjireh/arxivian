@@ -26,7 +26,7 @@ async function getFESMock() {
   return vi.mocked(mod.fetchEventSource)
 }
 
-const baseRequest: StreamRequest = { query: 'test query' }
+const baseRequest: StreamRequest = { query: 'test query', arxiv_id: '2301.00001' }
 
 describe('streamChat', () => {
   beforeEach(() => {

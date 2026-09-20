@@ -34,7 +34,6 @@ describe('matchesNav', () => {
   it('treats paper detail as the feed', () => {
     expect(matchesNav('/feed', '/papers/2401.00001')).toBe(true)
     expect(matchesNav('/feed', '/feed?week=x')).toBe(true)
-    expect(matchesNav('/chat', '/chat/abc')).toBe(true)
     expect(matchesNav('/library', '/library')).toBe(true)
     expect(matchesNav('/library', '/feed')).toBe(false)
   })

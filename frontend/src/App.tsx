@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import type { RouteObject } from 'react-router-dom'
 import { AuthenticateWithRedirectCallback } from '@clerk/clerk-react'
 import { Loader2 } from 'lucide-react'
@@ -8,7 +8,6 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 import OnboardingGate from './components/auth/OnboardingGate'
 import RouteErrorPage from './pages/RouteErrorPage'
 
-const ChatPage = lazy(() => import('./pages/ChatPage'))
 const SignInPage = lazy(() => import('./pages/SignInPage'))
 const SignUpPage = lazy(() => import('./pages/SignUpPage'))
 const LandingPage = lazy(() => import('./pages/LandingPage'))
@@ -89,8 +88,8 @@ export const routes: RouteObject[] = [
     children: [
       { path: '/feed', element: <Lazy component={FeedPage} /> },
       { path: '/papers/:arxivId', element: <Lazy component={PaperDetailPage} /> },
-      { path: '/chat', element: <Lazy component={ChatPage} /> },
-      { path: '/chat/:sessionId', element: <Lazy component={ChatPage} /> },
+      // The global chat tab was removed in Phase 3; old links land on the feed.
+      { path: '/chat/*', element: <Navigate to="/feed" replace /> },
       { path: '/library', element: <Lazy component={LibraryPage} /> },
       { path: '/settings', element: <Lazy component={SettingsPage} /> },
     ],

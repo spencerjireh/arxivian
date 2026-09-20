@@ -7,7 +7,7 @@ import logoIcon from '../assets/logo-icon.png'
 import clsx from 'clsx'
 import { staggerContainer, staggerItem, heroStaggerContainer, heroOrnamentLine, transitions } from '../lib/animations'
 import Button from '../components/ui/Button'
-import EquationConstellation from '../components/ui/EquationConstellation'
+import HeroArt from '../components/landing/HeroArt'
 import PublicHeader from '../components/layout/PublicHeader'
 import Footer from '../components/layout/Footer'
 
@@ -276,7 +276,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (isSignedIn) {
-      navigate('/chat', { replace: true })
+      navigate('/feed', { replace: true })
     }
   }, [isSignedIn, navigate])
 
@@ -287,7 +287,7 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="relative flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
         <div className="hero-vignette" aria-hidden="true" />
-        <EquationConstellation className="hidden sm:block" />
+        <HeroArt className="hidden sm:block" />
         <motion.div
           className="relative z-10 max-w-4xl mx-auto text-center"
           variants={shouldReduceMotion ? undefined : heroStaggerContainer}
@@ -331,7 +331,7 @@ export default function LandingPage() {
               transition={transitions.slow}
               className="flex flex-col sm:flex-row items-center justify-center gap-3"
             >
-              <Link to={isSignedIn ? '/chat' : '/sign-up'}>
+              <Link to={isSignedIn ? '/feed' : '/sign-up'}>
                 <Button
                   variant="primary"
                   size="lg"
