@@ -1,24 +1,25 @@
 """Shared pytest fixtures."""
 
-import os
+from pathlib import Path
 
 # Exclude evals/ from normal test collection when deepeval is not installed.
 try:
     import deepeval  # noqa: F401
 except ImportError:
-    collect_ignore = [os.path.join(os.path.dirname(__file__), "evals")]
+    collect_ignore = [str(Path(__file__).parent / "evals")]
 
 # Clear settings cache before any imports to prevent stale values with coverage
 from src.config import get_settings
 
 get_settings.cache_clear()
 
-import pytest  # noqa: E402
 import uuid  # noqa: E402
-from unittest.mock import AsyncMock, Mock  # noqa: E402
 from contextlib import asynccontextmanager  # noqa: E402
+from unittest.mock import AsyncMock, Mock  # noqa: E402
 
-from src.services.agent_service.context import ConversationFormatter, AgentContext  # noqa: E402
+import pytest  # noqa: E402
+
+from src.services.agent_service.context import AgentContext, ConversationFormatter  # noqa: E402
 
 
 @pytest.fixture
@@ -55,6 +56,7 @@ def mock_context(mock_llm_client, mock_search_service, conversation_formatter):
     ctx.max_iterations = 5
     ctx.temperature = 0.3
     ctx.max_generation_tokens = 2000
+    ctx.scoped_paper = None
     # Mock(spec=) only exposes class-level attrs; set instance attrs explicitly
     ctx.tool_registry = Mock()
     ctx.tool_registry.get_all_schemas.return_value = [

@@ -1,43 +1,29 @@
 """Executor node for running tools selected by the router."""
 
 from __future__ import annotations
+
 import asyncio
 import json
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.config import get_stream_writer
 
-from src.schemas.langgraph_state import AgentState, ToolExecution, ToolCall, ToolOutput
+from src.services.agent_service.state import AgentState, ToolCall, ToolExecution, ToolOutput
 from src.services.agent_service.tools import ToolResult
 from src.utils.logger import get_logger
+
 from ..context import AgentContext
 
 log = get_logger(__name__)
 
 
-_PAPER_SUMMARY_VERBS = {
-    "arxiv_search": "Found",
-    "ingest_papers": "Ingested",
-    "propose_ingest": "Proposed",
-}
-
-
-def _summarize_result(tool_name: str, result: ToolResult) -> str:
+def _summarize_result(result: ToolResult) -> str:
     """Create brief summary of tool result including actionable details for the router."""
     if result.success and result.data:
         if isinstance(result.data, list):
             return f"Retrieved {len(result.data)} items"
-        if isinstance(result.data, dict):
-            if tool_name in _PAPER_SUMMARY_VERBS:
-                papers = result.data.get("papers", [])
-                if papers:
-                    ids = [p.get("arxiv_id") for p in papers if isinstance(p, dict)]
-                    count = result.data.get("count", result.data.get("papers_processed", len(ids)))
-                    id_list = ", ".join(str(i) for i in ids[:10] if i)
-                    verb = _PAPER_SUMMARY_VERBS[tool_name]
-                    return f"{verb} {count} papers: [{id_list}]"
-            if "total_count" in result.data:
-                return f"Found {result.data['total_count']} items"
+        if isinstance(result.data, dict) and "total_count" in result.data:
+            return f"Found {result.data['total_count']} items"
         return str(result.data)[:200]
     if result.error:
         return f"Error: {result.error}"
@@ -84,11 +70,7 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
 
         writer({"type": "tool_start", "tool_name": tc.tool_name, "args": tool_args})
 
-        result = await context.tool_registry.execute(
-            tc.tool_name,
-            tool_outputs=state.get("tool_outputs", []),
-            **tool_args,
-        )
+        result = await context.tool_registry.execute(tc.tool_name, **tool_args)
 
         log.info(
             "executor tool completed",
@@ -144,7 +126,7 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
             tool_name=tool_name,
             tool_args=tool_args,
             success=result.success,
-            result_summary=_summarize_result(tool_name, result),
+            result_summary=_summarize_result(result),
             error=result.error,
         )
         tool_history.append(execution)
@@ -180,16 +162,5 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
     if retrieved_chunks:
         updates["retrieved_chunks"] = retrieved_chunks
         updates["retrieval_attempts"] = state.get("retrieval_attempts", 0) + 1
-
-    # Detect HITL-triggering tools and set pause state
-    for item in results:
-        if isinstance(item, BaseException):
-            continue
-        tool_name, _tool_args, result = item
-        tool = context.tool_registry.get(tool_name)
-        if tool and tool.sets_pause and result.success and result.data:
-            updates["pause_reason"] = f"{tool_name}_confirmation"
-            updates["pause_data"] = result.data
-            break
 
     return updates

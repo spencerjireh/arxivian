@@ -1,8 +1,8 @@
 """Repository for Chunk model operations."""
 
-from typing import List
-from sqlalchemy import select, delete
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.models.chunk import Chunk
 from src.utils.logger import get_logger
 
@@ -15,7 +15,7 @@ class ChunkRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create_bulk(self, chunks_data: List[dict]) -> List[Chunk]:
+    async def create_bulk(self, chunks_data: list[dict]) -> list[Chunk]:
         """Create multiple chunks at once. Caller is responsible for committing the transaction."""
         chunks = [Chunk(**data) for data in chunks_data]
         self.session.add_all(chunks)
@@ -25,7 +25,7 @@ class ChunkRepository:
         log.debug("chunks created", count=len(chunks))
         return chunks
 
-    async def get_by_paper_id(self, paper_id: str) -> List[Chunk]:
+    async def get_by_paper_id(self, paper_id: str) -> list[Chunk]:
         """Get all chunks for a paper."""
         result = await self.session.execute(
             select(Chunk).where(Chunk.paper_id == paper_id).order_by(Chunk.chunk_index)
@@ -34,7 +34,7 @@ class ChunkRepository:
         log.debug("chunks query by paper_id", paper_id=paper_id, count=len(chunks))
         return chunks
 
-    async def get_by_arxiv_id(self, arxiv_id: str) -> List[Chunk]:
+    async def get_by_arxiv_id(self, arxiv_id: str) -> list[Chunk]:
         """Get all chunks for a paper by arXiv ID."""
         result = await self.session.execute(
             select(Chunk).where(Chunk.arxiv_id == arxiv_id).order_by(Chunk.chunk_index)
@@ -47,7 +47,7 @@ class ChunkRepository:
         """Delete all chunks for a paper. Caller is responsible for committing the transaction."""
         result = await self.session.execute(delete(Chunk).where(Chunk.paper_id == paper_id))
         await self.session.flush()
-        count = result.rowcount or 0  # type: ignore[possibly-missing-attribute]
+        count = result.rowcount or 0  # ty: ignore[unresolved-attribute]
         log.debug("chunks deleted", paper_id=paper_id, count=count)
         return count
 
@@ -58,7 +58,5 @@ class ChunkRepository:
 
     async def count(self) -> int:
         """Get total count of chunks."""
-        from sqlalchemy import func
-
         result = await self.session.execute(select(func.count()).select_from(Chunk))
         return result.scalar_one()

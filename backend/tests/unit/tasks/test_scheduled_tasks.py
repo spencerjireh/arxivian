@@ -1,24 +1,20 @@
 """Unit tests for scheduled background tasks."""
 
-from unittest.mock import patch, Mock, AsyncMock
 from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, Mock, patch
 
 
 class TestDailyIngestTask:
     """Tests for the daily_ingest_task."""
 
-    def test_queues_tasks_for_system_user_searches(
-        self, sample_system_user_with_searches
-    ):
+    def test_queues_tasks_for_system_user_searches(self, sample_system_user_with_searches):
         """Verify the task queues ingest tasks for each enabled search."""
         from src.tasks.scheduled_tasks import daily_ingest_task
 
         mock_session = AsyncMock()
 
         mock_repo = AsyncMock()
-        mock_repo.get_by_clerk_id = AsyncMock(
-            return_value=sample_system_user_with_searches
-        )
+        mock_repo.get_by_clerk_id = AsyncMock(return_value=sample_system_user_with_searches)
 
         mock_task = Mock()
         mock_task.id = "queued-task-id"
@@ -28,16 +24,14 @@ class TestDailyIngestTask:
         async def mock_session_ctx():
             yield mock_session
 
-        with patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx):
-            with patch(
-                "src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo
-            ):
-                with patch(
-                    "src.tasks.scheduled_tasks.ingest_papers_task"
-                ) as mock_ingest_task:
-                    mock_ingest_task.apply_async = mock_apply_async
+        with (
+            patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx),
+            patch("src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo),
+            patch("src.tasks.scheduled_tasks.ingest_papers_task") as mock_ingest_task,
+        ):
+            mock_ingest_task.apply_async = mock_apply_async
 
-                    result = daily_ingest_task()
+            result = daily_ingest_task()
 
         # Should queue 2 tasks (one for each search in system user's preferences)
         assert result["status"] == "completed"
@@ -65,9 +59,7 @@ class TestDailyIngestTask:
         mock_session = AsyncMock()
 
         mock_repo = AsyncMock()
-        mock_repo.get_by_clerk_id = AsyncMock(
-            return_value=sample_system_user_with_searches
-        )
+        mock_repo.get_by_clerk_id = AsyncMock(return_value=sample_system_user_with_searches)
 
         mock_task = Mock()
         mock_task.id = "queued-task-id"
@@ -77,16 +69,14 @@ class TestDailyIngestTask:
         async def mock_session_ctx():
             yield mock_session
 
-        with patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx):
-            with patch(
-                "src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo
-            ):
-                with patch(
-                    "src.tasks.scheduled_tasks.ingest_papers_task"
-                ) as mock_ingest_task:
-                    mock_ingest_task.apply_async = mock_apply_async
+        with (
+            patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx),
+            patch("src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo),
+            patch("src.tasks.scheduled_tasks.ingest_papers_task") as mock_ingest_task,
+        ):
+            mock_ingest_task.apply_async = mock_apply_async
 
-                    daily_ingest_task()
+            daily_ingest_task()
 
         # Verify countdown values: 0, 30
         calls = mock_apply_async.call_args_list
@@ -100,9 +90,7 @@ class TestDailyIngestTask:
         mock_session = AsyncMock()
 
         mock_repo = AsyncMock()
-        mock_repo.get_by_clerk_id = AsyncMock(
-            return_value=sample_system_user_with_searches
-        )
+        mock_repo.get_by_clerk_id = AsyncMock(return_value=sample_system_user_with_searches)
 
         mock_task = Mock()
         mock_task.id = "queued-task-id"
@@ -112,16 +100,14 @@ class TestDailyIngestTask:
         async def mock_session_ctx():
             yield mock_session
 
-        with patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx):
-            with patch(
-                "src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo
-            ):
-                with patch(
-                    "src.tasks.scheduled_tasks.ingest_papers_task"
-                ) as mock_ingest_task:
-                    mock_ingest_task.apply_async = mock_apply_async
+        with (
+            patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx),
+            patch("src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo),
+            patch("src.tasks.scheduled_tasks.ingest_papers_task") as mock_ingest_task,
+        ):
+            mock_ingest_task.apply_async = mock_apply_async
 
-                    daily_ingest_task()
+            daily_ingest_task()
 
         # Verify task_id kwarg is present (deterministic)
         calls = mock_apply_async.call_args_list
@@ -136,9 +122,7 @@ class TestDailyIngestTask:
         mock_session = AsyncMock()
 
         mock_repo = AsyncMock()
-        mock_repo.get_by_clerk_id = AsyncMock(
-            return_value=sample_system_user_with_searches
-        )
+        mock_repo.get_by_clerk_id = AsyncMock(return_value=sample_system_user_with_searches)
 
         mock_task = Mock()
         mock_task.id = "queued-task-id"
@@ -148,16 +132,14 @@ class TestDailyIngestTask:
         async def mock_session_ctx():
             yield mock_session
 
-        with patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx):
-            with patch(
-                "src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo
-            ):
-                with patch(
-                    "src.tasks.scheduled_tasks.ingest_papers_task"
-                ) as mock_ingest_task:
-                    mock_ingest_task.apply_async = mock_apply_async
+        with (
+            patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx),
+            patch("src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo),
+            patch("src.tasks.scheduled_tasks.ingest_papers_task") as mock_ingest_task,
+        ):
+            mock_ingest_task.apply_async = mock_apply_async
 
-                    result = daily_ingest_task()
+            result = daily_ingest_task()
 
         assert "spread_duration_minutes" in result
         # 2 tasks, staggered by 30s: (2-1) * 30 / 60 = 0.5 minutes
@@ -170,9 +152,7 @@ class TestDailyIngestTask:
         mock_session = AsyncMock()
 
         mock_repo = AsyncMock()
-        mock_repo.get_by_clerk_id = AsyncMock(
-            return_value=sample_system_user_with_disabled_search
-        )
+        mock_repo.get_by_clerk_id = AsyncMock(return_value=sample_system_user_with_disabled_search)
 
         mock_task = Mock()
         mock_task.id = "queued-task-id"
@@ -182,16 +162,14 @@ class TestDailyIngestTask:
         async def mock_session_ctx():
             yield mock_session
 
-        with patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx):
-            with patch(
-                "src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo
-            ):
-                with patch(
-                    "src.tasks.scheduled_tasks.ingest_papers_task"
-                ) as mock_ingest_task:
-                    mock_ingest_task.apply_async = mock_apply_async
+        with (
+            patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx),
+            patch("src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo),
+            patch("src.tasks.scheduled_tasks.ingest_papers_task") as mock_ingest_task,
+        ):
+            mock_ingest_task.apply_async = mock_apply_async
 
-                    result = daily_ingest_task()
+            result = daily_ingest_task()
 
         # No tasks should be queued
         assert result["status"] == "completed"
@@ -206,9 +184,7 @@ class TestDailyIngestTask:
         mock_session = AsyncMock()
 
         mock_repo = AsyncMock()
-        mock_repo.get_by_clerk_id = AsyncMock(
-            return_value=sample_system_user_empty_query
-        )
+        mock_repo.get_by_clerk_id = AsyncMock(return_value=sample_system_user_empty_query)
 
         mock_task = Mock()
         mock_task.id = "queued-task-id"
@@ -218,16 +194,14 @@ class TestDailyIngestTask:
         async def mock_session_ctx():
             yield mock_session
 
-        with patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx):
-            with patch(
-                "src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo
-            ):
-                with patch(
-                    "src.tasks.scheduled_tasks.ingest_papers_task"
-                ) as mock_ingest_task:
-                    mock_ingest_task.apply_async = mock_apply_async
+        with (
+            patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx),
+            patch("src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo),
+            patch("src.tasks.scheduled_tasks.ingest_papers_task") as mock_ingest_task,
+        ):
+            mock_ingest_task.apply_async = mock_apply_async
 
-                    result = daily_ingest_task()
+            result = daily_ingest_task()
 
         # No tasks should be queued
         assert result["status"] == "completed"
@@ -247,14 +221,12 @@ class TestDailyIngestTask:
         async def mock_session_ctx():
             yield mock_session
 
-        with patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx):
-            with patch(
-                "src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo
-            ):
-                with patch(
-                    "src.tasks.scheduled_tasks.ingest_papers_task"
-                ) as mock_ingest_task:
-                    result = daily_ingest_task()
+        with (
+            patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx),
+            patch("src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo),
+            patch("src.tasks.scheduled_tasks.ingest_papers_task") as mock_ingest_task,
+        ):
+            result = daily_ingest_task()
 
         # Should complete with zero tasks
         assert result["status"] == "completed"
@@ -264,8 +236,8 @@ class TestDailyIngestTask:
 
     def test_handles_no_searches_configured(self):
         """Verify the task handles system user with no searches."""
-        from src.tasks.scheduled_tasks import daily_ingest_task
         from src.models.user import User
+        from src.tasks.scheduled_tasks import daily_ingest_task
 
         system_user = Mock(spec=User)
         system_user.id = "system-id"
@@ -281,14 +253,12 @@ class TestDailyIngestTask:
         async def mock_session_ctx():
             yield mock_session
 
-        with patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx):
-            with patch(
-                "src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo
-            ):
-                with patch(
-                    "src.tasks.scheduled_tasks.ingest_papers_task"
-                ) as mock_ingest_task:
-                    result = daily_ingest_task()
+        with (
+            patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx),
+            patch("src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo),
+            patch("src.tasks.scheduled_tasks.ingest_papers_task") as mock_ingest_task,
+        ):
+            result = daily_ingest_task()
 
         assert result["status"] == "completed"
         assert result["tasks_queued"] == 0
@@ -297,8 +267,8 @@ class TestDailyIngestTask:
 
     def test_uses_default_max_results_when_not_specified(self):
         """Verify the task uses default max_results of 10 when not specified."""
-        from src.tasks.scheduled_tasks import daily_ingest_task
         from src.models.user import User
+        from src.tasks.scheduled_tasks import daily_ingest_task
 
         system_user = Mock(spec=User)
         system_user.id = "system-id"
@@ -327,16 +297,14 @@ class TestDailyIngestTask:
         async def mock_session_ctx():
             yield mock_session
 
-        with patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx):
-            with patch(
-                "src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo
-            ):
-                with patch(
-                    "src.tasks.scheduled_tasks.ingest_papers_task"
-                ) as mock_ingest_task:
-                    mock_ingest_task.apply_async = mock_apply_async
+        with (
+            patch("src.tasks.scheduled_tasks.AsyncSessionLocal", mock_session_ctx),
+            patch("src.tasks.scheduled_tasks.UserRepository", return_value=mock_repo),
+            patch("src.tasks.scheduled_tasks.ingest_papers_task") as mock_ingest_task,
+        ):
+            mock_ingest_task.apply_async = mock_apply_async
 
-                    daily_ingest_task()
+            daily_ingest_task()
 
         # Verify default max_results was used
         call_args = mock_apply_async.call_args

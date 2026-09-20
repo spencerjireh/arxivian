@@ -3,7 +3,7 @@ import { preprocessLatex } from '../../../../src/lib/markdown/preprocessors'
 describe('preprocessLatex', () => {
   it('converts inline \\(...\\) to $...$', () => {
     expect(preprocessLatex('The loss \\(L_{KD}\\) is defined as')).toBe(
-      'The loss $L_{KD}$ is defined as',
+      'The loss $L_{KD}$ is defined as'
     )
   })
 

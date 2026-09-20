@@ -1,11 +1,12 @@
 """Shared pytest fixtures for task unit tests."""
 
-import pytest
 import uuid
-from unittest.mock import AsyncMock, Mock
 from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, Mock
 
-from src.schemas.ingest import IngestResponse
+import pytest
+
+from src.services.ingest_service import IngestResponse
 
 
 @pytest.fixture
@@ -135,7 +136,6 @@ def mock_settings():
     """Mock settings for tasks."""
     settings = Mock()
     settings.cleanup_retention_days = 30
-    settings.langfuse_enabled = False
     settings.celery_broker_url = "redis://localhost:6379/0"
     settings.celery_result_backend = "redis://localhost:6379/0"
     settings.celery_task_timeout = 3600

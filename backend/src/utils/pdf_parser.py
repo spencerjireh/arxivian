@@ -1,8 +1,7 @@
 """PDF parser service using Docling."""
 
-from typing import Dict, List
-from dataclasses import dataclass
 import asyncio
+from dataclasses import dataclass
 
 from src.exceptions import PDFProcessingError
 
@@ -12,9 +11,9 @@ class ParsedDocument:
     """Parsed PDF document with structure."""
 
     raw_text: str
-    sections: List[Dict]
-    references: List[str]
-    metadata: Dict
+    sections: list[dict]
+    references: list[str]
+    metadata: dict
 
 
 class PDFParser:
@@ -98,9 +97,9 @@ class PDFParser:
                 arxiv_id=arxiv_id,
                 stage="parsing",
                 message=str(e),
-            )
+            ) from e
 
-    def _extract_references(self, text: str) -> List[str]:
+    def _extract_references(self, text: str) -> list[str]:
         """
         Extract references from text.
 
@@ -122,9 +121,8 @@ class PDFParser:
                 continue
 
             # Extract reference lines
-            if in_references and line:
-                # Simple heuristic: lines that start with [number] or author names
-                if line[0].isdigit() or line[0] == "[":
-                    references.append(line)
+            # Simple heuristic: lines that start with [number] or author names
+            if in_references and line and (line[0].isdigit() or line[0] == "["):
+                references.append(line)
 
         return references[:50]  # Limit to first 50 references

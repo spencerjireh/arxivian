@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.config import get_settings
-from src.factories.service_factories import get_ingest_service
+from src.factories import get_ingest_service
 from src.models.user import User
 from src.repositories.paper_repository import PaperRepository
 
@@ -28,9 +28,7 @@ async def _seed() -> None:
 
     async with factory() as session:
         # Ensure test user exists
-        result = await session.execute(
-            select(User).where(User.clerk_id == "inteval_test_user")
-        )
+        result = await session.execute(select(User).where(User.clerk_id == "inteval_test_user"))
         user = result.scalar_one_or_none()
         if user is None:
             user = User(clerk_id="inteval_test_user", email="inteval@test.local")
@@ -63,8 +61,10 @@ async def _seed() -> None:
 
         await session.commit()
 
-        print(f"\nIngest complete: {result.status} -- "
-              f"{result.papers_processed} papers, {result.chunks_created} chunks")
+        print(
+            f"\nIngest complete: {result.status} -- "
+            f"{result.papers_processed} papers, {result.chunks_created} chunks"
+        )
         if result.errors:
             print(f"WARNING: {len(result.errors)} errors during ingest:")
             for err in result.errors:

@@ -2,9 +2,9 @@
 
 <img src="assets/logo-full.png" alt="Arxivian" width="320" />
 
-**An agentic RAG system for academic research.**
+**A weekly feed of arXiv papers you could actually implement.**
 
-Search, ingest, summarize, and explore citations across arXiv papers through a conversational AI agent backed by a LangGraph workflow, hybrid retrieval, and a shared knowledge base.
+Arxivian scores new ML papers on method clarity, resource feasibility, data availability and demand, ranks them for your compute budget and interests, and lets you chat with each paper's full text.
 
 [![CI](https://github.com/spencerjireh/arxivian/actions/workflows/ci.yml/badge.svg)](https://github.com/spencerjireh/arxivian/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)
@@ -18,11 +18,12 @@ Search, ingest, summarize, and explore citations across arXiv papers through a c
 
 ## How It Works
 
-You chat with an AI agent that has access to six specialized tools. The agent decides which tools to call, executes them (potentially in parallel), grades the retrieved context for relevance, and streams a cited answer back to you in real time.
+1. **Triage (weekly, cheap).** New papers in your categories are fetched from arXiv and filtered by a small LLM pass.
+2. **Score (per paper).** The full text is ingested and judged by TypeSafe Jev on four dimensions: method clarity, resource feasibility (compute tier), data availability (a PASS/FAIL gate) and demand (Semantic Scholar citations). Every judgment carries quoted evidence and a calibrated confidence.
+3. **Digest (weekly).** Scores are snapshotted into a ranked digest per category set.
+4. **Feed (read time).** Cards show a composite score, a one-line verdict, signal chips (pseudocode, public datasets, single GPU, code released) and a fit marker for your compute profile. Save, dismiss or mark papers as implementing; open one for the per-dimension breakdown and a chat scoped to that paper.
 
-<div align="center">
-<img src="public/agent-workflow.png" alt="Agent Workflow" width="700" />
-</div>
+`docs/product/feed-prd.md` is the product-of-record; `docs/design/scoring-pipeline.md` and `docs/design/scoring-rubric.md` describe the pipeline and the rubric; `AGENTS.md` maps the code for people and coding agents (`CLAUDE.md` is a symlink to it); `CONTRIBUTING.md` covers branches, checks and releases; `docs/ops/coolify-migration.md` is the server-move runbook.
 
 ## Architecture
 
@@ -34,27 +35,28 @@ You chat with an AI agent that has access to six specialized tools. The agent de
 
 | Layer | Technologies |
 |-------|-------------|
-| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS v4, Zustand, Framer Motion, GSAP |
+| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS v4, TanStack Query, Zustand |
 | **Backend** | FastAPI, Python 3.11, async SQLAlchemy 2.0, Pydantic v2 |
-| **Agent** | LangGraph (graph-based workflow), LiteLLM (multi-provider routing) |
+| **Scoring** | TypeSafe Jev (typed judgments with calibrated probabilities), LangGraph fan-out DAG |
+| **Chat** | LangGraph agent scoped to one paper, LiteLLM, SSE streaming |
 | **Retrieval** | pgvector HNSW (vector), PostgreSQL GIN/tsvector (full-text), Reciprocal Rank Fusion |
 | **Embeddings** | Jina Embeddings v3 (1024d) |
 | **Auth** | Clerk (JWT + Google OAuth), tiered rate limiting |
-| **Async** | Celery 5 + Redis (broker), Celery Beat (scheduler), Flower (monitoring) |
-| **Observability** | Langfuse (self-hosted), structlog with request ID correlation |
-| **Infra** | Docker Compose (dev/test/prod/eval profiles), Alembic migrations |
-| **CI** | GitHub Actions -- ruff, ty, pytest, eslint, tsc, vitest |
+| **Async** | Celery 5 + Redis (broker), RedBeat (scheduler), Flower (monitoring) |
+| **Observability** | Pydantic Logfire (OpenTelemetry; FastAPI, SQL, LangGraph, LiteLLM, Celery), structlog with request ID correlation |
+| **Infra** | Docker Compose (dev/test/prod/eval profiles), Alembic migrations, Coolify |
+| **CI** | GitHub Actions -- lint, unit/api + integration (pgvector service), coverage gates, image builds, PR-title check |
 
 ## Quick Start
 
-**Prerequisites:** Docker, Docker Compose, [just](https://github.com/casey/just)
+**Prerequisites:** Docker, Docker Compose, [just](https://github.com/casey/just). For the git hooks also uv and Node 22 (see `CONTRIBUTING.md`).
 
 ```bash
 git clone https://github.com/spencerjireh/arxivian.git
 cd arxivian
 
-just setup              # Create .env files from examples
-# Edit backend/.env and frontend/.env with your API keys (see below)
+just setup              # Copy backend/.env, backend/.env.test, frontend/.env from their .example files
+# Fill in the keys listed below in backend/.env and frontend/.env
 just dev                # Build and start everything with hot reload
 ```
 
@@ -62,69 +64,65 @@ just dev                # Build and start everything with hot reload
 |---------|-----|
 | Frontend | http://localhost:5173 |
 | API docs | http://localhost:8000/docs |
-| Langfuse | http://localhost:3001 |
 | Flower | http://localhost:5555 |
 
 ### Required API Keys
 
 | Key | File | Purpose |
 |-----|------|---------|
-| `OPENAI_API_KEY` | `backend/.env` | LLM calls via LiteLLM |
+| `OPENAI_API_KEY` | `backend/.env` | Triage and chat LLM calls via LiteLLM |
+| `TYPESAFE_API_KEY` | `backend/.env` | Stage 2 scoring (Jev). Chat and triage do not use it; the API starts without it |
 | `JINA_API_KEY` | `backend/.env` | Document embeddings (Jina v3) |
-| `CLERK_SECRET_KEY` | `backend/.env` | JWT verification |
+| `CLERK_DOMAIN` | `backend/.env` | Clerk instance domain; JWTs are verified against its JWKS. The only setting with no default |
 | `VITE_CLERK_PUBLISHABLE_KEY` | `frontend/.env` | Clerk auth UI |
+
+Semantic Scholar runs keyless (requests are paced through a Redis slot). Host-port overrides (`BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`, `REDIS_PORT`, `FLOWER_PORT`) are compose interpolation variables: set them in the shell, not in `backend/.env`.
 
 ## Development
 
 ```bash
-just dev                # Start all services with hot reload
-just down               # Stop services
-just logs               # Tail all logs
-just test               # Run full test suite (~466 tests)
-just test -k "pattern"  # Run tests matching pattern
-just lint               # Ruff linter
-just check              # Lint + typecheck (backend)
-just fix                # Auto-fix lint + format
-just lint-frontend      # ESLint
-just test-frontend      # Vitest
-just eval               # Run LLM-backed evals (requires API keys)
-just migrate            # Run Alembic migrations
-just db-shell           # PostgreSQL shell
-just shell-backend      # Shell into backend container
-just clean              # Stop, remove volumes + images
-just --list             # See all 30+ commands
+just dev                          # Start all services with hot reload
+just down                         # Stop services
+just test tests/unit tests/api    # Backend unit + api (what CI gates)
+just test tests/integration       # Repositories and migrations against the test DB
+just test -k "pattern"            # Any pytest args pass through
+just check                        # Lint + typecheck, both trees
+just ci                           # Every CI step locally (needs just up-d)
+just fix                          # Auto-fix backend lint + format
+just test-frontend                # Vitest
+just eval                         # LLM-backed evals (requires API keys)
+just inteval-seed && just inteval -k scoring   # Golden-set scoring eval against the real judge
+just migrate                      # Run Alembic migrations
+just --list                       # All recipes, grouped
 ```
 
 ## Key Design Decisions
 
-**Hybrid retrieval with RRF.** Vector search alone misses keyword-specific queries; full-text search alone misses semantic similarity. Combining pgvector HNSW with PostgreSQL GIN/tsvector via Reciprocal Rank Fusion gives the best of both, without adding an external search engine.
+**Typed judgments instead of free-text grading.** Scoring asks a judge model closed questions (yes/no, a choice, a level) and stores the full probability distribution plus the quoted evidence. The stored integers are denormalizations; the composite is recomputed at read time so weights can change without re-scoring.
 
-**LangGraph over chains.** The agent workflow has conditional branching (guardrail gating, retry loops on poor document grades, parallel tool execution). LangGraph's explicit graph structure makes these control flows testable and observable, rather than burying them in chain callbacks.
+**Read-time ranking.** The digest caches membership and a provisional order; personalization (compute-profile fit, keyword tie-breaks, NULL-safe weight renormalization) is computed per request from the live rows.
 
-**LiteLLM for model routing.** A single client handles OpenAI, NVIDIA NIM, and any future providers via prefix routing (`openai/gpt-4o-mini`). Switching models is a config change, not a code change.
+**Hybrid retrieval with RRF.** pgvector HNSW plus PostgreSQL GIN/tsvector fused by Reciprocal Rank Fusion, with no external search engine. Paper-scoped chat retrieves inside one paper only.
 
-**Communal knowledge base.** Papers are shared across all users. When one user ingests a paper, everyone benefits. This avoids redundant storage and embeddings while building a richer corpus over time.
+**Communal knowledge base.** Ingested papers are shared across users; scoring a paper once serves everyone.
 
-**Langfuse over LangSmith.** Self-hosted, open-source, with native LiteLLM integration via global callbacks. Traces, scores, and user feedback all link through trace IDs returned in SSE metadata.
+**OpenTelemetry for tracing.** Instrumentation is vendor-neutral (FastAPI, SQLAlchemy, httpx, Celery, LiteLLM, LangGraph via OpenInference); Logfire is the exporter today and swappable by env.
 
 ## Testing
 
-The test suite is organized by scope:
-
-| Suite | Count | What it covers |
-|-------|-------|---------------|
-| Unit | ~258 | Services, repositories, agent nodes, tools, edges |
-| API | ~141 | Router endpoints with mocked dependencies |
-| Eval | Variable | LLM-backed evaluation of agent responses (requires API keys) |
+| Suite | Marker | What it covers |
+|-------|--------|---------------|
+| Unit | `unit` | Schemas, services, nodes, tasks, clients (mocked I/O) |
+| API | `api` | Routers with mocked dependencies |
+| Integration | `integration` | Repositories and migrations against a real pgvector database |
+| Eval | `eval`, `inteval` | Golden-set agreement for chat and scoring (real API keys; run by hand, not in CI) |
 
 ```bash
-just test                          # All unit + API tests
-just test tests/unit/              # Unit only
-just test tests/api/               # API only
-just eval                          # LLM evals
+just test tests/unit tests/api     # unit + api
+just test tests/integration        # integration (test DB on port 5433)
+just eval                          # LLM evals (real OPENAI_API_KEY)
+just inteval-seed && just inteval  # golden-set scoring eval (real TypeSafe key + seeded DB)
 ```
-
-Coverage threshold is 80%, enforced in CI.
 
 ## License
 

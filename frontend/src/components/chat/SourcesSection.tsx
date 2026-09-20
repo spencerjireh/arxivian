@@ -1,11 +1,11 @@
+// Scoped chat: the collapsible Sources list under an assistant turn.
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { Variants } from 'framer-motion'
 import { ChevronRight, FileText } from 'lucide-react'
-import type { SourceInfo } from '../../types/api'
 import { transitions } from '../../lib/animations'
-
 import SourceCard from './SourceCard'
+import type { SourceInfo } from '../../types/api'
+import type { Variants } from 'framer-motion'
 
 interface SourcesSectionProps {
   sources: SourceInfo[]
@@ -23,8 +23,8 @@ export default function SourcesSection({ sources, shouldReduceMotion }: SourcesS
 
   if (sources.length === 1) {
     return (
-      <div className="mt-6 pt-6 border-t border-stone-100">
-        <h4 className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-3">
+      <div className="mt-6 border-t border-stone-100 pt-6">
+        <h4 className="mb-3 text-xs font-medium tracking-wider text-stone-400 uppercase">
           Sources
         </h4>
         <SourceCard source={sources[0]} />
@@ -35,7 +35,8 @@ export default function SourcesSection({ sources, shouldReduceMotion }: SourcesS
   const visibleStackCount = Math.min(sources.length, MAX_STACKED)
   const extraCount = sources.length - MAX_STACKED
   // Container height: first card full height + offsets for stacked cards behind it
-  const stackHeight = ROW_HEIGHT + (visibleStackCount - 1) * STACK_OFFSET + (extraCount > 0 ? 20 : 0)
+  const stackHeight =
+    ROW_HEIGHT + (visibleStackCount - 1) * STACK_OFFSET + (extraCount > 0 ? 20 : 0)
 
   const expandedContainer: Variants = {
     initial: { opacity: 0 },
@@ -71,19 +72,19 @@ export default function SourcesSection({ sources, shouldReduceMotion }: SourcesS
   }
 
   return (
-    <div className="mt-6 pt-6 border-t border-stone-100">
+    <div className="mt-6 border-t border-stone-100 pt-6">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-1.5 group mb-3"
+        className="group mb-3 flex items-center gap-1.5"
       >
         <motion.div
           className="text-stone-300"
           animate={{ rotate: isExpanded ? 90 : 0 }}
           transition={shouldReduceMotion ? { duration: 0 } : transitions.fast}
         >
-          <ChevronRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+          <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.5} />
         </motion.div>
-        <h4 className="text-xs font-medium text-stone-400 uppercase tracking-wider group-hover:text-stone-500 transition-colors duration-150">
+        <h4 className="text-xs font-medium tracking-wider text-stone-400 uppercase transition-colors duration-150 group-hover:text-stone-500">
           Sources ({sources.length})
         </h4>
       </button>
@@ -104,10 +105,7 @@ export default function SourcesSection({ sources, shouldReduceMotion }: SourcesS
               exit="exit"
             >
               {sources.map((source, index) => (
-                <motion.div
-                  key={`${source.arxiv_id}-${index}`}
-                  variants={staggerChild}
-                >
+                <motion.div key={`${source.arxiv_id}-${index}`} variants={staggerChild}>
                   <SourceCard source={source} />
                 </motion.div>
               ))}
@@ -122,7 +120,7 @@ export default function SourcesSection({ sources, shouldReduceMotion }: SourcesS
             >
               <button
                 onClick={() => setIsExpanded(true)}
-                className="w-full text-left group/stack"
+                className="group/stack w-full text-left"
                 style={{ height: stackHeight }}
               >
                 <div className="relative" style={{ height: stackHeight }}>
@@ -165,28 +163,28 @@ function CompactSourceRow({ source, stackIndex }: CompactSourceRowProps) {
 
   return (
     <div
-      className="absolute left-0 right-0 border border-stone-100 rounded-lg bg-white px-4 py-3 flex items-start gap-3 transition-colors duration-150 group-hover/stack:border-stone-200"
+      className="absolute right-0 left-0 flex items-start gap-3 rounded-lg border border-stone-100 bg-white px-4 py-3 transition-colors duration-150 group-hover/stack:border-stone-200"
       style={{
         top,
         opacity,
         zIndex: MAX_STACKED - stackIndex,
       }}
     >
-      <div className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-        <FileText className="w-4 h-4 text-stone-500" strokeWidth={1.5} />
+      <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-stone-100">
+        <FileText className="h-4 w-4 text-stone-500" strokeWidth={1.5} />
       </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-mono text-stone-400">{source.arxiv_id}</span>
+      <div className="min-w-0 flex-1">
+        <div className="mb-1 flex items-center gap-2">
+          <span className="font-mono text-xs text-stone-400">{source.arxiv_id}</span>
           <span className="text-xs text-stone-300">|</span>
           <span className="text-xs text-stone-400">{relevancePercent}% match</span>
         </div>
-        <p className="text-sm text-stone-700 leading-snug line-clamp-1">{source.title}</p>
+        <p className="line-clamp-1 text-sm leading-snug text-stone-700">{source.title}</p>
       </div>
 
-      <div className="flex-shrink-0 text-stone-300 mt-1">
-        <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
+      <div className="mt-1 flex-shrink-0 text-stone-300">
+        <ChevronRight className="h-4 w-4" strokeWidth={1.5} />
       </div>
     </div>
   )

@@ -1,9 +1,10 @@
 """Repository for search operations with hybrid search support."""
 
-from typing import List, Optional
 from dataclasses import dataclass
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -17,15 +18,15 @@ class SearchResult:
     paper_id: str
     arxiv_id: str
     title: str
-    authors: List[str]
+    authors: list[str]
     chunk_text: str
-    section_name: Optional[str]
-    page_number: Optional[int]
+    section_name: str | None
+    page_number: int | None
     score: float
-    vector_score: Optional[float] = None
-    text_score: Optional[float] = None
-    published_date: Optional[str] = None
-    pdf_url: Optional[str] = None
+    vector_score: float | None = None
+    text_score: float | None = None
+    published_date: str | None = None
+    pdf_url: str | None = None
 
 
 class SearchRepository:
@@ -35,8 +36,12 @@ class SearchRepository:
         self.session = session
 
     async def vector_search(
-        self, query_embedding: List[float], top_k: int = 10, min_score: float = 0.0
-    ) -> List[SearchResult]:
+        self,
+        query_embedding: list[float],
+        top_k: int = 10,
+        min_score: float = 0.0,
+        paper_id: str | None = None,
+    ) -> list[SearchResult]:
         """
         Vector similarity search using cosine distance.
 
@@ -44,17 +49,26 @@ class SearchRepository:
             query_embedding: Query embedding vector
             top_k: Number of results to return
             min_score: Minimum similarity score (0-1)
+            paper_id: If set, restrict the search to a single paper's chunks (used by
+                the Stage 2 scoring graph for per-dimension, per-paper retrieval).
 
         Returns:
             List of SearchResult objects ordered by similarity
         """
         log.debug(
-            "vector search", top_k=top_k, min_score=min_score, embedding_dim=len(query_embedding)
+            "vector search",
+            top_k=top_k,
+            min_score=min_score,
+            embedding_dim=len(query_embedding),
+            paper_id=paper_id,
         )
 
         embedding_str = f"[{','.join(map(str, query_embedding))}]"
 
-        query = text("""
+        # Static SQL fragment (no user input) -- paper_id itself is a bound parameter.
+        paper_filter = "AND c.paper_id = CAST(:paper_id AS uuid)" if paper_id else ""
+
+        query = text(f"""
             SELECT
                 c.id as chunk_id,
                 c.paper_id,
@@ -70,13 +84,16 @@ class SearchRepository:
             FROM chunks c
             JOIN papers p ON c.paper_id = p.id
             WHERE 1 - (c.embedding <=> CAST(:embedding AS vector)) >= :min_score
+            {paper_filter}
             ORDER BY c.embedding <=> CAST(:embedding AS vector)
             LIMIT :limit
         """)
 
-        result = await self.session.execute(
-            query, {"embedding": embedding_str, "min_score": min_score, "limit": top_k}
-        )
+        params = {"embedding": embedding_str, "min_score": min_score, "limit": top_k}
+        if paper_id:
+            params["paper_id"] = paper_id
+
+        result = await self.session.execute(query, params)
 
         results = [
             SearchResult(
@@ -99,7 +116,7 @@ class SearchRepository:
         log.debug("vector search results", count=len(results))
         return results
 
-    async def fulltext_search(self, query: str, top_k: int = 10) -> List[SearchResult]:
+    async def fulltext_search(self, query: str, top_k: int = 10) -> list[SearchResult]:
         """
         Full-text search using PostgreSQL tsvector.
 

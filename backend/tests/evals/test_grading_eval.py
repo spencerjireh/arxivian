@@ -54,6 +54,4 @@ async def test_batch_evaluation(
     # Check rewrite behavior: if insufficient and iterations remain, expect rewrite
     if not expected_sufficient and scenario.expect_rewrite:
         has_rewrite = result.get("rewritten_query") is not None
-        assert has_rewrite, (
-            f"[{scenario.id}] Expected rewrite suggestion but got None"
-        )
+        assert has_rewrite, f"[{scenario.id}] Expected rewrite suggestion but got None"

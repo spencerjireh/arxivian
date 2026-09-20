@@ -1,12 +1,12 @@
 """Tests for ArxivClient date-filtered search."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import arxiv
 import pytest
 
-from src.clients.arxiv_client import ArxivClient, ArxivPaper, _DATE_FILTER_SCAN_LIMIT
+from src.clients.arxiv_client import _DATE_FILTER_SCAN_LIMIT, ArxivClient
 
 
 def _make_result(
@@ -28,7 +28,7 @@ def _make_result(
 
 
 def _utc(year: int, month: int, day: int) -> datetime:
-    return datetime(year, month, day, tzinfo=timezone.utc)
+    return datetime(year, month, day, tzinfo=UTC)
 
 
 # Papers spanning Feb 8-16, sorted descending (like arXiv would return).
@@ -86,8 +86,7 @@ class TestDateFilteredSearchEarlyTermination:
     async def test_collects_up_to_max_results(self, client: ArxivClient):
         """When max_results is reached, stop even if more papers are in range."""
         all_in_range = [
-            _make_result(f"2602.0000{i}", _utc(2026, 2, 15 - i), f"Paper {i}")
-            for i in range(5)
+            _make_result(f"2602.0000{i}", _utc(2026, 2, 15 - i), f"Paper {i}") for i in range(5)
         ]
 
         with patch.object(client.client, "results", return_value=iter(all_in_range)):
@@ -101,9 +100,7 @@ class TestDateFilteredSearchEarlyTermination:
         assert len(results) == 2
 
     @pytest.mark.asyncio
-    async def test_skips_papers_after_end_date_without_stopping(
-        self, client: ArxivClient
-    ):
+    async def test_skips_papers_after_end_date_without_stopping(self, client: ArxivClient):
         """Papers newer than end_date are skipped but don't trigger early stop."""
         papers = [
             _make_result("2602.99010", _utc(2026, 2, 20), "Too new"),
@@ -144,8 +141,14 @@ class TestDateFilteredSearchConfig:
     """Verify the search is configured correctly for date-filtered queries."""
 
     @pytest.mark.asyncio
-    async def test_search_uses_scan_limit(self, client: ArxivClient):
-        """arxiv.Search should use _DATE_FILTER_SCAN_LIMIT as max_results."""
+    @pytest.mark.parametrize(
+        ("max_results", "expected_scan"),
+        [(5, 15), (100, 300), (500, _DATE_FILTER_SCAN_LIMIT)],
+    )
+    async def test_search_scan_limit_scales_with_request(
+        self, client: ArxivClient, max_results: int, expected_scan: int
+    ):
+        """The scan cap is 3x the request, never above _DATE_FILTER_SCAN_LIMIT (SPE-283)."""
         captured_search: list[arxiv.Search] = []
 
         def capture_search(search: arxiv.Search):
@@ -155,12 +158,12 @@ class TestDateFilteredSearchConfig:
         with patch.object(client.client, "results", side_effect=capture_search):
             await client.search_papers(
                 query="nlp",
-                max_results=5,
+                max_results=max_results,
                 start_date="2026-02-14",
             )
 
         assert len(captured_search) == 1
-        assert captured_search[0].max_results == _DATE_FILTER_SCAN_LIMIT
+        assert captured_search[0].max_results == expected_scan
 
     @pytest.mark.asyncio
     async def test_search_sorted_by_date_descending(self, client: ArxivClient):

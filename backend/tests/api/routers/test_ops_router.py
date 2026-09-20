@@ -1,7 +1,7 @@
 """Tests for ops router."""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import Mock, patch
 
 import pytest
@@ -223,7 +223,7 @@ class TestOpsTaskEndpoints:
         task.task_type = "ingest"
         task.status = "queued"
         task.error_message = None
-        task.created_at = datetime.now(timezone.utc)
+        task.created_at = datetime.now(UTC)
         task.completed_at = None
         mock_task_exec_repo.list_all.return_value = ([task], 1)
 
@@ -242,7 +242,7 @@ class TestOpsTaskEndpoints:
         task.task_type = "ingest"
         task.status = "queued"
         task.error_message = None
-        task.created_at = datetime.now(timezone.utc)
+        task.created_at = datetime.now(UTC)
         mock_task_exec_repo.get_by_celery_task_id.return_value = task
 
         with patch("src.routers.ops.AsyncResult") as mock_async_result:
@@ -300,7 +300,12 @@ class TestGetSystemSearches:
         system_user = Mock()
         system_user.preferences = {
             "arxiv_searches": [
-                {"name": "AI Papers", "query": "artificial intelligence", "max_results": 10, "enabled": True},
+                {
+                    "name": "AI Papers",
+                    "query": "artificial intelligence",
+                    "max_results": 10,
+                    "enabled": True,
+                },
             ],
             "notification_settings": {},
         }

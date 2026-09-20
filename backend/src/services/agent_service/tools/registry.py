@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterator
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
 from src.utils.logger import get_logger
+
 from .base import BaseTool, ToolResult
 
 if TYPE_CHECKING:
@@ -63,34 +65,12 @@ class ToolRegistry:
         """
         return self._tools.get(name)
 
-    def get_required(self, name: str) -> BaseTool:
-        """
-        Get a tool by name, raising if not found.
-
-        Args:
-            name: Tool name
-
-        Returns:
-            Tool instance
-
-        Raises:
-            KeyError: If tool is not registered
-        """
-        tool = self._tools.get(name)
-        if tool is None:
-            raise KeyError(f"Tool '{name}' is not registered")
-        return tool
-
-    async def execute(
-        self, name: str, *, tool_outputs: list | None = None, **kwargs
-    ) -> ToolResult:
+    async def execute(self, name: str, **kwargs) -> ToolResult:
         """
         Execute a tool by name.
 
         Args:
             name: Tool name
-            tool_outputs: Prior tool outputs from the current turn. Forwarded
-                only to tools that declare ``sets_pause = True``.
             **kwargs: Tool parameters
 
         Returns:
@@ -104,9 +84,6 @@ class ToolRegistry:
                 tool_name=name,
             )
 
-        if tool.sets_pause and tool_outputs is not None:
-            kwargs["tool_outputs"] = tool_outputs
-
         try:
             if self._session:
                 async with self._session.begin_nested():
@@ -116,18 +93,9 @@ class ToolRegistry:
             log.error("tool execution failed", tool_name=name, error=str(e), exc_info=True)
             return ToolResult(
                 success=False,
-                error=f"Tool execution failed: {str(e)}",
+                error=f"Tool execution failed: {e!s}",
                 tool_name=name,
             )
-
-    def list_tools(self) -> list[str]:
-        """
-        List all registered tool names.
-
-        Returns:
-            List of tool names
-        """
-        return list(self._tools.keys())
 
     def get_all_schemas(self) -> list[dict]:
         """

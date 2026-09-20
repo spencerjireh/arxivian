@@ -5,9 +5,10 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Integer, Date, ForeignKey, UniqueConstraint, func
-from sqlalchemy.dialects.postgresql import UUID, TIMESTAMP
+from sqlalchemy import Date, ForeignKey, Integer, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
 from sqlalchemy.orm import Mapped, mapped_column
+
 from src.database import Base
 
 
@@ -25,7 +26,6 @@ class UsageCounter(Base):
     )
     usage_date: Mapped[date] = mapped_column(Date, server_default=func.current_date())
     query_count: Mapped[int] = mapped_column(Integer, server_default="0")
-    ingest_count: Mapped[int] = mapped_column(Integer, server_default="0")
 
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()
@@ -37,5 +37,5 @@ class UsageCounter(Base):
     def __repr__(self):
         return (
             f"<UsageCounter(user_id='{self.user_id}', date='{self.usage_date}', "
-            f"queries={self.query_count}, ingests={self.ingest_count})>"
+            f"queries={self.query_count})>"
         )

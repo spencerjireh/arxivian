@@ -1,7 +1,6 @@
 """User tier definitions and policy resolution.
 
-Single source of truth for all tier-related logic: limits, capabilities,
-model resolution, and system user identity.
+Single source of truth for tier limits and the system user identity.
 """
 
 from __future__ import annotations
@@ -11,8 +10,9 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from src.repositories.user_repository import UserRepository
+
 if TYPE_CHECKING:
-    from src.config import Settings
     from src.models.user import User
 
 SYSTEM_USER_CLERK_ID = "system"
@@ -26,40 +26,11 @@ class UserTier(StrEnum):
 @dataclass(frozen=True, slots=True)
 class TierPolicy:
     daily_chats: int | None  # None = unlimited
-    daily_ingests: int | None  # None = unlimited
-    can_ingest: bool
-    can_search_arxiv: bool
-    can_adjust_settings: bool
-    can_view_execution_details: bool
-
-    def resolve_model(self, requested: str | None, settings: Settings) -> str:
-        """Return the model to use, enforcing tier restrictions."""
-        if not self.can_adjust_settings or not requested:
-            return settings.default_llm_model
-        if not settings.is_model_allowed(requested):
-            from src.exceptions import InvalidModelError
-
-            raise InvalidModelError(requested, "N/A", settings.get_allowed_models_list())
-        return requested
 
 
 TIER_POLICIES: dict[str, TierPolicy] = {
-    UserTier.FREE: TierPolicy(
-        daily_chats=10,
-        daily_ingests=5,
-        can_ingest=True,
-        can_search_arxiv=True,
-        can_adjust_settings=False,
-        can_view_execution_details=False,
-    ),
-    UserTier.PRO: TierPolicy(
-        daily_chats=None,
-        daily_ingests=None,
-        can_ingest=True,
-        can_search_arxiv=True,
-        can_adjust_settings=True,
-        can_view_execution_details=True,
-    ),
+    UserTier.FREE: TierPolicy(daily_chats=10),
+    UserTier.PRO: TierPolicy(daily_chats=None),
 }
 
 
@@ -83,7 +54,6 @@ def get_system_user_id() -> UUID:
 async def init_system_user(db: object) -> None:
     """Load the system user ID from the database. Call once at startup."""
     global _system_user_id
-    from src.repositories.user_repository import UserRepository
 
     user = await UserRepository(db).get_by_clerk_id(SYSTEM_USER_CLERK_ID)  # type: ignore[arg-type]
     if user is None:

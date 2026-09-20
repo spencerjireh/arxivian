@@ -1,9 +1,10 @@
-"""Retrieve chunks tool for vector search."""
+"""Retrieve chunks tool: vector search inside the paper the conversation is scoped to."""
 
 from typing import ClassVar
 
 from src.services.search_service import SearchService
 from src.utils.logger import get_logger
+
 from .base import BaseTool, ToolResult
 
 log = get_logger(__name__)
@@ -12,35 +13,24 @@ MAX_TOP_K = 50
 
 
 class RetrieveChunksTool(BaseTool):
-    """Tool for retrieving relevant document chunks from the vector database."""
+    """Retrieves passages from one paper's ingested chunks.
+
+    Within-paper retrieval returns raw cosine scores, so no RRF threshold is applied.
+    """
 
     name = "retrieve_chunks"
     description = (
-        "Answer questions using papers already in the knowledge base. "
-        "Retrieves relevant passages from ingested arXiv papers. "
-        "This is the DEFAULT tool for any content question about research topics."
+        "Retrieve passages from the paper the user is currently viewing. "
+        "This is the DEFAULT tool for any question about the paper's content."
     )
 
     extends_chunks: ClassVar[bool] = True
     required_dependencies: ClassVar[list[str]] = ["search_service"]
 
-    def __init__(
-        self,
-        search_service: SearchService,
-        default_top_k: int = 6,
-        min_score: float = 0.5,
-    ):
-        """
-        Initialize retrieve tool.
-
-        Args:
-            search_service: Service for vector/hybrid search
-            default_top_k: Default number of chunks to retrieve
-            min_score: Minimum RRF score to include a chunk (0.0-1.0)
-        """
+    def __init__(self, search_service: SearchService, paper_id: str, default_top_k: int = 6):
         self.search_service = search_service
+        self.paper_id = paper_id
         self.default_top_k = default_top_k
-        self.min_score = min_score
 
     @property
     def parameters_schema(self) -> dict:
@@ -69,14 +59,9 @@ class RetrieveChunksTool(BaseTool):
         log.debug("retrieve_chunks executing", query=query[:100], top_k=clamped_top_k)
 
         try:
-            results = await self.search_service.hybrid_search(
-                query=query,
-                top_k=clamped_top_k,
-                mode="hybrid",
+            results = await self.search_service.retrieve_within_paper(
+                query=query, paper_id=self.paper_id, top_k=clamped_top_k, min_score=0.0
             )
-
-            results = [r for r in results if r.score >= self.min_score]
-
             chunks = [
                 {
                     "chunk_id": str(r.chunk_id),
@@ -92,7 +77,6 @@ class RetrieveChunksTool(BaseTool):
                 }
                 for r in results
             ]
-
             log.debug("retrieve_chunks completed", chunks_found=len(chunks))
             return ToolResult(success=True, data=chunks, tool_name=self.name)
 

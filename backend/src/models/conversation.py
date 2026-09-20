@@ -6,9 +6,10 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, Text, Integer, ForeignKey, TIMESTAMP, func, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import TIMESTAMP, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from src.database import Base
 
 if TYPE_CHECKING:
@@ -24,6 +25,10 @@ class Conversation(Base):
     session_id: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), index=True
+    )
+    # Paper-scoped chat (SPE-277): set on creation from a paper detail page, never changed.
+    paper_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("papers.id", ondelete="SET NULL"), index=True
     )
     metadata_: Mapped[dict | None] = mapped_column("metadata_", JSONB)
     title: Mapped[str | None] = mapped_column(String(200), nullable=True)
@@ -68,9 +73,7 @@ class ConversationTurn(Base):
     rewritten_query: Mapped[str | None] = mapped_column(Text)
     sources: Mapped[list | None] = mapped_column(JSONB)
     reasoning_steps: Mapped[list | None] = mapped_column(JSONB)
-    thinking_steps: Mapped[list | None] = mapped_column(JSONB)
     citations: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    pending_confirmation: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     provider: Mapped[str] = mapped_column(String(50))
     model: Mapped[str] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(

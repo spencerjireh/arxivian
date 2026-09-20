@@ -1,28 +1,71 @@
 """Service for ingesting papers from arXiv."""
 
 import tempfile
-import os
-from datetime import datetime
+from pathlib import Path
 from time import time
-from typing import List, Optional
+from typing import Literal
 
+from pydantic import BaseModel, Field
 from sqlalchemy.exc import OperationalError
 
-from src.schemas.ingest import IngestRequest, IngestResponse, PaperError, PaperResult
 from src.clients.arxiv_client import ArxivClient, ArxivPaper
 from src.clients.embeddings_client import JinaEmbeddingsClient
-from src.utils.pdf_parser import PDFParser
-from src.utils.chunking_service import ChunkingService
-from src.repositories.paper_repository import PaperRepository
-from src.repositories.chunk_repository import ChunkRepository
-from src.utils.logger import get_logger
 from src.exceptions import (
     EmbeddingServiceError,
     InsufficientChunksError,
     PDFProcessingError,
 )
+from src.repositories.chunk_repository import ChunkRepository
+from src.repositories.paper_repository import PaperRepository
+from src.services.chunking_service import ChunkingService
+from src.utils.logger import get_logger
+from src.utils.pdf_parser import PDFParser
 
 log = get_logger(__name__)
+
+
+class IngestRequest(BaseModel):
+    """Request to ingest papers from arXiv."""
+
+    query: str = Field(..., description="arXiv search query")
+    max_results: int = Field(10, ge=1, le=50, description="Maximum papers to fetch")
+    categories: list[str] | None = Field(None, description="arXiv categories filter")
+    start_date: str | None = Field(None, description="Start date (YYYY-MM-DD)")
+    end_date: str | None = Field(None, description="End date (YYYY-MM-DD)")
+    force_reprocess: bool = Field(False, description="Re-process existing papers")
+    idempotency_key: str | None = Field(
+        default=None,
+        description="Unique key to prevent duplicate processing. If provided, duplicate requests return cached response.",
+        max_length=64,
+    )
+
+
+class PaperError(BaseModel):
+    """Error information for a failed paper."""
+
+    arxiv_id: str
+    error: str
+
+
+class PaperResult(BaseModel):
+    """Result for a single paper."""
+
+    arxiv_id: str
+    title: str
+    chunks_created: int
+    status: Literal["success", "failed"]
+
+
+class IngestResponse(BaseModel):
+    """Response from paper ingestion."""
+
+    status: Literal["completed", "failed"]
+    papers_fetched: int
+    papers_processed: int
+    chunks_created: int
+    duration_seconds: float
+    errors: list[PaperError] = []
+    papers: list[PaperResult] = []
 
 
 class IngestService:
@@ -36,7 +79,7 @@ class IngestService:
         chunking_service: ChunkingService,
         paper_repository: PaperRepository,
         chunk_repository: ChunkRepository,
-        ingested_by: Optional[str] = None,
+        ingested_by: str | None = None,
     ):
         self.arxiv_client = arxiv_client
         self.pdf_parser = pdf_parser
@@ -67,8 +110,8 @@ class IngestService:
         papers_fetched = 0
         papers_processed = 0
         chunks_created = 0
-        errors: List[PaperError] = []
-        paper_results: List[PaperResult] = []
+        errors: list[PaperError] = []
+        paper_results: list[PaperResult] = []
 
         try:
             # Search arXiv for papers
@@ -131,7 +174,7 @@ class IngestService:
 
     async def _process_single_paper(
         self, paper_meta: ArxivPaper, force_reprocess: bool
-    ) -> Optional[PaperResult]:
+    ) -> PaperResult | None:
         """
         Process a single paper: download, parse, chunk, and embed.
 
@@ -152,7 +195,7 @@ class IngestService:
 
         # Download and parse PDF (outside transaction - no DB operations)
         with tempfile.TemporaryDirectory() as temp_dir:
-            pdf_path = os.path.join(temp_dir, f"{arxiv_id}.pdf")
+            pdf_path = str(Path(temp_dir) / f"{arxiv_id}.pdf")
 
             if not paper_meta.pdf_url:
                 raise PDFProcessingError(arxiv_id=arxiv_id, stage="download", message="No PDF URL")
@@ -161,7 +204,7 @@ class IngestService:
                 await self.arxiv_client.download_pdf(pdf_url=paper_meta.pdf_url, save_path=pdf_path)
                 log.debug("pdf downloaded", arxiv_id=arxiv_id)
             except Exception as e:
-                raise PDFProcessingError(arxiv_id=arxiv_id, stage="download", message=str(e))
+                raise PDFProcessingError(arxiv_id=arxiv_id, stage="download", message=str(e)) from e
 
             # Parse PDF (now raises PDFProcessingError on failure)
             parsed = await self.pdf_parser.parse_pdf(pdf_path, arxiv_id=arxiv_id)
@@ -191,7 +234,7 @@ class IngestService:
             raise EmbeddingServiceError(
                 message=f"Failed to generate embeddings for {arxiv_id}",
                 details={"arxiv_id": arxiv_id, "error": str(e)},
-            )
+            ) from e
 
         # Database operations wrapped in savepoint for atomic rollback
         async with session.begin_nested():
@@ -247,7 +290,7 @@ class IngestService:
             paper_title = str(paper.title)
 
             chunks_data = []
-            for chunk, embedding in zip(chunks, embeddings):
+            for chunk, embedding in zip(chunks, embeddings, strict=False):
                 chunks_data.append(
                     {
                         "paper_id": paper_id,
@@ -274,7 +317,7 @@ class IngestService:
         )
 
     async def ingest_by_ids(
-        self, arxiv_ids: List[str], force_reprocess: bool = False
+        self, arxiv_ids: list[str], force_reprocess: bool = False
     ) -> IngestResponse:
         """
         Ingest specific papers by arXiv ID.
@@ -292,8 +335,8 @@ class IngestService:
         papers_fetched = 0
         papers_processed = 0
         chunks_created = 0
-        errors: List[PaperError] = []
-        paper_results: List[PaperResult] = []
+        errors: list[PaperError] = []
+        paper_results: list[PaperResult] = []
 
         try:
             papers = await self.arxiv_client.get_papers_by_ids(arxiv_ids)
@@ -344,41 +387,3 @@ class IngestService:
             errors=errors,
             papers=paper_results,
         )
-
-    async def list_papers(
-        self,
-        query: str | None = None,
-        author: str | None = None,
-        categories: list[str] | None = None,
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
-        limit: int = 20,
-        offset: int = 0,
-    ) -> tuple[list[dict], int]:
-        """List papers with optional filters. Returns (papers, total_count)."""
-        category = categories[0] if categories else None
-
-        papers, total = await self.paper_repository.get_all(
-            offset=offset,
-            limit=limit,
-            query=query,
-            author_filter=author,
-            category_filter=category,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-        return [
-            {
-                "arxiv_id": p.arxiv_id,
-                "title": p.title,
-                "authors": p.authors,
-                "abstract": (p.abstract[:500] + "..." if len(p.abstract) > 500 else p.abstract)
-                if p.abstract
-                else None,
-                "categories": p.categories,
-                "published_date": p.published_date.isoformat() if p.published_date else None,
-                "pdf_url": p.pdf_url,
-            }
-            for p in papers
-        ], total

@@ -1,6 +1,6 @@
 """Conditional edge functions for graph routing."""
 
-from src.schemas.langgraph_state import AgentState
+from src.services.agent_service.state import AgentState
 from src.services.agent_service.tools import RETRIEVE_CHUNKS
 
 
@@ -41,13 +41,9 @@ def route_after_executor(state: AgentState) -> str:
     """Route after tool execution.
 
     Returns:
-        - "confirm": If a tool triggered HITL pause (propose_ingest)
         - "evaluate": If retrieve_chunks was called and succeeded
         - "classify": Otherwise, go back to classify for next decision
     """
-    if state.get("pause_reason"):
-        return "confirm"
-
     last_executed = state.get("last_executed_tools", [])
 
     if not last_executed:

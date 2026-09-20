@@ -1,3 +1,4 @@
+// App shell: avatar button with the user name and a sign-out action.
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser, useClerk } from '@clerk/clerk-react'
@@ -32,7 +33,7 @@ export default function UserMenu() {
   const handleSignOut = async () => {
     clearUserStore()
     await signOut()
-    navigate('/sign-in')
+    await navigate('/sign-in')
   }
 
   if (!user) return null
@@ -42,12 +43,12 @@ export default function UserMenu() {
   return (
     <div ref={menuRef} className="relative">
       {isOpen && (
-        <div className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-stone-200 rounded-lg shadow-lg py-1 z-50">
+        <div className="absolute right-0 bottom-full left-0 z-50 mb-1 rounded-lg border border-stone-200 bg-white py-1 shadow-lg">
           <button
             onClick={handleSignOut}
-            className="w-full px-3 py-2 text-left text-sm text-stone-700 hover:bg-stone-50 flex items-center gap-2"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-stone-700 hover:bg-stone-50"
           >
-            <LogOut className="w-4 h-4" strokeWidth={1.5} />
+            <LogOut className="h-4 w-4" strokeWidth={1.5} />
             Sign out
           </button>
         </div>
@@ -55,20 +56,14 @@ export default function UserMenu() {
 
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-3 w-full px-2 py-2 rounded-lg hover:bg-stone-100 transition-colors"
+        className="flex w-full items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-stone-100"
       >
-        <img
-          src={user.imageUrl}
-          alt=""
-          className="w-8 h-8 rounded-full ring-2 ring-stone-200"
-        />
-        <div className="flex-1 text-left min-w-0">
-          <p className="text-sm font-medium text-stone-900 truncate">
-            {displayName}
-          </p>
+        <img src={user.imageUrl} alt="" className="h-8 w-8 rounded-full ring-2 ring-stone-200" />
+        <div className="min-w-0 flex-1 text-left">
+          <p className="truncate text-sm font-medium text-stone-900">{displayName}</p>
         </div>
         <ChevronUp
-          className={clsx('w-4 h-4 text-stone-400 transition-transform', !isOpen && 'rotate-180')}
+          className={clsx('h-4 w-4 text-stone-400 transition-transform', !isOpen && 'rotate-180')}
           strokeWidth={1.5}
         />
       </button>

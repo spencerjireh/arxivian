@@ -1,7 +1,7 @@
 """Authentication service for Clerk JWT verification."""
 
 from dataclasses import dataclass
-from typing import Optional
+
 import jwt
 from jwt import PyJWKClient
 
@@ -16,10 +16,10 @@ class AuthenticatedUser:
     """Represents an authenticated user from Clerk JWT."""
 
     clerk_id: str
-    email: Optional[str] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    profile_image_url: Optional[str] = None
+    email: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    profile_image_url: str | None = None
 
 
 class AuthService:
@@ -44,7 +44,7 @@ class AuthService:
             self._jwks_clients[clerk_domain] = PyJWKClient(jwks_url)
         return self._jwks_clients[clerk_domain]
 
-    async def verify_token(self, authorization_header: Optional[str]) -> AuthenticatedUser:
+    async def verify_token(self, authorization_header: str | None) -> AuthenticatedUser:
         """
         Verify Clerk JWT and extract user information.
 
@@ -132,36 +132,12 @@ class AuthService:
 
         except jwt.ExpiredSignatureError:
             log.warning("token expired")
-            raise InvalidTokenError("Token has expired")
+            raise InvalidTokenError("Token has expired") from None
         except InvalidTokenError:
             raise
         except jwt.InvalidTokenError as e:
             log.warning("token invalid", error=str(e))
-            raise InvalidTokenError(f"Token validation failed: {str(e)}")
+            raise InvalidTokenError(f"Token validation failed: {e!s}") from e
         except Exception as e:
             log.error("token verification failed", error=str(e), error_type=type(e).__name__)
-            raise InvalidTokenError("Token verification failed")
-
-
-# Singleton instance
-_auth_service: Optional[AuthService] = None
-
-
-def get_auth_service() -> AuthService:
-    """Get singleton auth service instance."""
-    global _auth_service
-    if _auth_service is None:
-        from src.config import get_settings
-
-        settings = get_settings()
-        _auth_service = AuthService(
-            allowed_domain=settings.clerk_domain,
-            audience=settings.clerk_jwt_audience or None,
-        )
-    return _auth_service
-
-
-def reset_auth_service() -> None:
-    """Reset singleton for testing."""
-    global _auth_service
-    _auth_service = None
+            raise InvalidTokenError("Token verification failed") from e

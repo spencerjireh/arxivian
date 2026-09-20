@@ -1,9 +1,9 @@
 """Hybrid search service with RRF fusion."""
 
-from typing import List
 from collections import defaultdict
-from src.repositories.search_repository import SearchRepository, SearchResult
+
 from src.clients.embeddings_client import JinaEmbeddingsClient
+from src.repositories.search_repository import SearchRepository, SearchResult
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -24,7 +24,7 @@ class SearchService:
 
     async def hybrid_search(
         self, query: str, top_k: int = 10, mode: str = "hybrid", min_score: float = 0.0
-    ) -> List[SearchResult]:
+    ) -> list[SearchResult]:
         """
         Perform hybrid search with vector + full-text + RRF.
 
@@ -46,9 +46,28 @@ class SearchService:
         log.info("search complete", mode=mode, results=len(results))
         return results
 
+    async def retrieve_within_paper(
+        self, query: str, paper_id: str, top_k: int = 5, min_score: float = 0.0
+    ) -> list[SearchResult]:
+        """Semantic (vector) retrieval scoped to a single paper's chunks.
+
+        Used by the Stage 2 scoring graph to pull the chunks most relevant to a given
+        dimension probe (e.g. compute/pseudocode/dataset) from one paper, instead of a
+        brittle keyword scan.
+        """
+        query_embedding = await self.embeddings_client.embed_query(query)
+        results = await self.search_repo.vector_search(
+            query_embedding=query_embedding,
+            top_k=top_k,
+            min_score=min_score,
+            paper_id=paper_id,
+        )
+        log.debug("within-paper retrieval done", paper_id=paper_id, results=len(results))
+        return results
+
     async def _vector_only_search(
         self, query: str, top_k: int, min_score: float
-    ) -> List[SearchResult]:
+    ) -> list[SearchResult]:
         """Vector similarity search only."""
         query_embedding = await self.embeddings_client.embed_query(query)
         log.debug("query embedded", embedding_dim=len(query_embedding))
@@ -59,7 +78,7 @@ class SearchService:
         log.debug("vector search done", results=len(results))
         return results
 
-    async def _fulltext_only_search(self, query: str, top_k: int) -> List[SearchResult]:
+    async def _fulltext_only_search(self, query: str, top_k: int) -> list[SearchResult]:
         """Full-text search only."""
         results = await self.search_repo.fulltext_search(query=query, top_k=top_k)
         log.debug("fulltext search done", results=len(results))
@@ -67,7 +86,7 @@ class SearchService:
 
     async def _hybrid_search_rrf(
         self, query: str, top_k: int, min_score: float
-    ) -> List[SearchResult]:
+    ) -> list[SearchResult]:
         """
         Hybrid search using Reciprocal Rank Fusion.
 
@@ -102,8 +121,8 @@ class SearchService:
         return fused_results
 
     def _reciprocal_rank_fusion(
-        self, vector_results: List[SearchResult], fulltext_results: List[SearchResult], top_k: int
-    ) -> List[SearchResult]:
+        self, vector_results: list[SearchResult], fulltext_results: list[SearchResult], top_k: int
+    ) -> list[SearchResult]:
         """
         Apply Reciprocal Rank Fusion to combine rankings.
 

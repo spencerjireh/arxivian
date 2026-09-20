@@ -1,17 +1,17 @@
 """Tests for edge routing functions."""
 
-from src.schemas.langgraph_state import (
-    ClassificationResult,
+from src.services.agent_service.edges import (
+    route_after_classify,
+    route_after_eval,
+    route_after_executor,
+)
+from src.services.agent_service.state import (
     BatchEvaluation,
+    ClassificationResult,
     ToolCall,
     ToolExecution,
 )
-from src.services.agent_service.edges import (
-    route_after_classify,
-    route_after_executor,
-    route_after_eval,
-)
-from src.services.agent_service.tools import RETRIEVE_CHUNKS, LIST_PAPERS, ARXIV_SEARCH
+from src.services.agent_service.tools import EXPLORE_CITATIONS, RETRIEVE_CHUNKS, SEMANTIC_SCHOLAR
 
 
 class TestRouteAfterClassify:
@@ -121,10 +121,10 @@ class TestRouteAfterExecutor:
 
     def test_classify_when_retrieve_chunks_not_in_current_batch(self):
         state = {
-            "last_executed_tools": [LIST_PAPERS],
+            "last_executed_tools": [EXPLORE_CITATIONS],
             "tool_history": [
                 ToolExecution(tool_name=RETRIEVE_CHUNKS, tool_args={}, success=True),
-                ToolExecution(tool_name=LIST_PAPERS, tool_args={}, success=True),
+                ToolExecution(tool_name=EXPLORE_CITATIONS, tool_args={}, success=True),
             ],
         }
         assert route_after_executor(state) == "classify"
@@ -153,34 +153,23 @@ class TestRouteAfterExecutor:
 
     def test_evaluate_with_parallel_execution_including_retrieve_chunks(self):
         state = {
-            "last_executed_tools": [RETRIEVE_CHUNKS, LIST_PAPERS],
+            "last_executed_tools": [RETRIEVE_CHUNKS, EXPLORE_CITATIONS],
             "tool_history": [
                 ToolExecution(tool_name=RETRIEVE_CHUNKS, tool_args={}, success=True),
-                ToolExecution(tool_name=LIST_PAPERS, tool_args={}, success=True),
+                ToolExecution(tool_name=EXPLORE_CITATIONS, tool_args={}, success=True),
             ],
         }
         assert route_after_executor(state) == "evaluate"
 
     def test_classify_with_other_tools_only(self):
         state = {
-            "last_executed_tools": [ARXIV_SEARCH, LIST_PAPERS],
+            "last_executed_tools": [SEMANTIC_SCHOLAR, EXPLORE_CITATIONS],
             "tool_history": [
-                ToolExecution(tool_name=ARXIV_SEARCH, tool_args={}, success=True),
-                ToolExecution(tool_name=LIST_PAPERS, tool_args={}, success=True),
+                ToolExecution(tool_name=SEMANTIC_SCHOLAR, tool_args={}, success=True),
+                ToolExecution(tool_name=EXPLORE_CITATIONS, tool_args={}, success=True),
             ],
         }
         assert route_after_executor(state) == "classify"
-
-    def test_confirm_when_pause_reason_set(self):
-        """When pause_reason is set (e.g. by propose_ingest), route to confirm."""
-        state = {
-            "pause_reason": "propose_ingest_confirmation",
-            "last_executed_tools": [ARXIV_SEARCH],
-            "tool_history": [
-                ToolExecution(tool_name=ARXIV_SEARCH, tool_args={}, success=True),
-            ],
-        }
-        assert route_after_executor(state) == "confirm"
 
 
 class TestRouteAfterEval:

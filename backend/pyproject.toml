@@ -3,7 +3,7 @@ name = "arxivian"
 version = "0.1.0"
 description = "Arxivian - agentic RAG system for arXiv papers with LangGraph"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.12"
 dependencies = [
     # Core Framework
     "fastapi>=0.115.0",
@@ -11,13 +11,11 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "pydantic>=2.9.2",
     "pydantic-settings>=2.6.0",
-    
     # Database
     "sqlalchemy>=2.0.35",
     "asyncpg>=0.29.0",
     "alembic>=1.13.3",
     "pgvector>=0.3.4",
-    
     # AI/ML
     "litellm>=1.50.0",
     "openai>=1.54.3",
@@ -25,49 +23,44 @@ dependencies = [
     "langchain-openai>=0.2.5",
     "langchain-core>=0.3.15",
     "langgraph>=0.2.45",
-    "langgraph-checkpoint-redis>=0.3.0",
-    
     # HTTP Client
     "httpx>=0.27.2",
-    
     # PDF Processing
     "docling>=2.7.0",
     "pypdf>=5.0.1",
-    
     # arXiv
     "arxiv>=2.1.3",
-    
+    # TypeSafe Jev (Stage 2 scoring judgments)
+    "typesafe-sdk>=0.7.0",
     # Utilities
     "python-multipart>=0.0.12",
     "tenacity>=9.0.0",
-    
     # Logging
     "structlog>=24.4.0",
-
-    # Observability
-    "langfuse>=2.60.0,<3.0.0",
-
+    # Observability (Logfire over OpenTelemetry; see src/observability.py)
+    "logfire[celery,fastapi,httpx,litellm,sqlalchemy]>=5.1.0",
+    "openinference-instrumentation-langchain>=0.1.76",
     # Authentication
-    "clerk-backend-api>=1.0.0",
     "pyjwt[crypto]>=2.8.0",
     "svix>=1.21.0",
-
     # Task Queue
     "celery[redis]>=5.4.0",
     "celery-redbeat>=2.2.0",
     "redis>=5.0.0",
 ]
 
-[project.optional-dependencies]
+# PEP 735 groups. `dev` is uv's default group (`uv sync` installs it; the production
+# image uses --no-dev); `eval` is opt-in (`uv sync --group eval`).
+[dependency-groups]
 dev = [
-    # Testing
     "pytest>=8.3.3",
     "pytest-asyncio>=0.24.0",
     "pytest-cov>=6.0.0",
-
-    # Development
-    "ruff>=0.7.4",
-    "ty",
+    # Exact pins: CI, the pre-commit hook and `just lint` all run the locked binary, and
+    # ruff/ty change diagnostics between releases. Dependabot bumps these.
+    "ruff==0.14.14",
+    "ty==0.0.82",
+    "vulture>=2.14",
 ]
 eval = [
     "deepeval>=2.0.0",
@@ -84,9 +77,46 @@ packages = ["src"]
 line-length = 100
 target-version = "py311"
 
+[tool.ruff.lint]
+select = [
+    "E", "W", "F",  # pycodestyle + pyflakes
+    "I",            # isort
+    "UP",           # pyupgrade
+    "B",            # bugbear
+    "SIM",          # simplify
+    "RUF",          # ruff-specific
+    "PT",           # pytest style
+    "ARG",          # unused arguments
+    "ERA",          # commented-out code
+    "T20",          # print
+    "PTH",          # pathlib
+    "ASYNC",        # async pitfalls
+    "PERF",         # perf lints
+]
+ignore = [
+    "E501",    # line length is enforced by the formatter
+    "ARG002",  # unused method args are common in tool/node signatures and overrides
+    "B008",    # FastAPI Depends()/Query() in defaults
+    "RUF012",  # mutable class attributes (pydantic / SQLAlchemy declarations)
+    "ASYNC109",  # explicit `timeout` params on client methods are the API, not a smell
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ARG", "PT011", "PT018", "T20", "ERA001", "ASYNC", "SIM117"]
+"alembic/**" = ["I", "ERA001"]
+"src/tasks/**" = ["T20"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src", "tests"]
+
 [tool.ty.environment]
-python-version = "3.13"
+python-version = "3.11"
 python-platform = "all"
+
+[tool.ty.terminal]
+# ty exits 1 on warnings by default; the rules below are deliberately warnings
+# (library-typing false positives), so only errors fail the gate.
+error-on-warning = false
 
 [tool.ty.rules]
 # Tool execute methods intentionally use explicit parameters for better DX
@@ -95,13 +125,19 @@ invalid-method-override = "warn"
 invalid-argument-type = "warn"
 invalid-assignment = "warn"
 no-matching-overload = "warn"
-possibly-missing-attribute = "warn"
 
 [tool.pytest.ini_options]
+addopts = ["-ra", "--strict-markers"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
+# New deprecation warnings fail the run instead of scrolling by. Starlette's status-code
+# rename is upstream noise until FastAPI catches up.
+filterwarnings = [
+    "error",
+    "ignore:.*HTTP_422_UNPROCESSABLE_ENTITY.*:DeprecationWarning",
+]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -109,7 +145,6 @@ markers = [
     "unit: Unit tests with mocked dependencies",
     "api: API router tests with mocked dependencies",
     "integration: Integration tests with real database",
-    "e2e: End-to-end tests",
     "eval: LLM-backed evaluation tests (requires API keys)",
     "inteval: Integration eval tests with real DB + real LLM + real services",
 ]
@@ -120,7 +155,7 @@ omit = [
     # App entrypoint and DI wiring - tested via integration/E2E
     "src/main.py",
     "src/dependencies.py",
-    "src/factories/*",
+    "src/factories.py",
     # HTTP layer - tested via API/integration tests
     "src/routers/*",
     "src/middleware/*",
@@ -131,26 +166,27 @@ omit = [
     "src/clients/*",
     # Pure Pydantic schemas with no logic - just data structures
     "src/schemas/errors.py",
-    "src/schemas/feedback.py",
     "src/schemas/health.py",
     "src/schemas/papers.py",
-    "src/schemas/search.py",
     "src/schemas/ops.py",
     # Utils that wrap external libraries - tested via integration
     "src/utils/pdf_parser.py",
-    "src/utils/chunking_service.py",
+    "src/services/chunking_service.py",
     "src/utils/logger.py",
     # LangGraph orchestration and nodes - tested via integration/E2E
     "src/services/agent_service/service.py",
     "src/services/agent_service/graph_builder.py",
     "src/services/agent_service/context.py",
     "src/services/agent_service/nodes/generation.py",
-    "src/services/agent_service/nodes/grading.py",
     "src/services/agent_service/nodes/out_of_scope.py",
-    "src/services/agent_service/nodes/retrieval.py",
-    "src/services/agent_service/nodes/rewrite.py",
-    "src/services/agent_service/nodes/router.py",
 ]
+
+# `just deadcode` / `uv run vulture`. Advisory only: decorator-registered routes, tasks and
+# ORM columns are false positives, so those packages are excluded.
+[tool.vulture]
+paths = ["src"]
+min_confidence = 60
+exclude = ["src/routers", "src/tasks", "src/models"]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -159,4 +195,4 @@ exclude_lines = [
     "raise NotImplementedError",
     "@abstractmethod",
 ]
-fail_under = 80
+fail_under = 92

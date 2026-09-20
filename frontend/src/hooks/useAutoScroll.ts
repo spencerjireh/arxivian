@@ -1,7 +1,8 @@
+// useAutoScroll: keeps a message list pinned to the bottom while new turns stream in.
 import { useRef, useEffect } from 'react'
 import type { Message } from '../types/api'
 
-export interface AutoScrollOptions {
+interface AutoScrollOptions {
   behavior?: ScrollBehavior
   enabled?: boolean
 }

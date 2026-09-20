@@ -4,8 +4,9 @@ from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.config import get_stream_writer
 
-from src.schemas.langgraph_state import AgentState
+from src.services.agent_service.state import AgentState
 from src.utils.logger import get_logger, truncate
+
 from ..context import AgentContext
 from ..prompts import PromptBuilder
 

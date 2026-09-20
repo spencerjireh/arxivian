@@ -1,3 +1,4 @@
+// Maps backend error codes (exceptions.py) to user-facing title, message and retry policy.
 type ErrorDisplay = 'inline' | 'toast' | 'none'
 
 export interface ErrorTreatment {
@@ -5,7 +6,6 @@ export interface ErrorTreatment {
   body: string | null // null = use backend message
   display: ErrorDisplay
   showRetry: boolean
-  clearsIngest: boolean
 }
 
 function getCountdownToMidnightUTC(): string {
@@ -28,56 +28,36 @@ const treatments: Record<string, (backendMessage: string) => ErrorTreatment> = {
     body: getCountdownToMidnightUTC(),
     display: 'inline',
     showRetry: false,
-    clearsIngest: false,
   }),
   TIMEOUT: () => ({
     title: 'Response timed out',
     body: 'Try a more specific question.',
     display: 'inline',
     showRetry: true,
-    clearsIngest: false,
   }),
   INTERNAL_ERROR: () => ({
     title: 'Something went wrong',
     body: 'An unexpected error occurred. Please try again.',
     display: 'inline',
     showRetry: true,
-    clearsIngest: false,
-  }),
-  CHECKPOINT_EXPIRED: () => ({
-    title: 'Confirmation expired',
-    body: 'The confirmation window timed out. Ask again to re-trigger.',
-    display: 'inline',
-    showRetry: false,
-    clearsIngest: true,
-  }),
-  DOUBLE_CONFIRM: (msg) => ({
-    title: 'Already processed',
-    body: msg,
-    display: 'inline',
-    showRetry: false,
-    clearsIngest: true,
   }),
   FORBIDDEN: (msg) => ({
-    title: 'Pro feature',
+    title: 'Not allowed',
     body: msg,
     display: 'toast',
     showRetry: false,
-    clearsIngest: false,
   }),
   CONNECTION_ERROR: () => ({
     title: 'Connection lost',
     body: 'Check your network and try again.',
     display: 'toast',
     showRetry: false,
-    clearsIngest: false,
   }),
   CANCELLED: () => ({
     title: '',
     body: null,
     display: 'none',
     showRetry: false,
-    clearsIngest: false,
   }),
 }
 
@@ -89,6 +69,5 @@ export function getErrorTreatment(code: string, backendMessage: string): ErrorTr
     body: backendMessage,
     display: 'inline',
     showRetry: true,
-    clearsIngest: false,
   }
 }

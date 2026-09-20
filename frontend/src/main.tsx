@@ -1,3 +1,4 @@
+// Entry point: ClerkProvider, QueryClient, ErrorBoundary and <App/>; VITE_MAINTENANCE_MODE swaps in MaintenanceScreen.
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -8,7 +9,7 @@ import App from './App.tsx'
 import ErrorBoundary from './components/ui/ErrorBoundary.tsx'
 import PageErrorFallback from './components/ui/PageErrorFallback.tsx'
 import Toaster from './components/ui/Toaster.tsx'
-import MaintenanceScreen from './components/MaintenanceScreen.tsx'
+import MaintenanceScreen from './components/layout/MaintenanceScreen'
 import { isAuthError, getUserMessage } from './lib/errors.ts'
 
 const root = createRoot(document.getElementById('root')!)
@@ -19,7 +20,7 @@ if (import.meta.env.VITE_MAINTENANCE_MODE === 'true') {
   root.render(
     <StrictMode>
       <MaintenanceScreen />
-    </StrictMode>,
+    </StrictMode>
   )
 } else {
   const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
@@ -51,14 +52,12 @@ if (import.meta.env.VITE_MAINTENANCE_MODE === 'true') {
     <StrictMode>
       <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
         <QueryClientProvider client={queryClient}>
-          <ErrorBoundary
-            fallback={(props) => <PageErrorFallback {...props} />}
-          >
+          <ErrorBoundary fallback={(props) => <PageErrorFallback {...props} />}>
             <App />
           </ErrorBoundary>
           <Toaster />
         </QueryClientProvider>
       </ClerkProvider>
-    </StrictMode>,
+    </StrictMode>
   )
 }

@@ -1,25 +1,21 @@
 """API routers."""
 
 from src.routers import (
-    health,
-    search,
-    stream,
     conversations,
+    health,
     ops,
     papers,
-    feedback,
+    stream,
     users,
     webhooks,
 )
 
 __all__ = [
-    "health",
-    "search",
-    "stream",
     "conversations",
+    "health",
     "ops",
     "papers",
-    "feedback",
+    "stream",
     "users",
     "webhooks",
 ]

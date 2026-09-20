@@ -4,34 +4,32 @@ This module builds the agent graph following 12-factor agent principles.
 
 Graph flow:
     START -> classify_and_route -> [out_of_scope | executor | evaluate_batch | generate]
-    executor -> [confirm_ingest | evaluate_batch | classify_and_route]
-    confirm_ingest -> classify_and_route
+    executor -> [evaluate_batch | classify_and_route]
     evaluate_batch -> [generate | classify_and_route]
     generate -> END
     out_of_scope -> END
 """
 
-from langgraph.checkpoint.base import BaseCheckpointSaver
-from langgraph.graph import StateGraph, END, START
+from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from src.schemas.langgraph_state import AgentState
-from .nodes import (
-    classify_and_route_node,
-    out_of_scope_node,
-    executor_node,
-    evaluate_batch_node,
-    generate_answer_node,
-    confirm_ingest_node,
-)
+from src.services.agent_service.state import AgentState
+
 from .edges import (
     route_after_classify,
-    route_after_executor,
     route_after_eval,
+    route_after_executor,
+)
+from .nodes import (
+    classify_and_route_node,
+    evaluate_batch_node,
+    executor_node,
+    generate_answer_node,
+    out_of_scope_node,
 )
 
 
-def build_graph(checkpointer: BaseCheckpointSaver | None = None) -> CompiledStateGraph:
+def build_graph() -> CompiledStateGraph:
     """Build and compile the agent workflow graph.
 
     Called once during application lifespan startup. The compiled graph
@@ -50,7 +48,6 @@ def build_graph(checkpointer: BaseCheckpointSaver | None = None) -> CompiledStat
     workflow.add_node("executor", executor_node)
     workflow.add_node("evaluate_batch", evaluate_batch_node)
     workflow.add_node("generate", generate_answer_node)
-    workflow.add_node("confirm_ingest", confirm_ingest_node)
 
     # START -> classify_and_route
     workflow.add_edge(START, "classify_and_route")
@@ -70,19 +67,12 @@ def build_graph(checkpointer: BaseCheckpointSaver | None = None) -> CompiledStat
     # out_of_scope -> END
     workflow.add_edge("out_of_scope", END)
 
-    # executor -> [confirm_ingest | evaluate_batch | classify_and_route]
+    # executor -> [evaluate_batch | classify_and_route]
     workflow.add_conditional_edges(
         "executor",
         route_after_executor,
-        {
-            "confirm": "confirm_ingest",
-            "evaluate": "evaluate_batch",
-            "classify": "classify_and_route",
-        },
+        {"evaluate": "evaluate_batch", "classify": "classify_and_route"},
     )
-
-    # confirm_ingest -> classify_and_route
-    workflow.add_edge("confirm_ingest", "classify_and_route")
 
     # evaluate_batch -> [generate | classify_and_route]
     workflow.add_conditional_edges(
@@ -94,4 +84,4 @@ def build_graph(checkpointer: BaseCheckpointSaver | None = None) -> CompiledStat
     # generate -> END
     workflow.add_edge("generate", END)
 
-    return workflow.compile(checkpointer=checkpointer)
+    return workflow.compile()

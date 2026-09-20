@@ -1,12 +1,12 @@
 """Integration tests for ConversationRepository."""
 
-import pytest
 import uuid
 
-from src.models.user import User
-from src.repositories.conversation_repository import ConversationRepository
-from src.schemas.conversation import TurnData
+import pytest
 
+from src.exceptions import ForbiddenError
+from src.models.user import User
+from src.repositories.conversation_repository import ConversationRepository, TurnData
 
 # =============================================================================
 # User Fixtures for Ownership Tests
@@ -225,67 +225,6 @@ class TestConversationRepositoryTurns:
         assert count == 0
 
 
-class TestConversationRepositoryThinkingSteps:
-    """Test thinking_steps persistence."""
-
-    @pytest.mark.asyncio
-    async def test_save_turn_with_thinking_steps(self, db_session):
-        """Verify thinking_steps roundtrip through save and retrieval."""
-        repo = ConversationRepository(session=db_session)
-
-        session_id = f"session-{uuid.uuid4().hex[:8]}"
-        steps = [
-            {
-                "step": "guardrail",
-                "message": "Query is in scope",
-                "details": {"score": 85, "threshold": 50},
-                "tool_name": None,
-                "started_at": "2026-02-15T10:00:00+00:00",
-                "completed_at": "2026-02-15T10:00:01+00:00",
-            },
-            {
-                "step": "executing",
-                "message": "retrieve completed",
-                "details": {"tool_name": "retrieve", "success": True},
-                "tool_name": "retrieve",
-                "started_at": "2026-02-15T10:00:02+00:00",
-                "completed_at": "2026-02-15T10:00:03+00:00",
-            },
-        ]
-        turn = TurnData(
-            user_query="What is ML?",
-            agent_response="Machine learning is...",
-            provider="openai",
-            model="gpt-4o-mini",
-            thinking_steps=steps,
-        )
-
-        saved = await repo.save_turn(session_id, turn)
-
-        assert saved.thinking_steps is not None
-        assert len(saved.thinking_steps) == 2
-        assert saved.thinking_steps[0]["step"] == "guardrail"
-        assert saved.thinking_steps[0]["details"]["score"] == 85
-        assert saved.thinking_steps[1]["tool_name"] == "retrieve"
-
-    @pytest.mark.asyncio
-    async def test_save_turn_without_thinking_steps(self, db_session):
-        """Verify None default for backward compat."""
-        repo = ConversationRepository(session=db_session)
-
-        session_id = f"session-{uuid.uuid4().hex[:8]}"
-        turn = TurnData(
-            user_query="What is ML?",
-            agent_response="Machine learning is...",
-            provider="openai",
-            model="gpt-4o-mini",
-        )
-
-        saved = await repo.save_turn(session_id, turn)
-
-        assert saved.thinking_steps is None
-
-
 class TestConversationRepositoryPagination:
     """Test conversation list pagination."""
 
@@ -475,86 +414,37 @@ class TestConversationRepositoryUserFiltering:
     async def test_get_or_create_does_not_return_other_users_conversation(
         self, db_session, test_user_1, test_user_2
     ):
-        """Verify get_or_create creates a new conversation when session belongs to another user."""
+        """Session ids are unique: another user reusing one is refused, not re-created."""
         repo = ConversationRepository(session=db_session)
 
         session_id = f"session-{uuid.uuid4().hex[:8]}"
 
-        # User 1 creates a conversation
         conv1 = await repo.get_or_create(session_id, user_id=test_user_1.id)
         assert conv1.user_id == test_user_1.id
 
-        # User 2 calls get_or_create with the same session_id -- should get a NEW conversation
-        conv2 = await repo.get_or_create(session_id, user_id=test_user_2.id)
-        assert conv2.id != conv1.id
-        assert conv2.user_id == test_user_2.id
+        with pytest.raises(ForbiddenError):
+            await repo.get_or_create(session_id, user_id=test_user_2.id)
 
     @pytest.mark.asyncio
     async def test_save_turn_does_not_write_to_other_users_conversation(
         self, db_session, test_user_1, test_user_2
     ):
-        """Verify save_turn creates a new conversation when session belongs to another user."""
+        """save_turn refuses another user's session id instead of writing into it."""
         repo = ConversationRepository(session=db_session)
 
         session_id = f"session-{uuid.uuid4().hex[:8]}"
-
         turn_data = TurnData(
-            user_query="Question",
-            agent_response="Answer",
-            provider="openai",
-            model="gpt-4o-mini",
+            user_query="Question", agent_response="Answer", provider="openai", model="m"
         )
 
-        # User 1 saves a turn (creates conversation)
         t1 = await repo.save_turn(session_id, turn_data, user_id=test_user_1.id)
-
-        # User 2 saves a turn with the same session_id -- should create a NEW conversation
-        t2 = await repo.save_turn(session_id, turn_data, user_id=test_user_2.id)
-
-        assert t1.conversation_id != t2.conversation_id
-
-    @pytest.mark.asyncio
-    async def test_clear_pending_confirmation_filters_by_user_id(
-        self, db_session, test_user_1, test_user_2
-    ):
-        """Verify clear_pending_confirmation no-ops when user_id does not match."""
-        repo = ConversationRepository(session=db_session)
-
-        session_id = f"session-{uuid.uuid4().hex[:8]}"
-
-        turn_data = TurnData(
-            user_query="Question",
-            agent_response="",
-            provider="openai",
-            model="gpt-4o-mini",
-            pending_confirmation={"papers": [], "proposed_ids": []},
-        )
-        saved = await repo.save_turn(session_id, turn_data, user_id=test_user_1.id)
-
-        # User 2 attempts to clear -- should no-op
-        await repo.clear_pending_confirmation(
-            session_id, saved.turn_number, user_id=test_user_2.id
-        )
-        await db_session.flush()
-
-        # Pending confirmation should still be set
-        pending = await repo.get_pending_turn(session_id, user_id=test_user_1.id)
-        assert pending is not None
-        assert pending.pending_confirmation is not None
-
-        # Owner clears successfully
-        await repo.clear_pending_confirmation(
-            session_id, saved.turn_number, user_id=test_user_1.id
-        )
-        await db_session.flush()
-
-        pending = await repo.get_pending_turn(session_id, user_id=test_user_1.id)
-        assert pending is None
+        with pytest.raises(ForbiddenError):
+            await repo.save_turn(session_id, turn_data, user_id=test_user_2.id)
+        assert (await repo.get_turn_count(session_id, user_id=test_user_1.id)) == 1
+        assert t1.turn_number == 0
 
     @pytest.mark.asyncio
-    async def test_update_title_filters_by_user_id(
-        self, db_session, test_user_1, test_user_2
-    ):
+    async def test_update_title_filters_by_user_id(self, db_session, test_user_1, test_user_2):
         """Verify update_title no-ops when user_id does not match."""
         repo = ConversationRepository(session=db_session)
 
@@ -579,9 +469,7 @@ class TestConversationRepositoryUserFiltering:
         assert conv.title == "My Title"
 
     @pytest.mark.asyncio
-    async def test_get_turn_count_filters_by_user_id(
-        self, db_session, test_user_1, test_user_2
-    ):
+    async def test_get_turn_count_filters_by_user_id(self, db_session, test_user_1, test_user_2):
         """Verify get_turn_count returns 0 when user_id does not match."""
         repo = ConversationRepository(session=db_session)
 
@@ -627,3 +515,57 @@ class TestConversationRepositoryUserFiltering:
         # Conversation is gone
         conv = await repo.get_by_session_id(session_id)
         assert conv is None
+
+
+class TestConversationPaperScope:
+    """SPE-277: the paper scope is set on creation only and filters listing."""
+
+    @pytest.mark.asyncio
+    async def test_save_turn_sets_scope_on_create_only(
+        self, db_session, created_user, sample_paper_data
+    ):
+        from src.repositories.conversation_repository import TurnData
+        from src.repositories.paper_repository import PaperRepository
+
+        paper = await PaperRepository(db_session).create(
+            {**sample_paper_data, "arxiv_id": "scope-1"}
+        )
+        other = await PaperRepository(db_session).create(
+            {**sample_paper_data, "arxiv_id": "scope-2"}
+        )
+        repo = ConversationRepository(db_session)
+        turn = TurnData(user_query="q", agent_response="a", provider="openai", model="m")
+
+        await repo.save_turn("scoped-session", turn, user_id=created_user.id, paper_id=paper.id)
+        await repo.save_turn("scoped-session", turn, user_id=created_user.id, paper_id=other.id)
+
+        conv = await repo.get_by_session_id("scoped-session", user_id=created_user.id)
+        assert conv is not None and conv.paper_id == paper.id
+
+        await repo.save_turn("plain-session", turn, user_id=created_user.id)
+        scoped, total = await repo.get_all(user_id=created_user.id, paper_id=paper.id)
+        assert total == 1 and scoped[0].session_id == "scoped-session"
+        _everything, total_all = await repo.get_all(user_id=created_user.id)
+        assert total_all == 2
+
+    @pytest.mark.asyncio
+    async def test_deleting_the_paper_unscopes_the_thread(
+        self, db_session, created_user, sample_paper_data
+    ):
+        from sqlalchemy import delete
+
+        from src.models.paper import Paper
+        from src.repositories.paper_repository import PaperRepository
+
+        paper = await PaperRepository(db_session).create(
+            {**sample_paper_data, "arxiv_id": "scope-3"}
+        )
+        repo = ConversationRepository(db_session)
+        conv = await repo.get_or_create("s3", user_id=created_user.id, paper_id=paper.id)
+        assert conv.paper_id == paper.id
+
+        await db_session.execute(delete(Paper).where(Paper.id == paper.id))
+        await db_session.flush()
+        await db_session.refresh(conv)
+
+        assert conv.paper_id is None

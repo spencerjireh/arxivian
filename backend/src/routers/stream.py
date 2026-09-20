@@ -3,27 +3,28 @@
 import asyncio
 import json
 import uuid
+from uuid import UUID
 
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from src.config import get_settings
-from src.schemas.stream import StreamRequest, ErrorEventData
 from src.dependencies import (
-    DbSession,
-    CurrentUserRequired,
-    TierPolicyDep,
-    ChatGuard,
-    SettingsGuard,
-    UsageCounterRepoDep,
     AgentGraphDep,
-    RedisDep,
+    ChatGuard,
     ConversationRepoDep,
+    CurrentUserRequired,
+    DbSession,
+    PaperRepoDep,
+    SettingsDep,
+    UsageCounterRepoDep,
 )
-from src.exceptions import BaseAPIException, ConflictError
-from src.factories.service_factories import get_agent_service
-from src.services.task_registry import task_registry
+from src.exceptions import BaseAPIException, PaperNotIngestedError, ScopeMismatchError
+from src.factories import get_agent_service
+from src.repositories.conversation_repository import ConversationRepository
+from src.repositories.paper_repository import PaperRepository
+from src.schemas.stream import ErrorEventData, StreamRequest
+from src.services.agent_service.context import ScopedPaper
 from src.utils.logger import get_logger
 
 router = APIRouter()
@@ -36,12 +37,33 @@ def _format_sse_error(error: str, code: str) -> str:
     return f"event: error\ndata: {json.dumps(error_data.model_dump())}\n\n"
 
 
-_USER_SAFE_ERROR_CODES: frozenset[str] = frozenset({
-    "USAGE_LIMIT_EXCEEDED",
-    "CHECKPOINT_EXPIRED",
-    "FORBIDDEN",
-    "CONFLICT",
-})
+_USER_SAFE_ERROR_CODES: frozenset[str] = frozenset(
+    {"USAGE_LIMIT_EXCEEDED", "FORBIDDEN", "CONFLICT", "PAPER_NOT_INGESTED", "SCOPE_MISMATCH"}
+)
+
+
+async def resolve_scoped_paper(
+    request: StreamRequest,
+    user_id: UUID,
+    conversation_repo: ConversationRepository,
+    paper_repo: PaperRepository,
+) -> ScopedPaper:
+    """Work out the paper scope for this stream (SPE-277).
+
+    A persisted scope (the conversation's `paper_id`) wins, so follow-ups stay narrowed to
+    the paper the thread started on. A request that names a different paper than the
+    conversation is scoped to is a 409 rather than a silent re-scope.
+    """
+    paper = await paper_repo.get_by_arxiv_id(request.arxiv_id)
+    if paper is None or not paper.pdf_processed:
+        raise PaperNotIngestedError(request.arxiv_id)
+
+    if request.session_id:
+        conv = await conversation_repo.get_by_session_id(request.session_id, user_id=user_id)
+        if conv is not None and isinstance(conv.paper_id, UUID) and conv.paper_id != paper.id:
+            raise ScopeMismatchError(request.session_id, request.arxiv_id)
+
+    return ScopedPaper(paper_id=str(paper.id), arxiv_id=paper.arxiv_id, title=paper.title)
 
 
 @router.post("/stream")
@@ -50,120 +72,50 @@ async def stream(
     db: DbSession,
     http_request: Request,
     current_user: CurrentUserRequired,
-    policy: TierPolicyDep,
     usage_repo: UsageCounterRepoDep,
     conversation_repo: ConversationRepoDep,
+    paper_repo: PaperRepoDep,
     graph: AgentGraphDep,
-    redis: RedisDep,
+    settings: SettingsDep,
     _limit: ChatGuard,
-    _settings: SettingsGuard,
 ) -> StreamingResponse:
-    """
-    Stream agent response via Server-Sent Events (SSE).
-
-    Supports two modes:
-    - query: start a new agent interaction
-    - resume: continue a paused HITL confirmation flow
-
-    Requires authentication.
-    """
-    settings = get_settings()
-    is_resume = request.resume is not None
-
-    # For resume requests, read stored model/temperature from the pending turn
-    if is_resume:
-        pending_turn = await conversation_repo.get_pending_turn(
-            request.resume.session_id, current_user.id
-        )
-        if not pending_turn or not pending_turn.pending_confirmation:
-            raise ConflictError("No pending confirmation for this session")
-        pending = pending_turn.pending_confirmation
-        model = policy.resolve_model(pending.get("model"), settings)
-        temperature = pending.get("temperature", 0.3)
-    else:
-        model = policy.resolve_model(request.model, settings)
-        temperature = request.temperature
-
-    # Determine timeout: request override > server default
-    timeout_seconds = (
-        request.timeout_seconds
-        if request.timeout_seconds is not None
-        else settings.agent_timeout_seconds
-    )
-
-    # Use session_id if provided, otherwise generate a temporary task ID
-    task_id = (
-        request.resume.session_id if is_resume else request.session_id
-    ) or str(uuid.uuid4())
-
+    """Stream one turn of a paper-scoped conversation via Server-Sent Events."""
+    timeout_seconds = settings.agent_timeout_seconds
+    task_id = request.session_id or str(uuid.uuid4())
     user_id = current_user.id
+
+    scoped_paper = await resolve_scoped_paper(request, user_id, conversation_repo, paper_repo)
 
     log.info(
         "stream request",
-        query=request.query[:100] if request.query else "[resume]",
-        model=model,
-        session_id=request.session_id if not is_resume else request.resume.session_id,
+        query=request.query[:100],
+        session_id=request.session_id,
         task_id=task_id,
-        timeout_seconds=timeout_seconds,
-        max_iterations=request.max_iterations,
         user_id=str(user_id),
         tier=current_user.tier,
-        is_resume=is_resume,
+        scoped_arxiv_id=scoped_paper.arxiv_id,
     )
 
     async def event_generator():
-        # Only increment usage counter for new queries (not resumes)
-        if not is_resume:
-            await usage_repo.increment_query_count(current_user.id)
-            await db.flush()
-
-        # Register the current task for cancellation support
-        current_task = asyncio.current_task()
-        if current_task is not None:
-            task_registry.register(task_id, current_task, user_id=str(user_id))
+        await usage_repo.increment_query_count(current_user.id)
+        await db.flush()
 
         try:
             async with asyncio.timeout(timeout_seconds):
-                # Create service with request parameters and tier-based tool gating
                 agent_service = get_agent_service(
                     db_session=db,
-                    model=model,
-                    guardrail_threshold=request.guardrail_threshold,
-                    top_k=request.top_k,
-                    max_retrieval_attempts=request.max_retrieval_attempts,
-                    temperature=temperature,
-                    session_id=request.session_id if not is_resume else request.resume.session_id,
-                    conversation_window=request.conversation_window,
-                    max_iterations=request.max_iterations,
                     user_id=user_id,
-                    can_ingest=policy.can_ingest,
-                    can_search_arxiv=policy.can_search_arxiv,
                     graph=graph,
-                    redis=redis,
-                    daily_ingests=policy.daily_ingests,
-                    usage_counter_repo=usage_repo,
+                    scoped_paper=scoped_paper,
                 )
 
-                # Route to ask_stream or resume_stream
-                if is_resume:
-                    event_stream = agent_service.resume_stream(
-                        session_id=request.resume.session_id,
-                        thread_id=request.resume.thread_id,
-                        approved=request.resume.approved,
-                        selected_ids=request.resume.selected_ids,
-                    )
-                else:
-                    event_stream = agent_service.ask_stream(
-                        request.query, session_id=request.session_id
-                    )
-
-                async for event in event_stream:
-                    # Check if client disconnected
+                async for event in agent_service.ask_stream(
+                    request.query, session_id=request.session_id
+                ):
                     if await http_request.is_disconnected():
                         log.info("client disconnected", task_id=task_id)
                         break
 
-                    # Format as SSE
                     event_type = event.event.value
                     if isinstance(event.data, BaseModel):
                         data_json = json.dumps(event.data.model_dump())
@@ -172,7 +124,7 @@ async def stream(
 
                     yield f"event: {event_type}\ndata: {data_json}\n\n"
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             log.warning("stream timeout", task_id=task_id, timeout_seconds=timeout_seconds)
             yield _format_sse_error(f"Request timed out after {timeout_seconds} seconds", "TIMEOUT")
             yield "event: done\ndata: {}\n\n"
@@ -189,10 +141,6 @@ async def stream(
             else:
                 yield _format_sse_error("An unexpected error occurred", "INTERNAL_ERROR")
             yield "event: done\ndata: {}\n\n"
-
-        finally:
-            # Always unregister the task when done
-            task_registry.unregister(task_id)
 
     return StreamingResponse(
         event_generator(),

@@ -6,10 +6,11 @@ import re
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 
-from src.schemas.langgraph_state import AgentState, ClassificationResult, ToolCall
+from src.services.agent_service.state import AgentState, ClassificationResult, ToolCall
 from src.utils.logger import get_logger
+
 from ..context import AgentContext
-from ..prompts import get_classify_and_route_prompt
+from ..prompts import get_classify_and_route_prompt, scoped_paper_note
 from ..security import scan_for_injection
 
 log = get_logger(__name__)
@@ -56,7 +57,7 @@ async def classify_and_route_node(state: AgentState, config: RunnableConfig) -> 
         )
 
     # ── Layer 2: Fast-path for short follow-ups ─────────────────────
-    last_score = metadata.get("last_guardrail_score")
+    last_score: int | None = metadata.get("last_guardrail_score")
     prior_in_scope = last_score is None or last_score >= context.guardrail_threshold
     if (
         history
@@ -134,6 +135,11 @@ async def classify_and_route_node(state: AgentState, config: RunnableConfig) -> 
         conversation_context=conversation_context,
         is_rewrite=is_rewrite,
         prior_scope_score=prior_scope_score,
+        scope_note=(
+            scoped_paper_note(context.scoped_paper.arxiv_id, context.scoped_paper.title)
+            if context.scoped_paper
+            else None
+        ),
     )
 
     log.debug(
@@ -177,19 +183,17 @@ async def classify_and_route_node(state: AgentState, config: RunnableConfig) -> 
                 succeeded_with_args.add((t.tool_name, norm))
 
         blocked = {
-            name for name in succeeded
+            name
+            for name in succeeded
             if not getattr(context.tool_registry.get(name), "extends_chunks", False)
         }
 
         def _is_same_args(tc: ToolCall) -> bool:
-            norm = json.dumps(
-                json.loads(tc.tool_args_json or "{}"), sort_keys=True
-            )
+            norm = json.dumps(json.loads(tc.tool_args_json or "{}"), sort_keys=True)
             return (tc.tool_name, norm) in succeeded_with_args
 
         novel = [
-            tc for tc in result.tool_calls
-            if tc.tool_name not in blocked and not _is_same_args(tc)
+            tc for tc in result.tool_calls if tc.tool_name not in blocked and not _is_same_args(tc)
         ]
         if not novel:
             log.info(
@@ -206,9 +210,7 @@ async def classify_and_route_node(state: AgentState, config: RunnableConfig) -> 
             log.info(
                 "classify_and_route: stripped duplicate tool calls",
                 kept=[tc.tool_name for tc in novel],
-                stripped=[
-                    tc.tool_name for tc in result.tool_calls if tc.tool_name in blocked
-                ],
+                stripped=[tc.tool_name for tc in result.tool_calls if tc.tool_name in blocked],
             )
             result = ClassificationResult(
                 intent=result.intent,

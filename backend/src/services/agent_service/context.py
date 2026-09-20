@@ -2,27 +2,24 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 from src.clients.base_llm_client import BaseLLMClient
-from src.clients.arxiv_client import ArxivClient
-from src.services.search_service import SearchService
-from src.services.ingest_service import IngestService
+from src.clients.semantic_scholar_client import SemanticScholarClient
 from src.repositories.paper_repository import PaperRepository
-from src.schemas.conversation import ConversationMessage
+from src.services.agent_service.state import ConversationMessage
+from src.services.search_service import SearchService
+
 from .tools import (
-    ToolRegistry,
-    RetrieveChunksTool,
-    ProposeIngestTool,
-    ListPapersTool,
-    ArxivSearchTool,
     ExploreCitationsTool,
+    RetrieveChunksTool,
+    SemanticScholarTool,
+    ToolRegistry,
 )
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
-    from src.repositories.usage_counter_repository import UsageCounterRepository
 
 
 class ConversationFormatter:
@@ -79,66 +76,62 @@ class ConversationFormatter:
         return "\n".join(parts)
 
 
+@dataclass(frozen=True)
+class ScopedPaper:
+    """The one paper a conversation is narrowed to (paper-scoped chat, SPE-277)."""
+
+    paper_id: str
+    arxiv_id: str
+    title: str
+
+
 class AgentContext:
-    """Context object passed to all LangGraph nodes."""
+    """Context object passed to all LangGraph nodes.
+
+    Every conversation is scoped to one paper (Phase 3): retrieval stays inside that
+    paper and the only other tools are the read-only citation lookups.
+    """
 
     def __init__(
         self,
         llm_client: BaseLLMClient,
         search_service: SearchService,
+        scoped_paper: ScopedPaper,
         db_session: AsyncSession | None = None,
-        ingest_service: IngestService | None = None,
-        arxiv_client: ArxivClient | None = None,
+        semantic_scholar_client: SemanticScholarClient | None = None,
         paper_repository: PaperRepository | None = None,
         tool_registry: ToolRegistry | None = None,
         conversation_formatter: ConversationFormatter | None = None,
         guardrail_threshold: int = 75,
         top_k: int = 3,
-        min_score: float = 0.5,
-        max_retrieval_attempts: int = 3,
         max_iterations: int = 5,
         temperature: float = 0.3,
         max_generation_tokens: int = 4000,
-        user_id: UUID | None = None,
-        daily_ingests: int | None = None,
-        usage_counter_repo: UsageCounterRepository | None = None,
     ):
         self.llm_client = llm_client
         self.search_service = search_service
-        self.ingest_service = ingest_service
+        self.scoped_paper = scoped_paper
         self.conversation_formatter = conversation_formatter or ConversationFormatter()
         self.guardrail_threshold = guardrail_threshold
         self.top_k = top_k
-        self.min_score = min_score
-        self.max_retrieval_attempts = max_retrieval_attempts
         self.max_iterations = max_iterations
         self.temperature = temperature
         self.max_generation_tokens = max_generation_tokens
 
-        # Initialize tool registry with default tools if not provided
         if tool_registry:
             self.tool_registry = tool_registry
         else:
             self.tool_registry = ToolRegistry(session=db_session)
-            # Register default tools
             self.tool_registry.register(
                 RetrieveChunksTool(
                     search_service=search_service,
+                    paper_id=scoped_paper.paper_id,
                     default_top_k=top_k * 2,
-                    min_score=min_score,
                 )
             )
-            if ingest_service:
-                self.tool_registry.register(ListPapersTool(ingest_service=ingest_service))
             if paper_repository:
-                self.tool_registry.register(
-                    ProposeIngestTool(
-                        paper_repository=paper_repository,
-                        daily_ingests=daily_ingests,
-                        usage_counter_repo=usage_counter_repo,
-                        user_id=user_id,
-                    )
-                )
                 self.tool_registry.register(ExploreCitationsTool(paper_repository=paper_repository))
-            if arxiv_client:
-                self.tool_registry.register(ArxivSearchTool(arxiv_client=arxiv_client))
+            if semantic_scholar_client:
+                self.tool_registry.register(
+                    SemanticScholarTool(semantic_scholar_client=semantic_scholar_client)
+                )

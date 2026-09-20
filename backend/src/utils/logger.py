@@ -3,6 +3,8 @@
 import logging
 import sys
 from contextvars import ContextVar
+
+import logfire
 import structlog
 from structlog.types import EventDict, Processor, WrappedLogger
 
@@ -12,7 +14,7 @@ request_id_ctx: ContextVar[str | None] = ContextVar("request_id", default=None)
 _configured = False
 
 
-def add_request_id(logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
+def add_request_id(_logger: WrappedLogger, _method_name: str, event_dict: EventDict) -> EventDict:
     """Inject request_id from context into log event."""
     if req_id := request_id_ctx.get():
         event_dict["request_id"] = req_id
@@ -37,6 +39,8 @@ def configure_logging(log_level: str = "INFO", debug: bool = False) -> None:
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
         add_request_id,
+        # Ships each line to Logfire attached to the active span (no-op without a token).
+        logfire.StructlogProcessor(),
     ]
 
     # Dev: colored key-value output

@@ -1,6 +1,6 @@
 """Error response schemas for consistent API error handling."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -20,7 +20,7 @@ class ErrorResponse(BaseModel):
     error: ErrorDetail = Field(..., description="Error details")
     request_id: str | None = Field(None, description="Request ID for tracing")
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc), description="Error timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Error timestamp"
     )
 
     model_config = {

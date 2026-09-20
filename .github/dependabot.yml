@@ -1,0 +1,40 @@
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+    # PR title = squash subject; the pr-title check requires build(deps): / build(deps-dev):
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      backend-minor-patch:
+        update-types: [minor, patch]
+    open-pull-requests-limit: 5
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+    # PR title = squash subject; the pr-title check requires build(deps): / build(deps-dev):
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      frontend-minor-patch:
+        update-types: [minor, patch]
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    # PR title = squash subject; the pr-title check requires build(deps): / build(deps-dev):
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      actions:
+        update-types: [minor, patch, major]

@@ -2,6 +2,7 @@
 
 from celery import Celery
 from celery.schedules import crontab
+
 from src.config import get_settings
 
 settings = get_settings()
@@ -63,5 +64,17 @@ celery_app.conf.beat_schedule = {
     "daily-cleanup": {
         "task": "src.tasks.cleanup_tasks.cleanup_task",
         "schedule": crontab(**parse_cron(settings.cleanup_schedule_cron)),
+    },
+    "weekly-triage": {
+        "task": "src.tasks.triage_tasks.triage_new_papers_task",
+        "schedule": crontab(**parse_cron(settings.triage_schedule_cron)),
+    },
+    "weekly-digest": {
+        "task": "src.tasks.digest_tasks.build_digest_task",
+        "schedule": crontab(**parse_cron(settings.digest_schedule_cron)),
+    },
+    "daily-demand-backfill": {
+        "task": "src.tasks.demand_tasks.backfill_demand_task",
+        "schedule": crontab(**parse_cron(settings.demand_backfill_schedule_cron)),
     },
 }

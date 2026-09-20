@@ -1,9 +1,12 @@
 """Repository for Paper model operations."""
 
-from typing import Optional, List, Literal
-from datetime import datetime, timezone
-from sqlalchemy import select, update, delete, func, desc, asc, or_, text
+import uuid
+from datetime import UTC, datetime
+
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.models.chunk import Chunk
 from src.models.paper import Paper
 from src.utils.logger import get_logger
 
@@ -16,7 +19,7 @@ class PaperRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_by_id(self, paper_id: str) -> Optional[Paper]:
+    async def get_by_id(self, paper_id: str) -> Paper | None:
         """Get paper by UUID."""
         log.debug("query paper by id", paper_id=paper_id)
         result = await self.session.execute(select(Paper).where(Paper.id == paper_id))
@@ -24,7 +27,14 @@ class PaperRepository:
         log.debug("query result", found=paper is not None)
         return paper
 
-    async def get_by_arxiv_id(self, arxiv_id: str) -> Optional[Paper]:
+    async def get_by_ids(self, paper_ids: list[uuid.UUID]) -> list[Paper]:
+        """Batch fetch by UUID (feed enrichment). Empty input -> empty list, no query."""
+        if not paper_ids:
+            return []
+        result = await self.session.execute(select(Paper).where(Paper.id.in_(paper_ids)))
+        return list(result.scalars().all())
+
+    async def get_by_arxiv_id(self, arxiv_id: str) -> Paper | None:
         """Get paper by arXiv ID."""
         log.debug("query paper by arxiv_id", arxiv_id=arxiv_id)
         stmt = select(Paper).where(Paper.arxiv_id == arxiv_id)
@@ -33,7 +43,7 @@ class PaperRepository:
         log.debug("query result", found=paper is not None)
         return paper
 
-    async def get_by_arxiv_id_for_update(self, arxiv_id: str) -> Optional[Paper]:
+    async def get_by_arxiv_id_for_update(self, arxiv_id: str) -> Paper | None:
         """
         Get paper by arXiv ID with row-level lock.
 
@@ -65,39 +75,15 @@ class PaperRepository:
         log.debug("paper created", arxiv_id=paper.arxiv_id)
         return paper
 
-    async def update(self, paper_id: str, update_data: dict) -> Optional[Paper]:
+    async def update(self, paper_id: str, update_data: dict) -> Paper | None:
         """Update paper. Caller is responsible for committing the transaction."""
-        update_data["updated_at"] = datetime.now(timezone.utc)
+        update_data["updated_at"] = datetime.now(UTC)
         await self.session.execute(update(Paper).where(Paper.id == paper_id).values(**update_data))
         await self.session.flush()
         log.debug("paper updated", paper_id=paper_id)
         # Expire cached object so get_by_id returns fresh data from DB
         self.session.expire_all()
         return await self.get_by_id(paper_id)
-
-    async def mark_as_processed(
-        self, paper_id: str, raw_text: str, sections: List[dict], parser_used: str
-    ) -> Optional[Paper]:
-        """Mark paper as processed with content."""
-        return await self.update(
-            paper_id,
-            {
-                "raw_text": raw_text,
-                "sections": sections,
-                "pdf_processed": True,
-                "pdf_processing_date": datetime.now(timezone.utc),
-                "parser_used": parser_used,
-            },
-        )
-
-    async def get_unprocessed_papers(self, limit: int = 100) -> List[Paper]:
-        """Get papers that haven't been processed yet."""
-        result = await self.session.execute(
-            select(Paper).where(Paper.pdf_processed.is_(False)).limit(limit)
-        )
-        papers = list(result.scalars().all())
-        log.debug("unprocessed papers query", count=len(papers))
-        return papers
 
     async def exists(self, arxiv_id: str) -> bool:
         """Check if paper exists by arXiv ID."""
@@ -118,93 +104,6 @@ class PaperRepository:
         result = await self.session.execute(select(func.count()).select_from(Paper))
         return result.scalar_one()
 
-    async def get_all(
-        self,
-        offset: int = 0,
-        limit: int = 20,
-        processed_only: Optional[bool] = None,
-        category_filter: Optional[str] = None,
-        author_filter: Optional[str] = None,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-        query: Optional[str] = None,
-        sort_by: Literal["created_at", "published_date", "updated_at"] = "created_at",
-        sort_order: Literal["asc", "desc"] = "desc",
-    ) -> tuple[List[Paper], int]:
-        """
-        Get paginated list of papers with optional filters.
-
-        Args:
-            offset: Number of papers to skip
-            limit: Maximum number of papers to return
-            processed_only: Filter by pdf_processed status
-            category_filter: Filter by category (case-insensitive substring match)
-            author_filter: Filter by author (case-insensitive substring match)
-            start_date: Filter papers published on or after this date
-            end_date: Filter papers published on or before this date
-            query: Search term for title/abstract (case-insensitive)
-            sort_by: Field to sort by
-            sort_order: Sort order (asc or desc)
-
-        Returns:
-            Tuple of (list of papers, total count matching filters)
-        """
-        log.debug(
-            "papers query",
-            offset=offset,
-            limit=limit,
-            processed_only=processed_only,
-            category_filter=category_filter,
-            sort_by=sort_by,
-        )
-
-        stmt = select(Paper)
-        count_stmt = select(func.count()).select_from(Paper)
-
-        def apply_filter(condition):
-            nonlocal stmt, count_stmt
-            stmt = stmt.where(condition)
-            count_stmt = count_stmt.where(condition)
-
-        if processed_only is not None:
-            apply_filter(Paper.pdf_processed == processed_only)
-
-        if category_filter:
-            condition = text(
-                "EXISTS (SELECT 1 FROM jsonb_array_elements_text(papers.categories) AS elem "
-                "WHERE lower(elem) LIKE '%' || lower(:cat_filter) || '%')"
-            ).bindparams(cat_filter=category_filter)
-            apply_filter(condition)
-
-        if author_filter:
-            condition = text(
-                "EXISTS (SELECT 1 FROM jsonb_array_elements_text(papers.authors) AS elem "
-                "WHERE lower(elem) LIKE '%' || lower(:auth_filter) || '%')"
-            ).bindparams(auth_filter=author_filter)
-            apply_filter(condition)
-
-        if start_date:
-            apply_filter(Paper.published_date >= start_date)
-
-        if end_date:
-            apply_filter(Paper.published_date <= end_date)
-
-        if query:
-            pattern = f"%{query}%"
-            apply_filter(or_(Paper.title.ilike(pattern), Paper.abstract.ilike(pattern)))
-
-        total = await self.session.scalar(count_stmt) or 0
-
-        sort_column = getattr(Paper, sort_by)
-        order_func = desc if sort_order == "desc" else asc
-        stmt = stmt.order_by(order_func(sort_column)).offset(offset).limit(limit)
-
-        result = await self.session.execute(stmt)
-        papers = list(result.scalars().all())
-
-        log.debug("papers query result", count=len(papers), total=total)
-        return papers, total
-
     async def delete(self, paper_id: str) -> bool:
         """
         Delete a paper by ID. Caller is responsible for committing the transaction.
@@ -219,7 +118,7 @@ class PaperRepository:
         """
         result = await self.session.execute(delete(Paper).where(Paper.id == paper_id))
         await self.session.flush()
-        deleted = (result.rowcount or 0) > 0  # type: ignore[possibly-missing-attribute]
+        deleted = (result.rowcount or 0) > 0  # ty: ignore[unresolved-attribute]
         if deleted:
             log.info("paper deleted", paper_id=paper_id)
         return deleted
@@ -239,12 +138,12 @@ class PaperRepository:
         stmt = delete(Paper).where(Paper.arxiv_id == arxiv_id)
         result = await self.session.execute(stmt)
         await self.session.flush()
-        deleted = (result.rowcount or 0) > 0  # type: ignore[possibly-missing-attribute]
+        deleted = (result.rowcount or 0) > 0  # ty: ignore[unresolved-attribute]
         if deleted:
             log.info("paper deleted", arxiv_id=arxiv_id)
         return deleted
 
-    async def get_orphaned_papers(self) -> List[Paper]:
+    async def get_orphaned_papers(self) -> list[Paper]:
         """
         Find papers that are marked as processed but have no chunks.
 
@@ -254,8 +153,6 @@ class PaperRepository:
         Returns:
             List of orphaned Paper objects
         """
-        from src.models.chunk import Chunk
-
         # Use NOT EXISTS for better performance on large datasets
         has_chunk = select(1).where(Chunk.paper_id == Paper.id).exists()
 

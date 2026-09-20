@@ -1,8 +1,8 @@
 """Integration tests for UserRepository."""
 
-import pytest
 import uuid
 
+import pytest
 from sqlalchemy.exc import IntegrityError
 
 from src.repositories.user_repository import UserRepository
@@ -81,26 +81,6 @@ class TestUserRepositoryGet:
         repo = UserRepository(session=db_session)
 
         retrieved = await repo.get_by_clerk_id("nonexistent_clerk_id")
-
-        assert retrieved is None
-
-    @pytest.mark.asyncio
-    async def test_get_by_email_found(self, db_session, created_user):
-        """Verify user is returned when email exists."""
-        repo = UserRepository(session=db_session)
-
-        retrieved = await repo.get_by_email(created_user.email)
-
-        assert retrieved is not None
-        assert retrieved.id == created_user.id
-        assert retrieved.email == created_user.email
-
-    @pytest.mark.asyncio
-    async def test_get_by_email_not_found(self, db_session):
-        """Verify None is returned when email doesn't exist."""
-        repo = UserRepository(session=db_session)
-
-        retrieved = await repo.get_by_email("nonexistent@example.com")
 
         assert retrieved is None
 
@@ -187,9 +167,7 @@ class TestUserRepositoryUpdate:
         assert updated_user.last_login_at > original_login
 
     @pytest.mark.asyncio
-    async def test_update_on_login_preserves_existing_fields(
-        self, db_session, created_user
-    ):
+    async def test_update_on_login_preserves_existing_fields(self, db_session, created_user):
         """Verify existing fields are preserved when not provided."""
         repo = UserRepository(session=db_session)
 
@@ -205,19 +183,6 @@ class TestUserRepositoryUpdate:
         assert updated_user.email == original_email
         assert updated_user.first_name == original_first_name
         assert updated_user.last_name == "NewLastName"
-
-    @pytest.mark.asyncio
-    async def test_update_last_login_only(self, db_session, created_user):
-        """Verify only last_login timestamp is updated."""
-        repo = UserRepository(session=db_session)
-
-        original_login = created_user.last_login_at
-        original_email = created_user.email
-
-        updated_user = await repo.update_last_login(created_user)
-
-        assert updated_user.last_login_at > original_login
-        assert updated_user.email == original_email
 
 
 class TestUserRepositoryPreferences:
@@ -250,14 +215,20 @@ class TestUserRepositoryPreferences:
 
     @pytest.mark.asyncio
     async def test_update_preferences_updates_timestamp(self, db_session, created_user):
-        """Verify updated_at timestamp is changed."""
+        """Verify updated_at timestamp is changed.
+
+        The row's initial updated_at is the database clock (server_default now()) while
+        update_preferences writes the Python clock; compare two Python-side writes so a
+        few ms of skew between the two clocks cannot flip the assertion.
+        """
         repo = UserRepository(session=db_session)
 
-        original_updated_at = created_user.updated_at
+        await repo.update_preferences(created_user, {"test": "first"})
+        first_updated_at = created_user.updated_at
 
-        await repo.update_preferences(created_user, {"test": "value"})
+        await repo.update_preferences(created_user, {"test": "second"})
 
-        assert created_user.updated_at > original_updated_at
+        assert created_user.updated_at > first_updated_at
 
     @pytest.mark.asyncio
     async def test_update_preferences_replaces_existing(self, db_session, created_user):
@@ -273,4 +244,3 @@ class TestUserRepositoryPreferences:
         assert "key1" not in updated_user.preferences
         assert "key2" not in updated_user.preferences
         assert updated_user.preferences["key3"] == "value3"
-

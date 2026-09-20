@@ -1,3 +1,4 @@
+// UI primitive: React error boundary that renders a fallback component with reset.
 import { Component, type ReactNode } from 'react'
 
 export interface FallbackProps {
@@ -32,10 +33,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
   }
 
   componentDidUpdate(prevProps: ErrorBoundaryProps): void {
-    if (
-      this.state.hasError &&
-      prevProps.resetKey !== this.props.resetKey
-    ) {
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
       this.resetErrorBoundary()
     }
   }

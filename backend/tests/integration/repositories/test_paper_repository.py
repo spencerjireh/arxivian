@@ -1,12 +1,13 @@
 """Integration tests for PaperRepository with real database."""
 
-import pytest
 import random
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from src.repositories.paper_repository import PaperRepository
+import pytest
+
 from src.repositories.chunk_repository import ChunkRepository
+from src.repositories.paper_repository import PaperRepository
 from tests.integration.conftest import make_chunk_data
 
 
@@ -115,110 +116,8 @@ class TestPaperRepositoryCRUD:
         assert final_count == initial_count + 2
 
 
-class TestPaperRepositoryFiltering:
-    """Test filtering and pagination."""
-
-    @pytest.mark.asyncio
-    async def test_get_all_pagination(self, db_session, sample_paper_data):
-        """Verify pagination works correctly."""
-        repo = PaperRepository(session=db_session)
-
-        for i in range(5):
-            data = {**sample_paper_data, "arxiv_id": f"2301.{i:05d}"}
-            await repo.create(data)
-
-        papers, total = await repo.get_all(offset=0, limit=2)
-        assert total == 5
-        assert len(papers) == 2
-
-        papers, total = await repo.get_all(offset=2, limit=2)
-        assert total == 5
-        assert len(papers) == 2
-
-        papers, total = await repo.get_all(offset=4, limit=2)
-        assert total == 5
-        assert len(papers) == 1
-
-    @pytest.mark.asyncio
-    async def test_get_all_with_category_filter(self, db_session, sample_paper_data):
-        """Verify category filtering works."""
-        repo = PaperRepository(session=db_session)
-        uid = sample_paper_data["ingested_by"]
-
-        await repo.create(
-            {
-                "arxiv_id": "2301.00001",
-                "ingested_by": uid,
-                "title": "ML Paper",
-                "authors": ["Author"],
-                "abstract": "Abstract",
-                "categories": ["cs.LG"],
-                "published_date": datetime(2023, 1, 1, tzinfo=timezone.utc),
-                "pdf_url": "https://arxiv.org/pdf/2301.00001.pdf",
-            }
-        )
-        await repo.create(
-            {
-                "arxiv_id": "2301.00002",
-                "ingested_by": uid,
-                "title": "AI Paper",
-                "authors": ["Author"],
-                "abstract": "Abstract",
-                "categories": ["cs.AI"],
-                "published_date": datetime(2023, 1, 1, tzinfo=timezone.utc),
-                "pdf_url": "https://arxiv.org/pdf/2301.00002.pdf",
-            }
-        )
-
-        papers, total = await repo.get_all(category_filter="cs.LG")
-        assert total == 1
-        assert papers[0].arxiv_id == "2301.00001"
-
-
 class TestPaperRepositoryProcessing:
     """Test processing-related operations."""
-
-    @pytest.mark.asyncio
-    async def test_mark_as_processed(self, db_session, sample_paper_data):
-        """Verify marking paper as processed updates all fields."""
-        repo = PaperRepository(session=db_session)
-        paper = await repo.create(sample_paper_data)
-
-        assert paper.pdf_processed is False
-
-        updated = await repo.mark_as_processed(
-            paper_id=str(paper.id),
-            raw_text="Full paper text content...",
-            sections=[{"name": "Introduction", "text": "Intro text"}],
-            parser_used="marker",
-        )
-
-        assert updated is not None
-        assert updated.pdf_processed is True
-        assert updated.raw_text == "Full paper text content..."
-        assert updated.parser_used == "marker"
-        assert updated.pdf_processing_date is not None
-
-    @pytest.mark.asyncio
-    async def test_get_unprocessed_papers(self, db_session, sample_paper_data):
-        """Verify unprocessed papers filter."""
-        repo = PaperRepository(session=db_session)
-
-        unprocessed = await repo.create(sample_paper_data)
-
-        processed_data = {
-            **sample_paper_data,
-            "arxiv_id": "2301.99999",
-            "pdf_processed": True,
-            "pdf_processing_date": datetime.now(timezone.utc),
-            "parser_used": "marker",
-            "raw_text": "Text",
-        }
-        await repo.create(processed_data)
-
-        papers = await repo.get_unprocessed_papers()
-        assert len(papers) == 1
-        assert papers[0].id == unprocessed.id
 
     @pytest.mark.asyncio
     async def test_get_orphaned_papers(self, db_session, sample_paper_data):
@@ -230,7 +129,7 @@ class TestPaperRepositoryProcessing:
         processed_data = {
             **sample_paper_data,
             "pdf_processed": True,
-            "pdf_processing_date": datetime.now(timezone.utc),
+            "pdf_processing_date": datetime.now(UTC),
             "parser_used": "marker",
             "raw_text": "Text",
         }
@@ -243,12 +142,14 @@ class TestPaperRepositoryProcessing:
             **sample_paper_data,
             "arxiv_id": f"2301.{uuid.uuid4().hex[:5]}",
             "pdf_processed": True,
-            "pdf_processing_date": datetime.now(timezone.utc),
+            "pdf_processing_date": datetime.now(UTC),
             "parser_used": "marker",
             "raw_text": "Text with chunks",
         }
         non_orphaned_paper = await repo.create(non_orphaned_data)
-        chunk_data = make_chunk_data(non_orphaned_paper.id, non_orphaned_paper.arxiv_id, 0, embedding)
+        chunk_data = make_chunk_data(
+            non_orphaned_paper.id, non_orphaned_paper.arxiv_id, 0, embedding
+        )
         await chunk_repo.create_bulk([chunk_data])
 
         orphaned = await repo.get_orphaned_papers()

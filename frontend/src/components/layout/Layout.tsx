@@ -1,3 +1,4 @@
+// App shell for signed-in routes: collapsible sidebar plus the routed page (Outlet).
 import { Outlet, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import Sidebar from '../sidebar/Sidebar'
@@ -15,10 +16,10 @@ const Layout = () => {
   const fastTransition = { duration: 0.15, ease: 'easeOut' as const }
 
   // Use stable key per section to prevent unmount/remount during within-section navigation
-  const pageKey = location.pathname.startsWith('/chat') ? 'chat' : location.pathname
+  const pageKey = location.pathname
 
   return (
-    <div className="h-screen bg-[#FAFAF9] flex overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-[#FAFAF9]">
       <AnimatePresence mode="wait">
         {isOpen && (
           <motion.aside
@@ -45,11 +46,11 @@ const Layout = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex min-w-0 flex-1 flex-col">
         <AnimatePresence mode="wait">
           <motion.div
             key={pageKey}
-            className="flex-1 flex flex-col min-h-0"
+            className="flex min-h-0 flex-1 flex-col"
             initial={shouldReduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={shouldReduceMotion ? undefined : { opacity: 0 }}

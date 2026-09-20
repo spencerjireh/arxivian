@@ -14,8 +14,8 @@ import pytest
 from deepeval import assert_test
 from deepeval.metrics import (
     AnswerRelevancyMetric,
-    FaithfulnessMetric,
     ContextualRelevancyMetric,
+    FaithfulnessMetric,
 )
 from deepeval.test_case import LLMTestCase
 
@@ -62,7 +62,7 @@ async def test_answer_quality(
     if not actual_output:
         pytest.skip(f"[{scenario.id}] LLM returned empty answer (model limitation)")
 
-    # If there is no retrieval context (e.g. arxiv_search-only scenario),
+    # If there is no retrieval context (e.g. a citations-only scenario),
     # use tool output summaries as context for faithfulness.
     # Exclude error-only outputs ({"error": "..."}) -- they carry no real content.
     if not retrieval_context:
@@ -98,17 +98,5 @@ async def test_answer_quality(
         metrics = [metric_map[name](threshold=0.5) for name in scenario.metrics_override]
     else:
         metrics = [cls(threshold=0.5) for cls in metric_map.values()]
-
-    # Verify arxiv_search scenarios don't loop (check before DeepEval so
-    # a loop regression is never masked by a metric failure).
-    if any(
-        out.get("tool_name") == "arxiv_search"
-        for out in (scenario.canned_tool_outputs or [])
-    ):
-        iterations = final_state.get("iteration", 0)
-        assert iterations <= 2, (
-            f"[{scenario.id}] arxiv_search flow took {iterations} iterations "
-            f"(expected <= 2). Possible search loop regression."
-        )
 
     assert_test(test_case, metrics)

@@ -1,19 +1,15 @@
-import { useEffect, useRef, useCallback, useMemo } from 'react'
-import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { Plus, PanelLeftClose, Loader2, MessageSquare, BookOpen, Settings } from 'lucide-react'
+// App shell: Feed / Library / Settings navigation and the user menu.
+import { useNavigate, useLocation } from 'react-router-dom'
+import { PanelLeftClose, BookOpen, Settings, Newspaper } from 'lucide-react'
 import clsx from 'clsx'
-import { useInfiniteConversations, useDeleteConversation } from '../../api/conversations'
 import { useSidebarStore } from '../../stores/sidebarStore'
-import SidebarConversationItem from './SidebarConversationItem'
 import UserMenu from './UserMenu'
 import Button from '../ui/Button'
-import ErrorBoundary from '../ui/ErrorBoundary'
-import SectionErrorFallback from '../ui/SectionErrorFallback'
-import { getUserMessage } from '../../lib/errors'
+import { matchesNav } from '../../lib/nav'
 import logoIcon from '../../assets/logo-icon.png'
 
 const navItems = [
-  { path: '/chat', label: 'Chat', icon: MessageSquare },
+  { path: '/feed', label: 'Feed', icon: Newspaper },
   { path: '/library', label: 'Library', icon: BookOpen },
   { path: '/settings', label: 'Settings', icon: Settings },
 ] as const
@@ -22,49 +18,29 @@ export default function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
   const close = useSidebarStore((state) => state.close)
-  const lastSessionId = useSidebarStore((state) => state.lastSessionId)
 
   return (
-    <div className="w-72 h-screen bg-stone-50 border-r border-stone-200 flex flex-col">
-      <div className="px-4 py-5 border-b border-stone-200">
+    <div className="flex h-screen w-72 flex-col border-r border-stone-200 bg-stone-50">
+      <div className="border-b border-stone-200 px-4 py-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src={logoIcon} alt="" className="h-6 w-auto" aria-hidden="true" />
-            <h1 className="font-display text-xl font-semibold text-stone-900 tracking-tight">
+            <h1 className="font-display text-xl font-semibold tracking-tight text-stone-900">
               Arxivian
-              <span className="ml-2 text-[10px] font-mono font-normal uppercase tracking-wider text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded">
+              <span className="ml-2 rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[10px] font-normal tracking-wider text-stone-400 uppercase">
                 Beta
               </span>
             </h1>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={close}
-            aria-label="Close sidebar"
-          >
-            <PanelLeftClose className="w-5 h-5" strokeWidth={1.5} />
+          <Button variant="ghost" size="sm" onClick={close} aria-label="Close sidebar">
+            <PanelLeftClose className="h-5 w-5" strokeWidth={1.5} />
           </Button>
         </div>
       </div>
 
-      <nav className="px-3 py-3 space-y-0.5">
-        <Button
-          variant="primary"
-          size="md"
-          className="w-full"
-          onClick={() => navigate('/chat')}
-          leftIcon={<Plus className="w-4 h-4" strokeWidth={2} />}
-        >
-          New conversation
-        </Button>
+      <nav className="flex-1 space-y-0.5 px-3 py-3">
         {navItems.map(({ path, label, icon: Icon }) => {
-          const isActive = path === '/chat'
-            ? location.pathname.startsWith('/chat')
-            : location.pathname === path
-          const target = path === '/chat' && lastSessionId
-            ? `/chat/${lastSessionId}`
-            : path
+          const isActive = matchesNav(path, location.pathname)
           return (
             <Button
               key={path}
@@ -72,10 +48,10 @@ export default function Sidebar() {
               size="md"
               className={clsx(
                 'w-full justify-start',
-                isActive && 'bg-stone-100 text-stone-900 font-medium'
+                isActive && 'bg-stone-100 font-medium text-stone-900'
               )}
-              onClick={() => navigate(target)}
-              leftIcon={<Icon className="w-4 h-4" strokeWidth={1.5} />}
+              onClick={() => navigate(path)}
+              leftIcon={<Icon className="h-4 w-4" strokeWidth={1.5} />}
             >
               {label}
             </Button>
@@ -83,129 +59,9 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <ErrorBoundary fallback={(props) => <SectionErrorFallback {...props} />}>
-        <SidebarConversations />
-      </ErrorBoundary>
-
-      <div className="px-2 py-3 border-t border-stone-200">
+      <div className="border-t border-stone-200 px-2 py-3">
         <UserMenu />
       </div>
-    </div>
-  )
-}
-
-function SidebarConversations() {
-  const navigate = useNavigate()
-  const { sessionId } = useParams()
-  const lastSessionId = useSidebarStore((state) => state.lastSessionId)
-  const setLastSessionId = useSidebarStore((state) => state.setLastSessionId)
-
-  const {
-    data,
-    isLoading,
-    error,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage,
-  } = useInfiniteConversations()
-  const deleteConversation = useDeleteConversation()
-
-  const conversations = useMemo(
-    () => data?.pages.flatMap((page) => page.conversations) ?? [],
-    [data?.pages]
-  )
-
-  // Infinite scroll via IntersectionObserver on a sentinel element
-  const sentinelRef = useRef<HTMLDivElement>(null)
-  const observerRef = useRef<IntersectionObserver | null>(null)
-
-  const handleObserver = useCallback(
-    (entries: IntersectionObserverEntry[]) => {
-      const [entry] = entries
-      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage()
-      }
-    },
-    [hasNextPage, isFetchingNextPage, fetchNextPage]
-  )
-
-  useEffect(() => {
-    observerRef.current?.disconnect()
-    observerRef.current = new IntersectionObserver(handleObserver, { threshold: 0.1 })
-    if (sentinelRef.current) observerRef.current.observe(sentinelRef.current)
-    return () => observerRef.current?.disconnect()
-  }, [handleObserver])
-
-  // Clear stale lastSessionId if it's not in any loaded page
-  useEffect(() => {
-    if (lastSessionId && conversations.length > 0) {
-      const exists = conversations.some((c) => c.session_id === lastSessionId)
-      if (!exists) setLastSessionId(null)
-    }
-  }, [conversations, lastSessionId, setLastSessionId])
-
-  const handleNavigate = (id: string) => {
-    navigate(`/chat/${id}`)
-  }
-
-  const handleDelete = (id: string) => {
-    deleteConversation.mutate(id, {
-      onSuccess: () => {
-        if (id === lastSessionId) {
-          setLastSessionId(null)
-        }
-        if (id === sessionId) {
-          navigate('/chat')
-        }
-      },
-    })
-  }
-
-  return (
-    <div className="flex-1 overflow-y-auto px-3">
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-5 h-5 animate-spin text-stone-300" strokeWidth={1.5} />
-        </div>
-      ) : error ? (
-        <div className="px-3 py-8 text-center">
-          <p className="text-sm text-stone-500">{getUserMessage(error)}</p>
-        </div>
-      ) : conversations.length === 0 ? (
-        <div className="px-3 py-12 text-center">
-          <div className="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center mx-auto mb-3">
-            <MessageSquare className="w-4 h-4 text-stone-400" strokeWidth={1.5} />
-          </div>
-          <p className="text-sm text-stone-500">No conversations yet</p>
-        </div>
-      ) : (
-        <>
-          <h2 className="text-xs text-stone-600 px-3 pt-4 pb-2">
-            Recent conversations
-          </h2>
-          <div className="space-y-0.5 pb-2">
-            {conversations.map((conversation) => (
-              <div key={conversation.session_id}>
-                <SidebarConversationItem
-                  conversation={conversation}
-                  isActive={conversation.session_id === sessionId}
-                  onClick={() => handleNavigate(conversation.session_id)}
-                  onDelete={() => handleDelete(conversation.session_id)}
-                  isDeleting={
-                    deleteConversation.isPending &&
-                    deleteConversation.variables === conversation.session_id
-                  }
-                />
-              </div>
-            ))}
-          </div>
-          <div ref={sentinelRef} className="py-2 flex justify-center">
-            {isFetchingNextPage && (
-              <Loader2 className="w-4 h-4 animate-spin text-stone-300" strokeWidth={1.5} />
-            )}
-          </div>
-        </>
-      )}
     </div>
   )
 }

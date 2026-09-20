@@ -2,8 +2,6 @@
 
 import json
 
-import pytest
-
 from src.services.agent_service.prompts import (
     ANSWER_SYSTEM_PROMPT,
     CLASSIFY_AND_ROUTE_SYSTEM_PROMPT,
@@ -22,27 +20,35 @@ class TestPromptBuilderToolOutputs:
 
     def test_grouped_under_header(self):
         builder = PromptBuilder("system")
-        builder.with_tool_outputs([
-            self._make_output("arxiv_search", {}, prompt_text="Found 3 papers on transformers"),
-        ])
+        builder.with_tool_outputs(
+            [
+                self._make_output(
+                    "semantic_scholar", {}, prompt_text="Found 3 papers on transformers"
+                ),
+            ]
+        )
         _, user = builder.build()
         assert user.startswith("Tool results:\n")
         assert "Found 3 papers on transformers" in user
 
     def test_retrieve_chunks_excluded(self):
         builder = PromptBuilder("system")
-        builder.with_tool_outputs([
-            self._make_output("retrieve_chunks", {"chunks": []}),
-        ])
+        builder.with_tool_outputs(
+            [
+                self._make_output("retrieve_chunks", {"chunks": []}),
+            ]
+        )
         _, user = builder.build()
         assert user == ""
 
     def test_multiple_under_single_header(self):
         builder = PromptBuilder("system")
-        builder.with_tool_outputs([
-            self._make_output("arxiv_search", {}, prompt_text="Paper A"),
-            self._make_output("explore_citations", {}, prompt_text="Citation B"),
-        ])
+        builder.with_tool_outputs(
+            [
+                self._make_output("semantic_scholar", {}, prompt_text="Paper A"),
+                self._make_output("explore_citations", {}, prompt_text="Citation B"),
+            ]
+        )
         _, user = builder.build()
         # Should be one "Tool results:" header, not two
         assert user.count("Tool results:") == 1
@@ -58,9 +64,11 @@ class TestPromptBuilderToolOutputs:
     def test_json_fallback(self):
         builder = PromptBuilder("system")
         data = {"key": "value", "count": 42}
-        builder.with_tool_outputs([
-            self._make_output("arxiv_search", data),
-        ])
+        builder.with_tool_outputs(
+            [
+                self._make_output("semantic_scholar", data),
+            ]
+        )
         _, user = builder.build()
         assert "Tool results:" in user
         assert json.dumps(data, default=str) in user

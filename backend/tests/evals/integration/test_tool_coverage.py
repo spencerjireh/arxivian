@@ -1,46 +1,30 @@
-"""Tool coverage tests -- verify each agent tool is invoked via the real agent."""
+"""Tool coverage tests -- each scoped-agent tool is invoked via the real agent."""
 
 from __future__ import annotations
 
 import pytest
 
-from src.services.agent_service import AgentService
-
 from .helpers import consume_stream
 
 
 @pytest.mark.inteval
-async def test_retrieve_tool_invoked(agent_service: AgentService):
-    """A retrieval query should invoke the retrieve tool and return sources."""
+async def test_retrieve_tool_invoked(agent_for):
+    """A content question should invoke retrieve_chunks and return sources."""
+    agent_service = await agent_for("1706.03762")
     result = await consume_stream(
-        agent_service,
-        "Retrieve information from the papers about multi-head attention in the Transformer architecture.",
+        agent_service, "Explain multi-head attention as described in this paper."
     )
     assert result.done_event is not None
+    assert "retrieve_chunks" in result.tools_invoked, result.tools_invoked
     assert len(result.source_arxiv_ids) > 0, "Should have retrieved sources"
 
 
 @pytest.mark.inteval
-async def test_list_papers_tool_invoked(agent_service: AgentService):
-    """A list query should invoke the list_papers tool."""
+async def test_explore_citations_tool_invoked(agent_for):
+    """A references question should invoke explore_citations."""
+    agent_service = await agent_for("1706.03762")
     result = await consume_stream(
-        agent_service,
-        "List all the papers currently available in my knowledge base using the list papers tool.",
+        agent_service, "What prior work does this paper cite and build upon?"
     )
     assert result.done_event is not None
-    assert "list_papers" in result.tools_invoked, (
-        f"Expected list_papers in tools_invoked, got: {result.tools_invoked}"
-    )
-
-
-@pytest.mark.inteval
-async def test_arxiv_search_tool_invoked(agent_service: AgentService):
-    """A search query should invoke the arxiv_search tool via real arXiv API."""
-    result = await consume_stream(
-        agent_service,
-        "Search arXiv for papers about chain-of-thought prompting and list what you find.",
-    )
-    assert result.done_event is not None
-    assert "arxiv_search" in result.tools_invoked, (
-        f"Expected arxiv_search in tools_invoked, got: {result.tools_invoked}"
-    )
+    assert "explore_citations" in result.tools_invoked, result.tools_invoked

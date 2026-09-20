@@ -1,0 +1,212 @@
+"""Repository for persisting Stage 2 scoring results.
+
+Writes `paper_scores` (one row per `(paper_id, rubric_version)`) plus its owned
+`score_evidence` rows. `upsert_score` is idempotent: a re-score under the same rubric
+updates the existing row and replaces its evidence (via the `cascade="all, delete-orphan"`
+relationship on `PaperScore.evidence`), so Celery retries and re-runs converge.
+"""
+
+import uuid
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from src.models.paper import Paper
+from src.models.paper_score import PaperScore, ScoreEvidence
+from src.utils.logger import get_logger
+
+log = get_logger(__name__)
+
+
+class ScoringRepository:
+    """Persists paper scores + evidence with upsert-on-rubric semantics."""
+
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def upsert_score(
+        self,
+        *,
+        paper_id: str,
+        rubric_version: str,
+        scores: dict[str, int | None],
+        dimensions: dict[str, Any],
+        evidence: list[dict[str, Any]],
+        attributes: dict[str, Any] | None = None,
+        model: str | None = None,
+        input_tokens: int | None = None,
+    ) -> PaperScore:
+        """Insert or update the `(paper_id, rubric_version)` score and replace its evidence.
+
+        Args:
+            paper_id: UUID string of the paper.
+            rubric_version: Rubric revision these scores encode.
+            scores: Derived per-dimension columns, e.g. {"method_clarity_score": 80, ...}.
+                None values persist as NULL (a soft-failed dimension).
+            dimensions: {dimension: DimensionScore JSON} -- the v2 source of truth.
+            evidence: Rows to (re)create, each {dimension, kind, text, source}.
+            attributes: PaperAttributes JSON (product chips), if judged.
+            model: Jev model id echoed by the server.
+            input_tokens: Summed input tokens across the paper's Jev requests.
+
+        Returns:
+            The persisted PaperScore (flushed, not committed -- the caller owns commit).
+        """
+        pid = uuid.UUID(paper_id)
+        stmt = (
+            select(PaperScore)
+            .where(
+                PaperScore.paper_id == pid,
+                PaperScore.rubric_version == rubric_version,
+            )
+            .options(selectinload(PaperScore.evidence))
+        )
+        existing = (await self.session.execute(stmt)).scalar_one_or_none()
+
+        if existing is None:
+            score = PaperScore(
+                paper_id=pid,
+                rubric_version=rubric_version,
+                dimensions=dimensions,
+                attributes=attributes,
+                model=model,
+                input_tokens=input_tokens,
+                **scores,
+            )
+            self.session.add(score)
+        else:
+            score = existing
+            for column, value in scores.items():
+                setattr(score, column, value)
+            score.dimensions = dimensions
+            score.attributes = attributes
+            score.model = model
+            score.input_tokens = input_tokens
+            # Clear old evidence first; delete-orphan removes the rows on flush.
+            score.evidence = []
+            await self.session.flush()
+
+        score.evidence = [
+            ScoreEvidence(
+                dimension=e["dimension"],
+                kind=e["kind"],
+                text=e["text"],
+                source=e.get("source"),
+            )
+            for e in evidence
+        ]
+        await self.session.flush()
+
+        log.info(
+            "paper_score_upserted",
+            paper_id=paper_id,
+            rubric_version=rubric_version,
+            evidence_count=len(evidence),
+            created=existing is None,
+        )
+        return score
+
+    async def get_by_paper_id(
+        self,
+        paper_id: uuid.UUID,
+        rubric_version: str,
+        *,
+        with_evidence: bool = False,
+    ) -> PaperScore | None:
+        """The `(paper_id, rubric_version)` row, optionally with its evidence loaded."""
+        stmt = select(PaperScore).where(
+            PaperScore.paper_id == paper_id,
+            PaperScore.rubric_version == rubric_version,
+        )
+        if with_evidence:
+            stmt = stmt.options(selectinload(PaperScore.evidence))
+        return (await self.session.execute(stmt)).scalar_one_or_none()
+
+    async def get_by_paper_ids(
+        self, paper_ids: list[uuid.UUID], rubric_version: str
+    ) -> dict[uuid.UUID, PaperScore]:
+        """Batch fetch (no evidence) keyed by paper id, for feed enrichment."""
+        if not paper_ids:
+            return {}
+        stmt = select(PaperScore).where(
+            PaperScore.paper_id.in_(paper_ids),
+            PaperScore.rubric_version == rubric_version,
+        )
+        rows = (await self.session.execute(stmt)).scalars().all()
+        return {row.paper_id: row for row in rows}
+
+    async def list_missing_demand(
+        self, *, rubric_version: str, limit: int
+    ) -> list[tuple[PaperScore, Paper]]:
+        """Scores whose demand lookup soft-failed (NULL), oldest first, joined to the paper."""
+        stmt = (
+            select(PaperScore, Paper)
+            .join(Paper, PaperScore.paper_id == Paper.id)
+            .where(
+                PaperScore.rubric_version == rubric_version,
+                PaperScore.demand_score.is_(None),
+            )
+            .order_by(PaperScore.updated_at)
+            .limit(limit)
+        )
+        rows = (await self.session.execute(stmt)).all()
+        return [(row[0], row[1]) for row in rows]
+
+    async def set_demand(
+        self,
+        score: PaperScore,
+        *,
+        demand_score: int,
+        dimension: dict[str, Any],
+        evidence: list[dict[str, Any]],
+    ) -> PaperScore:
+        """Fill in the demand dimension on an existing score (backfill after a soft-fail).
+
+        Replaces the `dimensions["demand"]` payload, sets the derived column, and appends
+        the citation evidence rows. Other dimensions and their evidence are untouched.
+        """
+        score.demand_score = demand_score
+        score.dimensions = {**(score.dimensions or {}), "demand": dimension}
+        for e in evidence:
+            score.evidence.append(
+                ScoreEvidence(
+                    dimension=e["dimension"],
+                    kind=e["kind"],
+                    text=e["text"],
+                    source=e.get("source"),
+                )
+            )
+        await self.session.flush()
+        log.info("paper_score_demand_backfilled", paper_id=str(score.paper_id), demand=demand_score)
+        return score
+
+    async def list_scores_for_digest(
+        self,
+        *,
+        start: datetime,
+        end: datetime,
+        rubric_version: str,
+    ) -> list[tuple[PaperScore, Paper]]:
+        """Gate-passing scores created in `[start, end)`, joined to their paper.
+
+        Candidate set for a weekly digest snapshot (SPE-271): only rows under `rubric_version`
+        that pass the data-availability gate (`data_availability_score == 100`). Category
+        filtering is left to the caller (bounded weekly volume). Ordered by creation time; the
+        digest task re-orders by provisional composite.
+        """
+        stmt = (
+            select(PaperScore, Paper)
+            .join(Paper, PaperScore.paper_id == Paper.id)
+            .where(
+                PaperScore.rubric_version == rubric_version,
+                PaperScore.created_at >= start,
+                PaperScore.created_at < end,
+                PaperScore.data_availability_score == 100,
+            )
+            .order_by(PaperScore.created_at)
+        )
+        rows = (await self.session.execute(stmt)).all()
+        return [(row[0], row[1]) for row in rows]

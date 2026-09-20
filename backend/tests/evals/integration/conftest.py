@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import os
+from pathlib import Path
 
 import litellm
 import pytest
@@ -14,11 +14,12 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from src.config import get_settings
-from src.factories.service_factories import get_agent_service
+from src.factories import get_agent_service
 from src.models.user import User
+from src.repositories.paper_repository import PaperRepository
 from src.services.agent_service import AgentService
+from src.services.agent_service.context import ScopedPaper
 from src.services.agent_service.graph_builder import build_graph
-
 
 # ---------------------------------------------------------------------------
 # Auto-apply inteval marker
@@ -27,7 +28,7 @@ from src.services.agent_service.graph_builder import build_graph
 
 def pytest_collection_modifyitems(items: list) -> None:
     """Auto-apply inteval marker to all tests in this directory."""
-    this_dir = os.path.dirname(__file__)
+    this_dir = str(Path(__file__).parent)
     for item in items:
         if str(item.fspath).startswith(this_dir):
             item.add_marker(pytest.mark.inteval)
@@ -52,7 +53,7 @@ def db_engine():
         echo=False,
         pool_pre_ping=True,
     )
-    yield engine
+    return engine
     # No teardown -- test-db is ephemeral via docker compose
 
 
@@ -65,9 +66,7 @@ def session_factory(db_engine):
 async def seed_user(session_factory) -> User:
     """Get or create the integration eval test user."""
     async with session_factory() as session:
-        result = await session.execute(
-            select(User).where(User.clerk_id == "inteval_test_user")
-        )
+        result = await session.execute(select(User).where(User.clerk_id == "inteval_test_user"))
         user = result.scalar_one_or_none()
         if user is None:
             user = User(clerk_id="inteval_test_user", email="inteval@test.local")
@@ -100,15 +99,23 @@ def compiled_graph():
 
 
 @pytest.fixture
-def agent_service(db_session: AsyncSession, seed_user: User, compiled_graph) -> AgentService:
-    """Production agent service wired to real DB + real LLM."""
-    return get_agent_service(
-        db_session,
-        user_id=seed_user.id,
-        temperature=0.3,
-        max_iterations=5,
-        graph=compiled_graph,
-    )
+def agent_for(db_session: AsyncSession, seed_user: User, compiled_graph):
+    """Factory: the production agent service scoped to one seeded paper.
+
+    Every conversation is paper-scoped (Phase 3); a test picks the paper its query is
+    about. Skips when the paper did not seed (see `scenarios.UNINGESTABLE`).
+    """
+
+    async def _build(arxiv_id: str) -> AgentService:
+        paper = await PaperRepository(db_session).get_by_arxiv_id(arxiv_id)
+        if paper is None or not paper.pdf_processed:
+            pytest.skip(f"Seed paper {arxiv_id} is not ingested; run `just inteval-seed`")
+        scope = ScopedPaper(paper_id=str(paper.id), arxiv_id=paper.arxiv_id, title=paper.title)
+        return get_agent_service(
+            db_session, user_id=seed_user.id, graph=compiled_graph, scoped_paper=scope
+        )
+
+    return _build
 
 
 # NOTE: adispatch_custom_event is NOT patched because ask_stream() uses

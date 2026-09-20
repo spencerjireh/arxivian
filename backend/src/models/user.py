@@ -6,9 +6,10 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, Text, TIMESTAMP, func
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import TIMESTAMP, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from src.database import Base
 
 if TYPE_CHECKING:
@@ -26,7 +27,7 @@ class User(Base):
     # Clerk identity
     clerk_id: Mapped[str] = mapped_column(String(255), unique=True, index=True)
 
-    # Tier (free / pro)
+    # Subscription tier, one of the UserTier values
     tier: Mapped[str] = mapped_column(String(20), server_default="free")
 
     # Profile information (from Clerk)
@@ -52,9 +53,3 @@ class User(Base):
 
     def __repr__(self):
         return f"<User(clerk_id='{self.clerk_id}', email='{self.email}')>"
-
-    @property
-    def full_name(self) -> str:
-        """Get user's full name."""
-        parts = [self.first_name, self.last_name]
-        return " ".join(p for p in parts if p) or ""

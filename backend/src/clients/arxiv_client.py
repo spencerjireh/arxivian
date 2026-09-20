@@ -1,23 +1,23 @@
 """arXiv API client for fetching papers and PDFs."""
 
 import asyncio
+import logging
 import re
-from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from pathlib import Path
+
 import arxiv
 import httpx
-from pathlib import Path
 from tenacity import (
+    before_sleep_log,
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
-    before_sleep_log,
 )
-import logging
 
-from src.utils.logger import get_logger
 from src.exceptions import ArxivAPIError
+from src.utils.logger import get_logger
 
 log = get_logger(__name__)
 _tenacity_logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ class ArxivClient:
         before_sleep=before_sleep_log(_tenacity_logger, logging.WARNING),
         reraise=True,
     )
-    def _execute_search_sync(self, search: arxiv.Search) -> List[arxiv.Result]:
+    def _execute_search_sync(self, search: arxiv.Search) -> list[arxiv.Result]:
         """
         Execute arXiv search synchronously with retry logic.
 
@@ -88,7 +88,7 @@ class ArxivClient:
             log.warning("arxiv search attempt failed", error=str(e), error_type=type(e).__name__)
             raise
 
-    async def _execute_search(self, search: arxiv.Search) -> List[arxiv.Result]:
+    async def _execute_search(self, search: arxiv.Search) -> list[arxiv.Result]:
         """
         Execute arXiv search asynchronously with retry logic.
 
@@ -106,9 +106,9 @@ class ArxivClient:
             return await loop.run_in_executor(None, self._execute_search_sync, search)
         except Exception as e:
             raise ArxivAPIError(
-                message=f"arXiv search failed after retries: {str(e)}",
+                message=f"arXiv search failed after retries: {e!s}",
                 details={"query": str(search.query), "error_type": type(e).__name__},
-            )
+            ) from e
 
     def _execute_date_filtered_search_sync(
         self,
@@ -132,14 +132,17 @@ class ArxivClient:
             paper = ArxivPaper(result)
             # Early termination: if the paper is older than the start date,
             # all subsequent papers will be older too (descending sort).
-            if start_dt and paper.published_date is not None:
-                if paper.published_date.date() < start_dt.date():
-                    log.debug(
-                        "date filtered search early stop",
-                        paper_date=str(paper.published_date.date()),
-                        start_date=str(start_dt.date()),
-                    )
-                    break
+            if (
+                start_dt
+                and paper.published_date is not None
+                and paper.published_date.date() < start_dt.date()
+            ):
+                log.debug(
+                    "date filtered search early stop",
+                    paper_date=str(paper.published_date.date()),
+                    start_date=str(start_dt.date()),
+                )
+                break
             if self._paper_in_date_range(paper, start_dt, end_dt):
                 matched.append(paper)
                 log.debug(
@@ -171,9 +174,9 @@ class ArxivClient:
             )
         except Exception as e:
             raise ArxivAPIError(
-                message=f"arXiv date-filtered search failed: {str(e)}",
+                message=f"arXiv date-filtered search failed: {e!s}",
                 details={"query": str(search.query), "error_type": type(e).__name__},
-            )
+            ) from e
 
     # Matches bare submittedDate:YYYY-MM-DD or submittedDate:YYYYMMDD in a query.
     # Does NOT match the valid range form submittedDate:[... TO ...].
@@ -244,18 +247,16 @@ class ArxivClient:
         pub_date = pub.date()
         if start_dt and pub_date < start_dt.date():
             return False
-        if end_dt and pub_date > end_dt.date():
-            return False
-        return True
+        return not (end_dt and pub_date > end_dt.date())
 
     async def search_papers(
         self,
         query: str,
         max_results: int = 10,
-        categories: Optional[List[str]] = None,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-    ) -> List[ArxivPaper]:
+        categories: list[str] | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> list[ArxivPaper]:
         """
         Search arXiv for papers matching criteria.
 
@@ -278,10 +279,8 @@ class ArxivClient:
 
         # Parse date strings once for client-side filtering (must be tz-aware
         # because ArxivPaper.published_date comes from the API as UTC)
-        start_dt = (
-            datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc) if start_date else None
-        )
-        end_dt = datetime.fromisoformat(end_date).replace(tzinfo=timezone.utc) if end_date else None
+        start_dt = datetime.fromisoformat(start_date).replace(tzinfo=UTC) if start_date else None
+        end_dt = datetime.fromisoformat(end_date).replace(tzinfo=UTC) if end_date else None
 
         # Sanitize any bare submittedDate: terms the LLM put in the query
         full_query, extracted_date = self._sanitize_query(query)
@@ -299,8 +298,9 @@ class ArxivClient:
 
         if has_date_filter:
             # Lazy iteration: sort by date descending, scan up to the limit,
-            # stop early once past the target window.
-            fetch_count = _DATE_FILTER_SCAN_LIMIT
+            # stop early once past the target window. The scan cap scales with the
+            # request so a small crawl does not page through 500 results (SPE-283).
+            fetch_count = min(_DATE_FILTER_SCAN_LIMIT, max(max_results * 3, 1))
             sort_by = arxiv.SortCriterion.SubmittedDate
             sort_order = arxiv.SortOrder.Descending
         else:
@@ -380,17 +380,16 @@ class ArxivClient:
 
         try:
             content = await _download_with_retry()
-            with open(save_path, "wb") as f:
-                f.write(content)
+            await asyncio.to_thread(Path(save_path).write_bytes, content)
             log.debug("pdf downloaded", path=save_path, size_kb=len(content) // 1024)
             return save_path
         except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError) as e:
             raise ArxivAPIError(
-                message=f"PDF download failed after retries: {str(e)}",
+                message=f"PDF download failed after retries: {e!s}",
                 details={"url": pdf_url, "error_type": type(e).__name__},
-            )
+            ) from e
 
-    async def get_papers_by_ids(self, arxiv_ids: List[str]) -> List[ArxivPaper]:
+    async def get_papers_by_ids(self, arxiv_ids: list[str]) -> list[ArxivPaper]:
         """
         Fetch papers by arXiv IDs.
 
@@ -402,7 +401,9 @@ class ArxivClient:
         """
         log.debug("arxiv fetch by ids", count=len(arxiv_ids))
 
-        search = arxiv.Search(id_list=arxiv_ids)
+        # Cap the page to the request: without it a single-ID lookup (the scoring
+        # ingest path) asks arXiv for a 100-result page (SPE-283).
+        search = arxiv.Search(id_list=arxiv_ids, max_results=len(arxiv_ids))
 
         # Use retry-enabled helper
         raw_results = await self._execute_search(search)

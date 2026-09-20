@@ -1,13 +1,12 @@
 """Background tasks for paper ingestion."""
 
-from typing import Any, Optional
+from typing import Any
 
 from src.celery_app import celery_app
 from src.database import AsyncSessionLocal
-from src.factories.service_factories import get_ingest_service
-from src.schemas.ingest import IngestRequest
-from src.tasks.utils import run_async
-from src.tasks.tracing import trace_task
+from src.factories import get_ingest_service
+from src.services.ingest_service import IngestRequest
+from src.tasks.runtime import run_async
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -27,9 +26,9 @@ def ingest_papers_task(
     self,
     query: str,
     max_results: int = 10,
-    categories: Optional[list[str]] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
+    categories: list[str] | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
     force_reprocess: bool = False,
 ) -> dict[str, Any]:
     """Background task for paper ingestion.
@@ -75,41 +74,22 @@ def ingest_papers_task(
             await session.commit()
             return result.model_dump()
 
-    with trace_task(
-        "ingest_papers",
-        task_id,
-        {
-            "query": query,
-            "max_results": max_results,
-            "categories": categories,
-            "attempt": attempt,
-        },
-    ) as trace:
-        try:
-            result = run_async(_run())
-            log.info(
-                "ingest_task_completed",
-                task_id=task_id,
-                papers_processed=result.get("papers_processed", 0),
-                chunks_created=result.get("chunks_created", 0),
-            )
-
-            # Add result metadata to trace
-            if trace:
-                trace.update(
-                    metadata={
-                        "papers_processed": result.get("papers_processed", 0),
-                        "chunks_created": result.get("chunks_created", 0),
-                    }
-                )
-
-            return result
-        except Exception as exc:
-            log.error(
-                "ingest_task_failed",
-                task_id=task_id,
-                attempt=attempt,
-                max_retries=self.max_retries,
-                error=str(exc),
-            )
-            raise  # autoretry_for handles retry logic
+    # The Celery instrumentation opens the task span; the log lines carry the counts.
+    try:
+        result = run_async(_run())
+        log.info(
+            "ingest_task_completed",
+            task_id=task_id,
+            papers_processed=result.get("papers_processed", 0),
+            chunks_created=result.get("chunks_created", 0),
+        )
+        return result
+    except Exception as exc:
+        log.error(
+            "ingest_task_failed",
+            task_id=task_id,
+            attempt=attempt,
+            max_retries=self.max_retries,
+            error=str(exc),
+        )
+        raise  # autoretry_for handles retry logic

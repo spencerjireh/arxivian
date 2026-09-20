@@ -1,4 +1,4 @@
-"""Golden-set scenarios for the v1 scoring rubric.
+"""Golden-set scenarios for the scoring rubric (v2 labels).
 
 Hand-labeled papers used to gate the scoring pipeline's accuracy (`@pytest.mark.eval`,
 wired in Phase 1 / SPE-272). Labels are coarse bands per the rubric
@@ -7,13 +7,24 @@ LOW / MED / HIGH; data availability is a PASS / FAIL gate; `implementable` is th
 >=85% agreement target measures against, and must equal the rubric rule
 (`data_availability == PASS and method_clarity >= MED and resource_feasibility >= MED`).
 
-FIRST-PASS LABELS, PENDING REVIEW. Every scenario carries `reviewed=False`. These are a
-researched first pass (reliable for well-known papers; the compute/data notes cite the basis)
-and are the ground-truth trust anchor -- they need human sign-off before the eval leans on
-them. Flip `reviewed=True` per row as they are confirmed.
+REVIEWED 2026-09-19 against rubric v2 (SPE-295). Every row carries `reviewed=True`; the
+compute/data notes cite the basis. Interpretation rules applied during the review:
+
+- The data gate judges whether OBTAINABLE data demonstrates the core claim, not whether the
+  exact headline corpus is public. A data-agnostic method whose claim is demonstrable on a
+  standard public dataset is PASS even when the headline run used an internal corpus
+  (word2vec, knowledge distillation). FAIL is reserved for claims that cannot be demonstrated
+  without data the authors did not release (CLIP, PaLM, Whisper, Chinchilla, GPT-4).
+- Resource feasibility converts stated hardware to single-A100 equivalents (~3 P100/V100
+  GPU-hours per A100-hour). A few days on one A100 is MED; several hundred A100-hours is LOW.
+  When the trained model IS the claim (a pretraining recipe or foundation model), the cost to
+  train it is what counts; fine-tuning released weights does not reproduce the claim.
+- Method clarity counts the four v2 criteria (algorithm, architecture, hyperparameters,
+  training procedure): 0-1 = LOW, 2 = MED, 3-4 = HIGH.
 
 Coverage notes:
-- 20 rows are re-labeled from `spikes/github-code-gap/golden_papers.json` (the code-gap seed);
+- 20 rows are re-labeled from `code_gap_golden_papers.json` in this directory (the code-gap
+  seed; formerly `spikes/github-code-gap/golden_papers.json`);
   ~10 are added to span LOW feasibility / FAIL data, since the seed skews toward famous,
   high-feasibility papers and would not exercise the "cluster-scale rated single-GPU" failure
   the eval exists to catch.
@@ -52,7 +63,7 @@ class ScoringScenario:
 
 
 SCORING_SCENARIOS: list[ScoringScenario] = [
-    # --- Re-labeled from the code-gap seed (spikes/github-code-gap/golden_papers.json) -------
+    # --- Re-labeled from the code-gap seed (code_gap_golden_papers.json) -------------------
     ScoringScenario(
         id="lora",
         arxiv_id="2106.09685",
@@ -65,6 +76,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="Explicit low-rank update equations and rank/alpha hyperparameters; the whole point is cheap adaptation on a single GPU.",
         compute_note="Adapter fine-tuning; single consumer GPU.",
         data_note="Public benchmarks (GLUE, WikiSQL, E2E).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="mamba",
@@ -78,6 +90,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="Selective SSM and the hardware-aware scan are specified with algorithms; small/medium models are reproducible on a single high-end GPU.",
         compute_note="Models up to ~2.8B; small variants single-GPU, full suite modest multi-GPU.",
         data_note="The Pile (public).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="flash-attention",
@@ -91,6 +104,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="IO-aware tiling algorithm given in detail; it is a kernel that runs and benchmarks on a single GPU (CUDA effort is high but that is not a clarity or compute gate).",
         compute_note="Single GPU; benchmarking, not large-scale training.",
         data_note="Standard benchmarks; not data-bound.",
+        reviewed=True,
     ),
     ScoringScenario(
         id="segment-anything",
@@ -104,6 +118,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="Architecture (ViT-H encoder + prompt encoder + mask decoder) is clear, but training the model is cluster-scale, so an individual cannot reproduce the core result.",
         compute_note="Trained on 256 A100 GPUs over the SA-1B pipeline.",
         data_note="SA-1B released publicly, but the compute is the blocker.",
+        reviewed=True,
     ),
     ScoringScenario(
         id="vit",
@@ -117,6 +132,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="Architecture fully specified, but the headline result depends on very large-scale pretraining; solo reproduction of the SOTA is out of reach.",
         compute_note="Large-scale pretraining on TPUv3 pods (JFT-300M for the strongest results).",
         data_note="Public ImageNet-21k variant reproduces much of it; JFT-300M itself is proprietary.",
+        reviewed=True,
     ),
     ScoringScenario(
         id="rag",
@@ -130,6 +146,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="Method is described but leans on assembling DPR + BART components; fine-tuning is achievable on a single high-end GPU.",
         compute_note="Fine-tune BART-large + a DPR retriever; single high-end GPU.",
         data_note="Wikipedia dump + Natural Questions / other public QA sets.",
+        reviewed=True,
     ),
     ScoringScenario(
         id="bert",
@@ -143,6 +160,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="MLM/NSP objectives and architecture are fully specified, but reproducing pretraining (the paper's result) is cluster-scale; only downstream fine-tuning is cheap.",
         compute_note="BERT-large pretrained on 16 TPUs for ~4 days.",
         data_note="BooksCorpus + English Wikipedia (Wikipedia public; BooksCorpus semi-available).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="transformer",
@@ -156,6 +174,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="The architecture is specified in full detail; the base model is reproducible on modest multi-GPU hardware over time.",
         compute_note="Base model ~12h on 8 P100s; big model ~3.5 days on 8 GPUs.",
         data_note="WMT 2014 EN-DE / EN-FR (public).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="llama",
@@ -169,6 +188,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="Architecture and training recipe are clear and the data is deliberately all-public, but pretraining even the 7B model is far beyond an individual's compute.",
         compute_note="Trained on 2048 A100 GPUs; smallest model still hundreds of GPU-days.",
         data_note="All-public corpus (a stated design goal).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="latent-diffusion",
@@ -182,6 +202,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="LDM architecture (VAE + UNet + cross-attention) is detailed, but training from scratch is hundreds of GPU-days; only inference/fine-tuning is cheap.",
         compute_note="Training on the order of hundreds of A100-days.",
         data_note="LAION subsets (public).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="resnet",
@@ -195,6 +216,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="Residual block and full architecture are specified; ResNet-50 on ImageNet is reproducible on a single high-end GPU over time (CIFAR variants are trivial).",
         compute_note="ImageNet training on a few GPUs; CIFAR variants single-GPU.",
         data_note="ImageNet / CIFAR-10 (public).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="adam",
@@ -208,6 +230,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="The optimizer is given as explicit pseudocode; demonstrating it needs only toy-scale training.",
         compute_note="Optimizer; negligible compute (MNIST/CIFAR toys).",
         data_note="MNIST / CIFAR (public).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="chain-of-thought",
@@ -221,6 +244,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="The prompting technique is clearly described but is not a formal algorithm; reproducing it needs access to a capable LLM (affordable via API), not training.",
         compute_note="Inference-only against a large LLM (e.g. via API); no training.",
         data_note="GSM8K and other public reasoning benchmarks.",
+        reviewed=True,
     ),
     ScoringScenario(
         id="llama-2",
@@ -234,6 +258,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="Pretraining + RLHF pipeline is well documented, but the compute is cluster-scale and the preference data is not fully released.",
         compute_note="Pretraining on thousands of A100s; RLHF adds further cost.",
         data_note="Pretraining data public-style; human-preference data proprietary.",
+        reviewed=True,
     ),
     ScoringScenario(
         id="clip",
@@ -247,6 +272,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="Contrastive method is clear, but the 400M image-text training set (WIT) was never released and training is large-scale -- both gates fail.",
         compute_note="Hundreds of GPUs; large contrastive pretraining.",
         data_note="WebImageText (WIT), 400M pairs, PROPRIETARY / unreleased.",
+        reviewed=True,
     ),
     ScoringScenario(
         id="ppo",
@@ -260,6 +286,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="Clipped-surrogate objective and update loop are explicit; RL benchmarks run on a single GPU or even CPU.",
         compute_note="MuJoCo / Atari; single GPU or CPU.",
         data_note="Simulation environments (public).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="ddpm",
@@ -273,6 +300,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="Training and sampling algorithms are given explicitly; CIFAR-scale DDPM is reproducible on a single high-end GPU.",
         compute_note="CIFAR-10 / LSUN; single high-end GPU (days) for CIFAR.",
         data_note="CIFAR-10, LSUN, CelebA (public).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="gpt-4",
@@ -286,6 +314,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="The report deliberately withholds architecture, data, and training details; nothing is reproducible.",
         compute_note="Undisclosed; frontier-scale.",
         data_note="Undisclosed / proprietary.",
+        reviewed=True,
     ),
     ScoringScenario(
         id="gin",
@@ -299,6 +328,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="GIN architecture and the expressiveness theory are precise; small GNNs on standard graph datasets train on a single GPU or CPU.",
         compute_note="Small GNNs; single GPU / CPU.",
         data_note="Public bioinformatics / social-network graph benchmarks.",
+        reviewed=True,
     ),
     ScoringScenario(
         id="palm",
@@ -312,6 +342,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="Architecture is transformer-standard but many system details are Pathways-specific; compute is extreme and the corpus is proprietary.",
         compute_note="6144 TPU v4 chips.",
         data_note="780B-token proprietary corpus.",
+        reviewed=True,
     ),
     # --- Added to span LOW feasibility / FAIL data (new, not in the code-gap seed) ----------
     ScoringScenario(
@@ -326,6 +357,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="Architecture is GPT-2-style and described, but 175B-parameter training is far beyond individual compute.",
         compute_note="Thousands of GPU-hours; 175B parameters.",
         data_note="Filtered Common Crawl + others (public-style; exact filtered set not released).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="word2vec",
@@ -339,19 +371,21 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="Skip-gram and CBOW are described clearly and famously train on a single machine, even CPU.",
         compute_note="Single machine / CPU.",
         data_note="Trainable on text8 / Wikipedia (public).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="gan",
         arxiv_id="1406.2661",
         title="Generative Adversarial Networks",
-        method_clarity="HIGH",
+        method_clarity="MED",
         resource_feasibility="HIGH",
         data_availability="PASS",
         demand="HIGH",
         implementable=True,
-        reasoning="The minimax objective and training loop are given as an explicit algorithm; MNIST/CIFAR GANs train on a single GPU.",
+        reasoning="The minimax objective and training loop are given as an explicit algorithm, but the architecture is only sketched (rectifier/sigmoid generator, maxout discriminator) and hyperparameters are absent except k=1; 2 of 4 criteria. MNIST/CIFAR GANs train on a single GPU.",
         compute_note="MNIST / CIFAR; single GPU.",
         data_note="MNIST, CIFAR-10, TFD (public).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="batchnorm",
@@ -365,6 +399,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="The normalization algorithm is explicit; the technique is testable on small nets, and the ImageNet demonstration is reproducible on a few GPUs.",
         compute_note="Technique trivial on small nets; ImageNet demo on a few GPUs.",
         data_note="ImageNet / MNIST (public).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="chinchilla",
@@ -378,6 +413,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="The scaling analysis is clear, but validating it required many large training runs and the MassiveText corpus is proprietary.",
         compute_note="Many large LM training runs (up to 70B).",
         data_note="MassiveText (DeepMind proprietary).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="scaling-laws",
@@ -391,6 +427,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="The empirical laws are clearly stated, but reproducing the study means a sweep of large-model training runs that an individual cannot afford.",
         compute_note="Sweep of many large-model training runs.",
         data_note="WebText2 (public-style).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="unet",
@@ -404,6 +441,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="The encoder-decoder architecture is fully specified; the segmentation task trains on a single GPU.",
         compute_note="Single GPU.",
         data_note="ISBI cell-segmentation challenge data (public).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="yolo",
@@ -417,6 +455,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="The single-shot detection architecture and loss are specified; training on Pascal VOC is feasible on a single high-end GPU.",
         compute_note="Pascal VOC; single high-end GPU.",
         data_note="Pascal VOC / COCO (public).",
+        reviewed=True,
     ),
     ScoringScenario(
         id="whisper",
@@ -430,6 +469,7 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="The architecture is a standard encoder-decoder, but the 680k-hour training set is proprietary web-scraped audio and training is large-scale.",
         compute_note="Large-scale training over 680k hours of audio.",
         data_note="Web-scraped supervised audio, NOT released.",
+        reviewed=True,
     ),
     ScoringScenario(
         id="knowledge-distillation",
@@ -443,5 +483,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         reasoning="The soft-target distillation idea and temperature are described clearly enough to reproduce; distilling small models is cheap.",
         compute_note="Distillation on small models; single GPU.",
         data_note="MNIST / speech benchmarks (public).",
+        reviewed=True,
     ),
 ]

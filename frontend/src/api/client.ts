@@ -18,7 +18,7 @@ export function setAuthTokenGetter(getter: TokenGetter): void {
  * Get the current auth token.
  * Returns null if no token getter is registered or no token is available.
  */
-export async function getAuthToken(): Promise<string | null> {
+async function getAuthToken(): Promise<string | null> {
   if (!authTokenGetter) {
     return null
   }
@@ -50,13 +50,22 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
   return headers
 }
 
+/** Pull a human-readable message out of a parsed error body, if it has one. */
+export function errorMessageFrom(parsed: unknown): string | undefined {
+  if (typeof parsed !== 'object' || parsed === null) return undefined
+  const body = parsed as { detail?: unknown; message?: unknown }
+  if (typeof body.detail === 'string') return body.detail
+  if (typeof body.message === 'string') return body.message
+  return undefined
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const errorBody = await response.text()
     let message = errorBody
     try {
-      const parsed = JSON.parse(errorBody)
-      message = parsed.detail || parsed.message || errorBody
+      const parsed: unknown = JSON.parse(errorBody)
+      message = errorMessageFrom(parsed) ?? errorBody
     } catch {
       // Keep original text if not JSON
     }
@@ -65,7 +74,10 @@ async function handleResponse<T>(response: Response): Promise<T> {
     }
     throw new ApiError(response.status, response.statusText, message)
   }
-  return response.json()
+  if (response.status === 204) {
+    return undefined as T
+  }
+  return response.json() as Promise<T>
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
@@ -77,10 +89,20 @@ export async function apiGet<T>(path: string): Promise<T> {
   return handleResponse<T>(response)
 }
 
-export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+export async function apiPut<T>(path: string, body: unknown): Promise<T> {
   const headers = await getAuthHeaders()
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: 'POST',
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(body),
+  })
+  return handleResponse<T>(response)
+}
+
+export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
+  const headers = await getAuthHeaders()
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'PATCH',
     headers,
     body: JSON.stringify(body),
   })

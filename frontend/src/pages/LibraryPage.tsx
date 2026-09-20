@@ -1,183 +1,143 @@
-import { useState, useMemo } from 'react'
-import { Loader2, BookOpen, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react'
-import clsx from 'clsx'
-import { usePapers } from '../api/papers'
-import { useDebounce } from '../hooks/useDebounce'
-import PaperCard from '../components/library/PaperCard'
-import Button from '../components/ui/Button'
+// /library route: the caller's papers grouped Saved / Implementing / Shipped (GET /users/me/library).
+import { useCallback, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { AlertCircle, BookOpen, Loader2 } from 'lucide-react'
+import { useLibrary } from '../api/library'
+import { useClearPaperState, useSetPaperState } from '../api/paperStates'
+import FeedList from '../components/feed/FeedList'
+import Chip from '../components/ui/Chip'
 import { getUserMessage } from '../lib/errors'
-import type { PaperListParams } from '../types/api'
+import type { PendingAction } from '../components/feed/CardActions'
+import type { LibraryGroup, LibraryResponse, PaperLifecycleState } from '../types/api'
 
-type ProcessedFilter = 'all' | 'processed' | 'unprocessed'
-type SortBy = 'created_at' | 'published_date'
-type SortOrder = 'desc' | 'asc'
+const GROUPS: { key: LibraryGroup; label: string }[] = [
+  { key: 'saved', label: 'Saved' },
+  { key: 'implementing', label: 'Implementing' },
+  { key: 'shipped', label: 'Shipped' },
+]
 
-const LIMIT = 20
+const EMPTY: LibraryResponse = { saved: [], implementing: [], shipped: [] }
 
+/** The return-visit surface: the caller's papers grouped saved -> implementing -> shipped. */
 export default function LibraryPage() {
-  const [offset, setOffset] = useState(0)
-  const [categoryInput, setCategoryInput] = useState('')
-  const debouncedCategory = useDebounce(categoryInput, 300)
-  const [processedFilter, setProcessedFilter] = useState<ProcessedFilter>('all')
-  const [sortBy, setSortBy] = useState<SortBy>('created_at')
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
+  const { data, isLoading, error } = useLibrary()
+  const setState = useSetPaperState()
+  const clearState = useClearPaperState()
+  const [pending, setPending] = useState<{ arxivId: string; action: PendingAction } | null>(null)
 
-  const handleCategoryChange = (value: string) => {
-    setCategoryInput(value)
-    setOffset(0)
-  }
+  const library = data ?? EMPTY
+  const total = GROUPS.reduce((n, g) => n + library[g.key].length, 0)
 
-  const params = useMemo<PaperListParams>(() => {
-    const p: PaperListParams = {
-      offset,
-      limit: LIMIT,
-      sort_by: sortBy,
-      sort_order: sortOrder,
-    }
-    if (debouncedCategory) p.category = debouncedCategory
-    if (processedFilter === 'processed') p.processed_only = true
-    if (processedFilter === 'unprocessed') p.processed_only = false
-    return p
-  }, [offset, debouncedCategory, processedFilter, sortBy, sortOrder])
+  const stateOf = useCallback(
+    (arxivId: string) =>
+      GROUPS.flatMap((g) => library[g.key]).find((i) => i.paper.arxiv_id === arxivId)?.state ??
+      null,
+    [library]
+  )
 
-  const { data, isLoading, error } = usePapers(params)
+  const run = useCallback((arxivId: string, action: PendingAction, fn: () => Promise<unknown>) => {
+    setPending({ arxivId, action })
+    void fn().finally(() => setPending((p) => (p?.arxivId === arxivId ? null : p)))
+  }, [])
 
-  const total = data?.total ?? 0
-  const hasPages = total > LIMIT
-  const hasPrev = offset > 0
-  const hasNext = offset + LIMIT < total
+  const transition = useCallback(
+    (arxivId: string, state: PaperLifecycleState, repo_url?: string) =>
+      run(arxivId, state, () =>
+        setState.mutateAsync({ arxivId, body: { state, repo_url } }).catch(() => undefined)
+      ),
+    [run, setState]
+  )
 
-  const processedOptions: { value: ProcessedFilter; label: string }[] = [
-    { value: 'all', label: 'All' },
-    { value: 'processed', label: 'Processed' },
-    { value: 'unprocessed', label: 'Unprocessed' },
-  ]
-
-  const selectClass =
-    'px-3 py-2 text-sm text-stone-800 bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-stone-200 focus:border-stone-300 transition-colors duration-150'
+  const onSave = useCallback(
+    (arxivId: string) => {
+      if (stateOf(arxivId)?.state === 'saved') {
+        run(arxivId, 'clear', () => clearState.mutateAsync({ arxivId }).catch(() => undefined))
+      } else {
+        transition(arxivId, 'saved')
+      }
+    },
+    [stateOf, run, clearState, transition]
+  )
+  const onDismiss = useCallback((arxivId: string) => transition(arxivId, 'dismissed'), [transition])
+  const onImplementing = useCallback(
+    (arxivId: string) =>
+      transition(arxivId, stateOf(arxivId)?.state === 'implementing' ? 'saved' : 'implementing'),
+    [stateOf, transition]
+  )
+  const onShip = useCallback(
+    (arxivId: string, repoUrl: string) => transition(arxivId, 'shipped', repoUrl),
+    [transition]
+  )
+  const pendingFor = useCallback(
+    (arxivId: string): PendingAction => (pending?.arxivId === arxivId ? pending.action : null),
+    [pending]
+  )
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Page header */}
+    <div className="flex flex-1 flex-col overflow-hidden">
       <div className="px-6 pt-6 pb-4">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-2xl font-semibold text-stone-900">Library</h1>
           {data && (
-            <span className="text-sm text-stone-400 font-mono">
+            <span className="font-mono text-sm text-stone-400">
               {total} paper{total !== 1 ? 's' : ''}
             </span>
           )}
         </div>
       </div>
 
-      {/* Filter bar */}
-      <div className="px-6 pb-4 flex flex-wrap items-center gap-3">
-        <input
-          type="text"
-          value={categoryInput}
-          onChange={(e) => handleCategoryChange(e.target.value)}
-          placeholder="Filter by category..."
-          className={clsx(selectClass, 'w-48')}
-        />
-
-        <div className="inline-flex rounded-lg overflow-hidden border border-stone-200">
-          {processedOptions.map(({ value, label }) => (
-            <button
-              key={value}
-              onClick={() => {
-                setProcessedFilter(value)
-                setOffset(0)
-              }}
-              className={clsx(
-                'px-3 py-2 text-sm transition-colors duration-150',
-                processedFilter === value
-                  ? 'bg-stone-900 text-white'
-                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <select
-          value={`${sortBy}:${sortOrder}`}
-          onChange={(e) => {
-            const [sb, so] = e.target.value.split(':') as [SortBy, SortOrder]
-            setSortBy(sb)
-            setSortOrder(so)
-            setOffset(0)
-          }}
-          className={selectClass}
-        >
-          <option value="created_at:desc">Newest added</option>
-          <option value="created_at:asc">Oldest added</option>
-          <option value="published_date:desc">Recently published</option>
-          <option value="published_date:asc">Earliest published</option>
-        </select>
-      </div>
-
-      {/* Paper grid */}
       <div className="flex-1 overflow-y-auto px-6 pb-6">
         {isLoading ? (
           <div className="flex items-center justify-center py-24">
-            <Loader2 className="w-6 h-6 animate-spin text-stone-300" strokeWidth={1.5} />
+            <Loader2 className="h-6 w-6 animate-spin text-stone-300" strokeWidth={1.5} />
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-24">
-            <div className="w-12 h-12 rounded-full bg-[var(--color-error-soft)] flex items-center justify-center mb-3">
-              <AlertCircle className="w-5 h-5 text-[var(--color-error)]" strokeWidth={1.5} />
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-error-soft)]">
+              <AlertCircle className="h-5 w-5 text-[var(--color-error)]" strokeWidth={1.5} />
             </div>
             <p className="text-sm text-stone-500">{getUserMessage(error)}</p>
           </div>
-        ) : !data || data.papers.length === 0 ? (
+        ) : total === 0 ? (
           <div className="flex flex-col items-center justify-center py-24">
-            <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center mb-3">
-              <BookOpen className="w-5 h-5 text-stone-400" strokeWidth={1.5} />
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-stone-100">
+              <BookOpen className="h-5 w-5 text-stone-400" strokeWidth={1.5} />
             </div>
-            <p className="text-sm font-medium text-stone-700">No papers in the knowledge base yet</p>
-            <p className="text-sm text-stone-400 mt-1">
-              Papers will appear here once ingested via chat
+            <p className="text-sm font-medium text-stone-700">Nothing saved yet</p>
+            <p className="mt-1 text-sm text-stone-400">
+              Save a paper from the{' '}
+              <Link to="/feed" className="text-stone-600 underline hover:text-stone-900">
+                feed
+              </Link>{' '}
+              and it shows up here
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {data.papers.map((paper) => (
-              <PaperCard
-                key={paper.arxiv_id}
-                paper={paper}
-              />
+          <div className="max-w-3xl space-y-8">
+            {GROUPS.filter((g) => library[g.key].length > 0).map((g) => (
+              <section key={g.key} aria-labelledby={`library-${g.key}`}>
+                <div className="mb-3 flex items-center gap-2">
+                  <h2
+                    id={`library-${g.key}`}
+                    className="font-display text-lg font-semibold text-stone-900"
+                  >
+                    {g.label}
+                  </h2>
+                  <Chip>{library[g.key].length}</Chip>
+                </div>
+                <FeedList
+                  items={library[g.key]}
+                  onSave={onSave}
+                  onDismiss={onDismiss}
+                  onImplementing={onImplementing}
+                  onShip={onShip}
+                  pendingFor={pendingFor}
+                />
+              </section>
             ))}
           </div>
         )}
       </div>
-
-      {/* Pagination */}
-      {hasPages && (
-        <div className="px-6 py-3 border-t border-stone-200 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setOffset(Math.max(0, offset - LIMIT))}
-            disabled={!hasPrev}
-            leftIcon={<ChevronLeft className="w-4 h-4" strokeWidth={1.5} />}
-          >
-            Previous
-          </Button>
-          <span className="text-xs text-stone-400">
-            {Math.min(offset + 1, total)}-{Math.min(offset + LIMIT, total)} of {total}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setOffset(offset + LIMIT)}
-            disabled={!hasNext}
-            rightIcon={<ChevronRight className="w-4 h-4" strokeWidth={1.5} />}
-          >
-            Next
-          </Button>
-        </div>
-      )}
     </div>
   )
 }

@@ -2,13 +2,27 @@
 // Lightweight mock for framer-motion that renders plain HTML elements
 
 import { forwardRef } from 'react'
-import type { ReactNode, ElementType, ComponentPropsWithRef } from 'react'
+import type { ReactNode, ElementType } from 'react'
 
 const animationProps = new Set([
-  'initial', 'animate', 'exit', 'variants', 'transition',
-  'whileHover', 'whileTap', 'whileInView', 'whileFocus', 'whileDrag',
-  'layout', 'layoutId', 'onAnimationStart', 'onAnimationComplete',
-  'viewport', 'drag', 'dragConstraints', 'dragElastic',
+  'initial',
+  'animate',
+  'exit',
+  'variants',
+  'transition',
+  'whileHover',
+  'whileTap',
+  'whileInView',
+  'whileFocus',
+  'whileDrag',
+  'layout',
+  'layoutId',
+  'onAnimationStart',
+  'onAnimationComplete',
+  'viewport',
+  'drag',
+  'dragConstraints',
+  'dragElastic',
 ])
 
 function filterProps(props: Record<string, unknown>): Record<string, unknown> {
@@ -22,12 +36,10 @@ function filterProps(props: Record<string, unknown>): Record<string, unknown> {
 }
 
 function createMotionComponent(tag: ElementType) {
-  return forwardRef<unknown, ComponentPropsWithRef<typeof tag> & Record<string, unknown>>(
-    function MotionProxy(props, ref) {
-      const Tag = tag as ElementType
-      return <Tag ref={ref} {...filterProps(props)} />
-    }
-  )
+  return forwardRef<unknown, Record<string, unknown>>(function MotionProxy(props, ref) {
+    const Tag = tag
+    return <Tag ref={ref} {...filterProps(props)} />
+  })
 }
 
 const componentCache = new Map<string, ReturnType<typeof createMotionComponent>>()

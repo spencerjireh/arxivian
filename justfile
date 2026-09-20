@@ -1,98 +1,102 @@
-# Justfile for Arxivian
-# Run 'just --list' to see all available commands
+# Arxivian -- all development runs in Docker. `just --list` shows recipes by group.
 
-# Default recipe to display help
+profiles := "--profile dev --profile test --profile eval --profile inteval"
+
 default:
     @just --list
 
-# Setup: Copy .env.example to .env if it doesn't exist
+# Create backend/.env, backend/.env.test and frontend/.env from their .example files (idempotent)
+[group('env')]
 setup:
-    @test -f .env || (cp .env.example .env && echo ".env file created. Please update with your API keys.")
-    @test -f .env && echo ".env file exists."
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for f in backend/.env backend/.env.test frontend/.env; do
+        if [ -f "$f" ]; then echo "$f exists"; else cp "$f.example" "$f" && echo "created $f -- fill in the keys listed in README.md"; fi
+    done
 
-# Build all services (with hot reload)
+# Build and start everything with hot reload
+[group('env')]
+dev: build up
+
+[group('env')]
 build:
     BUILD_TARGET=development docker compose --profile dev build
 
-# Build with no cache (clean build)
+[group('env')]
 rebuild:
     BUILD_TARGET=development docker compose --profile dev build --no-cache
 
-# Start all services (with hot reload)
+[group('env')]
 up:
     BUILD_TARGET=development docker compose --profile dev up
 
-# Start all services (detached)
+[group('env')]
 up-d:
     BUILD_TARGET=development docker compose --profile dev up -d
 
-# Stop all services
+[group('env')]
 down:
-    docker compose --profile dev --profile test --profile inteval down
+    docker compose {{profiles}} down
 
-# Stop all services and remove volumes
+# Stop everything and remove volumes
+[group('env')]
 down-volumes:
-    docker compose --profile dev --profile test --profile inteval down -v
+    docker compose {{profiles}} down -v
 
-# View logs from all services
-logs:
-    docker compose --profile dev logs -f
-
-# View logs from specific service (usage: just logs-service app)
-logs-service service:
-    docker compose --profile dev logs -f {{service}}
-
-# Restart all services
+[group('env')]
 restart:
     docker compose --profile dev restart
 
-# Check status of all services
+# Follow logs (usage: just logs, just logs app celery-worker)
+[group('env')]
+logs *services:
+    docker compose --profile dev logs -f {{services}}
+
+[group('env')]
 ps:
-    docker compose --profile dev --profile test --profile inteval ps
+    docker compose {{profiles}} ps
 
-# Execute command in backend container (usage: just exec-backend "ls -la")
-exec-backend cmd:
-    docker compose --profile dev exec app {{cmd}}
-
-# Execute command in frontend container (usage: just exec-frontend "ls -la")
-exec-frontend cmd:
-    docker compose --profile dev exec frontend {{cmd}}
-
-# Open shell in backend container
-shell-backend:
-    docker compose --profile dev exec app sh
-
-# Open shell in frontend container
-shell-frontend:
-    docker compose --profile dev exec frontend sh
-
-# Open PostgreSQL shell
-db-shell:
-    docker compose exec db psql -U arxiv_user -d arxiv_rag
-
-# Check backend health
+[group('env')]
 health:
     @curl -sf http://localhost:${BACKEND_PORT:-8000}/api/v1/health | python3 -m json.tool || echo "Health check failed - is the backend running?"
 
-# Run database migrations
+# Stop everything, remove volumes and locally built images
+[group('env')]
+clean:
+    docker compose {{profiles}} down -v --rmi local
+
+# Full reset: clean, setup, build, start detached
+[group('env')]
+reset: clean setup build up-d
+
+# Run a command in the backend container (usage: just exec-backend "uv run alembic current")
+[group('shell')]
+exec-backend cmd:
+    docker compose --profile dev exec app {{cmd}}
+
+[group('shell')]
+exec-frontend cmd:
+    docker compose --profile dev exec frontend {{cmd}}
+
+[group('shell')]
+shell-backend:
+    docker compose --profile dev exec app sh
+
+[group('shell')]
+shell-frontend:
+    docker compose --profile dev exec frontend sh
+
+[group('shell')]
+db-shell:
+    docker compose --profile dev exec db psql -U arxiv_user -d arxiv_rag
+
+# Run Alembic migrations in the dev backend
+[group('shell')]
 migrate:
     docker compose --profile dev exec app uv run alembic upgrade head
 
-# Clean up: stop containers, remove volumes, and remove locally built images
-clean:
-    docker compose --profile dev --profile test --profile inteval down -v --rmi local
-
-# Full reset: clean everything and rebuild
-reset: clean setup build up-d
-
-# Development workflow: build and start with hot reload
-dev: build up
-
-# =============================================================================
-# Testing
-# =============================================================================
-
-# Run tests (usage: just test, just test tests/integration, just test -k "pattern")
+# Backend tests; bare `just test` also collects tests/evals (usage: just test tests/unit tests/api, just test -k "pattern")
+[group('test')]
 test *args:
     #!/usr/bin/env bash
     set -uo pipefail
@@ -100,29 +104,27 @@ test *args:
     docker compose --profile test build test-runner
     docker compose --profile test run --rm test-runner uv run pytest {{args}}
 
-# Cleanup test containers
+# Frontend tests (usage: just test-frontend, just test-frontend --coverage)
+[group('test')]
+test-frontend *args:
+    docker compose --profile test run --rm frontend-test-runner npm test -- {{args}}
+
+[group('test')]
 test-clean:
     docker compose --profile test rm -fsv test-db test-runner frontend-test-runner 2>/dev/null
 
-# =============================================================================
-# Evaluation
-# =============================================================================
-
-# Run LLM-backed evals (requires API keys in backend/.env)
+# LLM-backed evals (requires API keys in backend/.env)
+[group('eval')]
 eval *args:
     #!/usr/bin/env bash
     set -uo pipefail
     trap 'docker compose --profile eval down 2>/dev/null' EXIT
     docker compose --profile eval build eval-runner
     docker compose --profile eval run --rm eval-runner \
-        sh -c "uv sync --frozen --extra dev --extra eval && uv run pytest tests/evals -m eval -v --tb=short {{args}}"
+        sh -c "uv sync --frozen --group eval && uv run pytest tests/evals -m eval -v --tb=short {{args}}"
 
-# =============================================================================
-# Integration Evaluation (real LLM + real DB + real services)
-# =============================================================================
-
-# Seed DB for integration evals (migrations + paper ingest). Idempotent.
-# Data persists in test_postgres_data volume; only re-seed after `just clean`.
+# Seed the inteval DB (migrations + paper ingest); idempotent, re-seed only after `just clean`
+[group('eval')]
 inteval-seed:
     #!/usr/bin/env bash
     set -uo pipefail
@@ -130,10 +132,10 @@ inteval-seed:
     docker compose --profile inteval build inteval-runner
     docker compose --profile inteval up -d test-db
     docker compose --profile inteval run --rm inteval-runner \
-        sh -c "uv sync --frozen --extra dev --extra eval && uv run alembic upgrade head && uv run python -m tests.evals.integration.seed"
+        sh -c "uv sync --frozen --group eval && uv run alembic upgrade head && uv run python -m tests.evals.integration.seed"
 
-# Run integration evals (requires inteval-seed first).
-# Data persists in test_postgres_data volume; only re-seed after `just clean`.
+# Integration evals: real LLM + real DB + real services (run inteval-seed first)
+[group('eval')]
 inteval *args:
     #!/usr/bin/env bash
     set -uo pipefail
@@ -141,36 +143,61 @@ inteval *args:
     docker compose --profile inteval build inteval-runner
     docker compose --profile inteval up -d test-db
     docker compose --profile inteval run --rm inteval-runner \
-        sh -c "uv sync --frozen --extra dev --extra eval && uv run alembic upgrade head && uv run pytest tests/evals/integration -m inteval -v --tb=short {{args}}"
+        sh -c "uv sync --frozen --group eval && uv run alembic upgrade head && uv run pytest tests/evals/integration -m inteval -v --tb=short {{args}}"
 
-# =============================================================================
-# Code Quality
-# =============================================================================
-
-# Run Python linter
+# Ruff lint + format check (src, tests, alembic)
+[group('quality')]
 lint:
-    docker compose --profile dev exec app uv run ruff check src/
+    docker compose --profile dev exec app uv run ruff check src/ tests/ alembic/
+    docker compose --profile dev exec app uv run ruff format --check src/ tests/ alembic/
 
-# Run Python formatter
+[group('quality')]
 format:
-    docker compose --profile dev exec app uv run ruff format src/
+    docker compose --profile dev exec app uv run ruff format src/ tests/ alembic/
 
-# Run Python type checker
+[group('quality')]
 typecheck:
     docker compose --profile dev exec app uv run ty check src/
 
-# Run all checks (lint + typecheck)
-check: lint typecheck
-
-# Auto-fix Python lint and formatting issues
+# Auto-fix backend lint and formatting
+[group('quality')]
 fix:
-    docker compose --profile dev exec app uv run ruff format src/
-    docker compose --profile dev exec app uv run ruff check src/ --fix
+    docker compose --profile dev exec app uv run ruff format src/ tests/ alembic/
+    docker compose --profile dev exec app uv run ruff check src/ tests/ alembic/ --fix
 
-# Run frontend linting
+# Likely-dead backend code (config in pyproject [tool.vulture]; advisory, decorator-registered code is noise)
+[group('quality')]
+deadcode:
+    docker compose --profile dev exec app uv run vulture
+
+# ESLint + knip, prettier check, tsc -- the same three steps as CI
+[group('quality')]
 lint-frontend:
-    docker compose --profile dev run --rm --no-deps frontend npm run lint
+    docker compose --profile dev run --rm --no-deps frontend sh -c "npm run lint && npm run format:check && npm run typecheck"
 
-# Run frontend tests (usage: just test-frontend, just test-frontend -- --reporter=verbose)
-test-frontend *args:
-    docker compose --profile test run --rm frontend-test-runner npm test -- {{args}}
+[group('quality')]
+format-frontend:
+    docker compose --profile dev run --rm --no-deps frontend npm run format
+
+# Lint + typecheck, both trees
+[group('quality')]
+check: lint typecheck lint-frontend
+
+# All git hooks against every file (needs uv and Node 22 on the host)
+[group('quality')]
+pre-commit:
+    uvx pre-commit run --all-files
+
+# Everything CI gates on, locally (needs `just up-d`; skips the production image builds)
+[group('quality')]
+ci:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    docker compose --profile dev exec app uv lock --check
+    just check
+    just test tests/unit tests/api --cov=src --cov-report=term-missing:skip-covered
+    just test tests/integration
+    just test-frontend --coverage
+    POSTGRES_PASSWORD=x REDIS_PASSWORD=x TYPESAFE_API_KEY=x OPENAI_API_KEY=x JINA_API_KEY=x \
+    CLERK_DOMAIN=x CORS_ORIGINS=http://localhost VITE_CLERK_PUBLISHABLE_KEY=pk_test_x FLOWER_BASIC_AUTH=a:b \
+        docker compose -f docker-compose.coolify.yml config -q

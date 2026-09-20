@@ -1,7 +1,8 @@
+// Scoped chat: one retrieved source (backend schemas/stream.py::SourceInfo).
 import { useState } from 'react'
 import { ChevronRight, ExternalLink, FileText, Check, AlertTriangle } from 'lucide-react'
-import type { SourceInfo } from '../../types/api'
 import { AnimatedCollapse } from '../ui/AnimatedCollapse'
+import type { SourceInfo } from '../../types/api'
 
 interface SourceCardProps {
   source: SourceInfo
@@ -13,60 +14,60 @@ export default function SourceCard({ source }: SourceCardProps) {
   const relevancePercent = (source.relevance_score * 100).toFixed(0)
 
   return (
-    <div className="border border-stone-100 rounded-lg overflow-hidden transition-colors duration-150 hover:border-stone-200">
+    <div className="overflow-hidden rounded-lg border border-stone-100 transition-colors duration-150 hover:border-stone-200">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-4 py-3 text-left flex items-start gap-3 hover:bg-stone-50 transition-colors duration-150"
+        className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors duration-150 hover:bg-stone-50"
       >
-        <div className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <FileText className="w-4 h-4 text-stone-500" strokeWidth={1.5} />
+        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-stone-100">
+          <FileText className="h-4 w-4 text-stone-500" strokeWidth={1.5} />
         </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-mono text-stone-400">{source.arxiv_id}</span>
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex items-center gap-2">
+            <span className="font-mono text-xs text-stone-400">{source.arxiv_id}</span>
             <span className="text-xs text-stone-300">|</span>
             <span className="text-xs text-stone-400">{relevancePercent}% match</span>
           </div>
-          <p className="text-sm text-stone-700 leading-snug line-clamp-2">{source.title}</p>
+          <p className="line-clamp-2 text-sm leading-snug text-stone-700">{source.title}</p>
         </div>
 
         <div
-          className="flex-shrink-0 text-stone-300 mt-1 chevron-rotate"
+          className="chevron-rotate mt-1 flex-shrink-0 text-stone-300"
           data-expanded={isExpanded}
         >
-          <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
+          <ChevronRight className="h-4 w-4" strokeWidth={1.5} />
         </div>
       </button>
 
       <AnimatedCollapse isOpen={isExpanded}>
-        <div className="px-4 pb-4 pt-1">
+        <div className="px-4 pt-1 pb-4">
           <div className="ml-11 space-y-3">
             <div>
-              <span className="text-xs text-stone-400 uppercase tracking-wide">Authors</span>
-              <p className="text-sm text-stone-600 mt-0.5 leading-relaxed">
+              <span className="text-xs tracking-wide text-stone-400 uppercase">Authors</span>
+              <p className="mt-0.5 text-sm leading-relaxed text-stone-600">
                 {source.authors.join(', ')}
               </p>
             </div>
 
             {source.published_date && (
               <div>
-                <span className="text-xs text-stone-400 uppercase tracking-wide">Published</span>
-                <p className="text-sm text-stone-600 mt-0.5">{source.published_date}</p>
+                <span className="text-xs tracking-wide text-stone-400 uppercase">Published</span>
+                <p className="mt-0.5 text-sm text-stone-600">{source.published_date}</p>
               </div>
             )}
 
             <div className="flex items-center gap-4">
               <div>
-                <span className="text-xs text-stone-400 uppercase tracking-wide">Relevance</span>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="w-24 h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                <span className="text-xs tracking-wide text-stone-400 uppercase">Relevance</span>
+                <div className="mt-1 flex items-center gap-2">
+                  <div className="h-1.5 w-24 overflow-hidden rounded-full bg-stone-100">
                     <div
-                      className="h-full bg-stone-600 rounded-full transition-[width] duration-500 ease-out"
+                      className="h-full rounded-full bg-stone-600 transition-[width] duration-500 ease-out"
                       style={{ width: `${relevancePercent}%` }}
                     />
                   </div>
-                  <span className="text-xs font-mono text-stone-500">{relevancePercent}%</span>
+                  <span className="font-mono text-xs text-stone-500">{relevancePercent}%</span>
                 </div>
               </div>
 
@@ -74,15 +75,15 @@ export default function SourceCard({ source }: SourceCardProps) {
                 <div className="flex items-center gap-1.5">
                   {source.was_graded_relevant ? (
                     <>
-                      <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                        <Check className="w-3 h-3 text-green-600" strokeWidth={2} />
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100">
+                        <Check className="h-3 w-3 text-green-600" strokeWidth={2} />
                       </div>
                       <span className="text-xs text-green-700">Verified relevant</span>
                     </>
                   ) : (
                     <>
-                      <div className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center">
-                        <AlertTriangle className="w-3 h-3 text-amber-600" strokeWidth={2} />
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-100">
+                        <AlertTriangle className="h-3 w-3 text-amber-600" strokeWidth={2} />
                       </div>
                       <span className="text-xs text-amber-700">Low confidence</span>
                     </>
@@ -95,9 +96,9 @@ export default function SourceCard({ source }: SourceCardProps) {
               href={source.pdf_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-stone-600 hover:text-stone-900 transition-colors duration-150"
+              className="inline-flex items-center gap-1.5 text-sm text-stone-600 transition-colors duration-150 hover:text-stone-900"
             >
-              <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} />
+              <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.5} />
               View PDF
             </a>
           </div>

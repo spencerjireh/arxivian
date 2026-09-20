@@ -1,97 +1,124 @@
-import { screen } from '@testing-library/react'
+import { screen, fireEvent, within } from '@testing-library/react'
 import { renderWithProviders } from '../../helpers/renderWithProviders'
 import LibraryPage from '../../../src/pages/LibraryPage'
+import { makeFeedItem, makeLibraryResponse } from '../../fixtures/feed'
+import type { FeedItem, PaperLifecycleState } from '../../../src/types/api'
 
 vi.mock('@clerk/clerk-react', () => import('../../mocks/clerk'))
 vi.mock('framer-motion', () => import('../../mocks/framer-motion'))
 
-const mockUsePapers = vi.fn()
+const mockUseLibrary = vi.fn()
+const setMutateAsync = vi.fn().mockResolvedValue({})
+const clearMutateAsync = vi.fn().mockResolvedValue(undefined)
 
-vi.mock('../../../src/api/papers', () => ({
-  usePapers: () => mockUsePapers(),
+vi.mock('../../../src/api/library', () => ({
+  useLibrary: () => mockUseLibrary(),
+}))
+vi.mock('../../../src/api/paperStates', () => ({
+  useSetPaperState: () => ({ mutateAsync: setMutateAsync }),
+  useClearPaperState: () => ({ mutateAsync: clearMutateAsync }),
 }))
 
-const samplePapers = [
-  {
-    arxiv_id: '2401.00001',
-    title: 'Test Paper One',
-    authors: ['Alice', 'Bob'],
-    abstract: 'Abstract one',
-    categories: ['cs.AI'],
-    published_date: '2024-01-01',
-    pdf_url: 'https://arxiv.org/pdf/2401.00001',
-    sections: null,
-    pdf_processed: true,
-    pdf_processing_date: null,
-    parser_used: null,
-    created_at: '2024-01-01',
-    updated_at: '2024-01-01',
-  },
-]
+function item(arxivId: string, title: string, state: PaperLifecycleState): FeedItem {
+  return makeFeedItem({
+    paper: { ...makeFeedItem().paper, arxiv_id: arxivId, title },
+    state: {
+      state,
+      repo_url: state === 'shipped' ? 'https://github.com/x/y' : null,
+      dismissal_reason: null,
+      updated_at: 'x',
+    },
+  })
+}
+
+function ready(overrides = {}) {
+  return { data: makeLibraryResponse(overrides), isLoading: false, error: null }
+}
+
+beforeEach(() => {
+  setMutateAsync.mockClear()
+  clearMutateAsync.mockClear()
+})
 
 describe('LibraryPage', () => {
-  it('shows loading spinner', () => {
-    mockUsePapers.mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      error: null,
-    })
-
+  it('shows a spinner while loading', () => {
+    mockUseLibrary.mockReturnValue({ data: undefined, isLoading: true, error: null })
     renderWithProviders(<LibraryPage />)
-
     expect(screen.getByText('Library')).toBeInTheDocument()
-    const spinner = document.querySelector('.animate-spin')
-    expect(spinner).toBeInTheDocument()
+    expect(document.querySelector('.animate-spin')).toBeInTheDocument()
   })
 
-  it('shows error message on query failure', () => {
-    mockUsePapers.mockReturnValue({
+  it('shows the error message', () => {
+    mockUseLibrary.mockReturnValue({
       data: undefined,
       isLoading: false,
       error: new Error('Network error'),
     })
-
     renderWithProviders(<LibraryPage />)
-
     expect(screen.getByText('Network error')).toBeInTheDocument()
   })
 
-  it('shows empty state when no papers', () => {
-    mockUsePapers.mockReturnValue({
-      data: { total: 0, offset: 0, limit: 20, papers: [] },
-      isLoading: false,
-      error: null,
-    })
-
+  it('shows one empty state with a link to the feed when every group is empty', () => {
+    mockUseLibrary.mockReturnValue(ready())
     renderWithProviders(<LibraryPage />)
-
-    expect(screen.getByText('No papers in the knowledge base yet')).toBeInTheDocument()
+    expect(screen.getByText('Nothing saved yet')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'feed' })).toHaveAttribute('href', '/feed')
+    expect(screen.queryByRole('heading', { name: 'Saved' })).not.toBeInTheDocument()
   })
 
-  it('renders paper cards when data is available', () => {
-    mockUsePapers.mockReturnValue({
-      data: { total: 1, offset: 0, limit: 20, papers: samplePapers },
-      isLoading: false,
-      error: null,
-    })
-
+  it('renders the non-empty groups in lifecycle order with counts', () => {
+    mockUseLibrary.mockReturnValue(
+      ready({
+        saved: [item('a', 'Saved one', 'saved'), item('b', 'Saved two', 'saved')],
+        shipped: [item('c', 'Shipped one', 'shipped')],
+      })
+    )
     renderWithProviders(<LibraryPage />)
 
-    expect(screen.getByText('Test Paper One')).toBeInTheDocument()
-    expect(screen.getByText('1 paper')).toBeInTheDocument()
+    expect(screen.getByText('3 papers')).toBeInTheDocument()
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
+    expect(headings).toEqual(['Saved', 'Shipped'])
+
+    const saved = screen.getByRole('region', { name: 'Saved' })
+    expect(within(saved).getByText('2')).toBeInTheDocument()
+    expect(within(saved).getByRole('link', { name: 'Saved one' })).toBeInTheDocument()
+
+    const shipped = screen.getByRole('region', { name: 'Shipped' })
+    expect(within(shipped).getByRole('link', { name: /Repo/ })).toHaveAttribute(
+      'href',
+      'https://github.com/x/y'
+    )
   })
 
-  it('renders pagination when total exceeds page size', () => {
-    mockUsePapers.mockReturnValue({
-      data: { total: 25, offset: 0, limit: 20, papers: samplePapers },
-      isLoading: false,
-      error: null,
-    })
-
+  it('marks an implementing paper as shipped with the entered repo url', () => {
+    mockUseLibrary.mockReturnValue(
+      ready({ implementing: [item('a', 'Building it', 'implementing')] })
+    )
     renderWithProviders(<LibraryPage />)
 
-    expect(screen.getByText('Previous')).toBeInTheDocument()
-    expect(screen.getByText('Next')).toBeInTheDocument()
-    expect(screen.getByText('1-20 of 25')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Mark as shipped' }))
+    fireEvent.change(screen.getByLabelText('Repository URL'), {
+      target: { value: 'https://github.com/me/repo' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    expect(setMutateAsync).toHaveBeenCalledWith({
+      arxivId: 'a',
+      body: { state: 'shipped', repo_url: 'https://github.com/me/repo' },
+    })
+  })
+
+  it('toggles saved off with the clear mutation and dismisses in one click', () => {
+    mockUseLibrary.mockReturnValue(ready({ saved: [item('a', 'Saved one', 'saved')] }))
+    renderWithProviders(<LibraryPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Saved' }))
+    expect(clearMutateAsync).toHaveBeenCalledWith({ arxivId: 'a' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(setMutateAsync).toHaveBeenCalledWith({
+      arxivId: 'a',
+      body: { state: 'dismissed', repo_url: undefined },
+    })
   })
 })

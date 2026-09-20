@@ -1,10 +1,14 @@
+# Install once: `uvx pre-commit install`. Needs uv and Node 22 (frontend/.nvmrc) on the host,
+# plus `cd frontend && npm ci` for the lint-staged hook.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
       - id: check-added-large-files
         args: ['--maxkb=1000']
 
@@ -13,21 +17,28 @@ repos:
     hooks:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
-
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.9
-    hooks:
-      - id: ruff
-        args: [--fix]
-        files: ^backend/
-      - id: ruff-format
-        files: ^backend/
+        exclude: package-lock\.json$|uv\.lock$
 
   - repo: local
     hooks:
-      - id: eslint-frontend
-        name: eslint (frontend)
-        entry: bash -c 'cd frontend && npm run lint'
+      # Backend: the ruff pinned in backend/uv.lock, so the hook, `just lint` and CI can never
+      # disagree on a version. --only-group dev keeps the host venv to the dev tools.
+      - id: ruff-check
+        name: ruff check (backend)
+        entry: uv run --project backend --frozen --only-group dev ruff check --fix --force-exclude
         language: system
-        files: ^frontend/src/.*\.(ts|tsx)$
+        types: [python]
+        files: ^backend/(src|tests|alembic)/
+      - id: ruff-format
+        name: ruff format (backend)
+        entry: uv run --project backend --frozen --only-group dev ruff format --force-exclude
+        language: system
+        types: [python]
+        files: ^backend/(src|tests|alembic)/
+      # Frontend: eslint --fix + prettier on the staged files only (config in package.json).
+      - id: lint-staged-frontend
+        name: lint-staged (frontend)
+        entry: bash -c 'cd frontend && npx lint-staged'
+        language: system
+        files: ^frontend/.*\.(ts|tsx|css|md|json)$
         pass_filenames: false

@@ -11,3 +11,7 @@ tests/
 *.pyc
 .git
 .gitignore
+.deepeval/
+.coverage
+coverage.xml
+htmlcov/

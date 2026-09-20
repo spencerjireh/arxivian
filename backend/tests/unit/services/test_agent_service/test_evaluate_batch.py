@@ -1,10 +1,11 @@
 """Tests for evaluate_batch node."""
 
-import pytest
 from unittest.mock import AsyncMock
 
-from src.schemas.langgraph_state import BatchEvaluation
+import pytest
+
 from src.services.agent_service.nodes.evaluate_batch import _chunk_fingerprints
+from src.services.agent_service.state import BatchEvaluation
 
 
 class TestChunkFingerprints:

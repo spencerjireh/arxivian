@@ -1,33 +1,37 @@
 """FastAPI application entry point."""
 
 from contextlib import asynccontextmanager
+
+import logfire
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from src.config import get_settings
-from src.database import engine, init_db, AsyncSessionLocal
-
-from src.services.agent_service.graph_builder import build_graph
-
-# Import routers
-from src.routers import (
-    health,
-    search,
-    stream,
-    papers,
-    conversations,
-    ops,
-    feedback,
-    users,
-    webhooks,
-)
+from src.database import AsyncSessionLocal, engine, init_db
 
 # Import middleware
 from src.middleware import logging_middleware, maintenance_middleware, register_exception_handlers
+from src.observability import configure_tracing, flush
+
+# Import routers
+from src.routers import (
+    conversations,
+    feed,
+    health,
+    ops,
+    paper_states,
+    papers,
+    stream,
+    users,
+    webhooks,
+)
+from src.services.agent_service.graph_builder import build_graph
 from src.utils.logger import configure_logging, get_logger
 
 settings = get_settings()
 
-# Configure logging early
+# Tracing before logging so the structlog processor finds a configured provider
+configure_tracing("arxivian-api")
 configure_logging(log_level=settings.log_level, debug=settings.debug)
 log = get_logger(__name__)
 
@@ -45,53 +49,32 @@ async def lifespan(app: FastAPI):
     litellm.suppress_debug_info = True  # type: ignore[invalid-assignment]
     litellm.set_verbose = False
 
-    if settings.langfuse_enabled:
-        litellm.success_callback = ["langfuse"]
-        litellm.failure_callback = ["langfuse"]
-        log.info("langfuse_enabled", host=settings.langfuse_host)
-
     # Redis for rate limiting and caching
     import redis.asyncio as aioredis
 
     app.state.redis = aioredis.from_url(settings.redis_url, decode_responses=True)
 
-    # Initialize LangGraph checkpointer (must use Redis DB 0 for RediSearch)
-    from langgraph.checkpoint.redis.aio import AsyncRedisSaver
+    # Compile the agent graph once (singleton for app lifetime; no checkpointer -- every
+    # turn is a single uninterrupted graph run since HITL was removed in Phase 3)
+    app.state.agent_graph = build_graph()
+    log.info("agent graph compiled")
 
-    async with AsyncRedisSaver.from_conn_string(
-        settings.redis_checkpoint_url,
-        ttl={"default_ttl": 60 * 24, "refresh_on_read": False},  # 24h in minutes
-    ) as checkpointer:
-        await checkpointer.asetup()
-        log.info("redis checkpointer initialized", url=settings.redis_checkpoint_url)
+    # Load system user ID (seeded by migration)
+    from src.tiers import init_system_user
 
-        # Compile agent graph once with checkpointer (singleton for app lifetime)
-        app.state.agent_graph = build_graph(checkpointer)
-        log.info("agent graph compiled with checkpointer")
+    async with AsyncSessionLocal() as db:
+        await init_system_user(db)
+    log.info("system user loaded")
 
-        # Load system user ID (seeded by migration)
-        from src.tiers import init_system_user
-
-        async with AsyncSessionLocal() as db:
-            await init_system_user(db)
-        log.info("system user loaded")
-
-        yield
+    yield
 
     # Shutdown Redis (rate-limit client)
     await app.state.redis.aclose()
 
-    # Flush any pending Langfuse events on shutdown
-    try:
-        from src.clients.langfuse_utils import shutdown_langfuse
-
-        shutdown_langfuse()
-    except Exception as e:
-        log.warning("langfuse_shutdown_failed", error=str(e))
-
     log.info("shutting down application")
     await engine.dispose()
     log.info("database connections closed")
+    flush()
 
 
 app = FastAPI(
@@ -102,6 +85,10 @@ app = FastAPI(
     docs_url="/docs" if settings.debug else None,
     redoc_url="/redoc" if settings.debug else None,
 )
+
+# Tracing: one span per request (health excluded) and per SQL statement
+logfire.instrument_fastapi(app, excluded_urls="/api/v1/health")
+logfire.instrument_sqlalchemy(engine=engine)
 
 # Register exception handlers first
 register_exception_handlers(app)
@@ -127,14 +114,14 @@ app.middleware("http")(logging_middleware)
 
 # Register routers
 app.include_router(health.router, prefix="/api/v1", tags=["Health"])
-app.include_router(search.router, prefix="/api/v1", tags=["Search"])
 app.include_router(stream.router, prefix="/api/v1", tags=["Stream"])
 app.include_router(conversations.router, prefix="/api/v1", tags=["Conversations"])
 app.include_router(papers.router, prefix="/api/v1", tags=["Papers"])
 app.include_router(ops.router, prefix="/api/v1", tags=["Ops"])
-app.include_router(feedback.router, prefix="/api/v1", tags=["Feedback"])
 app.include_router(users.router, prefix="/api/v1", tags=["Users"])
 app.include_router(webhooks.router, prefix="/api/v1", tags=["Webhooks"])
+app.include_router(feed.router, prefix="/api/v1", tags=["Feed"])
+app.include_router(paper_states.router, prefix="/api/v1", tags=["Paper States"])
 
 
 @app.get("/")

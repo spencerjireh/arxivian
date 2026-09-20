@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react'
+import { Routes, Route } from 'react-router-dom'
 import { mockAuth } from '../../mocks/clerk'
 import { renderWithProviders } from '../../helpers/renderWithProviders'
-import { Routes, Route } from 'react-router-dom'
 import LandingPage from '../../../src/pages/LandingPage'
 
 vi.mock('@clerk/clerk-react', () => import('../../mocks/clerk'))
@@ -15,18 +15,18 @@ describe('LandingPage', () => {
   it('renders hero and Get started CTA when unauthenticated', () => {
     renderWithProviders(<LandingPage />)
 
-    expect(screen.getByRole('heading', { name: /Understand research/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Papers you could/ })).toBeInTheDocument()
     // "Get started" appears in both nav and hero CTA
     const buttons = screen.getAllByText('Get started')
     expect(buttons.length).toBeGreaterThanOrEqual(1)
   })
 
-  it('shows Go to Chat button when authenticated', () => {
+  it('shows Open feed when authenticated', () => {
     mockAuth.isSignedIn = true
 
     renderWithProviders(<LandingPage />)
 
-    expect(screen.getByText('Go to Chat')).toBeInTheDocument()
+    expect(screen.getAllByText('Open feed').length).toBeGreaterThanOrEqual(1)
   })
 
   it('shows See plans link to /pricing when unauthenticated', () => {
@@ -36,19 +36,19 @@ describe('LandingPage', () => {
     expect(link).toHaveAttribute('href', '/pricing')
   })
 
-  it('redirects to /chat when authenticated', async () => {
+  it('redirects to /feed when authenticated', async () => {
     mockAuth.isSignedIn = true
 
     renderWithProviders(
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/chat" element={<div data-testid="chat-page">Chat</div>} />
+        <Route path="/feed" element={<div data-testid="feed-page">Feed</div>} />
       </Routes>,
-      { initialEntries: ['/'] },
+      { initialEntries: ['/'] }
     )
 
     await waitFor(() => {
-      expect(screen.getByTestId('chat-page')).toBeInTheDocument()
+      expect(screen.getByTestId('feed-page')).toBeInTheDocument()
     })
   })
 })

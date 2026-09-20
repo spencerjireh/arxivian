@@ -1,18 +1,18 @@
 """Conversations management router for chat history."""
 
+from uuid import UUID
+
 from fastapi import APIRouter, Query
 
-from src.schemas.conversation import (
+from src.dependencies import ConversationRepoDep, CurrentUserRequired, PaperRepoDep
+from src.exceptions import ResourceNotFoundError
+from src.schemas.conversations import (
+    ConversationDetailResponse,
     ConversationListItem,
     ConversationListResponse,
-    ConversationDetailResponse,
     ConversationTurnResponse,
     DeleteConversationResponse,
-    CancelStreamResponse,
 )
-from src.dependencies import ConversationRepoDep, DbSession, CurrentUserRequired
-from src.exceptions import ResourceNotFoundError
-from src.services.task_registry import task_registry
 
 router = APIRouter()
 
@@ -20,29 +20,32 @@ router = APIRouter()
 @router.get("/conversations", response_model=ConversationListResponse)
 async def list_conversations(
     conversation_repo: ConversationRepoDep,
+    paper_repo: PaperRepoDep,
     current_user: CurrentUserRequired,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
+    arxiv_id: str = Query(..., description="Only threads scoped to this paper"),
 ) -> ConversationListResponse:
+    """List the caller's threads scoped to one paper, most recently updated first.
+
+    Every conversation is paper-scoped (Phase 3), so the paper is required.
     """
-    Get paginated list of all conversations.
+    paper = await paper_repo.get_by_arxiv_id(arxiv_id)
+    if paper is None:
+        raise ResourceNotFoundError("Paper", arxiv_id)
+    scope_paper_id = paper.id
 
-    Returns conversations ordered by most recently updated first.
-    Each item includes a summary with turn count and last query preview.
-
-    Args:
-        conversation_repo: Injected conversation repository
-        offset: Number of conversations to skip
-        limit: Maximum number of conversations to return
-
-    Returns:
-        ConversationListResponse with paginated conversations
-    """
     conversations, total = await conversation_repo.get_all(
         offset=offset,
         limit=limit,
         user_id=current_user.id,
+        paper_id=scope_paper_id,
     )
+
+    scoped_ids = {conv.paper_id for conv in conversations if isinstance(conv.paper_id, UUID)}
+    arxiv_by_paper = {
+        paper.id: paper.arxiv_id for paper in await paper_repo.get_by_ids(list(scoped_ids))
+    }
 
     items = []
     for conv in conversations:
@@ -61,6 +64,7 @@ async def list_conversations(
                 created_at=conv.created_at,
                 updated_at=conv.updated_at,
                 last_query=last_query,
+                arxiv_id=arxiv_by_paper.get(conv.paper_id),
             )
         )
 
@@ -76,6 +80,7 @@ async def list_conversations(
 async def get_conversation(
     session_id: str,
     conversation_repo: ConversationRepoDep,
+    paper_repo: PaperRepoDep,
     current_user: CurrentUserRequired,
 ) -> ConversationDetailResponse:
     """
@@ -108,19 +113,23 @@ async def get_conversation(
             rewritten_query=turn.rewritten_query,
             sources=turn.sources,
             reasoning_steps=turn.reasoning_steps,
-            thinking_steps=turn.thinking_steps,
             citations=turn.citations,
-            pending_confirmation=turn.pending_confirmation,
             created_at=turn.created_at,
         )
         for turn in sorted(conv.turns, key=lambda t: t.turn_number)
     ]
+
+    scoped_arxiv_id = None
+    if isinstance(conv.paper_id, UUID):
+        scoped_paper = await paper_repo.get_by_id(str(conv.paper_id))
+        scoped_arxiv_id = scoped_paper.arxiv_id if scoped_paper else None
 
     return ConversationDetailResponse(
         session_id=conv.session_id,
         title=conv.title,
         created_at=conv.created_at,
         updated_at=conv.updated_at,
+        arxiv_id=scoped_arxiv_id,
         turns=turns,
     )
 
@@ -129,7 +138,6 @@ async def get_conversation(
 async def delete_conversation(
     session_id: str,
     conversation_repo: ConversationRepoDep,
-    db: DbSession,
     current_user: CurrentUserRequired,
 ) -> DeleteConversationResponse:
     """
@@ -165,39 +173,3 @@ async def delete_conversation(
         session_id=session_id,
         turns_deleted=turn_count,
     )
-
-
-@router.post("/conversations/{session_id}/cancel", response_model=CancelStreamResponse)
-async def cancel_stream(
-    session_id: str,
-    current_user: CurrentUserRequired,
-) -> CancelStreamResponse:
-    """
-    Cancel an active streaming request for a conversation.
-
-    This endpoint allows clients to cancel an in-progress stream for
-    a specific session. Useful for implementing a "stop generation"
-    button in the frontend.
-
-    Args:
-        session_id: Session identifier for the streaming conversation
-
-    Returns:
-        CancelStreamResponse indicating whether a stream was cancelled
-    """
-    cancelled = task_registry.cancel(session_id, user_id=str(current_user.id))
-
-    if cancelled:
-        return CancelStreamResponse(
-            session_id=session_id,
-            cancelled=True,
-            message="Stream cancelled successfully",
-        )
-    else:
-        return CancelStreamResponse(
-            session_id=session_id,
-            cancelled=False,
-            message="No active stream found for this session",
-        )
-
-

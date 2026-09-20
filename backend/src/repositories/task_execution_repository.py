@@ -1,9 +1,8 @@
 """Repository for TaskExecution model operations."""
 
-from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import select, func, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.task_execution import TaskExecution
@@ -25,7 +24,7 @@ class TaskExecutionRepository:
         celery_task_id: str,
         user_id: UUID,
         task_type: str,
-        parameters: Optional[dict] = None,
+        parameters: dict | None = None,
     ) -> TaskExecution:
         """Create a new task execution record."""
         task_exec = TaskExecution(
@@ -40,22 +39,10 @@ class TaskExecutionRepository:
         log.debug("task_execution_created", celery_task_id=celery_task_id, task_type=task_type)
         return task_exec
 
-    async def get_by_celery_task_id(self, celery_task_id: str) -> Optional[TaskExecution]:
+    async def get_by_celery_task_id(self, celery_task_id: str) -> TaskExecution | None:
         """Get task execution by Celery task ID."""
         result = await self.session.execute(
             select(TaskExecution).where(TaskExecution.celery_task_id == celery_task_id)
-        )
-        return result.scalar_one_or_none()
-
-    async def get_by_user_and_celery_task_id(
-        self, user_id: UUID, celery_task_id: str
-    ) -> Optional[TaskExecution]:
-        """Get task execution by user ID and Celery task ID (ownership check)."""
-        result = await self.session.execute(
-            select(TaskExecution).where(
-                TaskExecution.user_id == user_id,
-                TaskExecution.celery_task_id == celery_task_id,
-            )
         )
         return result.scalar_one_or_none()
 
@@ -63,7 +50,7 @@ class TaskExecutionRepository:
         self,
         celery_task_id: str,
         status: str,
-        error_message: Optional[str] = None,
+        error_message: str | None = None,
     ) -> None:
         """Update task execution status. Sets completed_at on terminal states."""
         values: dict = {"status": status, "updated_at": func.now()}
@@ -77,25 +64,6 @@ class TaskExecutionRepository:
             .where(TaskExecution.celery_task_id == celery_task_id)
             .values(**values)
         )
-
-    async def list_by_user(
-        self, user_id: UUID, limit: int = 20, offset: int = 0
-    ) -> tuple[list[TaskExecution], int]:
-        """List task executions for a user with pagination."""
-        count_result = await self.session.execute(
-            select(func.count()).select_from(TaskExecution).where(TaskExecution.user_id == user_id)
-        )
-        total = count_result.scalar_one()
-
-        result = await self.session.execute(
-            select(TaskExecution)
-            .where(TaskExecution.user_id == user_id)
-            .order_by(TaskExecution.created_at.desc())
-            .offset(offset)
-            .limit(limit)
-        )
-        tasks = list(result.scalars().all())
-        return tasks, total
 
     async def list_all(self, limit: int = 20, offset: int = 0) -> tuple[list[TaskExecution], int]:
         """List all task executions with pagination (ops use)."""

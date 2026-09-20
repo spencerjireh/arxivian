@@ -1,15 +1,15 @@
 """Prompt templates for agent workflow."""
 
 from __future__ import annotations
+
 import json
-from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from src.services.agent_service.tools import RETRIEVE_CHUNKS
 
 if TYPE_CHECKING:
-    from src.schemas.conversation import ConversationMessage
-    from src.schemas.langgraph_state import ToolOutput
+    from src.services.agent_service.state import ConversationMessage, ToolOutput
+
     from .context import ConversationFormatter
 
 
@@ -25,11 +25,11 @@ RICH SOURCES -- Retrieved passages or tool results cover the question well:
 PARTIAL SOURCES -- Some relevant context but it does not fully cover the question:
   Blend the provided context with your general knowledge. Clearly distinguish sourced claims
   ("According to [arxiv_id], ...") from unsourced claims ("More broadly, ...").
-  Offer to search arXiv for more comprehensive coverage.
+  Say what the paper does not cover.
 
 NO SOURCES -- No retrieved passages and no tool results returned anything relevant:
   Answer from your general knowledge of the topic. Be upfront that this is general knowledge,
-  not sourced from the knowledge base. Offer to search arXiv for papers on the topic.
+  not sourced from the paper.
 
 HALLUCINATION GUARD:
 - NEVER invent paper titles, arXiv IDs, or author names.
@@ -40,7 +40,8 @@ PRESENTATION RULES:
   inline math as $expression$ and display math as $$expression$$. Never use
   \\(...\\) or \\[...\\] delimiters.
 - Write as a knowledgeable person, not a system. Never expose internal details like
-  tool names (arxiv_search, retrieve_chunks, etc.), raw field names, or implementation artifacts.
+  tool names (retrieve_chunks, explore_citations, etc.), raw field names, or implementation
+  artifacts.
 - Lead with paper titles, not arXiv IDs. Cite sources as [arxiv_id] where appropriate.
 - Use human-readable dates (e.g. "February 12, 2026"), never ISO timestamps in prose.
 - Do not state the obvious. If the user asked for papers from a date, do not repeat
@@ -58,7 +59,8 @@ TITLE_SYSTEM_PROMPT = (
 )
 
 CLASSIFY_AND_ROUTE_SYSTEM_PROMPT = """You are a classification and routing agent for an academic research assistant.
-Your job: (1) score the query's relevance to academic research, then (2) decide the next action.
+The conversation is scoped to one paper. Your job: (1) score the query's relevance to academic
+research, then (2) decide the next action.
 
 STEP 1 -- SCOPE SCORING
 
@@ -85,66 +87,31 @@ Available tools:
 ROUTING PRIORITY (evaluate top-to-bottom, use the FIRST match):
 
 1. CONTENT QUESTIONS (default) -> retrieve_chunks
-   Any question about research concepts, methods, results, or papers.
-   EXCEPTION: questions about a paper's references, citations, influences, or
-   related work belong in Tier 3 (explore_citations).
-   Examples: "summarize X", "what does Y paper say about Z", "explain attention mechanisms"
+   Any question about the paper's concepts, methods, results, setup, or claims.
+   Examples: "summarize the method", "what does it say about ablations", "how is X trained"
 
-2. KNOWLEDGE BASE BROWSING -> list_papers
-   User wants to see what papers are available or browse the collection.
-   Examples: "what papers do we have", "list papers about transformers"
+2. CITATION EXPLORATION -> explore_citations
+   The user asks about the paper's references, related work, academic lineage, or what it
+   builds upon. Examples: "what does this paper cite", "what inspired this work"
 
-3. CITATION EXPLORATION -> explore_citations
-   User asks about references, related work, citation graphs, or academic lineage
-   for a specific paper.
-   Examples: "show citations for 1706.03762", "what does this paper cite",
-   "academic influences on X", "what inspired this paper", "what does X build upon"
+3. CITATION METRICS -> semantic_scholar
+   The user asks how influential or cited the paper is, or for its citation count.
 
-4. DISCOVERY (explicit or implicit) -> arxiv_search
-   User wants to find or discover NEW papers.
-   Explicit signals: "find on arXiv", "search arXiv", "discover new papers".
-   Implicit signals: "latest work on X", "recent advances in Y", "what's new in Z",
-   "state of the art in X", "current research on X".
-   Key distinction from Tier 1: if the user signals interest in NEW or RECENT work
-   they have not seen yet, use arxiv_search. If they ask about concepts or existing
-   papers without temporal/novelty language, use retrieve_chunks.
-
-5. EXPLICIT INGESTION -> propose_ingest
-   ONLY after arxiv_search succeeded AND the user explicitly asked to add/import/ingest papers.
-
-6. SUFFICIENT CONTEXT -> intent="direct"
-   Return intent="direct" when the conversation already contains retrieved passages
-   or tool results (e.g. arxiv_search, list_papers, explore_citations output) that
-   address the current question. Do not repeat tools that already succeeded --
-   use their results to generate a response.
+4. SUFFICIENT CONTEXT -> intent="direct"
+   Return intent="direct" when the conversation already contains retrieved passages or
+   tool results that address the current question. Do not repeat tools that already
+   succeeded -- use their results to generate a response.
 
 CRITICAL RULES:
 - retrieve_chunks is the DEFAULT. When uncertain which tool to use, choose retrieve_chunks.
 - If retrieve_chunks already ran and returned weak, low-relevance, or no results:
-  return intent="direct". Do NOT re-call retrieve_chunks with the same or similar query
-  and do NOT escalate to arxiv_search. Generate with what you have and offer to search arXiv.
-- arxiv_search is ONLY for discovering new papers when the user indicates discovery intent.
-- propose_ingest requires BOTH a prior arxiv_search AND explicit user intent to add papers.
+  return intent="direct". Do NOT re-call retrieve_chunks with the same or similar query.
+  Generate with what you have and say what the paper does not cover.
 - NEVER repeat the same tool with the same arguments. If a tool already succeeded, use its results.
-
-TOOL CHAINING:
-- arxiv_search only returns metadata. To add papers, follow up with propose_ingest.
-- When the user asks to "search and ingest" or "find and add" papers:
-  1. First call arxiv_search to find papers
-  2. Then call propose_ingest with the arxiv_ids from the search results
-- propose_ingest pauses execution for user confirmation. After the user confirms,
-  use retrieve_chunks to query the ingested content.
-- If the user previously declined ingestion, do not re-propose in the same turn.
 
 PARALLEL EXECUTION:
 - You may select MULTIPLE tools if they are independent.
 - Only parallelize when queries benefit from multiple data sources.
-
-DATE HANDLING (critical for arxiv_search):
-- The query parameter MUST contain actual keywords. It must NEVER be empty, "*", or contain
-  submittedDate: syntax.
-- When the user mentions dates, ALWAYS use the start_date/end_date parameters for filtering.
-- If the user omits the year, default to {current_year}.
 
 OUTPUT:
 - If scope_score < threshold -> intent="out_of_scope", empty tool_calls
@@ -162,6 +129,7 @@ def get_classify_and_route_prompt(
     conversation_context: str = "",
     is_rewrite: bool = False,
     prior_scope_score: int | None = None,
+    scope_note: str | None = None,
 ) -> tuple[str, str]:
     """Generate the merged classify-and-route prompt.
 
@@ -175,20 +143,17 @@ def get_classify_and_route_prompt(
         conversation_context: Formatted conversation history
         is_rewrite: True on rewrite loops (iteration > 0) -- skip scope assessment
         prior_scope_score: Scope score from initial classification (carried forward on rewrite)
+        scope_note: Paper-scoped chat note (which paper, which tools are unavailable)
 
     Returns:
         Tuple of (system_prompt, user_prompt)
     """
     # Format tool descriptions
-    tool_desc_lines = []
-    for schema in tool_schemas:
-        tool_desc_lines.append(f"- {schema['name']}: {schema['description']}")
-    tool_descriptions = "\n".join(tool_desc_lines)
-
-    system_prompt = CLASSIFY_AND_ROUTE_SYSTEM_PROMPT.format(
-        tool_descriptions=tool_descriptions,
-        current_year=datetime.now(timezone.utc).year,
+    tool_descriptions = "\n".join(
+        f"- {schema['name']}: {schema['description']}" for schema in tool_schemas
     )
+
+    system_prompt = CLASSIFY_AND_ROUTE_SYSTEM_PROMPT.format(tool_descriptions=tool_descriptions)
 
     # Build user prompt
     user_parts = []
@@ -199,6 +164,9 @@ def get_classify_and_route_prompt(
             f"Skip scope assessment -- use scope_score={prior_scope_score or 100}. "
             f"Focus on selecting the best tools for the rewritten query."
         )
+
+    if scope_note:
+        user_parts.append(f"[SCOPE] {scope_note}")
 
     if topic_context:
         user_parts.append(topic_context)
@@ -328,3 +296,9 @@ class PromptBuilder:
         return self._system, "\n\n".join(self._user_parts)
 
 
+def scoped_paper_note(arxiv_id: str, title: str) -> str:
+    """The routing note for a paper-scoped conversation (SPE-277)."""
+    return (
+        f"This conversation is scoped to paper {arxiv_id} ('{title}'). Route questions about "
+        f"its content to retrieve_chunks, which only searches this paper."
+    )

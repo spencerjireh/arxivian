@@ -1,8 +1,9 @@
 """Repository for User model operations."""
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
+
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.user import User
@@ -17,7 +18,7 @@ class UserRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_by_id(self, user_id: str) -> Optional[User]:
+    async def get_by_id(self, user_id: str) -> User | None:
         """Get user by UUID."""
         log.debug("query user by id", user_id=user_id)
         result = await self.session.execute(select(User).where(User.id == user_id))
@@ -25,7 +26,7 @@ class UserRepository:
         log.debug("query result", found=user is not None)
         return user
 
-    async def get_by_clerk_id(self, clerk_id: str) -> Optional[User]:
+    async def get_by_clerk_id(self, clerk_id: str) -> User | None:
         """Get user by Clerk ID."""
         log.debug("query user by clerk_id", clerk_id=clerk_id)
         result = await self.session.execute(select(User).where(User.clerk_id == clerk_id))
@@ -33,21 +34,13 @@ class UserRepository:
         log.debug("query result", found=user is not None)
         return user
 
-    async def get_by_email(self, email: str) -> Optional[User]:
-        """Get user by email."""
-        log.debug("query user by email", email=email)
-        result = await self.session.execute(select(User).where(User.email == email))
-        user = result.scalar_one_or_none()
-        log.debug("query result", found=user is not None)
-        return user
-
     async def create(
         self,
         clerk_id: str,
-        email: Optional[str] = None,
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
-        profile_image_url: Optional[str] = None,
+        email: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        profile_image_url: str | None = None,
     ) -> User:
         """
         Create a new user.
@@ -60,7 +53,7 @@ class UserRepository:
             first_name=first_name,
             last_name=last_name,
             profile_image_url=profile_image_url,
-            last_login_at=datetime.now(timezone.utc),
+            last_login_at=datetime.now(UTC),
         )
         self.session.add(user)
         await self.session.flush()
@@ -71,10 +64,10 @@ class UserRepository:
     async def get_or_create(
         self,
         clerk_id: str,
-        email: Optional[str] = None,
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
-        profile_image_url: Optional[str] = None,
+        email: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        profile_image_url: str | None = None,
     ) -> tuple[User, bool]:
         """
         Get existing user or create a new one.
@@ -103,23 +96,41 @@ class UserRepository:
             )
             return user, False
 
-        # Create new user
-        user = await self.create(
-            clerk_id=clerk_id,
-            email=email,
-            first_name=first_name,
-            last_name=last_name,
-            profile_image_url=profile_image_url,
-        )
+        # First sign-in fires several requests at once and each one runs this dependency,
+        # so a parallel request may insert the row between the lookup and this insert.
+        # This runs before any other work in the request, so rolling back only discards
+        # the failed insert; the loser then adopts the row.
+        try:
+            user = await self.create(
+                clerk_id=clerk_id,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                profile_image_url=profile_image_url,
+            )
+        except IntegrityError:
+            await self.session.rollback()
+            user = await self.get_by_clerk_id(clerk_id)
+            if user is None:
+                raise
+            log.info("user create raced, adopted existing row", clerk_id=clerk_id)
+            await self.update_on_login(
+                user,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                profile_image_url=profile_image_url,
+            )
+            return user, False
         return user, True
 
     async def update_on_login(
         self,
         user: User,
-        email: Optional[str] = None,
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
-        profile_image_url: Optional[str] = None,
+        email: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        profile_image_url: str | None = None,
     ) -> User:
         """
         Update user's last login time and sync profile data from Clerk.
@@ -127,8 +138,8 @@ class UserRepository:
         Caller is responsible for committing the transaction.
         """
         update_data = {
-            "last_login_at": datetime.now(timezone.utc),
-            "updated_at": datetime.now(timezone.utc),
+            "last_login_at": datetime.now(UTC),
+            "updated_at": datetime.now(UTC),
         }
 
         # Only update fields if they have values (to preserve existing data)
@@ -149,26 +160,6 @@ class UserRepository:
         log.debug("user login updated", clerk_id=user.clerk_id)
         return user
 
-    async def update_last_login(self, user: User) -> User:
-        """
-        Update only the user's last login timestamp.
-
-        Caller is responsible for committing the transaction.
-        """
-        now = datetime.now(timezone.utc)
-        await self.session.execute(
-            update(User)
-            .where(User.id == user.id)
-            .values(
-                last_login_at=now,
-                updated_at=now,
-            )
-        )
-        await self.session.flush()
-        await self.session.refresh(user)
-        log.debug("user last_login updated", clerk_id=user.clerk_id)
-        return user
-
     async def update_tier(self, user: User, tier: str) -> User:
         """
         Update user's tier.
@@ -182,7 +173,7 @@ class UserRepository:
         Returns:
             Updated user
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         await self.session.execute(
             update(User)
             .where(User.id == user.id)
@@ -209,7 +200,7 @@ class UserRepository:
         Returns:
             Updated user
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         await self.session.execute(
             update(User)
             .where(User.id == user.id)

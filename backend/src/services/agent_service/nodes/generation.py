@@ -4,10 +4,11 @@ from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.config import get_stream_writer
 
-from src.schemas.langgraph_state import AgentState
+from src.services.agent_service.state import AgentState
 from src.utils.logger import get_logger, truncate
+
 from ..context import AgentContext
-from ..prompts import PromptBuilder, ANSWER_SYSTEM_PROMPT
+from ..prompts import ANSWER_SYSTEM_PROMPT, PromptBuilder
 
 log = get_logger(__name__)
 
@@ -38,6 +39,13 @@ async def generate_answer_node(state: AgentState, config: RunnableConfig) -> dic
         .with_tool_outputs(tool_outputs)
         .with_query(query)
     )
+
+    if context.scoped_paper is not None:
+        builder.with_note(
+            f"All retrieved passages come from paper {context.scoped_paper.arxiv_id} "
+            f"('{context.scoped_paper.title}'); the user is reading it. Cite it as "
+            f"[{context.scoped_paper.arxiv_id}]."
+        )
 
     # Add note if batch evaluation found insufficient coverage
     batch_eval = state.get("evaluation_result")

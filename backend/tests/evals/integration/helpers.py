@@ -5,11 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from src.schemas.stream import (
+    MetadataEventData,
+    SourcesEventData,
+    StatusEventData,
     StreamEvent,
     StreamEventType,
-    StatusEventData,
-    SourcesEventData,
-    MetadataEventData,
 )
 from src.services.agent_service import AgentService
 
