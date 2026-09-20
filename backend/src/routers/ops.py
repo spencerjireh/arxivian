@@ -6,6 +6,14 @@ from celery.result import AsyncResult
 from fastapi import APIRouter, Query
 
 from src.celery_app import celery_app
+from src.dependencies import (
+    ApiKeyCheck,
+    ChunkRepoDep,
+    PaperRepoDep,
+    TaskExecRepoDep,
+    UserRepoDep,
+)
+from src.exceptions import ForbiddenError, ResourceNotFoundError
 from src.schemas.ops import (
     BulkIngestRequest,
     BulkIngestResponse,
@@ -23,14 +31,6 @@ from src.schemas.tasks import (
     TaskListResponse,
     TaskStatusResponse,
 )
-from src.dependencies import (
-    PaperRepoDep,
-    ChunkRepoDep,
-    ApiKeyCheck,
-    UserRepoDep,
-    TaskExecRepoDep,
-)
-from src.exceptions import ForbiddenError, ResourceNotFoundError
 from src.tasks.ingest_tasks import ingest_papers_task
 from src.tiers import SYSTEM_USER_CLERK_ID, UserTier, get_system_user_id
 from src.utils.logger import get_logger

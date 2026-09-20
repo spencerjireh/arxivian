@@ -1,12 +1,13 @@
 """Unit tests for AuthService JWT verification."""
 
-import pytest
-from datetime import datetime, timezone
-from unittest.mock import patch, MagicMock
-import jwt as pyjwt
+from datetime import UTC, datetime
+from unittest.mock import MagicMock, patch
 
-from src.services.auth_service import AuthService, AuthenticatedUser
+import jwt as pyjwt
+import pytest
+
 from src.exceptions import InvalidTokenError, MissingTokenError
+from src.services.auth_service import AuthenticatedUser, AuthService
 
 
 class TestAuthServiceVerifyToken:
@@ -52,9 +53,7 @@ class TestAuthServiceVerifyToken:
             await auth_service.verify_token("Bearer not.a.valid.jwt")
 
     @pytest.mark.asyncio
-    async def test_verify_token_invalid_issuer_raises_error(
-        self, auth_service, valid_jwt_payload
-    ):
+    async def test_verify_token_invalid_issuer_raises_error(self, auth_service, valid_jwt_payload):
         """Verify InvalidTokenError when issuer doesn't start with https://."""
         # Create payload with invalid issuer (not https://)
         invalid_payload = {**valid_jwt_payload, "iss": "http://insecure.example.com"}
@@ -66,9 +65,7 @@ class TestAuthServiceVerifyToken:
                 await auth_service.verify_token("Bearer some.valid.looking.token")
 
     @pytest.mark.asyncio
-    async def test_verify_token_missing_issuer_raises_error(
-        self, auth_service, valid_jwt_payload
-    ):
+    async def test_verify_token_missing_issuer_raises_error(self, auth_service, valid_jwt_payload):
         """Verify InvalidTokenError when issuer is missing."""
         invalid_payload = {k: v for k, v in valid_jwt_payload.items() if k != "iss"}
 
@@ -90,9 +87,7 @@ class TestAuthServiceVerifyToken:
             assert "Token has expired" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_verify_token_missing_sub_raises_error(
-        self, auth_service, valid_jwt_payload
-    ):
+    async def test_verify_token_missing_sub_raises_error(self, auth_service, valid_jwt_payload):
         """Verify InvalidTokenError when sub claim is missing."""
         # Payload without sub claim
         payload_without_sub = {k: v for k, v in valid_jwt_payload.items() if k != "sub"}
@@ -100,9 +95,10 @@ class TestAuthServiceVerifyToken:
         mock_signing_key = MagicMock()
         mock_signing_key.key = "mock-key"
 
-        with patch.object(pyjwt, "decode") as mock_decode, \
-             patch("src.services.auth_service.PyJWKClient") as mock_jwks_class:
-
+        with (
+            patch.object(pyjwt, "decode") as mock_decode,
+            patch("src.services.auth_service.PyJWKClient") as mock_jwks_class,
+        ):
             # First call is unverified decode (needs issuer), second is verified (no sub)
             mock_decode.side_effect = [valid_jwt_payload, payload_without_sub]
 
@@ -115,16 +111,15 @@ class TestAuthServiceVerifyToken:
                 await auth_service.verify_token("Bearer valid.looking.token")
 
     @pytest.mark.asyncio
-    async def test_verify_token_success_returns_user(
-        self, auth_service, valid_jwt_payload
-    ):
+    async def test_verify_token_success_returns_user(self, auth_service, valid_jwt_payload):
         """Verify returns AuthenticatedUser with correct fields."""
         mock_signing_key = MagicMock()
         mock_signing_key.key = "mock-key"
 
-        with patch.object(pyjwt, "decode") as mock_decode, \
-             patch("src.services.auth_service.PyJWKClient") as mock_jwks_class:
-
+        with (
+            patch.object(pyjwt, "decode") as mock_decode,
+            patch("src.services.auth_service.PyJWKClient") as mock_jwks_class,
+        ):
             # First call is unverified decode, second is verified
             mock_decode.side_effect = [valid_jwt_payload, valid_jwt_payload]
 
@@ -147,16 +142,17 @@ class TestAuthServiceVerifyToken:
         minimal_payload = {
             "sub": "user_minimal123",
             "iss": "https://test-clerk.clerk.accounts.dev",
-            "iat": int(datetime.now(timezone.utc).timestamp()),
-            "exp": int(datetime.now(timezone.utc).timestamp()) + 3600,
+            "iat": int(datetime.now(UTC).timestamp()),
+            "exp": int(datetime.now(UTC).timestamp()) + 3600,
         }
 
         mock_signing_key = MagicMock()
         mock_signing_key.key = "mock-key"
 
-        with patch.object(pyjwt, "decode") as mock_decode, \
-             patch("src.services.auth_service.PyJWKClient") as mock_jwks_class:
-
+        with (
+            patch.object(pyjwt, "decode") as mock_decode,
+            patch("src.services.auth_service.PyJWKClient") as mock_jwks_class,
+        ):
             mock_decode.side_effect = [minimal_payload, minimal_payload]
 
             mock_jwks_instance = MagicMock()
@@ -178,17 +174,18 @@ class TestAuthServiceVerifyToken:
         payload_with_image_url = {
             "sub": "user_123",
             "iss": "https://test-clerk.clerk.accounts.dev",
-            "iat": int(datetime.now(timezone.utc).timestamp()),
-            "exp": int(datetime.now(timezone.utc).timestamp()) + 3600,
+            "iat": int(datetime.now(UTC).timestamp()),
+            "exp": int(datetime.now(UTC).timestamp()) + 3600,
             "image_url": "https://example.com/image.png",
         }
 
         mock_signing_key = MagicMock()
         mock_signing_key.key = "mock-key"
 
-        with patch.object(pyjwt, "decode") as mock_decode, \
-             patch("src.services.auth_service.PyJWKClient") as mock_jwks_class:
-
+        with (
+            patch.object(pyjwt, "decode") as mock_decode,
+            patch("src.services.auth_service.PyJWKClient") as mock_jwks_class,
+        ):
             mock_decode.side_effect = [payload_with_image_url, payload_with_image_url]
 
             mock_jwks_instance = MagicMock()
@@ -216,9 +213,10 @@ class TestAuthServiceJWKSClient:
             "iss": "https://test-clerk.clerk.accounts.dev",
         }
 
-        with patch.object(pyjwt, "decode") as mock_decode, \
-             patch("src.services.auth_service.PyJWKClient") as mock_jwks_class:
-
+        with (
+            patch.object(pyjwt, "decode") as mock_decode,
+            patch("src.services.auth_service.PyJWKClient") as mock_jwks_class,
+        ):
             mock_decode.return_value = valid_payload
 
             mock_jwks_instance = MagicMock()
@@ -233,18 +231,17 @@ class TestAuthServiceJWKSClient:
             assert "Token verification failed" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_verify_token_jwt_invalid_error_raises_invalid_token(
-        self, auth_service
-    ):
+    async def test_verify_token_jwt_invalid_error_raises_invalid_token(self, auth_service):
         """Verify InvalidTokenError on generic JWT errors."""
         valid_payload = {
             "sub": "user_123",
             "iss": "https://test-clerk.clerk.accounts.dev",
         }
 
-        with patch.object(pyjwt, "decode") as mock_decode, \
-             patch("src.services.auth_service.PyJWKClient") as mock_jwks_class:
-
+        with (
+            patch.object(pyjwt, "decode") as mock_decode,
+            patch("src.services.auth_service.PyJWKClient") as mock_jwks_class,
+        ):
             # First call returns valid payload, second raises error
             mock_decode.side_effect = [
                 valid_payload,
@@ -320,8 +317,10 @@ class TestAuthServiceAudienceValidation:
         mock_signing_key = MagicMock()
         mock_signing_key.key = "mock-key"
 
-        with patch.object(pyjwt, "decode") as mock_decode, \
-             patch("src.services.auth_service.PyJWKClient") as mock_jwks_class:
+        with (
+            patch.object(pyjwt, "decode") as mock_decode,
+            patch("src.services.auth_service.PyJWKClient") as mock_jwks_class,
+        ):
             mock_decode.side_effect = [valid_jwt_payload, payload_with_aud]
             mock_jwks_instance = MagicMock()
             mock_jwks_instance.get_signing_key_from_jwt.return_value = mock_signing_key
@@ -341,8 +340,10 @@ class TestAuthServiceAudienceValidation:
         mock_signing_key = MagicMock()
         mock_signing_key.key = "mock-key"
 
-        with patch.object(pyjwt, "decode") as mock_decode, \
-             patch("src.services.auth_service.PyJWKClient") as mock_jwks_class:
+        with (
+            patch.object(pyjwt, "decode") as mock_decode,
+            patch("src.services.auth_service.PyJWKClient") as mock_jwks_class,
+        ):
             mock_decode.side_effect = [
                 valid_jwt_payload,
                 pyjwt.InvalidAudienceError("Audience mismatch"),
@@ -362,8 +363,10 @@ class TestAuthServiceAudienceValidation:
         mock_signing_key = MagicMock()
         mock_signing_key.key = "mock-key"
 
-        with patch.object(pyjwt, "decode") as mock_decode, \
-             patch("src.services.auth_service.PyJWKClient") as mock_jwks_class:
+        with (
+            patch.object(pyjwt, "decode") as mock_decode,
+            patch("src.services.auth_service.PyJWKClient") as mock_jwks_class,
+        ):
             mock_decode.side_effect = [valid_jwt_payload, valid_jwt_payload]
             mock_jwks_instance = MagicMock()
             mock_jwks_instance.get_signing_key_from_jwt.return_value = mock_signing_key
@@ -375,4 +378,3 @@ class TestAuthServiceAudienceValidation:
             # Verify the second decode call had verify_aud=False
             verified_call = mock_decode.call_args_list[1]
             assert verified_call.kwargs.get("options", {}).get("verify_aud") is False
-

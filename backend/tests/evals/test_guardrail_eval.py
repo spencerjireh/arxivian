@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import pytest
 
+from src.services.agent_service.nodes.classify_and_route import classify_and_route_node
+
 from .fixtures.guardrail_scenarios import GUARDRAIL_SCENARIOS, GuardrailScenario
 from .helpers import build_initial_state
-from src.services.agent_service.nodes.classify_and_route import classify_and_route_node
 
 
 @pytest.mark.parametrize(

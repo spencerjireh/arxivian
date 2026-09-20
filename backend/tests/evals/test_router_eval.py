@@ -39,9 +39,7 @@ async def test_router_tool_selection(
     classification = result["classification_result"]
 
     # Map old expected_action to new intent
-    expected_intent = (
-        "execute" if scenario.expected_action == "execute_tools" else "direct"
-    )
+    expected_intent = "execute" if scenario.expected_action == "execute_tools" else "direct"
     assert classification.intent == expected_intent, (
         f"[{scenario.id}] Expected intent={expected_intent}, "
         f"got intent={classification.intent}. Reasoning: {classification.reasoning}"
@@ -52,14 +50,8 @@ async def test_router_tool_selection(
         return
 
     # Build DeepEval test case for tool correctness
-    actual_tools = [
-        ToolCall(name=tc.tool_name)
-        for tc in classification.tool_calls
-    ]
-    expected_tools = [
-        ToolCall(name=name)
-        for name in scenario.expected_tools
-    ]
+    actual_tools = [ToolCall(name=tc.tool_name) for tc in classification.tool_calls]
+    expected_tools = [ToolCall(name=name) for name in scenario.expected_tools]
 
     test_case = LLMTestCase(
         input=scenario.query,

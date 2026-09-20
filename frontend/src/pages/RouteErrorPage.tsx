@@ -12,12 +12,14 @@ export default function RouteErrorPage() {
   const error =
     routeError instanceof Error
       ? routeError
-      : new Error(String(routeError ?? 'An unexpected error occurred'))
+      : new Error(typeof routeError === 'string' ? routeError : 'An unexpected error occurred')
 
   return (
     <PageErrorFallback
       error={error}
-      resetErrorBoundary={() => { window.location.href = '/' }}
+      resetErrorBoundary={() => {
+        window.location.href = '/'
+      }}
     />
   )
 }

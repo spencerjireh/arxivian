@@ -1,6 +1,5 @@
 """Text chunking service for splitting documents into retrievable chunks."""
 
-from typing import List, Optional, Dict
 from dataclasses import dataclass
 
 
@@ -10,8 +9,8 @@ class TextChunk:
 
     text: str
     chunk_index: int
-    section_name: Optional[str] = None
-    page_number: Optional[int] = None
+    section_name: str | None = None
+    page_number: int | None = None
     word_count: int = 0
 
 
@@ -33,7 +32,7 @@ class ChunkingService:
         self.overlap_words = overlap_words
         self.min_chunk_words = min_chunk_words
 
-    def chunk_document(self, text: str, sections: Optional[List[Dict]] = None) -> List[TextChunk]:
+    def chunk_document(self, text: str, sections: list[dict] | None = None) -> list[TextChunk]:
         """
         Chunk document with section-awareness.
 
@@ -49,7 +48,7 @@ class ChunkingService:
         else:
             return self._chunk_plain_text(text)
 
-    def _chunk_plain_text(self, text: str) -> List[TextChunk]:
+    def _chunk_plain_text(self, text: str) -> list[TextChunk]:
         """Chunk plain text without section boundaries."""
         words = text.split()
         chunks = []
@@ -77,7 +76,7 @@ class ChunkingService:
 
         return chunks
 
-    def _chunk_with_sections(self, sections: List[Dict]) -> List[TextChunk]:
+    def _chunk_with_sections(self, sections: list[dict]) -> list[TextChunk]:
         """Chunk text respecting section boundaries."""
         chunks = []
         chunk_index = 0

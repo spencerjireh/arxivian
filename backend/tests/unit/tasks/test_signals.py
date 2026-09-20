@@ -1,7 +1,7 @@
 """Unit tests for Celery signals."""
 
 import asyncio
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
 
 class TestWorkerLifecycleSignals:
@@ -97,9 +97,7 @@ class TestTaskStatusSignals:
 
     def test_prerun_calls_update_with_started(self):
         """Verify task_prerun updates status to started."""
-        with patch(
-            "src.tasks.signals._update_task_execution_status"
-        ) as mock_update:
+        with patch("src.tasks.signals._update_task_execution_status") as mock_update:
             from src.tasks.signals import _on_task_prerun
 
             _on_task_prerun(task_id="test-task-123")
@@ -108,9 +106,7 @@ class TestTaskStatusSignals:
 
     def test_success_calls_update_with_success(self):
         """Verify task_success updates status to success."""
-        with patch(
-            "src.tasks.signals._update_task_execution_status"
-        ) as mock_update:
+        with patch("src.tasks.signals._update_task_execution_status") as mock_update:
             from src.tasks.signals import _on_task_success
 
             mock_sender = Mock()
@@ -122,9 +118,7 @@ class TestTaskStatusSignals:
 
     def test_failure_calls_update_with_failure_and_error(self):
         """Verify task_failure updates status to failure with error message."""
-        with patch(
-            "src.tasks.signals._update_task_execution_status"
-        ) as mock_update:
+        with patch("src.tasks.signals._update_task_execution_status") as mock_update:
             from src.tasks.signals import _on_task_failure
 
             exc = ValueError("something went wrong")

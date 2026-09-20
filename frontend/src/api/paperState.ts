@@ -1,11 +1,23 @@
 // Per-user paper lifecycle state: PUT / DELETE /papers/{id}/state with optimistic cache updates.
 
-import { useMutation, useQueryClient, type InfiniteData, type QueryClient, type QueryKey } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQueryClient,
+  type InfiniteData,
+  type QueryClient,
+  type QueryKey,
+} from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { apiDelete, apiPut } from './client'
 import { feedKeys } from './feed'
 import { scoreKeys } from './scores'
-import type { FeedParams, FeedResponse, PaperScoreResult, PaperState, SetPaperStateBody } from '../types/api'
+import type {
+  FeedParams,
+  FeedResponse,
+  PaperScoreResult,
+  PaperState,
+  SetPaperStateBody,
+} from '../types/api'
 
 type FeedData = InfiniteData<FeedResponse>
 
@@ -16,7 +28,7 @@ interface Snapshot {
 
 function feedParamsOf(key: QueryKey): FeedParams {
   const params = key[2]
-  return params && typeof params === 'object' ? (params as FeedParams) : {}
+  return params && typeof params === 'object' ? params : {}
 }
 
 /**
@@ -26,7 +38,7 @@ function feedParamsOf(key: QueryKey): FeedParams {
 export function applyStateToCaches(
   queryClient: QueryClient,
   arxivId: string,
-  nextState: PaperState | null,
+  nextState: PaperState | null
 ): Snapshot {
   const previousFeeds = queryClient.getQueriesData<FeedData>({ queryKey: feedKeys.lists() })
 
@@ -45,7 +57,7 @@ export function applyStateToCaches(
           items: removing
             ? page.items.filter((item) => item.paper.arxiv_id !== arxivId)
             : page.items.map((item) =>
-                item.paper.arxiv_id === arxivId ? { ...item, state: nextState } : item,
+                item.paper.arxiv_id === arxivId ? { ...item, state: nextState } : item
               ),
         }
       }),
@@ -113,8 +125,8 @@ export function useSetPaperState() {
       }
     },
     onSettled: (_data, _err, { arxivId }) => {
-      queryClient.invalidateQueries({ queryKey: feedKeys.lists() })
-      queryClient.invalidateQueries({ queryKey: scoreKeys.detail(arxivId) })
+      void queryClient.invalidateQueries({ queryKey: feedKeys.lists() })
+      void queryClient.invalidateQueries({ queryKey: scoreKeys.detail(arxivId) })
     },
   })
 }
@@ -132,8 +144,8 @@ export function useClearPaperState() {
       restore(queryClient, arxivId, context)
     },
     onSettled: (_data, _err, { arxivId }) => {
-      queryClient.invalidateQueries({ queryKey: feedKeys.lists() })
-      queryClient.invalidateQueries({ queryKey: scoreKeys.detail(arxivId) })
+      void queryClient.invalidateQueries({ queryKey: feedKeys.lists() })
+      void queryClient.invalidateQueries({ queryKey: scoreKeys.detail(arxivId) })
     },
   })
 }

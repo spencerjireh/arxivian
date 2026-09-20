@@ -29,11 +29,7 @@ export default defineConfig({
           ) {
             return 'markdown-enhanced'
           }
-          if (
-            id.includes('react-markdown') ||
-            id.includes('remark-') ||
-            id.includes('rehype-')
-          ) {
+          if (id.includes('react-markdown') || id.includes('remark-') || id.includes('rehype-')) {
             return 'markdown-base'
           }
         },

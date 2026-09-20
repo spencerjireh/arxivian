@@ -6,8 +6,14 @@ describe('SignalChips', () => {
   it('renders nothing when no signal is set', () => {
     const { container } = render(
       <SignalChips
-        signals={{ pseudocode_present: false, public_datasets: false, single_gpu: false, code_released: false, compute_match: false }}
-      />,
+        signals={{
+          pseudocode_present: false,
+          public_datasets: false,
+          single_gpu: false,
+          code_released: false,
+          compute_match: false,
+        }}
+      />
     )
     expect(container).toBeEmptyDOMElement()
   })
@@ -15,8 +21,14 @@ describe('SignalChips', () => {
   it('renders code released and compute fit chips', () => {
     render(
       <SignalChips
-        signals={{ pseudocode_present: false, public_datasets: false, single_gpu: false, code_released: true, compute_match: true }}
-      />,
+        signals={{
+          pseudocode_present: false,
+          public_datasets: false,
+          single_gpu: false,
+          code_released: true,
+          compute_match: true,
+        }}
+      />
     )
     expect(screen.getByText('Code released')).toBeInTheDocument()
     expect(screen.getByText('Fits your compute')).toBeInTheDocument()

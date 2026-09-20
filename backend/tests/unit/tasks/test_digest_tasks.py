@@ -8,7 +8,7 @@ integration test).
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -19,7 +19,7 @@ from src.schemas.digest import (
 )
 from src.tasks.digest_tasks import _category_key, _week_start, build_digest_for_week
 
-NOW = datetime(2026, 8, 5, 12, 0, tzinfo=timezone.utc)  # a Wednesday
+NOW = datetime(2026, 8, 5, 12, 0, tzinfo=UTC)  # a Wednesday
 
 
 def _score(method=None, feasibility=None, data=100, demand=None):

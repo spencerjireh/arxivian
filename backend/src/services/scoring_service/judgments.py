@@ -7,7 +7,7 @@ keeps it unit-testable and makes the rubric tunable without re-running inference
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 from src.clients.typesafe_client import ChoiceResult, ScoreResult
 from src.schemas.scoring_state import (
@@ -86,7 +86,7 @@ def combine_method_clarity(
     probs = [nouls[k] for k in criteria_keys]
     dist = poisson_binomial(probs)
     level = argmax(dist)
-    summary = ", ".join(f"{k} {_pct(p)}" for k, p in zip(criteria_keys, probs))
+    summary = ", ".join(f"{k} {_pct(p)}" for k, p in zip(criteria_keys, probs, strict=False))
     return DimensionScore(
         dimension="method_clarity",
         level=level,
@@ -94,7 +94,7 @@ def combine_method_clarity(
         expected=round(sum(probs), 4),
         probabilities=dist,
         confidence=dist[level],
-        judgments=[noul_judgment(k, p) for k, p in zip(criteria_keys, probs)],
+        judgments=[noul_judgment(k, p) for k, p in zip(criteria_keys, probs, strict=False)],
         evidence=evidence,
         reasoning=f"{level} of {len(criteria_keys)} clarity criteria likely satisfied ({summary})",
     )

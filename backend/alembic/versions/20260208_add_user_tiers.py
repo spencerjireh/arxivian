@@ -6,16 +6,16 @@ Create Date: 2026-02-08
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = "011_add_user_tiers"
-down_revision: Union[str, None] = "010_scope_reports_to_users"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "010_scope_reports_to_users"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -43,9 +43,7 @@ def upgrade() -> None:
     op.create_foreign_key("fk_papers_user_id", "papers", "users", ["user_id"], ["id"])
 
     # 5. Backfill existing papers to system user
-    op.execute(
-        "UPDATE papers SET user_id = (SELECT id FROM users WHERE clerk_id = 'system')"
-    )
+    op.execute("UPDATE papers SET user_id = (SELECT id FROM users WHERE clerk_id = 'system')")
 
     # 6. Make user_id NOT NULL
     op.alter_column("papers", "user_id", nullable=False)

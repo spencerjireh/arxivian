@@ -1,7 +1,8 @@
 """Utilities for running async code in Celery tasks."""
 
 import asyncio
-from typing import TypeVar, Coroutine, Any
+from collections.abc import Coroutine
+from typing import Any, TypeVar
 
 T = TypeVar("T")
 

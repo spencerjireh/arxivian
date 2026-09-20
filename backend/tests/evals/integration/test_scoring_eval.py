@@ -29,8 +29,7 @@ import pytest
 
 from src.clients.semantic_scholar_client import CitationMetrics
 from src.config import get_settings
-from src.factories import get_typesafe_client
-from src.factories import get_ingest_service, get_search_service
+from src.factories import get_ingest_service, get_search_service, get_typesafe_client
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.scoring_repository import ScoringRepository
 from src.schemas.scoring_state import RUBRIC_VERSION, Band, score_to_band
@@ -153,7 +152,7 @@ async def scoring_results(session_factory) -> list[dict]:
                 records.append(
                     {"scenario": scenario, "scored": True, "state": state, "input_tokens": tokens}
                 )
-            except Exception as exc:  # noqa: BLE001 -- a bad paper skips, not fails the suite
+            except Exception as exc:
                 records.append(
                     {"scenario": scenario, "scored": False, "state": None, "error": str(exc)}
                 )
@@ -206,7 +205,7 @@ def test_implementable_agreement(scoring_results: list[dict]) -> None:
 
 
 @pytest.mark.parametrize(
-    "dimension,result_key",
+    ("dimension", "result_key"),
     [
         ("method_clarity", "method_clarity_result"),
         ("resource_feasibility", "resource_feasibility_result"),

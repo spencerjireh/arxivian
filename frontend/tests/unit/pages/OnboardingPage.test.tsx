@@ -1,4 +1,4 @@
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
 import { Route, Routes } from 'react-router-dom'
 import { renderWithProviders } from '../../helpers/renderWithProviders'
 import OnboardingPage from '../../../src/pages/OnboardingPage'
@@ -12,8 +12,13 @@ vi.mock('../../../src/api/users', () => ({
 }))
 
 const base = {
-  id: 'u', email: null, first_name: null, last_name: null, tier: 'free' as const,
-  daily_chat_limit: null, chats_used_today: 0,
+  id: 'u',
+  email: null,
+  first_name: null,
+  last_name: null,
+  tier: 'free' as const,
+  daily_chat_limit: null,
+  chats_used_today: 0,
 }
 
 function renderPage() {
@@ -22,7 +27,7 @@ function renderPage() {
       <Route path="/onboarding" element={<OnboardingPage />} />
       <Route path="/feed" element={<div>feed page</div>} />
     </Routes>,
-    { initialEntries: ['/onboarding'] },
+    { initialEntries: ['/onboarding'] }
   )
 }
 
@@ -48,8 +53,8 @@ describe('OnboardingPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Build my feed' }))
     expect(mutate).toHaveBeenCalledWith(
       { categories: ['cs.AI'], compute_profile: 'laptop', keywords: [] },
-      expect.any(Object),
+      expect.any(Object)
     )
-    await waitFor(() => expect(screen.getByText('feed page')).toBeInTheDocument())
+    expect(await screen.findByText('feed page')).toBeInTheDocument()
   })
 })

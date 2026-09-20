@@ -1,7 +1,8 @@
 """Langfuse tracing utilities for Celery tasks."""
 
-from contextlib import contextmanager
-from typing import Any, Generator, Optional
+from collections.abc import Generator
+from contextlib import contextmanager, suppress
+from typing import Any
 
 from src.config import get_settings
 from src.utils.logger import get_logger
@@ -46,8 +47,8 @@ def _get_langfuse():
 def trace_task(
     task_name: str,
     task_id: str,
-    metadata: Optional[dict[str, Any]] = None,
-) -> Generator[Optional[Any], None, None]:
+    metadata: dict[str, Any] | None = None,
+) -> Generator[Any | None, None, None]:
     """Context manager for tracing Celery tasks with Langfuse.
 
     Creates a trace for the task execution, automatically handling
@@ -93,10 +94,8 @@ def trace_task(
         raise
     finally:
         # Ensure trace is flushed before task completes
-        try:
+        with suppress(Exception):
             langfuse.flush()
-        except Exception:
-            pass
 
 
 def shutdown_task_langfuse() -> None:

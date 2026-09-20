@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import time
 import uuid as uuid_lib
-from typing import TYPE_CHECKING, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.graph.state import CompiledStateGraph
 
 from src.clients.base_llm_client import BaseLLMClient
@@ -24,23 +25,24 @@ try:
 except ImportError:
     LANGFUSE_CALLBACK_AVAILABLE = False
 from src.clients.semantic_scholar_client import SemanticScholarClient
-from src.services.search_service import SearchService
 from src.repositories.conversation_repository import ConversationRepository
 from src.repositories.paper_repository import PaperRepository
+from src.schemas.common import SourceInfo
 from src.schemas.conversation import ConversationMessage, TurnData
 from src.schemas.stream import (
+    CitationsEventData,
+    ContentEventData,
+    DoneEventData,
+    MetadataEventData,
+    SourcesEventData,
+    StatusEventData,
     StreamEvent,
     StreamEventType,
-    StatusEventData,
-    ContentEventData,
-    SourcesEventData,
-    MetadataEventData,
-    CitationsEventData,
-    DoneEventData,
 )
-from src.schemas.common import SourceInfo
-from src.utils.logger import get_logger
+from src.services.search_service import SearchService
 from src.services.title_service import generate_title
+from src.utils.logger import get_logger
+
 from .context import AgentContext, ScopedPaper
 
 log = get_logger(__name__)

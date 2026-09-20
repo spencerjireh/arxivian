@@ -12,7 +12,7 @@ interface ProviderOptions {
 
 export function renderWithProviders(
   ui: ReactNode,
-  options: ProviderOptions & Omit<RenderOptions, 'wrapper'> = {},
+  options: ProviderOptions & Omit<RenderOptions, 'wrapper'> = {}
 ) {
   const { initialEntries = ['/'], ...renderOptions } = options
 
@@ -28,9 +28,7 @@ export function renderWithProviders(
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={initialEntries}>
-          {children}
-        </MemoryRouter>
+        <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>
       </QueryClientProvider>
     )
   }

@@ -17,27 +17,30 @@ just down               # Stop services
 just test               # All tests (spins up test containers)
 just test tests/unit/test_file.py::test_func   # Single test
 just test -k "pattern"  # Pattern match
-just lint               # Ruff linter
+just lint               # Ruff lint + format check on src, tests, alembic
 just format             # Ruff formatter
 just fix                # Auto-fix lint and format issues
 just check              # Lint + typecheck
+just deadcode           # vulture report (advisory, not a gate)
 just eval               # Run LLM-backed evals (requires API keys)
 just migrate            # Run Alembic migrations
 just shell-backend      # Shell in backend container
 just clean              # Stop, remove volumes + local images
-just lint-frontend      # ESLint via docker
+just lint-frontend      # ESLint (type-checked) + knip via docker
 just test-frontend      # Vitest via docker
 ```
 
+One-time: `uvx pre-commit install` wires ruff (backend) and lint-staged (eslint + prettier on staged frontend files) into `git commit`.
+
 Backend tools (run inside container or with `just exec-backend`):
 ```bash
-uv run ruff check src/        # Lint
-uv run ruff format src/       # Format
+uv run ruff check src/ tests/ alembic/   # Lint (rule set in pyproject: E,W,F,I,UP,B,SIM,RUF,PT,ARG,ERA,T20,PTH,ASYNC,PERF)
+uv run ruff format src/ tests/ alembic/  # Format
 uv run ty check src/          # Type check
 uv run alembic upgrade head   # Run migrations
 ```
 
-Test markers: `@pytest.mark.unit`, `@pytest.mark.api`, `@pytest.mark.integration`, `@pytest.mark.e2e`, `@pytest.mark.eval`. Test dirs mirror markers. Pytest runs with `asyncio_mode = "auto"` (session-scoped loop). Coverage threshold: `fail_under = 80`. Integration tests use a dedicated test DB (port 5433), config in `.env.test`.
+Test markers: `@pytest.mark.unit`, `@pytest.mark.api`, `@pytest.mark.integration`, `@pytest.mark.eval`, `@pytest.mark.inteval`. Test dirs mirror markers. Pytest runs with `asyncio_mode = "auto"` (session-scoped loop) and `filterwarnings = error` (new deprecations fail the run). Coverage gate: backend `fail_under = 90` (unit + api, with the `omit` list in pyproject), frontend thresholds in `vitest.config.ts`; both are ratchets -- raise when the number goes up, never lower. Integration tests use a dedicated test DB (port 5433), config in `.env.test`.
 
 ## Architecture
 
@@ -87,5 +90,5 @@ Production is a single Coolify docker-compose app deploying `docker-compose.cool
 ## Code Style
 
 - Python: 100 char lines, type hints on all functions, async/await for I/O, `get_logger(__name__)`, exceptions from `src/exceptions.py`
-- TypeScript: strict mode, functional components, Zustand for state
+- TypeScript: strict mode, functional components, Zustand for state; Prettier (no semicolons, single quotes, 100 cols, Tailwind class order) and type-checked ESLint (`recommendedTypeChecked`, `import-x` order/no-cycle, vitest + testing-library rules in `tests/`); `knip` fails the lint on unused files, exports and deps
 - No emojis in code or comments

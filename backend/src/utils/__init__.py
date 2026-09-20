@@ -1,6 +1,6 @@
 """Utility services."""
 
-from src.utils.pdf_parser import PDFParser
 from src.utils.chunking_service import ChunkingService
+from src.utils.pdf_parser import PDFParser
 
-__all__ = ["PDFParser", "ChunkingService"]
+__all__ = ["ChunkingService", "PDFParser"]

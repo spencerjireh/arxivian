@@ -52,7 +52,7 @@ This summary provides key points from our Privacy Notice, but you can find out m
 
 ### Personal information you disclose to us
 
-*In Short: We collect personal information that you provide to us.*
+_In Short: We collect personal information that you provide to us._
 
 We collect personal information that you voluntarily provide to us when you register on the Services, express an interest in obtaining information about us or our products and Services, when you participate in activities on the Services, or otherwise when you contact us.
 
@@ -81,7 +81,7 @@ All personal information that you provide to us must be true, complete, and accu
 
 ## 2. How Do We Process Your Information?
 
-*In Short: We process your information to provide, improve, and administer our Services, communicate with you, for security and fraud prevention, and to comply with law. We process the personal information for the following purposes listed below. We may also process your information for other purposes only with your prior explicit consent.*
+_In Short: We process your information to provide, improve, and administer our Services, communicate with you, for security and fraud prevention, and to comply with law. We process the personal information for the following purposes listed below. We may also process your information for other purposes only with your prior explicit consent._
 
 We process your personal information for a variety of reasons, depending on how you interact with our Services, including:
 
@@ -97,7 +97,7 @@ We do not sell your personal data. We do not use your data for advertising.
 
 ## 3. What Legal Bases Do We Rely On to Process Your Information?
 
-*In Short: We only process your personal information when we believe it is necessary and we have a valid legal reason (i.e., legal basis) to do so under applicable law, like with your consent, to comply with laws, to provide you with services to enter into or fulfill our contractual obligations, to protect your rights, or to fulfill our legitimate business interests.*
+_In Short: We only process your personal information when we believe it is necessary and we have a valid legal reason (i.e., legal basis) to do so under applicable law, like with your consent, to comply with laws, to provide you with services to enter into or fulfill our contractual obligations, to protect your rights, or to fulfill our legitimate business interests._
 
 ### If you are located in the EU or UK, this section applies to you.
 
@@ -131,7 +131,7 @@ In some exceptional cases, we may be legally permitted under applicable law to p
 
 ## 4. When and With Whom Do We Share Your Information?
 
-*In Short: We may share information in specific situations described in this section and/or with the following third parties.*
+_In Short: We may share information in specific situations described in this section and/or with the following third parties._
 
 **Vendors, Consultants, and Other Third-Party Service Providers.** We may share your data with third-party vendors, service providers, contractors, or agents ("third parties") who perform services for us or on our behalf and require access to such information to do that work. We have contracts in place with our third parties, which are designed to help safeguard your personal information. This means that they cannot do anything with your personal information unless we have instructed them to do it. They will also not share your personal information with any organization apart from us. They also commit to protect the data they hold on our behalf and to retain it for the period we instruct.
 
@@ -151,7 +151,7 @@ We also may need to share your personal information in the following situations:
 
 ## 5. Do We Use Cookies and Other Tracking Technologies?
 
-*In Short: We use cookies set by Clerk for authentication and browser local storage for your preferences. We do not use tracking or analytics cookies.*
+_In Short: We use cookies set by Clerk for authentication and browser local storage for your preferences. We do not use tracking or analytics cookies._
 
 Arxivian uses cookies set by Clerk for authentication sessions. We also use browser local storage to persist your display and model preferences. We do not use tracking cookies, third-party analytics cookies, or advertising cookies.
 
@@ -161,7 +161,7 @@ We do not permit third parties or service providers to use online tracking techn
 
 ## 6. Do We Offer Artificial Intelligence-Based Products?
 
-*In Short: We offer products, features, or tools powered by artificial intelligence, machine learning, or similar technologies.*
+_In Short: We offer products, features, or tools powered by artificial intelligence, machine learning, or similar technologies._
 
 As part of our Services, we offer products, features, or tools powered by artificial intelligence, machine learning, or similar technologies (collectively, "AI Products"). These tools are designed to enhance your experience and provide you with innovative solutions. The terms in this Privacy Notice govern your use of the AI Products within our Services.
 
@@ -182,7 +182,7 @@ As part of our Services, we offer products, features, or tools powered by artifi
 
 ## 7. How Do We Handle Your Social Logins?
 
-*In Short: If you choose to register or log in to our Services using a social media account, we may have access to certain information about you.*
+_In Short: If you choose to register or log in to our Services using a social media account, we may have access to certain information about you._
 
 Our Services offer you the ability to register and log in using your third-party social media account details (like your Google account). Where you choose to do this, we will receive certain profile information about you from your social media provider. The profile information we receive may vary depending on the social media provider concerned, but will often include your name, email address, and profile picture, as well as other information you choose to make public on such a social media platform.
 
@@ -207,7 +207,7 @@ Arxivian's use and transfer of information received from Google APIs adheres to 
 
 ## 9. Data Retention and Deletion
 
-*In Short: We keep your information for as long as necessary to fulfill the purposes outlined in this Privacy Notice unless otherwise required by law.*
+_In Short: We keep your information for as long as necessary to fulfill the purposes outlined in this Privacy Notice unless otherwise required by law._
 
 We will only keep your personal information for as long as it is necessary for the purposes set out in this Privacy Notice, unless a longer retention period is required or permitted by law (such as tax, accounting, or other legal requirements). No purpose in this notice will require us keeping your personal information for longer than the period of time in which users have an account with us.
 
@@ -219,7 +219,7 @@ To request data deletion without signing in, contact us at email@spencerjireh.co
 
 ## 10. How Do We Keep Your Information Safe?
 
-*In Short: We aim to protect your personal information through a system of organizational and technical security measures.*
+_In Short: We aim to protect your personal information through a system of organizational and technical security measures._
 
 We have implemented appropriate and reasonable technical and organizational security measures designed to protect the security of any personal information we process, including encrypted connections (TLS), secure authentication via Clerk, and isolated database access.
 
@@ -227,13 +227,13 @@ However, despite our safeguards and efforts to secure your information, no elect
 
 ## 11. Do We Collect Information from Minors?
 
-*In Short: We do not knowingly collect data from or market to children under 18 years of age or the equivalent age as specified by law in your jurisdiction.*
+_In Short: We do not knowingly collect data from or market to children under 18 years of age or the equivalent age as specified by law in your jurisdiction._
 
 We do not knowingly collect, solicit data from, or market to children under 18 years of age or the equivalent age as specified by law in your jurisdiction, nor do we knowingly sell such personal information. By using the Services, you represent that you are at least 18 or the equivalent age as specified by law in your jurisdiction or that you are the parent or guardian of such a minor and consent to such minor dependent's use of the Services. If we learn that personal information from users less than 18 years of age or the equivalent age as specified by law in your jurisdiction has been collected, we will deactivate the account and take reasonable measures to promptly delete such data from our records. If you become aware of any data we may have collected from children under age 18 or the equivalent age as specified by law in your jurisdiction, please contact us at email@spencerjireh.com.
 
 ## 12. What Are Your Privacy Rights?
 
-*In Short: Depending on your state of residence in the US or in some regions, such as the European Economic Area (EEA), United Kingdom (UK), Switzerland, and Canada, you have rights that allow you greater access to and control over your personal information. You may review, change, or terminate your account at any time, depending on your country, province, or state of residence.*
+_In Short: Depending on your state of residence in the US or in some regions, such as the European Economic Area (EEA), United Kingdom (UK), Switzerland, and Canada, you have rights that allow you greater access to and control over your personal information. You may review, change, or terminate your account at any time, depending on your country, province, or state of residence._
 
 In some regions (like the EEA, UK, Switzerland, and Canada), you have certain rights under applicable data protection laws. These may include the right (i) to request access and obtain a copy of your personal information, (ii) to request rectification or erasure; (iii) to restrict the processing of your personal information; (iv) if applicable, to data portability; and (v) not to be subject to automated decision-making. If a decision that produces legal or similarly significant effects is made solely by automated means, we will inform you, explain the main factors, and offer a simple way to request human review. In certain circumstances, you may also have the right to object to the processing of your personal information. You can make such a request by contacting us using the contact details provided in the section [Contact](#15-contact) below.
 
@@ -256,25 +256,25 @@ Upon your request to terminate your account, we will deactivate or delete your a
 
 ## 13. Do United States Residents Have Specific Privacy Rights?
 
-*In Short: If you are a resident of a US state with applicable privacy laws, you may have the right to request access to and receive details about the personal information we maintain about you and how we have processed it, correct inaccuracies, get a copy of, or delete your personal information. You may also have the right to withdraw your consent to our processing of your personal information. These rights may be limited in some circumstances by applicable law.*
+_In Short: If you are a resident of a US state with applicable privacy laws, you may have the right to request access to and receive details about the personal information we maintain about you and how we have processed it, correct inaccuracies, get a copy of, or delete your personal information. You may also have the right to withdraw your consent to our processing of your personal information. These rights may be limited in some circumstances by applicable law._
 
 ### Categories of Personal Information We Collect
 
 The table below shows the categories of personal information we have collected in the past twelve (12) months.
 
-| Category | Examples | Collected |
-|---|---|---|
-| A. Identifiers | Contact details, such as real name, alias, email address, and account name | YES |
-| B. Protected classification characteristics under state or federal law | Gender, age, date of birth, race and ethnicity, national origin, marital status, and other demographic data | NO |
-| C. Commercial information | Transaction information, purchase history, financial details, and payment information | NO |
-| D. Biometric information | Fingerprints and voiceprints | NO |
-| E. Internet or other similar network activity | Browsing history, search history, online behavior, interest data, and interactions with websites and applications | NO |
-| F. Geolocation data | Device location | NO |
-| G. Audio, electronic, sensory, or similar information | Images and audio, video or call recordings created in connection with our business activities | NO |
-| H. Professional or employment-related information | Business contact details, job title, work history, and professional qualifications | NO |
-| I. Education Information | Student records and directory information | NO |
-| J. Inferences drawn from collected personal information | Inferences drawn from any of the collected personal information listed above to create a profile or summary about an individual's preferences and characteristics | NO |
-| K. Sensitive personal Information | | NO |
+| Category                                                               | Examples                                                                                                                                                          | Collected |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| A. Identifiers                                                         | Contact details, such as real name, alias, email address, and account name                                                                                        | YES       |
+| B. Protected classification characteristics under state or federal law | Gender, age, date of birth, race and ethnicity, national origin, marital status, and other demographic data                                                       | NO        |
+| C. Commercial information                                              | Transaction information, purchase history, financial details, and payment information                                                                             | NO        |
+| D. Biometric information                                               | Fingerprints and voiceprints                                                                                                                                      | NO        |
+| E. Internet or other similar network activity                          | Browsing history, search history, online behavior, interest data, and interactions with websites and applications                                                 | NO        |
+| F. Geolocation data                                                    | Device location                                                                                                                                                   | NO        |
+| G. Audio, electronic, sensory, or similar information                  | Images and audio, video or call recordings created in connection with our business activities                                                                     | NO        |
+| H. Professional or employment-related information                      | Business contact details, job title, work history, and professional qualifications                                                                                | NO        |
+| I. Education Information                                               | Student records and directory information                                                                                                                         | NO        |
+| J. Inferences drawn from collected personal information                | Inferences drawn from any of the collected personal information listed above to create a profile or summary about an individual's preferences and characteristics | NO        |
+| K. Sensitive personal Information                                      |                                                                                                                                                                   | NO        |
 
 We may also collect other personal information outside of these categories through instances where you interact with us in person, online, or by phone or mail in the context of:
 

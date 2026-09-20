@@ -1,8 +1,8 @@
 import { renderHook, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { ReactNode } from 'react'
 import { useChat, chatKeys } from '../../../src/hooks/useChat'
 import { useChatStore } from '../../../src/stores/chatStore'
+import type { ReactNode } from 'react'
 import type { StreamCallbacks } from '../../../src/api/stream'
 import type { Message, StreamRequest } from '../../../src/types/api'
 
@@ -29,7 +29,9 @@ function completeStream(request: StreamRequest, callbacks: StreamCallbacks) {
   callbacks.onStatus?.({ step: 'classifying', message: 'Classifying query...' })
   callbacks.onContent?.({ token: 'Hi' })
   callbacks.onSources?.({
-    sources: [{ arxiv_id: request.arxiv_id, title: 'T', authors: [], pdf_url: '', relevance_score: 1 }],
+    sources: [
+      { arxiv_id: request.arxiv_id, title: 'T', authors: [], pdf_url: '', relevance_score: 1 },
+    ],
   })
   callbacks.onMetadata?.({
     session_id: 's-new',

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import litellm
@@ -12,11 +13,12 @@ from src.clients.litellm_client import LiteLLMClient
 from src.services.agent_service.context import AgentContext, ConversationFormatter, ScopedPaper
 from src.services.agent_service.graph_builder import build_graph
 from src.services.agent_service.tools import (
-    ToolRegistry,
-    RetrieveChunksTool,
     ExploreCitationsTool,
+    RetrieveChunksTool,
     SemanticScholarTool,
+    ToolRegistry,
 )
+
 from .helpers import ServiceMockBuilder, ServiceMocks
 
 # Every eval turn is scoped to this paper (the canned chunks are from it).
@@ -29,8 +31,8 @@ EVAL_SCOPE = ScopedPaper(
 
 def pytest_collection_modifyitems(items: list) -> None:
     """Auto-apply eval marker to all tests in this directory (except integration/)."""
-    evals_dir = os.path.dirname(__file__)
-    integration_dir = os.path.join(evals_dir, "integration")
+    evals_dir = str(Path(__file__).parent)
+    integration_dir = str(Path(__file__).parent / "integration")
     for item in items:
         fspath = str(item.fspath)
         if fspath.startswith(evals_dir) and not fspath.startswith(integration_dir):

@@ -32,10 +32,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
   }
 
   componentDidUpdate(prevProps: ErrorBoundaryProps): void {
-    if (
-      this.state.hasError &&
-      prevProps.resetKey !== this.props.resetKey
-    ) {
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
       this.resetErrorBoundary()
     }
   }

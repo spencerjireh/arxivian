@@ -10,10 +10,10 @@ from .dimensions import (
 from .fetch_and_extract import fetch_and_extract_node
 
 __all__ = [
+    "compose_and_persist_node",
     "fetch_and_extract_node",
-    "score_method_clarity_node",
-    "score_resource_feasibility_node",
     "score_data_availability_node",
     "score_demand_node",
-    "compose_and_persist_node",
+    "score_method_clarity_node",
+    "score_resource_feasibility_node",
 ]

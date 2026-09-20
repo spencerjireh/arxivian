@@ -1,8 +1,8 @@
 """Integration tests for UserRepository."""
 
-import pytest
 import uuid
 
+import pytest
 from sqlalchemy.exc import IntegrityError
 
 from src.repositories.user_repository import UserRepository
@@ -167,9 +167,7 @@ class TestUserRepositoryUpdate:
         assert updated_user.last_login_at > original_login
 
     @pytest.mark.asyncio
-    async def test_update_on_login_preserves_existing_fields(
-        self, db_session, created_user
-    ):
+    async def test_update_on_login_preserves_existing_fields(self, db_session, created_user):
         """Verify existing fields are preserved when not provided."""
         repo = UserRepository(session=db_session)
 
@@ -185,6 +183,7 @@ class TestUserRepositoryUpdate:
         assert updated_user.email == original_email
         assert updated_user.first_name == original_first_name
         assert updated_user.last_name == "NewLastName"
+
 
 class TestUserRepositoryPreferences:
     """Test user preferences operations."""
@@ -239,4 +238,3 @@ class TestUserRepositoryPreferences:
         assert "key1" not in updated_user.preferences
         assert "key2" not in updated_user.preferences
         assert updated_user.preferences["key3"] == "value3"
-

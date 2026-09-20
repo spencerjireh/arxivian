@@ -15,7 +15,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary: 'bg-stone-900 text-white hover:bg-stone-800 focus-visible:ring-stone-500',
-  secondary: 'bg-stone-50 text-stone-700 border border-stone-200 hover:bg-stone-100 focus-visible:ring-stone-400',
+  secondary:
+    'bg-stone-50 text-stone-700 border border-stone-200 hover:bg-stone-100 focus-visible:ring-stone-400',
   ghost: 'text-stone-600 hover:bg-stone-100 hover:text-stone-900 focus-visible:ring-stone-400',
   danger: 'bg-red-500 text-white hover:bg-red-600 focus-visible:ring-red-500',
   icon: 'text-stone-500 hover:bg-stone-100 hover:text-stone-700 focus-visible:ring-stone-400',
@@ -59,16 +60,11 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       'hover-lift',
       variantClasses[variant],
       isIconOnly ? iconSizeClasses[size] : sizeClasses[size],
-      className,
+      className
     )
 
     return (
-      <button
-        ref={ref}
-        className={classes}
-        disabled={disabled || isLoading}
-        {...props}
-      >
+      <button ref={ref} className={classes} disabled={disabled || isLoading} {...props}>
         {isLoading ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (

@@ -6,7 +6,7 @@ Create Date: 2025-02-07
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from alembic import op
 import sqlalchemy as sa
@@ -14,9 +14,9 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "008_celery_improvements"
-down_revision: Union[str, None] = "007_add_user_preferences"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "007_add_user_preferences"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -38,12 +38,8 @@ def upgrade() -> None:
         sa.Column("status", sa.String(50), nullable=False, server_default="queued"),
         sa.Column("error_message", sa.Text(), nullable=True),
         sa.Column("completed_at", sa.TIMESTAMP(timezone=True), nullable=True),
-        sa.Column(
-            "created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
-        ),
-        sa.Column(
-            "updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
-        ),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()),
     )
 
     # Create reports table
@@ -54,18 +50,12 @@ def upgrade() -> None:
         sa.Column("period_start", sa.TIMESTAMP(timezone=True), nullable=False),
         sa.Column("period_end", sa.TIMESTAMP(timezone=True), nullable=False),
         sa.Column("data", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-        sa.Column(
-            "created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
-        ),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()),
     )
 
     # Add indexes for cleanup task performance
-    op.create_index(
-        "ix_conversations_created_at", "conversations", ["created_at"]
-    )
-    op.create_index(
-        "ix_agent_executions_created_at", "agent_executions", ["created_at"]
-    )
+    op.create_index("ix_conversations_created_at", "conversations", ["created_at"])
+    op.create_index("ix_agent_executions_created_at", "agent_executions", ["created_at"])
 
 
 def downgrade() -> None:

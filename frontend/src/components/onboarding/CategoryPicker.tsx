@@ -14,7 +14,11 @@ export default function CategoryPicker({ value, onChange, error }: CategoryPicke
 
   return (
     <div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2" role="group" aria-label="arXiv categories">
+      <div
+        className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+        role="group"
+        aria-label="arXiv categories"
+      >
         {ARXIV_CATEGORIES.map((cat) => {
           const selected = value.includes(cat.id)
           return (
@@ -24,14 +28,16 @@ export default function CategoryPicker({ value, onChange, error }: CategoryPicke
               aria-pressed={selected}
               onClick={() => toggle(cat.id)}
               className={clsx(
-                'text-left rounded-lg border px-3 py-2 transition-colors duration-150',
+                'rounded-lg border px-3 py-2 text-left transition-colors duration-150',
                 selected
-                  ? 'bg-stone-900 border-stone-900 text-white'
-                  : 'bg-white border-stone-200 text-stone-700 hover:border-stone-300',
+                  ? 'border-stone-900 bg-stone-900 text-white'
+                  : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300'
               )}
             >
               <span className="block font-mono text-xs">{cat.id}</span>
-              <span className={clsx('block text-xs', selected ? 'text-stone-300' : 'text-stone-500')}>
+              <span
+                className={clsx('block text-xs', selected ? 'text-stone-300' : 'text-stone-500')}
+              >
                 {cat.label}
               </span>
             </button>

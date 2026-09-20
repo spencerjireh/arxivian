@@ -31,7 +31,9 @@ export default function CardActions({
   if (current === 'shipped') {
     return (
       <div className="flex items-center gap-2">
-        <Chip tone="success" size="md">Shipped</Chip>
+        <Chip tone="success" size="md">
+          Shipped
+        </Chip>
         {state?.repo_url && (
           <a
             href={state.repo_url}
@@ -40,7 +42,7 @@ export default function CardActions({
             className="inline-flex items-center gap-1 text-xs text-stone-500 hover:text-stone-700"
           >
             Repo
-            <ExternalLink className="w-3 h-3" strokeWidth={1.5} />
+            <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
           </a>
         )}
       </div>

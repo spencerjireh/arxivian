@@ -11,7 +11,14 @@ vi.mock('framer-motion', () => import('../../../mocks/framer-motion'))
 
 describe('DistributionBar', () => {
   it('renders one segment per level and highlights the argmax', () => {
-    render(<DistributionBar probabilities={{ '0': 0.1, '1': 0.3, '2': 0.6 }} level={2} maxLevel={2} labels={['Low', 'Med', 'High']} />)
+    render(
+      <DistributionBar
+        probabilities={{ '0': 0.1, '1': 0.3, '2': 0.6 }}
+        level={2}
+        maxLevel={2}
+        labels={['Low', 'Med', 'High']}
+      />
+    )
     const bar = screen.getByRole('img')
     expect(bar).toHaveAttribute('aria-label', 'Low: 10%, Med: 30%, High: 60%')
     const segments = bar.querySelectorAll('[data-level]')
@@ -71,8 +78,12 @@ describe('AttributeChips', () => {
     unmount()
     render(
       <AttributeChips
-        attributes={{ ...attrs, code_released: { ...attrs.code_released!, answer: false }, task_type: { ...attrs.task_type!, answer: 'other' } }}
-      />,
+        attributes={{
+          ...attrs,
+          code_released: { ...attrs.code_released!, answer: false },
+          task_type: { ...attrs.task_type!, answer: 'other' },
+        }}
+      />
     )
     expect(screen.queryByText('Code released')).not.toBeInTheDocument()
     expect(screen.queryByText('other')).not.toBeInTheDocument()

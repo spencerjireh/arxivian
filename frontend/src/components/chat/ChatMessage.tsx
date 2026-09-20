@@ -1,19 +1,16 @@
 import { lazy, Suspense, useState, useRef, useEffect } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Lightbulb, User } from 'lucide-react'
-import logoIcon from '../../assets/logo-icon.png'
 import clsx from 'clsx'
+import logoIcon from '../../assets/logo-icon.png'
 import { useChatStore } from '../../stores/chatStore'
-import type { Message } from '../../types/api'
+import { cursorTransitionVariants, sourcesRevealContainer } from '../../lib/animations'
 import MarkdownRenderer from './MarkdownRenderer'
 import MessageErrorDisplay from './MessageErrorDisplay'
+import type { Message } from '../../types/api'
 
 const SourcesSection = lazy(() => import('./SourcesSection'))
 const CitationTree = lazy(() => import('./CitationTree'))
-import {
-  cursorTransitionVariants,
-  sourcesRevealContainer,
-} from '../../lib/animations'
 
 interface ChatMessageProps {
   message: Message
@@ -48,12 +45,9 @@ export default function ChatMessage({
       queueMicrotask(() => setCursorPhase('complete'))
       const cursorTimer = setTimeout(
         () => setCursorPhase('streaming'),
-        shouldReduceMotion ? 0 : 400,
+        shouldReduceMotion ? 0 : 400
       )
-      const footerTimer = setTimeout(
-        () => setShowFooter(true),
-        shouldReduceMotion ? 0 : 300,
-      )
+      const footerTimer = setTimeout(() => setShowFooter(true), shouldReduceMotion ? 0 : 300)
       return () => {
         clearTimeout(cursorTimer)
         clearTimeout(footerTimer)
@@ -70,12 +64,12 @@ export default function ChatMessage({
   return (
     <div className={clsx(isUser && 'flex justify-end')}>
       <div className={clsx(isUser && 'max-w-[80%]')}>
-        <div className={clsx('flex items-center gap-2.5 mb-3', isUser && 'justify-end')}>
+        <div className={clsx('mb-3 flex items-center gap-2.5', isUser && 'justify-end')}>
           {isUser ? (
             <>
               <span className="text-sm font-medium text-stone-500">You</span>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-stone-100">
-                <User className="w-3.5 h-3.5 text-stone-500" strokeWidth={1.5} />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-100">
+                <User className="h-3.5 w-3.5 text-stone-500" strokeWidth={1.5} />
               </div>
             </>
           ) : (
@@ -104,7 +98,7 @@ export default function ChatMessage({
                         <>
                           {/* Diffuse ambient glow */}
                           <motion.div
-                            className="absolute -inset-[6px] rounded-2xl blur-[4px] opacity-40"
+                            className="absolute -inset-[6px] rounded-2xl opacity-40 blur-[4px]"
                             style={{
                               background:
                                 'conic-gradient(from 180deg, transparent 60%, #C2704A 78%, transparent 95%)',
@@ -128,14 +122,14 @@ export default function ChatMessage({
                   )}
                 </AnimatePresence>
                 <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center bg-stone-100 relative"
+                  className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-stone-100"
                   style={
                     isStreaming && !shouldReduceMotion
                       ? { boxShadow: '0 0 6px rgba(194, 112, 74, 0.15)' }
                       : undefined
                   }
                 >
-                  <img src={logoIcon} alt="" className="w-4 h-4" aria-hidden="true" />
+                  <img src={logoIcon} alt="" className="h-4 w-4" aria-hidden="true" />
                 </div>
               </div>
               <span className="text-sm font-medium text-stone-500">Arxivian</span>
@@ -152,7 +146,7 @@ export default function ChatMessage({
 
           <div className="text-stone-800">
             {isUser ? (
-              <div className="whitespace-pre-wrap leading-relaxed">{content}</div>
+              <div className="leading-relaxed whitespace-pre-wrap">{content}</div>
             ) : (
               <div className="prose-stone">
                 <MarkdownRenderer
@@ -162,7 +156,7 @@ export default function ChatMessage({
                       <motion.span
                         variants={shouldReduceMotion ? {} : cursorTransitionVariants}
                         animate={cursorPhase}
-                        className="inline-block w-0.5 h-5 ml-0.5 bg-stone-400 align-text-bottom"
+                        className="ml-0.5 inline-block h-5 w-0.5 bg-stone-400 align-text-bottom"
                       />
                     ) : undefined
                   }
@@ -194,22 +188,30 @@ export default function ChatMessage({
               animate="animate"
             >
               <Suspense fallback={null}>
-                <SourcesSection sources={message.sources} shouldReduceMotion={!!shouldReduceMotion} />
+                <SourcesSection
+                  sources={message.sources}
+                  shouldReduceMotion={!!shouldReduceMotion}
+                />
               </Suspense>
             </motion.div>
           )}
 
-          {!isUser && showFooter && !message.sources && !message.citations && content && !message.error && (
-            <motion.div
-              className="mt-4 flex items-center gap-2 text-xs text-stone-400"
-              variants={shouldReduceMotion ? undefined : sourcesRevealContainer}
-              initial="initial"
-              animate="animate"
-            >
-              <Lightbulb className="w-3.5 h-3.5" strokeWidth={1.5} />
-              <span>Answered from general knowledge</span>
-            </motion.div>
-          )}
+          {!isUser &&
+            showFooter &&
+            !message.sources &&
+            !message.citations &&
+            content &&
+            !message.error && (
+              <motion.div
+                className="mt-4 flex items-center gap-2 text-xs text-stone-400"
+                variants={shouldReduceMotion ? undefined : sourcesRevealContainer}
+                initial="initial"
+                animate="animate"
+              >
+                <Lightbulb className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <span>Answered from general knowledge</span>
+              </motion.div>
+            )}
         </div>
       </div>
     </div>

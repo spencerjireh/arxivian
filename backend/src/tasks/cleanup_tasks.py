@@ -1,6 +1,6 @@
 """Cleanup background tasks for data retention."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import delete, select
@@ -72,7 +72,7 @@ def cleanup_task() -> dict[str, Any]:
     log.info("cleanup_task_started", retention_days=retention_days)
 
     async def _run() -> dict[str, Any]:
-        cutoff_date = datetime.now(timezone.utc) - timedelta(days=retention_days)
+        cutoff_date = datetime.now(UTC) - timedelta(days=retention_days)
         results = {
             "conversations_deleted": 0,
             "cutoff_date": cutoff_date.isoformat(),

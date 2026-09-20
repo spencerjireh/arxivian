@@ -2,13 +2,13 @@
 
 import time
 import uuid
-from typing import Callable, Awaitable
+from collections.abc import Awaitable, Callable
 
 from fastapi import Request, Response
 from starlette.responses import StreamingResponse
 
 from src.config import get_settings
-from src.utils.logger import get_logger, set_request_id, clear_request_id, truncate
+from src.utils.logger import clear_request_id, get_logger, set_request_id, truncate
 
 log = get_logger(__name__)
 settings = get_settings()

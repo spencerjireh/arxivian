@@ -2,17 +2,12 @@
 
 import re
 import uuid
-from typing import Optional, Literal
 from datetime import datetime
+from typing import Literal
+
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
-from src.schemas.papers import (
-    PaperResponse,
-    PaperListResponse,
-    PaperListItem,
-)
-from src.schemas.feed import PaperScoreDetailResponse, ScorePendingResponse
 from src.dependencies import (
     CurrentUserRequired,
     FeedServiceDep,
@@ -22,6 +17,12 @@ from src.dependencies import (
     TaskExecRepoDep,
 )
 from src.exceptions import InvalidParameterError, ResourceNotFoundError
+from src.schemas.feed import PaperScoreDetailResponse, ScorePendingResponse
+from src.schemas.papers import (
+    PaperListItem,
+    PaperListResponse,
+    PaperResponse,
+)
 from src.tasks.score_tasks import ondemand_lock_key, score_paper_task
 
 router = APIRouter()
@@ -37,11 +38,11 @@ async def list_papers(
     _user: CurrentUserRequired,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    processed_only: Optional[bool] = None,
-    category: Optional[str] = None,
-    author: Optional[str] = None,
-    start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None,
+    processed_only: bool | None = None,
+    category: str | None = None,
+    author: str | None = None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
     sort_by: Literal["created_at", "published_date", "updated_at"] = "created_at",
     sort_order: Literal["asc", "desc"] = "desc",
 ) -> PaperListResponse:

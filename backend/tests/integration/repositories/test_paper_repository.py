@@ -1,12 +1,13 @@
 """Integration tests for PaperRepository with real database."""
 
-import pytest
 import random
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from src.repositories.paper_repository import PaperRepository
+import pytest
+
 from src.repositories.chunk_repository import ChunkRepository
+from src.repositories.paper_repository import PaperRepository
 from tests.integration.conftest import make_chunk_data
 
 
@@ -153,7 +154,7 @@ class TestPaperRepositoryFiltering:
                 "authors": ["Author"],
                 "abstract": "Abstract",
                 "categories": ["cs.LG"],
-                "published_date": datetime(2023, 1, 1, tzinfo=timezone.utc),
+                "published_date": datetime(2023, 1, 1, tzinfo=UTC),
                 "pdf_url": "https://arxiv.org/pdf/2301.00001.pdf",
             }
         )
@@ -165,7 +166,7 @@ class TestPaperRepositoryFiltering:
                 "authors": ["Author"],
                 "abstract": "Abstract",
                 "categories": ["cs.AI"],
-                "published_date": datetime(2023, 1, 1, tzinfo=timezone.utc),
+                "published_date": datetime(2023, 1, 1, tzinfo=UTC),
                 "pdf_url": "https://arxiv.org/pdf/2301.00002.pdf",
             }
         )
@@ -188,7 +189,7 @@ class TestPaperRepositoryProcessing:
         processed_data = {
             **sample_paper_data,
             "pdf_processed": True,
-            "pdf_processing_date": datetime.now(timezone.utc),
+            "pdf_processing_date": datetime.now(UTC),
             "parser_used": "marker",
             "raw_text": "Text",
         }
@@ -201,12 +202,14 @@ class TestPaperRepositoryProcessing:
             **sample_paper_data,
             "arxiv_id": f"2301.{uuid.uuid4().hex[:5]}",
             "pdf_processed": True,
-            "pdf_processing_date": datetime.now(timezone.utc),
+            "pdf_processing_date": datetime.now(UTC),
             "parser_used": "marker",
             "raw_text": "Text with chunks",
         }
         non_orphaned_paper = await repo.create(non_orphaned_data)
-        chunk_data = make_chunk_data(non_orphaned_paper.id, non_orphaned_paper.arxiv_id, 0, embedding)
+        chunk_data = make_chunk_data(
+            non_orphaned_paper.id, non_orphaned_paper.arxiv_id, 0, embedding
+        )
         await chunk_repo.create_bulk([chunk_data])
 
         orphaned = await repo.get_orphaned_papers()

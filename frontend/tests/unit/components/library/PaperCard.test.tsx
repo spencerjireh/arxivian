@@ -23,9 +23,7 @@ const samplePaper: PaperListItem = {
 
 describe('PaperCard', () => {
   it('renders title, authors, arXiv ID, and categories', () => {
-    renderWithProviders(
-      <PaperCard paper={samplePaper} />,
-    )
+    renderWithProviders(<PaperCard paper={samplePaper} />)
 
     expect(screen.getByText('Attention Is All You Need')).toBeInTheDocument()
     expect(screen.getByText('Vaswani, Shazeer, Parmar')).toBeInTheDocument()
@@ -35,9 +33,7 @@ describe('PaperCard', () => {
   })
 
   it('has target="_blank" and no rel attribute on PDF link', () => {
-    renderWithProviders(
-      <PaperCard paper={samplePaper} />,
-    )
+    renderWithProviders(<PaperCard paper={samplePaper} />)
 
     const pdfLink = screen.getByText('PDF').closest('a')
     expect(pdfLink).toHaveAttribute('target', '_blank')

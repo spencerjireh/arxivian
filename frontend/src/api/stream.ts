@@ -1,7 +1,7 @@
 // SSE stream handler using fetchEventSource
 
 import { fetchEventSource } from '@microsoft/fetch-event-source'
-import { getApiBaseUrl, getAuthHeaders } from './client'
+import { errorMessageFrom, getApiBaseUrl, getAuthHeaders } from './client'
 import type {
   StreamRequest,
   StreamEventType,
@@ -61,13 +61,14 @@ export async function streamChat(
         let errorMessage = errorText
         let errorCode = 'INTERNAL_ERROR'
         try {
-          const parsed = JSON.parse(errorText)
+          const parsed: unknown = JSON.parse(errorText)
           // Structured error from error middleware: { error: { code, message } }
-          if (parsed.error?.code) {
-            errorCode = parsed.error.code
-            errorMessage = parsed.error.message || errorText
+          const structured = (parsed as { error?: { code?: unknown; message?: unknown } }).error
+          if (structured && typeof structured.code === 'string') {
+            errorCode = structured.code
+            errorMessage = typeof structured.message === 'string' ? structured.message : errorText
           } else {
-            errorMessage = parsed.detail || parsed.message || errorText
+            errorMessage = errorMessageFrom(parsed) ?? errorText
           }
         } catch {
           // Keep original text
@@ -87,7 +88,7 @@ export async function streamChat(
       const eventType = event.event as StreamEventType
 
       try {
-        const data = JSON.parse(event.data)
+        const data: unknown = JSON.parse(event.data)
 
         switch (eventType) {
           case 'status':
@@ -118,7 +119,8 @@ export async function streamChat(
     },
 
     onerror: (err) => {
-      throw new StreamError(err.message || 'Stream connection error', 'CONNECTION_ERROR')
+      const message = err instanceof Error && err.message ? err.message : 'Stream connection error'
+      throw new StreamError(message, 'CONNECTION_ERROR')
     },
 
     onclose: () => {

@@ -1,10 +1,11 @@
 """Tests for executor node."""
 
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
 
 from src.schemas.langgraph_state import ClassificationResult, ToolCall
-from src.services.agent_service.tools import ToolResult, EXPLORE_CITATIONS, SEMANTIC_SCHOLAR
+from src.services.agent_service.tools import EXPLORE_CITATIONS, SEMANTIC_SCHOLAR, ToolResult
 
 
 class TestExecutorNode:
@@ -35,7 +36,9 @@ class TestExecutorNode:
         return {
             "classification_result": ClassificationResult(
                 intent="execute",
-                tool_calls=[ToolCall(tool_name=EXPLORE_CITATIONS, tool_args_json='{"query": "test"}')],
+                tool_calls=[
+                    ToolCall(tool_name=EXPLORE_CITATIONS, tool_args_json='{"query": "test"}')
+                ],
                 scope_score=90,
                 reasoning="Testing",
             ),
@@ -325,9 +328,7 @@ class TestExecutorNode:
         state = {
             "classification_result": ClassificationResult(
                 intent="execute",
-                tool_calls=[
-                    ToolCall(tool_name=EXPLORE_CITATIONS, tool_args_json="not valid json")
-                ],
+                tool_calls=[ToolCall(tool_name=EXPLORE_CITATIONS, tool_args_json="not valid json")],
                 scope_score=90,
                 reasoning="Testing",
             ),

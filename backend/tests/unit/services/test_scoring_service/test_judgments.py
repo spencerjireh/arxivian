@@ -71,7 +71,7 @@ class TestJudgmentBuilders:
 
 class TestCombineMethodClarity:
     def test_distribution_and_derived(self):
-        nouls = dict(zip(METHOD_CLARITY_CRITERIA, [0.9, 0.9, 0.9, 0.9]))
+        nouls = dict(zip(METHOD_CLARITY_CRITERIA, [0.9, 0.9, 0.9, 0.9], strict=False))
         dim = combine_method_clarity(nouls, METHOD_CLARITY_CRITERIA, [])
         assert dim.max_level == 4
         assert dim.expected == pytest.approx(3.6)
@@ -82,7 +82,7 @@ class TestCombineMethodClarity:
         assert "4 of 4" in dim.reasoning
 
     def test_mixed_criteria_lands_mid(self):
-        nouls = dict(zip(METHOD_CLARITY_CRITERIA, [0.95, 0.9, 0.2, 0.1]))
+        nouls = dict(zip(METHOD_CLARITY_CRITERIA, [0.95, 0.9, 0.2, 0.1], strict=False))
         dim = combine_method_clarity(nouls, METHOD_CLARITY_CRITERIA, [])
         assert dim.level == 2
         assert dim.derived_score() == 54

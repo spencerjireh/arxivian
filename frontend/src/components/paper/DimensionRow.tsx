@@ -24,30 +24,38 @@ export default function DimensionRow({ dimension, defaultOpen = false }: Dimensi
   const panelId = `dimension-${dimension.dimension}`
 
   return (
-    <div className="border border-stone-200 rounded-xl bg-white">
+    <div className="rounded-xl border border-stone-200 bg-white">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="w-full text-left px-5 py-4 flex flex-col gap-3"
+        className="flex w-full flex-col gap-3 px-5 py-4 text-left"
       >
         <div className="flex items-center gap-3">
-          <span className="font-display text-lg text-stone-900 flex-1">
+          <span className="font-display flex-1 text-lg text-stone-900">
             {DIMENSION_LABELS[dimension.dimension]}
           </span>
-          <Chip tone={bandTone[dimension.band]} size="md">{dimension.band}</Chip>
-          <span className="font-mono text-sm text-stone-700 tabular-nums">{dimension.score}/100</span>
+          <Chip tone={bandTone[dimension.band]} size="md">
+            {dimension.band}
+          </Chip>
+          <span className="font-mono text-sm text-stone-700 tabular-nums">
+            {dimension.score}/100
+          </span>
           <span className="font-mono text-xs text-stone-400 tabular-nums">
             {Math.round(dimension.confidence * 100)}% conf.
           </span>
           {low && (
-            <Chip tone="warning" size="sm" icon={<AlertCircle className="w-3 h-3" strokeWidth={1.5} />}>
+            <Chip
+              tone="warning"
+              size="sm"
+              icon={<AlertCircle className="h-3 w-3" strokeWidth={1.5} />}
+            >
               Low confidence
             </Chip>
           )}
           <ChevronDown
-            className={clsx('w-4 h-4 text-stone-400 transition-transform', open && 'rotate-180')}
+            className={clsx('h-4 w-4 text-stone-400 transition-transform', open && 'rotate-180')}
             strokeWidth={1.5}
           />
         </div>
@@ -59,16 +67,14 @@ export default function DimensionRow({ dimension, defaultOpen = false }: Dimensi
             labels={labels}
             className="flex-1"
           />
-          <span className="text-xs text-stone-500 whitespace-nowrap">
+          <span className="text-xs whitespace-nowrap text-stone-500">
             {labels?.[dimension.level] ?? `Level ${dimension.level}`}
           </span>
         </div>
       </button>
       <AnimatedCollapse isOpen={open}>
-        <div id={panelId} className="px-5 pb-5 space-y-5 border-t border-stone-100 pt-4">
-          {dimension.reasoning && (
-            <p className="text-sm text-stone-600">{dimension.reasoning}</p>
-          )}
+        <div id={panelId} className="space-y-5 border-t border-stone-100 px-5 pt-4 pb-5">
+          {dimension.reasoning && <p className="text-sm text-stone-600">{dimension.reasoning}</p>}
           <JudgmentList judgments={dimension.judgments} />
           <EvidenceList evidence={dimension.evidence} />
         </div>

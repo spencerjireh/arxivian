@@ -23,7 +23,13 @@ const MIN_SCORE_OPTIONS: { value: number | undefined; label: string }[] = [
 ]
 
 /** Category, minimum composite (band thresholds), and the dismissed toggle. */
-export default function FeedFilterBar({ categories, category, minScore, includeDismissed, onChange }: FeedFilterBarProps) {
+export default function FeedFilterBar({
+  categories,
+  category,
+  minScore,
+  includeDismissed,
+  onChange,
+}: FeedFilterBarProps) {
   const hasFilters = Boolean(category) || minScore !== undefined || includeDismissed
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -41,7 +47,11 @@ export default function FeedFilterBar({ categories, category, minScore, includeD
         ))}
       </select>
 
-      <div className="inline-flex rounded-lg overflow-hidden border border-stone-200" role="group" aria-label="Minimum score">
+      <div
+        className="inline-flex overflow-hidden rounded-lg border border-stone-200"
+        role="group"
+        aria-label="Minimum score"
+      >
         {MIN_SCORE_OPTIONS.map(({ value, label }) => (
           <button
             key={label}
@@ -50,7 +60,7 @@ export default function FeedFilterBar({ categories, category, minScore, includeD
             aria-pressed={minScore === value}
             className={clsx(
               'px-3 py-2 text-sm transition-colors duration-150',
-              minScore === value ? segmentedActiveClass : segmentedInactiveClass,
+              minScore === value ? segmentedActiveClass : segmentedInactiveClass
             )}
           >
             {label}
@@ -72,7 +82,9 @@ export default function FeedFilterBar({ categories, category, minScore, includeD
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => onChange({ category: undefined, minScore: undefined, includeDismissed: false })}
+          onClick={() =>
+            onChange({ category: undefined, minScore: undefined, includeDismissed: false })
+          }
         >
           Clear filters
         </Button>

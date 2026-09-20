@@ -1,9 +1,10 @@
 """Repository for search operations with hybrid search support."""
 
-from typing import List, Optional
 from dataclasses import dataclass
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -17,15 +18,15 @@ class SearchResult:
     paper_id: str
     arxiv_id: str
     title: str
-    authors: List[str]
+    authors: list[str]
     chunk_text: str
-    section_name: Optional[str]
-    page_number: Optional[int]
+    section_name: str | None
+    page_number: int | None
     score: float
-    vector_score: Optional[float] = None
-    text_score: Optional[float] = None
-    published_date: Optional[str] = None
-    pdf_url: Optional[str] = None
+    vector_score: float | None = None
+    text_score: float | None = None
+    published_date: str | None = None
+    pdf_url: str | None = None
 
 
 class SearchRepository:
@@ -36,11 +37,11 @@ class SearchRepository:
 
     async def vector_search(
         self,
-        query_embedding: List[float],
+        query_embedding: list[float],
         top_k: int = 10,
         min_score: float = 0.0,
-        paper_id: Optional[str] = None,
-    ) -> List[SearchResult]:
+        paper_id: str | None = None,
+    ) -> list[SearchResult]:
         """
         Vector similarity search using cosine distance.
 
@@ -115,7 +116,7 @@ class SearchRepository:
         log.debug("vector search results", count=len(results))
         return results
 
-    async def fulltext_search(self, query: str, top_k: int = 10) -> List[SearchResult]:
+    async def fulltext_search(self, query: str, top_k: int = 10) -> list[SearchResult]:
         """
         Full-text search using PostgreSQL tsvector.
 

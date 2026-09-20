@@ -2,10 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from './client'
-import type {
-  PaperListResponse,
-  PaperListParams,
-} from '../types/api'
+import type { PaperListResponse, PaperListParams } from '../types/api'
 
 // Query keys
 export const paperKeys = {
@@ -19,7 +16,8 @@ function buildPaperQuery(params: PaperListParams): string {
   const searchParams = new URLSearchParams()
   if (params.offset !== undefined) searchParams.set('offset', String(params.offset))
   if (params.limit !== undefined) searchParams.set('limit', String(params.limit))
-  if (params.processed_only !== undefined) searchParams.set('processed_only', String(params.processed_only))
+  if (params.processed_only !== undefined)
+    searchParams.set('processed_only', String(params.processed_only))
   if (params.category) searchParams.set('category', params.category)
   if (params.author) searchParams.set('author', params.author)
   if (params.sort_by) searchParams.set('sort_by', params.sort_by)

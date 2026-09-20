@@ -1,10 +1,10 @@
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider, type InfiniteData } from '@tanstack/react-query'
 import { createElement } from 'react'
-import type { ReactNode } from 'react'
 import { feedKeys } from '../../../src/api/feed'
 import { applyStateToCaches, useSetPaperState } from '../../../src/api/paperState'
 import { makeFeedItem, makeFeedResponse } from '../../fixtures/feed'
+import type { ReactNode } from 'react'
 import type { FeedResponse } from '../../../src/types/api'
 
 const apiPut = vi.fn()
@@ -18,14 +18,22 @@ vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), succe
 type FeedData = InfiniteData<FeedResponse>
 
 function seed(queryClient: QueryClient) {
-  const items = [makeFeedItem({ paper: { ...makeFeedItem().paper, arxiv_id: 'a' } }), makeFeedItem({ paper: { ...makeFeedItem().paper, arxiv_id: 'b' } })]
+  const items = [
+    makeFeedItem({ paper: { ...makeFeedItem().paper, arxiv_id: 'a' } }),
+    makeFeedItem({ paper: { ...makeFeedItem().paper, arxiv_id: 'b' } }),
+  ]
   const page = makeFeedResponse(items)
   queryClient.setQueryData<FeedData>(feedKeys.list({}), { pages: [page], pageParams: [0] })
-  queryClient.setQueryData<FeedData>(feedKeys.list({ include_dismissed: true }), { pages: [page], pageParams: [0] })
+  queryClient.setQueryData<FeedData>(feedKeys.list({ include_dismissed: true }), {
+    pages: [page],
+    pageParams: [0],
+  })
 }
 
 function setup() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
+  })
   seed(queryClient)
   const wrapper = ({ children }: { children: ReactNode }) =>
     createElement(QueryClientProvider, { client: queryClient }, children)
@@ -35,7 +43,12 @@ function setup() {
 describe('applyStateToCaches', () => {
   it('removes a dismissed card from caches that hide dismissed and keeps it elsewhere', () => {
     const { queryClient } = setup()
-    applyStateToCaches(queryClient, 'a', { state: 'dismissed', repo_url: null, dismissal_reason: null, updated_at: 'x' })
+    applyStateToCaches(queryClient, 'a', {
+      state: 'dismissed',
+      repo_url: null,
+      dismissal_reason: null,
+      updated_at: 'x',
+    })
 
     const hidden = queryClient.getQueryData<FeedData>(feedKeys.list({}))!
     expect(hidden.pages[0].items.map((i) => i.paper.arxiv_id)).toEqual(['b'])
@@ -49,7 +62,12 @@ describe('applyStateToCaches', () => {
 
   it('patches state in place for save', () => {
     const { queryClient } = setup()
-    applyStateToCaches(queryClient, 'b', { state: 'saved', repo_url: null, dismissal_reason: null, updated_at: 'x' })
+    applyStateToCaches(queryClient, 'b', {
+      state: 'saved',
+      repo_url: null,
+      dismissal_reason: null,
+      updated_at: 'x',
+    })
     const data = queryClient.getQueryData<FeedData>(feedKeys.list({}))!
     expect(data.pages[0].items[1].state?.state).toBe('saved')
     expect(data.pages[0].items[0].state).toBeNull()
@@ -61,14 +79,29 @@ describe('applyStateToCaches (score detail)', () => {
     const { scoreKeys } = await import('../../../src/api/scores')
     const { makePaperScoreDetail } = await import('../../fixtures/scores')
     const { queryClient } = setup()
-    queryClient.setQueryData(scoreKeys.detail('a'), { status: 'ready', detail: makePaperScoreDetail() })
+    queryClient.setQueryData(scoreKeys.detail('a'), {
+      status: 'ready',
+      detail: makePaperScoreDetail(),
+    })
     queryClient.setQueryData(scoreKeys.detail('b'), { status: 'pending', task_id: null })
-    const next = { state: 'saved' as const, repo_url: null, dismissal_reason: null, updated_at: 'x' }
+    const next = {
+      state: 'saved' as const,
+      repo_url: null,
+      dismissal_reason: null,
+      updated_at: 'x',
+    }
     const snap = applyStateToCaches(queryClient, 'a', next)
-    expect(queryClient.getQueryData<{ status: string; detail: { state: unknown } }>(scoreKeys.detail('a'))?.detail.state).toEqual(next)
+    expect(
+      queryClient.getQueryData<{ status: string; detail: { state: unknown } }>(
+        scoreKeys.detail('a')
+      )?.detail.state
+    ).toEqual(next)
     expect(snap.previousScore?.status).toBe('ready')
     applyStateToCaches(queryClient, 'b', next)
-    expect(queryClient.getQueryData(scoreKeys.detail('b'))).toEqual({ status: 'pending', task_id: null })
+    expect(queryClient.getQueryData(scoreKeys.detail('b'))).toEqual({
+      status: 'pending',
+      task_id: null,
+    })
   })
 })
 
@@ -95,7 +128,12 @@ describe('useSetPaperState', () => {
 
   it('calls PUT with the body', async () => {
     const { wrapper } = setup()
-    apiPut.mockResolvedValueOnce({ state: 'saved', repo_url: null, dismissal_reason: null, updated_at: 'x' })
+    apiPut.mockResolvedValueOnce({
+      state: 'saved',
+      repo_url: null,
+      dismissal_reason: null,
+      updated_at: 'x',
+    })
     const { result } = renderHook(() => useSetPaperState(), { wrapper })
     await act(async () => {
       await result.current.mutateAsync({ arxivId: '2401.00001', body: { state: 'saved' } })

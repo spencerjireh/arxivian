@@ -5,7 +5,7 @@ branch on (rate limits carry `retry_after`). Every exception carries a stable `e
 that the error handler returns and the frontend may switch on.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 
 class BaseAPIException(Exception):
@@ -15,8 +15,8 @@ class BaseAPIException(Exception):
         self,
         message: str,
         status_code: int = 500,
-        error_code: Optional[str] = None,
-        details: Optional[dict[str, Any]] = None,
+        error_code: str | None = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(message)
         self.message = message
@@ -34,7 +34,7 @@ class ValidationError(BaseAPIException):
     def __init__(
         self,
         message: str,
-        details: Optional[dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
         error_code: str = "VALIDATION_ERROR",
     ):
         super().__init__(message, status_code=400, error_code=error_code, details=details)
@@ -114,7 +114,7 @@ class ConflictError(BaseAPIException):
         self,
         message: str,
         error_code: str = "CONFLICT",
-        details: Optional[dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(message, status_code=409, error_code=error_code, details=details)
 
@@ -155,7 +155,7 @@ class UsageLimitExceededError(BaseAPIException):
 
 
 class DatabaseError(BaseAPIException):
-    def __init__(self, message: str, details: Optional[dict[str, Any]] = None):
+    def __init__(self, message: str, details: dict[str, Any] | None = None):
         super().__init__(message, status_code=500, error_code="DATABASE_ERROR", details=details)
 
 
@@ -168,7 +168,7 @@ class ExternalServiceError(BaseAPIException):
         message: str,
         status_code: int = 502,
         error_code: str = "EXTERNAL_SERVICE_ERROR",
-        details: Optional[dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ):
         details = {**(details or {}), "service": service_name}
         super().__init__(message, status_code=status_code, error_code=error_code, details=details)
@@ -177,10 +177,10 @@ class ExternalServiceError(BaseAPIException):
 class _RateLimited:
     """Mixin: records `retry_after` (seconds) on a rate-limit error."""
 
-    retry_after: Optional[float]
+    retry_after: float | None
 
     @staticmethod
-    def _with_retry(details: Optional[dict[str, Any]], retry_after: Optional[float]) -> dict:
+    def _with_retry(details: dict[str, Any] | None, retry_after: float | None) -> dict:
         details = dict(details or {})
         if retry_after is not None:
             details["retry_after"] = retry_after
@@ -188,7 +188,7 @@ class _RateLimited:
 
 
 class ArxivAPIError(ExternalServiceError):
-    def __init__(self, message: str, details: Optional[dict[str, Any]] = None):
+    def __init__(self, message: str, details: dict[str, Any] | None = None):
         super().__init__("arXiv", message, error_code="ARXIV_API_ERROR", details=details)
 
 
@@ -196,7 +196,7 @@ class EmbeddingServiceError(ExternalServiceError):
     def __init__(
         self,
         message: str,
-        details: Optional[dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
         error_code: str = "EMBEDDING_SERVICE_ERROR",
     ):
         super().__init__("Jina Embeddings", message, error_code=error_code, details=details)
@@ -206,8 +206,8 @@ class EmbeddingRateLimitError(EmbeddingServiceError, _RateLimited):
     def __init__(
         self,
         message: str = "Embedding API rate limit exceeded",
-        retry_after: Optional[float] = None,
-        details: Optional[dict[str, Any]] = None,
+        retry_after: float | None = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message, self._with_retry(details, retry_after), error_code="EMBEDDING_RATE_LIMIT"
@@ -219,7 +219,7 @@ class SemanticScholarError(ExternalServiceError):
     def __init__(
         self,
         message: str,
-        details: Optional[dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
         error_code: str = "SEMANTIC_SCHOLAR_ERROR",
     ):
         super().__init__("Semantic Scholar", message, error_code=error_code, details=details)
@@ -229,8 +229,8 @@ class SemanticScholarRateLimitError(SemanticScholarError, _RateLimited):
     def __init__(
         self,
         message: str = "Semantic Scholar API rate limit exceeded",
-        retry_after: Optional[float] = None,
-        details: Optional[dict[str, Any]] = None,
+        retry_after: float | None = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message,
@@ -250,9 +250,9 @@ class TypeSafeError(ExternalServiceError):
     def __init__(
         self,
         message: str,
-        status: Optional[int] = None,
-        request_id: Optional[str] = None,
-        details: Optional[dict[str, Any]] = None,
+        status: int | None = None,
+        request_id: str | None = None,
+        details: dict[str, Any] | None = None,
         error_code: str = "TYPESAFE_ERROR",
     ):
         details = dict(details or {})
@@ -271,9 +271,9 @@ class TypeSafeRateLimitError(TypeSafeError, _RateLimited):
     def __init__(
         self,
         message: str = "TypeSafe API rate limit exceeded",
-        retry_after: Optional[float] = None,
-        request_id: Optional[str] = None,
-        details: Optional[dict[str, Any]] = None,
+        retry_after: float | None = None,
+        request_id: str | None = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message,
@@ -288,7 +288,7 @@ class TypeSafeRateLimitError(TypeSafeError, _RateLimited):
 class TypeSafeConnectionError(TypeSafeError):
     """TypeSafe cannot be reached or timed out (after SDK retries); the scoring task retries."""
 
-    def __init__(self, message: str, details: Optional[dict[str, Any]] = None):
+    def __init__(self, message: str, details: dict[str, Any] | None = None):
         super().__init__(message, details=details, error_code="TYPESAFE_CONNECTION_ERROR")
 
 

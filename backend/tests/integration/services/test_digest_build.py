@@ -7,7 +7,7 @@ and the upsert (a rebuild refreshes one row, never duplicates).
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -46,9 +46,9 @@ async def _make_scored_paper(
 
 @pytest.mark.asyncio
 async def test_build_digest_selects_and_orders(db_session, sample_paper_data):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     week_start = _week_start(now.date())
-    in_week = datetime(week_start.year, week_start.month, week_start.day, tzinfo=timezone.utc)
+    in_week = datetime(week_start.year, week_start.month, week_start.day, tzinfo=UTC)
     before_week = in_week - timedelta(days=1)
 
     # composite 81.5 -- highest
@@ -108,9 +108,9 @@ async def test_build_digest_selects_and_orders(db_session, sample_paper_data):
 
 @pytest.mark.asyncio
 async def test_rebuild_upserts_single_row(db_session, sample_paper_data):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     week_start = _week_start(now.date())
-    in_week = datetime(week_start.year, week_start.month, week_start.day, tzinfo=timezone.utc)
+    in_week = datetime(week_start.year, week_start.month, week_start.day, tzinfo=UTC)
 
     await _make_scored_paper(
         db_session,

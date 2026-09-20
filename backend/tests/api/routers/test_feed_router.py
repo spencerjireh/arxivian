@@ -1,6 +1,6 @@
 """Tests for GET /api/v1/feed."""
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 import pytest
 
@@ -33,7 +33,7 @@ def _item():
             title="T",
             authors=["A"],
             categories=["cs.LG"],
-            published_date=datetime(2023, 1, 1, tzinfo=timezone.utc),
+            published_date=datetime(2023, 1, 1, tzinfo=UTC),
             pdf_url="https://arxiv.org/pdf/2301.00001.pdf",
         ),
         scores=FeedScores(
@@ -47,7 +47,7 @@ def _item():
         signals=FeedSignals(
             pseudocode_present=True, public_datasets=True, single_gpu=True, code_released=False
         ),
-        scored_at=datetime(2026, 8, 4, tzinfo=timezone.utc),
+        scored_at=datetime(2026, 8, 4, tzinfo=UTC),
     )
 
 

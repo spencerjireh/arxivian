@@ -25,18 +25,19 @@ export default function AuthTokenProvider({ children }: { children: React.ReactN
   const handleForceSignOut = useCallback(async () => {
     clearUserStore()
     await signOut()
-    navigate('/sign-in')
+    await navigate('/sign-in')
   }, [clearUserStore, signOut, navigate])
 
   // Fetch user tier/usage info once on mount
   useEffect(() => {
-    fetchMe()
+    void fetchMe()
   }, [fetchMe])
 
   // Listen for forced sign-out from API 401 responses
   useEffect(() => {
-    window.addEventListener('auth:signout', handleForceSignOut)
-    return () => window.removeEventListener('auth:signout', handleForceSignOut)
+    const onSignOut = () => void handleForceSignOut()
+    window.addEventListener('auth:signout', onSignOut)
+    return () => window.removeEventListener('auth:signout', onSignOut)
   }, [handleForceSignOut])
 
   return <>{children}</>

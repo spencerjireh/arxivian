@@ -23,7 +23,9 @@ export default function KeywordInput({ value, onChange }: KeywordInputProps) {
     <div>
       <Input
         value={draft}
-        placeholder={value.length >= MAX_KEYWORDS ? 'Keyword limit reached' : 'Add a keyword and press Enter'}
+        placeholder={
+          value.length >= MAX_KEYWORDS ? 'Keyword limit reached' : 'Add a keyword and press Enter'
+        }
         disabled={value.length >= MAX_KEYWORDS}
         aria-label="Interest keyword"
         onChange={(e) => setDraft(e.target.value)}
@@ -42,7 +44,7 @@ export default function KeywordInput({ value, onChange }: KeywordInputProps) {
         }}
       />
       {value.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-2">
+        <div className="mt-2 flex flex-wrap gap-1.5">
           {value.map((k) => (
             <Chip key={k} size="md">
               {k}
@@ -52,7 +54,7 @@ export default function KeywordInput({ value, onChange }: KeywordInputProps) {
                 onClick={() => onChange(value.filter((v) => v !== k))}
                 className="ml-0.5 rounded hover:bg-stone-200"
               >
-                <X className="w-3 h-3" strokeWidth={1.5} />
+                <X className="h-3 w-3" strokeWidth={1.5} />
               </button>
             </Chip>
           ))}

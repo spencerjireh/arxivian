@@ -1,10 +1,10 @@
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
-import type { ReactNode } from 'react'
 import { useUpdateFeedProfile } from '../../../src/api/users'
 import { feedKeys } from '../../../src/api/feed'
 import { useUserStore } from '../../../src/stores/userStore'
+import type { ReactNode } from 'react'
 
 const apiPatch = vi.fn()
 vi.mock('../../../src/api/client', () => ({
@@ -13,9 +13,16 @@ vi.mock('../../../src/api/client', () => ({
 }))
 
 const me = {
-  id: 'u', email: null, first_name: null, last_name: null, tier: 'free' as const,
-  daily_chat_limit: null, chats_used_today: 0,
-  preferences: { feed_profile: { categories: ['cs.LG'], compute_profile: 'laptop' as const, keywords: [] } },
+  id: 'u',
+  email: null,
+  first_name: null,
+  last_name: null,
+  tier: 'free' as const,
+  daily_chat_limit: null,
+  chats_used_today: 0,
+  preferences: {
+    feed_profile: { categories: ['cs.LG'], compute_profile: 'laptop' as const, keywords: [] },
+  },
   onboarded: false,
 }
 
@@ -29,11 +36,17 @@ describe('useUpdateFeedProfile', () => {
 
     const { result } = renderHook(() => useUpdateFeedProfile(), { wrapper })
     await act(async () => {
-      await result.current.mutateAsync({ categories: ['cs.LG'], compute_profile: 'laptop', keywords: [] })
+      await result.current.mutateAsync({
+        categories: ['cs.LG'],
+        compute_profile: 'laptop',
+        keywords: [],
+      })
     })
 
     expect(apiPatch).toHaveBeenCalledWith('/users/me/preferences', {
-      categories: ['cs.LG'], compute_profile: 'laptop', keywords: [],
+      categories: ['cs.LG'],
+      compute_profile: 'laptop',
+      keywords: [],
     })
     await waitFor(() => expect(useUserStore.getState().me?.onboarded).toBe(true))
     expect(invalidate).toHaveBeenCalledWith({ queryKey: feedKeys.lists() })

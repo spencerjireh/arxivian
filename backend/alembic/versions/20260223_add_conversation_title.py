@@ -5,16 +5,14 @@ Revises: 017_add_citations
 Create Date: 2026-02-23
 """
 
-from typing import Union
-
 from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = "018_add_conversation_title"
-down_revision: Union[str, None] = "017_add_citations"
-branch_labels: Union[str, None] = None
-depends_on: Union[str, None] = None
+down_revision: str | None = "017_add_citations"
+branch_labels: str | None = None
+depends_on: str | None = None
 
 
 def upgrade() -> None:

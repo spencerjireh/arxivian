@@ -2,8 +2,8 @@
 
 import pytest
 
-from src.services.search_service import SearchService
 from src.repositories.search_repository import SearchResult
+from src.services.search_service import SearchService
 
 
 def create_search_result(chunk_id: str, score: float = 0.9, **kwargs) -> SearchResult:
@@ -169,6 +169,7 @@ class TestSearchServiceVectorSearch:
         call_kwargs = mock_search_repository.vector_search.call_args.kwargs
         assert call_kwargs["query_embedding"] == embedding
 
+
 class TestSearchServiceFulltextSearch:
     """Tests for SearchService._fulltext_only_search method."""
 
@@ -191,9 +192,7 @@ class TestSearchServiceFulltextSearch:
         mock_search_repository.fulltext_search.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_fulltext_only_search_passes_query(
-        self, search_service, mock_search_repository
-    ):
+    async def test_fulltext_only_search_passes_query(self, search_service, mock_search_repository):
         """Verify query is passed correctly."""
         mock_search_repository.fulltext_search.return_value = []
 
@@ -202,6 +201,7 @@ class TestSearchServiceFulltextSearch:
         call_kwargs = mock_search_repository.fulltext_search.call_args.kwargs
         assert call_kwargs["query"] == "deep learning"
         assert call_kwargs["top_k"] == 5
+
 
 class TestSearchServiceRRF:
     """Tests for SearchService RRF (Reciprocal Rank Fusion) implementation."""
@@ -321,7 +321,7 @@ class TestSearchServiceRRF:
 
         # Create more results than top_k
         vector_results = [create_search_result(f"chunk-{i}") for i in range(10)]
-        fulltext_results = [create_search_result(f"chunk-{i+10}") for i in range(10)]
+        fulltext_results = [create_search_result(f"chunk-{i + 10}") for i in range(10)]
 
         mock_search_repository.vector_search.return_value = vector_results
         mock_search_repository.fulltext_search.return_value = fulltext_results
@@ -371,9 +371,7 @@ class TestSearchServiceRRF:
 
         assert results == []
 
-    def test_reciprocal_rank_fusion_preserves_metadata(
-        self, search_service
-    ):
+    def test_reciprocal_rank_fusion_preserves_metadata(self, search_service):
         """Verify result metadata is preserved through fusion."""
         result = create_search_result(
             "chunk-1",

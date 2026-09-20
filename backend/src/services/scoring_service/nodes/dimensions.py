@@ -13,7 +13,8 @@ column persists NULL, and the rest of the paper still scores.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Mapping
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
 
 from langchain_core.runnables import RunnableConfig
 
@@ -44,10 +45,10 @@ log = get_logger(__name__)
 
 __all__ = [
     "DEMAND_BAND_TO_SCORE",
-    "score_method_clarity_node",
-    "score_resource_feasibility_node",
     "score_data_availability_node",
     "score_demand_node",
+    "score_method_clarity_node",
+    "score_resource_feasibility_node",
 ]
 
 # Evidence spans kept per kind (the same spans are sent as state, truncated for storage).

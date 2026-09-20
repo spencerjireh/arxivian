@@ -32,7 +32,7 @@ def _verify_svix_signature(payload: bytes, headers: dict[str, str], secret: str)
         return wh.verify(payload, headers)
     except WebhookVerificationError as exc:
         log.warning("webhook signature verification failed", error=str(exc))
-        raise ValidationError("Invalid webhook signature")
+        raise ValidationError("Invalid webhook signature") from exc
 
 
 @router.post("/clerk")
@@ -114,6 +114,7 @@ async def _handle_user_deleted(clerk_id: str) -> None:
 
         # Nullify paper.ingested_by (nullable FK -- keep paper data)
         from sqlalchemy import update as sa_update
+
         from src.models.paper import Paper
 
         await session.execute(

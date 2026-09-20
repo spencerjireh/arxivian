@@ -1,14 +1,15 @@
 """Repository for Conversation model operations."""
 
-from typing import Optional, List, Tuple
 from uuid import UUID
-from sqlalchemy import select, func, desc
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from sqlalchemy import desc, func, select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
+from src.exceptions import ForbiddenError
 from src.models.conversation import Conversation, ConversationTurn
 from src.schemas.conversation import TurnData
-from src.exceptions import ForbiddenError
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -23,8 +24,8 @@ class ConversationRepository:
     async def get_or_create(
         self,
         session_id: str,
-        user_id: Optional[UUID] = None,
-        paper_id: Optional[UUID] = None,
+        user_id: UUID | None = None,
+        paper_id: UUID | None = None,
     ) -> Conversation:
         """
         Get existing conversation or create new one.
@@ -61,8 +62,8 @@ class ConversationRepository:
         return conv
 
     async def get_history(
-        self, session_id: str, limit: int = 5, user_id: Optional[UUID] = None
-    ) -> List[ConversationTurn]:
+        self, session_id: str, limit: int = 5, user_id: UUID | None = None
+    ) -> list[ConversationTurn]:
         """
         Get conversation history for a session.
 
@@ -99,8 +100,8 @@ class ConversationRepository:
         self,
         session_id: str,
         turn: TurnData,
-        user_id: Optional[UUID] = None,
-        paper_id: Optional[UUID] = None,
+        user_id: UUID | None = None,
+        paper_id: UUID | None = None,
     ) -> ConversationTurn:
         """
         Save a conversation turn with optimistic retry.
@@ -185,9 +186,7 @@ class ConversationRepository:
             "Failed to save turn after max retries", None, Exception("max retries")
         )
 
-    async def update_title(
-        self, session_id: str, title: str, user_id: Optional[UUID] = None
-    ) -> None:
+    async def update_title(self, session_id: str, title: str, user_id: UUID | None = None) -> None:
         """Update the title of a conversation."""
         query = select(Conversation).where(Conversation.session_id == session_id)
         if user_id is not None:
@@ -199,7 +198,7 @@ class ConversationRepository:
             conv.title = title
             await self.session.flush()
 
-    async def delete(self, session_id: str, user_id: Optional[UUID] = None) -> bool:
+    async def delete(self, session_id: str, user_id: UUID | None = None) -> bool:
         """
         Delete a conversation and all its turns.
 
@@ -226,8 +225,8 @@ class ConversationRepository:
         return False
 
     async def get_by_session_id(
-        self, session_id: str, user_id: Optional[UUID] = None
-    ) -> Optional[Conversation]:
+        self, session_id: str, user_id: UUID | None = None
+    ) -> Conversation | None:
         """
         Get conversation by session ID.
 
@@ -245,7 +244,7 @@ class ConversationRepository:
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_turn_count(self, session_id: str, user_id: Optional[UUID] = None) -> int:
+    async def get_turn_count(self, session_id: str, user_id: UUID | None = None) -> int:
         """
         Get the number of turns in a conversation.
 
@@ -275,9 +274,9 @@ class ConversationRepository:
         self,
         offset: int = 0,
         limit: int = 20,
-        user_id: Optional[UUID] = None,
-        paper_id: Optional[UUID] = None,
-    ) -> Tuple[List[Conversation], int]:
+        user_id: UUID | None = None,
+        paper_id: UUID | None = None,
+    ) -> tuple[list[Conversation], int]:
         """
         Get paginated list of conversations with turn counts.
 
@@ -319,8 +318,8 @@ class ConversationRepository:
         return conversations, total
 
     async def get_with_turns(
-        self, session_id: str, user_id: Optional[UUID] = None
-    ) -> Optional[Conversation]:
+        self, session_id: str, user_id: UUID | None = None
+    ) -> Conversation | None:
         """
         Get conversation with eager-loaded turns.
 

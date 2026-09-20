@@ -1,11 +1,12 @@
 """Integration tests for SearchRepository with real pgvector."""
 
-import pytest
 import random
 
-from src.repositories.search_repository import SearchRepository
-from src.repositories.paper_repository import PaperRepository
+import pytest
+
 from src.repositories.chunk_repository import ChunkRepository
+from src.repositories.paper_repository import PaperRepository
+from src.repositories.search_repository import SearchRepository
 from tests.integration.conftest import make_chunk_data
 
 

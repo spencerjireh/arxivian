@@ -1,8 +1,8 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
-import type { ReactNode } from 'react'
 import { usePapers, paperKeys } from '../../../src/api/papers'
+import type { ReactNode } from 'react'
 
 vi.mock('../../../src/api/client', () => ({
   apiGet: vi.fn().mockResolvedValue({
@@ -11,7 +11,9 @@ vi.mock('../../../src/api/client', () => ({
     limit: 20,
     papers: [],
   }),
-  apiDelete: vi.fn().mockResolvedValue({ arxiv_id: 'test', title: 'test', chunks_deleted: 0, message: 'ok' }),
+  apiDelete: vi
+    .fn()
+    .mockResolvedValue({ arxiv_id: 'test', title: 'test', chunks_deleted: 0, message: 'ok' }),
 }))
 
 function createWrapper() {

@@ -5,10 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from src.schemas.conversation import ConversationMessage
+
 from .canned_data import (
-    TRANSFORMER_CHUNKS,
     BERT_CHUNKS,
     IRRELEVANT_CHUNKS,
+    TRANSFORMER_CHUNKS,
 )
 
 

@@ -10,7 +10,7 @@ export interface StreamRequest {
 }
 
 export type StreamEventType =
-  | 'status' | 'content' | 'sources' | 'metadata' | 'error' | 'done' | 'citations'
+  'status' | 'content' | 'sources' | 'metadata' | 'error' | 'done' | 'citations'
 
 export interface StatusEventData {
   step: string
@@ -151,7 +151,7 @@ export interface MeResponse {
   first_name: string | null
   last_name: string | null
   tier: 'free' | 'pro'
-  daily_chat_limit: number | null  // null = unlimited
+  daily_chat_limit: number | null // null = unlimited
   chats_used_today: number
   preferences?: UserPreferences
   onboarded?: boolean
@@ -232,10 +232,7 @@ export interface FeedSignals {
 }
 
 export type ScoreDimension =
-  | 'method_clarity'
-  | 'resource_feasibility'
-  | 'data_availability'
-  | 'demand'
+  'method_clarity' | 'resource_feasibility' | 'data_availability' | 'demand'
 
 export interface FeedItem {
   paper: FeedPaper
@@ -287,7 +284,8 @@ export interface Judgment {
 }
 
 export interface EvidenceSpan {
-  kind: EvidenceKind | string
+  // The backend may add kinds before the client learns them; keep the union open.
+  kind: EvidenceKind | (string & {})
   text: string
   source: string | null
 }
@@ -333,5 +331,4 @@ export interface PaperScorePending {
 }
 
 export type PaperScoreResult =
-  | { status: 'ready'; detail: PaperScoreDetail }
-  | { status: 'pending'; task_id: string | null }
+  { status: 'ready'; detail: PaperScoreDetail } | { status: 'pending'; task_id: string | null }

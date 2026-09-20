@@ -1,25 +1,24 @@
 """Integration test configuration with real PostgreSQL database."""
 
-import os
-import uuid
-import random
-import pytest
 import asyncio
-from datetime import datetime, timezone
-from typing import AsyncGenerator
+import os
+import random
+import uuid
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime
 
+import pytest
+from alembic.config import Config
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
-    create_async_engine,
+    AsyncEngine,
     AsyncSession,
     async_sessionmaker,
-    AsyncEngine,
+    create_async_engine,
 )
-from alembic.config import Config
+
 from alembic import command
-
 from src.database import Base
-
 
 # Test database URL from environment or default
 TEST_DATABASE_URL = os.getenv(
@@ -154,7 +153,7 @@ def sample_paper_data(created_user) -> dict:
         "authors": ["Alice Smith", "Bob Jones"],
         "abstract": "This paper explores novel machine learning techniques.",
         "categories": ["cs.LG", "cs.AI"],
-        "published_date": datetime(2023, 1, 15, tzinfo=timezone.utc),
+        "published_date": datetime(2023, 1, 15, tzinfo=UTC),
         "pdf_url": "https://arxiv.org/pdf/2301.00001.pdf",
     }
 
@@ -165,7 +164,7 @@ def sample_processed_paper_data(sample_paper_data) -> dict:
     return {
         **sample_paper_data,
         "pdf_processed": True,
-        "pdf_processing_date": datetime.now(timezone.utc),
+        "pdf_processing_date": datetime.now(UTC),
         "parser_used": "marker",
         "raw_text": "Full text content of the paper...",
         "sections": [

@@ -59,9 +59,7 @@ describe('App routes', () => {
 
     render(<RouterProvider router={router} />)
 
-    expect(
-      await screen.findByRole('heading', { name: /Understand research/ }),
-    ).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /Understand research/ })).toBeInTheDocument()
   })
 
   it('renders PricingPage at /pricing', async () => {
@@ -72,7 +70,7 @@ describe('App routes', () => {
     render(<RouterProvider router={router} />)
 
     expect(
-      await screen.findByRole('heading', { name: /Simple, transparent pricing/ }),
+      await screen.findByRole('heading', { name: /Simple, transparent pricing/ })
     ).toBeInTheDocument()
   })
 
@@ -85,7 +83,7 @@ describe('App routes', () => {
     render(
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
-      </QueryClientProvider>,
+      </QueryClientProvider>
     )
 
     expect(await screen.findByRole('heading', { name: /Feed page stub/ })).toBeInTheDocument()
@@ -98,7 +96,7 @@ describe('App routes', () => {
     render(
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
-      </QueryClientProvider>,
+      </QueryClientProvider>
     )
 
     expect(await screen.findByRole('heading', { name: /Feed page stub/ })).toBeInTheDocument()
@@ -114,7 +112,7 @@ describe('App routes', () => {
     render(
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
-      </QueryClientProvider>,
+      </QueryClientProvider>
     )
 
     expect(await screen.findByRole('heading', { name: /Paper detail stub/ })).toBeInTheDocument()

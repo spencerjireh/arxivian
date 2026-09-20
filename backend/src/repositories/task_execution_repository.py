@@ -1,9 +1,8 @@
 """Repository for TaskExecution model operations."""
 
-from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import select, func, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.task_execution import TaskExecution
@@ -25,7 +24,7 @@ class TaskExecutionRepository:
         celery_task_id: str,
         user_id: UUID,
         task_type: str,
-        parameters: Optional[dict] = None,
+        parameters: dict | None = None,
     ) -> TaskExecution:
         """Create a new task execution record."""
         task_exec = TaskExecution(
@@ -40,7 +39,7 @@ class TaskExecutionRepository:
         log.debug("task_execution_created", celery_task_id=celery_task_id, task_type=task_type)
         return task_exec
 
-    async def get_by_celery_task_id(self, celery_task_id: str) -> Optional[TaskExecution]:
+    async def get_by_celery_task_id(self, celery_task_id: str) -> TaskExecution | None:
         """Get task execution by Celery task ID."""
         result = await self.session.execute(
             select(TaskExecution).where(TaskExecution.celery_task_id == celery_task_id)
@@ -51,7 +50,7 @@ class TaskExecutionRepository:
         self,
         celery_task_id: str,
         status: str,
-        error_message: Optional[str] = None,
+        error_message: str | None = None,
     ) -> None:
         """Update task execution status. Sets completed_at on terminal states."""
         values: dict = {"status": status, "updated_at": func.now()}

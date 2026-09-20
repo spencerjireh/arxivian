@@ -9,17 +9,25 @@ interface DistributionBarProps {
 }
 
 /** One segment per level, width = probability mass; the argmax level is highlighted. */
-export default function DistributionBar({ probabilities, level, maxLevel, labels, className }: DistributionBarProps) {
+export default function DistributionBar({
+  probabilities,
+  level,
+  maxLevel,
+  labels,
+  className,
+}: DistributionBarProps) {
   const levels = Array.from({ length: maxLevel + 1 }, (_, i) => i)
   const description = levels
-    .map((i) => `${labels?.[i] ?? `Level ${i}`}: ${Math.round((probabilities[String(i)] ?? 0) * 100)}%`)
+    .map(
+      (i) => `${labels?.[i] ?? `Level ${i}`}: ${Math.round((probabilities[String(i)] ?? 0) * 100)}%`
+    )
     .join(', ')
 
   return (
     <div
       role="img"
       aria-label={description}
-      className={clsx('flex h-2 w-full gap-0.5 rounded-full overflow-hidden', className)}
+      className={clsx('flex h-2 w-full gap-0.5 overflow-hidden rounded-full', className)}
     >
       {levels.map((i) => {
         const p = probabilities[String(i)] ?? 0

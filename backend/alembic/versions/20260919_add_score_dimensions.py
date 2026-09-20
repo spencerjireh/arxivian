@@ -8,7 +8,7 @@ The four `*_score` integer columns stay as derived denormalizations; `dimensions
 becomes the source of truth (per-dimension level distributions + atomic Jev judgments).
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from alembic import op
 import sqlalchemy as sa
@@ -16,9 +16,9 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "020_add_score_dimensions"
-down_revision: Union[str, None] = "019_add_scoring_tables"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "019_add_scoring_tables"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

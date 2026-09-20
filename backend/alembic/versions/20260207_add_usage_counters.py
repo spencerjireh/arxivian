@@ -6,7 +6,7 @@ Create Date: 2026-02-07
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from alembic import op
 import sqlalchemy as sa
@@ -14,9 +14,9 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "009_add_usage_counters"
-down_revision: Union[str, None] = "008_celery_improvements"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "008_celery_improvements"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -38,12 +38,8 @@ def upgrade() -> None:
         ),
         sa.Column("query_count", sa.Integer, nullable=False, server_default="0"),
         sa.Column("ingest_count", sa.Integer, nullable=False, server_default="0"),
-        sa.Column(
-            "created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
-        ),
-        sa.Column(
-            "updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
-        ),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()),
         sa.UniqueConstraint("user_id", "usage_date", name="uq_usage_counters_user_date"),
     )
     op.create_index("ix_usage_counters_user_id", "usage_counters", ["user_id"])

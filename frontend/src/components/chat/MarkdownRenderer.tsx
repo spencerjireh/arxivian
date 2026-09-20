@@ -14,7 +14,7 @@ export default function MarkdownRenderer({ content, streamingCursor }: MarkdownR
     <div
       className={clsx(
         'markdown-content',
-        streamingCursor && '[&_p:last-of-type]:inline [&_p:last-of-type]:mb-0'
+        streamingCursor && '[&_p:last-of-type]:mb-0 [&_p:last-of-type]:inline'
       )}
     >
       <Suspense fallback={<p className="whitespace-pre-wrap">{content}</p>}>

@@ -1,10 +1,12 @@
 """Repository for Paper model operations."""
 
 import uuid
-from typing import Optional, List, Literal
-from datetime import datetime, timezone
-from sqlalchemy import select, update, delete, func, desc, asc, or_, text
+from datetime import UTC, datetime
+from typing import Literal
+
+from sqlalchemy import asc, delete, desc, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.models.paper import Paper
 from src.utils.logger import get_logger
 
@@ -17,7 +19,7 @@ class PaperRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_by_id(self, paper_id: str) -> Optional[Paper]:
+    async def get_by_id(self, paper_id: str) -> Paper | None:
         """Get paper by UUID."""
         log.debug("query paper by id", paper_id=paper_id)
         result = await self.session.execute(select(Paper).where(Paper.id == paper_id))
@@ -25,14 +27,14 @@ class PaperRepository:
         log.debug("query result", found=paper is not None)
         return paper
 
-    async def get_by_ids(self, paper_ids: List[uuid.UUID]) -> List[Paper]:
+    async def get_by_ids(self, paper_ids: list[uuid.UUID]) -> list[Paper]:
         """Batch fetch by UUID (feed enrichment). Empty input -> empty list, no query."""
         if not paper_ids:
             return []
         result = await self.session.execute(select(Paper).where(Paper.id.in_(paper_ids)))
         return list(result.scalars().all())
 
-    async def get_by_arxiv_id(self, arxiv_id: str) -> Optional[Paper]:
+    async def get_by_arxiv_id(self, arxiv_id: str) -> Paper | None:
         """Get paper by arXiv ID."""
         log.debug("query paper by arxiv_id", arxiv_id=arxiv_id)
         stmt = select(Paper).where(Paper.arxiv_id == arxiv_id)
@@ -41,7 +43,7 @@ class PaperRepository:
         log.debug("query result", found=paper is not None)
         return paper
 
-    async def get_by_arxiv_id_for_update(self, arxiv_id: str) -> Optional[Paper]:
+    async def get_by_arxiv_id_for_update(self, arxiv_id: str) -> Paper | None:
         """
         Get paper by arXiv ID with row-level lock.
 
@@ -73,9 +75,9 @@ class PaperRepository:
         log.debug("paper created", arxiv_id=paper.arxiv_id)
         return paper
 
-    async def update(self, paper_id: str, update_data: dict) -> Optional[Paper]:
+    async def update(self, paper_id: str, update_data: dict) -> Paper | None:
         """Update paper. Caller is responsible for committing the transaction."""
-        update_data["updated_at"] = datetime.now(timezone.utc)
+        update_data["updated_at"] = datetime.now(UTC)
         await self.session.execute(update(Paper).where(Paper.id == paper_id).values(**update_data))
         await self.session.flush()
         log.debug("paper updated", paper_id=paper_id)
@@ -106,15 +108,15 @@ class PaperRepository:
         self,
         offset: int = 0,
         limit: int = 20,
-        processed_only: Optional[bool] = None,
-        category_filter: Optional[str] = None,
-        author_filter: Optional[str] = None,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-        query: Optional[str] = None,
+        processed_only: bool | None = None,
+        category_filter: str | None = None,
+        author_filter: str | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        query: str | None = None,
         sort_by: Literal["created_at", "published_date", "updated_at"] = "created_at",
         sort_order: Literal["asc", "desc"] = "desc",
-    ) -> tuple[List[Paper], int]:
+    ) -> tuple[list[Paper], int]:
         """
         Get paginated list of papers with optional filters.
 
@@ -228,7 +230,7 @@ class PaperRepository:
             log.info("paper deleted", arxiv_id=arxiv_id)
         return deleted
 
-    async def get_orphaned_papers(self) -> List[Paper]:
+    async def get_orphaned_papers(self) -> list[Paper]:
         """
         Find papers that are marked as processed but have no chunks.
 

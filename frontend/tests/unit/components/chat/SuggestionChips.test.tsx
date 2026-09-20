@@ -16,7 +16,7 @@ describe('SuggestionChips', () => {
         onSelect={onSelect}
         columns={1}
         suggestions={[{ icon: BookOpen, title: 'Custom', prompt: 'Custom prompt.' }]}
-      />,
+      />
     )
     fireEvent.click(screen.getByRole('button', { name: /Custom/ }))
     expect(onSelect).toHaveBeenCalledWith('Custom prompt.')

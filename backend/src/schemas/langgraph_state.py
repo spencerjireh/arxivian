@@ -1,12 +1,12 @@
 """LangGraph state and structured output models."""
 
-from typing import Any, Required, TypedDict, Annotated, Literal
+from typing import Annotated, Any, Literal, Required, TypedDict
 
-from pydantic import BaseModel, Field, ConfigDict
 from langchain_core.messages import AnyMessage
 from langgraph.graph.message import add_messages
-from src.schemas.conversation import ConversationMessage
+from pydantic import BaseModel, ConfigDict, Field
 
+from src.schemas.conversation import ConversationMessage
 
 # Execution status types
 ExecutionStatus = Literal["running", "completed", "failed"]

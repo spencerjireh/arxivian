@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterator
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
 from src.utils.logger import get_logger
+
 from .base import BaseTool, ToolResult
 
 if TYPE_CHECKING:
@@ -91,7 +93,7 @@ class ToolRegistry:
             log.error("tool execution failed", tool_name=name, error=str(e), exc_info=True)
             return ToolResult(
                 success=False,
-                error=f"Tool execution failed: {str(e)}",
+                error=f"Tool execution failed: {e!s}",
                 tool_name=name,
             )
 

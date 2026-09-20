@@ -8,23 +8,19 @@ interface AuthLayoutProps {
 
 export default function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#FAFAF9] px-4">
-      <div className="w-full max-w-md flex flex-col items-center">
-        <div className="w-14 h-14 rounded-2xl bg-stone-100 border border-stone-200 flex items-center justify-center mb-6">
-          <img src={logoIcon} alt="" className="w-8 h-8" aria-hidden="true" />
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#FAFAF9] px-4">
+      <div className="flex w-full max-w-md flex-col items-center">
+        <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-stone-200 bg-stone-100">
+          <img src={logoIcon} alt="" className="h-8 w-8" aria-hidden="true" />
         </div>
 
-        <h1 className="font-display text-3xl font-semibold text-stone-900 tracking-tight text-center">
+        <h1 className="font-display text-center text-3xl font-semibold tracking-tight text-stone-900">
           {title}
         </h1>
 
-        <p className="mt-2 text-stone-500 text-center max-w-sm">
-          {subtitle}
-        </p>
+        <p className="mt-2 max-w-sm text-center text-stone-500">{subtitle}</p>
 
-        <div className="mt-8 w-full">
-          {children}
-        </div>
+        <div className="mt-8 w-full">{children}</div>
       </div>
     </div>
   )

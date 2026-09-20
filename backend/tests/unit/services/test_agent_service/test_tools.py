@@ -1,16 +1,17 @@
 """Tests for agent tools."""
 
-import pytest
-from unittest.mock import AsyncMock, Mock
 from typing import ClassVar
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 from src.services.agent_service.tools import (
     BaseTool,
-    ToolResult,
-    ToolRegistry,
-    RetrieveChunksTool,
     ExploreCitationsTool,
+    RetrieveChunksTool,
     SemanticScholarTool,
+    ToolRegistry,
+    ToolResult,
 )
 from src.services.agent_service.tools.retrieve import MAX_TOP_K
 
@@ -24,7 +25,9 @@ class TestRetrieveChunksTool:
 
     @pytest.fixture
     def tool(self, mock_search_service):
-        return RetrieveChunksTool(search_service=mock_search_service, paper_id="p1", default_top_k=6)
+        return RetrieveChunksTool(
+            search_service=mock_search_service, paper_id="p1", default_top_k=6
+        )
 
     @pytest.mark.asyncio
     async def test_empty_query_returns_error(self, tool):
@@ -90,6 +93,7 @@ class TestRetrieveChunksTool:
     def test_class_variables(self, tool):
         assert tool.extends_chunks is True
         assert "search_service" in tool.required_dependencies
+
 
 class TestExploreCitationsTool:
     """Tests for ExploreCitationsTool."""

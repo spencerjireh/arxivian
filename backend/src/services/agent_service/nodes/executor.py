@@ -1,28 +1,29 @@
 """Executor node for running tools selected by the router."""
 
 from __future__ import annotations
+
 import asyncio
 import json
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.config import get_stream_writer
 
-from src.schemas.langgraph_state import AgentState, ToolExecution, ToolCall, ToolOutput
+from src.schemas.langgraph_state import AgentState, ToolCall, ToolExecution, ToolOutput
 from src.services.agent_service.tools import ToolResult
 from src.utils.logger import get_logger
+
 from ..context import AgentContext
 
 log = get_logger(__name__)
 
 
-def _summarize_result(tool_name: str, result: ToolResult) -> str:
+def _summarize_result(result: ToolResult) -> str:
     """Create brief summary of tool result including actionable details for the router."""
     if result.success and result.data:
         if isinstance(result.data, list):
             return f"Retrieved {len(result.data)} items"
-        if isinstance(result.data, dict):
-            if "total_count" in result.data:
-                return f"Found {result.data['total_count']} items"
+        if isinstance(result.data, dict) and "total_count" in result.data:
+            return f"Found {result.data['total_count']} items"
         return str(result.data)[:200]
     if result.error:
         return f"Error: {result.error}"
@@ -125,7 +126,7 @@ async def executor_node(state: AgentState, config: RunnableConfig) -> dict:
             tool_name=tool_name,
             tool_args=tool_args,
             success=result.success,
-            result_summary=_summarize_result(tool_name, result),
+            result_summary=_summarize_result(result),
             error=result.error,
         )
         tool_history.append(execution)

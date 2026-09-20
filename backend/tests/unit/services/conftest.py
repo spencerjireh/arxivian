@@ -1,8 +1,9 @@
 """Shared pytest fixtures for service tests."""
 
-import pytest
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock
-from datetime import datetime, timezone
+
+import pytest
 
 from src.services.auth_service import reset_auth_service
 
@@ -93,7 +94,7 @@ def sample_arxiv_paper():
     paper.authors = ["Author One", "Author Two"]
     paper.abstract = "This is a test abstract for unit testing purposes."
     paper.categories = ["cs.LG", "cs.AI"]
-    paper.published_date = datetime(2023, 1, 1, tzinfo=timezone.utc)
+    paper.published_date = datetime(2023, 1, 1, tzinfo=UTC)
     paper.pdf_url = "https://arxiv.org/pdf/2301.00001.pdf"
     return paper
 
@@ -190,9 +191,9 @@ def sample_user():
     user.first_name = "Test"
     user.last_name = "User"
     user.profile_image_url = "https://example.com/avatar.png"
-    user.created_at = datetime.now(timezone.utc)
-    user.updated_at = datetime.now(timezone.utc)
-    user.last_login_at = datetime.now(timezone.utc)
+    user.created_at = datetime.now(UTC)
+    user.updated_at = datetime.now(UTC)
+    user.last_login_at = datetime.now(UTC)
     return user
 
 
@@ -202,8 +203,8 @@ def valid_jwt_payload():
     return {
         "sub": "user_2abc123def456",
         "iss": "https://test-clerk.clerk.accounts.dev",
-        "iat": int(datetime.now(timezone.utc).timestamp()),
-        "exp": int(datetime.now(timezone.utc).timestamp()) + 3600,
+        "iat": int(datetime.now(UTC).timestamp()),
+        "exp": int(datetime.now(UTC).timestamp()) + 3600,
         "email": "test@example.com",
         "first_name": "Test",
         "last_name": "User",

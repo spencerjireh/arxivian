@@ -19,10 +19,17 @@ describe('scoring helpers', () => {
 describe('feedParamsFromSearch', () => {
   it('reads valid params and ignores invalid ones', () => {
     const params = feedParamsFromSearch(
-      new URLSearchParams('week=2026-08-03&category=cs.LG&min_score=40&dismissed=1'),
+      new URLSearchParams('week=2026-08-03&category=cs.LG&min_score=40&dismissed=1')
     )
-    expect(params).toEqual({ week: '2026-08-03', category: 'cs.LG', min_score: 40, include_dismissed: true })
-    expect(feedParamsFromSearch(new URLSearchParams('week=foo&min_score=101&dismissed=0'))).toEqual({})
+    expect(params).toEqual({
+      week: '2026-08-03',
+      category: 'cs.LG',
+      min_score: 40,
+      include_dismissed: true,
+    })
+    expect(feedParamsFromSearch(new URLSearchParams('week=foo&min_score=101&dismissed=0'))).toEqual(
+      {}
+    )
   })
 
   it('formats the week without timezone drift', () => {

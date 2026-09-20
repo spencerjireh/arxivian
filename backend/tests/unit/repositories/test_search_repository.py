@@ -1,7 +1,8 @@
 """Tests for SearchRepository query preparation logic."""
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
 
 from src.repositories.search_repository import SearchRepository
 
@@ -53,9 +54,7 @@ class TestSearchRepositoryQueryPreparation:
         mock_async_session.execute.return_value = mock_result
 
         embedding = [0.1, 0.2, 0.3]
-        await search_repository.vector_search(
-            query_embedding=embedding, top_k=10, min_score=0.0
-        )
+        await search_repository.vector_search(query_embedding=embedding, top_k=10, min_score=0.0)
 
         call_args = mock_async_session.execute.call_args
         params = call_args[0][1]

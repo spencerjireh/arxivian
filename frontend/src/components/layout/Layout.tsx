@@ -18,7 +18,7 @@ const Layout = () => {
   const pageKey = location.pathname
 
   return (
-    <div className="h-screen bg-[#FAFAF9] flex overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-[#FAFAF9]">
       <AnimatePresence mode="wait">
         {isOpen && (
           <motion.aside
@@ -45,11 +45,11 @@ const Layout = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex min-w-0 flex-1 flex-col">
         <AnimatePresence mode="wait">
           <motion.div
             key={pageKey}
-            className="flex-1 flex flex-col min-h-0"
+            className="flex min-h-0 flex-1 flex-col"
             initial={shouldReduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={shouldReduceMotion ? undefined : { opacity: 0 }}

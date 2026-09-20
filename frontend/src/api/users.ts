@@ -17,7 +17,7 @@ export function useUpdateFeedProfile() {
     mutationFn: patchFeedProfile,
     onSuccess: (me) => {
       useUserStore.getState().setMe({ ...me, onboarded: true })
-      queryClient.invalidateQueries({ queryKey: feedKeys.lists() })
+      void queryClient.invalidateQueries({ queryKey: feedKeys.lists() })
     },
   })
 }

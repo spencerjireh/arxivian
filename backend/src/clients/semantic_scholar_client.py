@@ -15,7 +15,7 @@ import asyncio
 import json
 import logging
 import random
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 import httpx
@@ -71,7 +71,7 @@ def compute_velocity(
     if not publication_date:
         return 0.0
     try:
-        pub = datetime.strptime(publication_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        pub = datetime.strptime(publication_date, "%Y-%m-%d").replace(tzinfo=UTC)
     except (ValueError, TypeError):
         return 0.0
     months = (now - pub).days / _AVG_DAYS_PER_MONTH
@@ -279,7 +279,7 @@ class SemanticScholarClient:
         velocity = compute_velocity(
             citation_count=raw["citation_count"],
             publication_date=raw.get("publication_date"),
-            now=datetime.now(timezone.utc),
+            now=datetime.now(UTC),
         )
         return CitationMetrics(
             arxiv_id=arxiv_id,

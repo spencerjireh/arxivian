@@ -74,9 +74,8 @@ async def test_ask_normalizes_answers(client):
 @pytest.mark.asyncio
 async def test_rate_limit_mapped_with_retry_after_seconds(client):
     err = SDKRateLimitError(429, {"error": "slow down"}, httpx2.Headers({"retry-after-ms": "1500"}))
-    with _patched_sdk(AsyncMock(side_effect=err)):
-        with pytest.raises(TypeSafeRateLimitError) as exc:
-            await client.ask("s", _QUESTIONS, request_name="t")
+    with _patched_sdk(AsyncMock(side_effect=err)), pytest.raises(TypeSafeRateLimitError) as exc:
+        await client.ask("s", _QUESTIONS, request_name="t")
     assert exc.value.retry_after == pytest.approx(1.5)
     assert exc.value.status == 429
 
@@ -84,9 +83,8 @@ async def test_rate_limit_mapped_with_retry_after_seconds(client):
 @pytest.mark.asyncio
 async def test_rate_limit_without_header(client):
     err = SDKRateLimitError(429, None, httpx2.Headers({}))
-    with _patched_sdk(AsyncMock(side_effect=err)):
-        with pytest.raises(TypeSafeRateLimitError) as exc:
-            await client.ask("s", _QUESTIONS, request_name="t")
+    with _patched_sdk(AsyncMock(side_effect=err)), pytest.raises(TypeSafeRateLimitError) as exc:
+        await client.ask("s", _QUESTIONS, request_name="t")
     assert exc.value.retry_after is None
 
 
@@ -100,8 +98,7 @@ async def test_connection_error_mapped(client):
 @pytest.mark.asyncio
 async def test_api_error_mapped_non_retryable(client):
     err = SDKAPIError(422, {"error": "bad criteria"}, httpx2.Headers({}))
-    with _patched_sdk(AsyncMock(side_effect=err)):
-        with pytest.raises(TypeSafeError) as exc:
-            await client.ask("s", _QUESTIONS, request_name="t")
+    with _patched_sdk(AsyncMock(side_effect=err)), pytest.raises(TypeSafeError) as exc:
+        await client.ask("s", _QUESTIONS, request_name="t")
     assert exc.value.status == 422
     assert not isinstance(exc.value, (TypeSafeRateLimitError, TypeSafeConnectionError))

@@ -53,17 +53,17 @@ async def compose_and_persist_node(state: PaperScoreState, config: RunnableConfi
             continue
         # mode="json" turns the int probability keys into strings for JSONB.
         dimensions[dim] = result.model_dump(mode="json")
-        for span in result.evidence:
-            evidence.append(
-                {"dimension": dim, "kind": span.kind, "text": span.text, "source": span.source}
-            )
+        evidence.extend(
+            {"dimension": dim, "kind": span.kind, "text": span.text, "source": span.source}
+            for span in result.evidence
+        )
 
     attributes_result = state.get("attributes_result")
     attributes = attributes_result.model_dump(mode="json") if attributes_result else None
-    for mention in (state.get("extracted_spans") or {}).get("code_mentions") or []:
-        evidence.append(
-            {"dimension": "code_released", "kind": "code", "text": mention, "source": "raw_text"}
-        )
+    evidence.extend(
+        {"dimension": "code_released", "kind": "code", "text": mention, "source": "raw_text"}
+        for mention in (state.get("extracted_spans") or {}).get("code_mentions") or []
+    )
 
     usages = [u for u in (state.get(key) for key in _USAGE_KEYS) if u]
     model = next((u["model"] for u in usages if u.get("model")), None)

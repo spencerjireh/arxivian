@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -92,7 +92,7 @@ async def _scored(db_session, sample_paper_data, arxiv_id, *, scores, feas_level
 
 @pytest.mark.asyncio
 async def test_feed_end_to_end(db_session, sample_paper_data, created_user):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     categories = ["cs.LG", "cs.CV"]
     top = await _scored(
         db_session,

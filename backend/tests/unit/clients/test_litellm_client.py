@@ -1,6 +1,5 @@
 """Tests for LiteLLMClient."""
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -118,7 +117,7 @@ class TestGenerateCompletion:
         with patch(
             "src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock
         ) as mock:
-            mock.side_effect = asyncio.TimeoutError()
+            mock.side_effect = TimeoutError()
             with pytest.raises(LLMTimeoutError):
                 await client.generate_completion(messages, timeout=1.0)
 
@@ -173,7 +172,7 @@ class TestGenerateStreaming:
     @pytest.mark.asyncio
     async def test_streaming_timeout_raises(self, client, messages):
         async def mock_acompletion(**kwargs):
-            raise asyncio.TimeoutError()
+            raise TimeoutError()
 
         with patch("src.clients.litellm_client.litellm.acompletion", side_effect=mock_acompletion):
             with pytest.raises(LLMTimeoutError):
@@ -214,7 +213,7 @@ class TestGenerateStructured:
         with patch(
             "src.clients.litellm_client.litellm.acompletion", new_callable=AsyncMock
         ) as mock:
-            mock.side_effect = asyncio.TimeoutError()
+            mock.side_effect = TimeoutError()
             with pytest.raises(LLMTimeoutError):
                 await client.generate_structured(messages, SampleResponse, timeout=1.0)
 

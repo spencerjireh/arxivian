@@ -15,13 +15,17 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-cream)] paper-grain flex items-center justify-center p-6">
-      <div className="relative z-10 w-full max-w-2xl bg-white rounded-xl border border-stone-200 shadow-md p-8 animate-fade-in-up">
-        <div className="flex items-center gap-3 mb-6">
+    <div className="paper-grain flex min-h-screen items-center justify-center bg-[var(--color-cream)] p-6">
+      <div className="animate-fade-in-up relative z-10 w-full max-w-2xl rounded-xl border border-stone-200 bg-white p-8 shadow-md">
+        <div className="mb-6 flex items-center gap-3">
           <img src={logoIcon} alt="" className="h-8 w-auto" aria-hidden="true" />
           <div>
-            <h1 className="font-display text-2xl font-semibold text-stone-900">Shape your first digest</h1>
-            <p className="text-sm text-stone-500">About 30 seconds. You can change this later in Settings.</p>
+            <h1 className="font-display text-2xl font-semibold text-stone-900">
+              Shape your first digest
+            </h1>
+            <p className="text-sm text-stone-500">
+              About 30 seconds. You can change this later in Settings.
+            </p>
           </div>
         </div>
         <FeedProfileForm
@@ -30,7 +34,7 @@ export default function OnboardingPage() {
           submitLabel="Build my feed"
           onSubmit={(profile) =>
             update.mutate(profile, {
-              onSuccess: () => navigate('/feed', { replace: true }),
+              onSuccess: () => void navigate('/feed', { replace: true }),
               onError: () => toast.error('Could not save your profile'),
             })
           }

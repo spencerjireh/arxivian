@@ -14,7 +14,7 @@ def test_graph_compiles_with_expected_nodes():
     graph = build_scoring_graph()
     nodes = set(graph.get_graph().nodes)
     assert {"fetch_and_extract", "compose_and_persist"} <= nodes
-    assert _DIMENSIONS <= nodes
+    assert nodes >= _DIMENSIONS
 
 
 def test_fan_out_and_fan_in_edges():

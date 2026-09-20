@@ -111,8 +111,8 @@ class LiteLLMClient(BaseLLMClient):
         try:
             async with asyncio.timeout(seconds):
                 yield
-        except asyncio.TimeoutError:
-            raise LLMTimeoutError(provider=self.provider_name, timeout_seconds=seconds)
+        except TimeoutError:
+            raise LLMTimeoutError(provider=self.provider_name, timeout_seconds=seconds) from None
 
     async def generate_completion(
         self,

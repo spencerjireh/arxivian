@@ -14,7 +14,7 @@ export default function SidebarToggle() {
         aria-label="Open sidebar"
         className="shadow-sm hover:shadow"
       >
-        <PanelLeft className="w-5 h-5" strokeWidth={1.5} />
+        <PanelLeft className="h-5 w-5" strokeWidth={1.5} />
       </Button>
     </div>
   )

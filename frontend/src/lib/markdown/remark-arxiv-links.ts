@@ -10,8 +10,8 @@
  *   arXiv:2301.12345      -- colon-prefixed standard ID (case-insensitive)
  *   arXiv:cs/0112017      -- colon-prefixed legacy ID
  */
-import type { Root, PhrasingContent } from 'mdast'
 import { findAndReplace } from 'mdast-util-find-and-replace'
+import type { Root, PhrasingContent } from 'mdast'
 
 const ARXIV_URL = 'https://arxiv.org/abs/'
 

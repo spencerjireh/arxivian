@@ -9,21 +9,21 @@ from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from src.schemas.stream import StreamRequest, ErrorEventData
 from src.dependencies import (
-    DbSession,
-    SettingsDep,
-    CurrentUserRequired,
-    ChatGuard,
-    UsageCounterRepoDep,
     AgentGraphDep,
+    ChatGuard,
     ConversationRepoDep,
+    CurrentUserRequired,
+    DbSession,
     PaperRepoDep,
+    SettingsDep,
+    UsageCounterRepoDep,
 )
 from src.exceptions import BaseAPIException, PaperNotIngestedError, ScopeMismatchError
 from src.factories import get_agent_service
 from src.repositories.conversation_repository import ConversationRepository
 from src.repositories.paper_repository import PaperRepository
+from src.schemas.stream import ErrorEventData, StreamRequest
 from src.services.agent_service.context import ScopedPaper
 from src.utils.logger import get_logger
 
@@ -124,7 +124,7 @@ async def stream(
 
                     yield f"event: {event_type}\ndata: {data_json}\n\n"
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             log.warning("stream timeout", task_id=task_id, timeout_seconds=timeout_seconds)
             yield _format_sse_error(f"Request timed out after {timeout_seconds} seconds", "TIMEOUT")
             yield "event: done\ndata: {}\n\n"

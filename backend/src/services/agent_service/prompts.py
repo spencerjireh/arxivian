@@ -1,6 +1,7 @@
 """Prompt templates for agent workflow."""
 
 from __future__ import annotations
+
 import json
 from typing import TYPE_CHECKING
 
@@ -9,6 +10,7 @@ from src.services.agent_service.tools import RETRIEVE_CHUNKS
 if TYPE_CHECKING:
     from src.schemas.conversation import ConversationMessage
     from src.schemas.langgraph_state import ToolOutput
+
     from .context import ConversationFormatter
 
 
@@ -148,10 +150,9 @@ def get_classify_and_route_prompt(
         Tuple of (system_prompt, user_prompt)
     """
     # Format tool descriptions
-    tool_desc_lines = []
-    for schema in tool_schemas:
-        tool_desc_lines.append(f"- {schema['name']}: {schema['description']}")
-    tool_descriptions = "\n".join(tool_desc_lines)
+    tool_descriptions = "\n".join(
+        f"- {schema['name']}: {schema['description']}" for schema in tool_schemas
+    )
 
     system_prompt = CLASSIFY_AND_ROUTE_SYSTEM_PROMPT.format(tool_descriptions=tool_descriptions)
 

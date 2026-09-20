@@ -16,7 +16,7 @@ See `docs/design/scoring-pipeline.md` -> "Stage 1 -- Cheap Triage".
 import asyncio
 import hashlib
 from collections.abc import Sequence
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from src.celery_app import celery_app
@@ -40,7 +40,7 @@ def _triage_task_id(category: str, arxiv_id: str) -> str:
 
     Keyed on date + category + arXiv ID (mirrors `scheduled_tasks._deterministic_task_id`).
     """
-    key = f"{datetime.now(timezone.utc).date().isoformat()}:{category}:{arxiv_id}"
+    key = f"{datetime.now(UTC).date().isoformat()}:{category}:{arxiv_id}"
     return hashlib.sha256(key.encode()).hexdigest()[:32]
 
 
@@ -65,7 +65,7 @@ def triage_new_papers_task() -> dict[str, Any]:
         arxiv_client = get_arxiv_client()
         llm_client = get_llm_client()  # cheap default model (no override)
 
-        today = datetime.now(timezone.utc).date()
+        today = datetime.now(UTC).date()
         start_date = (today - timedelta(days=settings.triage_lookback_days)).isoformat()
         end_date = today.isoformat()
 

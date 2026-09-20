@@ -1,10 +1,12 @@
 """Health check router."""
 
+from datetime import UTC, datetime
+
 from fastapi import APIRouter
-from datetime import datetime, timezone
-from src.schemas.health import HealthResponse, ServiceStatus
-from src.dependencies import DbSession, EmbeddingsClientDep, PaperRepoDep, ChunkRepoDep
+
 from src.config import get_settings
+from src.dependencies import ChunkRepoDep, EmbeddingsClientDep, PaperRepoDep
+from src.schemas.health import HealthResponse, ServiceStatus
 from src.utils.logger import get_logger
 
 router = APIRouter()
@@ -13,7 +15,6 @@ log = get_logger(__name__)
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check(
-    db: DbSession,
     embeddings_client: EmbeddingsClientDep,
     paper_repo: PaperRepoDep,
     chunk_repo: ChunkRepoDep,
@@ -81,5 +82,5 @@ async def health_check(
         status=overall_status,
         version="0.2.0",
         services=services,
-        timestamp=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        timestamp=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
     )
