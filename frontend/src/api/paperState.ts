@@ -67,10 +67,11 @@ export function applyStateToCaches(
   const scoreKey = scoreKeys.detail(arxivId)
   const previousScore = queryClient.getQueryData<PaperScoreResult>(scoreKey)
   if (previousScore?.status === 'ready') {
-    queryClient.setQueryData<PaperScoreResult>(scoreKey, {
+    const next: PaperScoreResult = {
       status: 'ready',
       detail: { ...previousScore.detail, state: nextState },
-    })
+    }
+    queryClient.setQueryData<PaperScoreResult>(scoreKey, next)
   }
 
   return { previousFeeds, previousScore }

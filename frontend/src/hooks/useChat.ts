@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { streamChat, StreamAbortError, StreamError } from '../api/stream'
@@ -37,7 +37,9 @@ export function useChat(sessionId: string | null, options: UseChatOptions) {
   const abortControllerRef = useRef<AbortController | null>(null)
   const streamingMessageIdRef = useRef<string | null>(null)
   const optionsRef = useRef(options)
-  optionsRef.current = options
+  useEffect(() => {
+    optionsRef.current = options
+  })
   const scope = options.arxivId
 
   const { messages, setMessages, loadFromHistory, clearMessages } = useMessageCache(
