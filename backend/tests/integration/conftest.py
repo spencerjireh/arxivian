@@ -35,12 +35,6 @@ def pytest_collection_modifyitems(items):
 
 
 @pytest.fixture(scope="session")
-def event_loop_policy():
-    """Return the event loop policy for session scope."""
-    return asyncio.DefaultEventLoopPolicy()
-
-
-@pytest.fixture(scope="session")
 async def test_engine() -> AsyncGenerator[AsyncEngine, None]:
     """Create test database engine (session-scoped)."""
     engine = create_async_engine(

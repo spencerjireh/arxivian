@@ -83,7 +83,7 @@ class UserPaperStateRepository:
             UserPaperState.user_id == user_id, UserPaperState.paper_id == paper_id
         )
         result = await self.session.execute(stmt)
-        return (result.rowcount or 0) > 0  # type: ignore[possibly-missing-attribute]
+        return (result.rowcount or 0) > 0  # ty: ignore[unresolved-attribute]
 
     async def list_for_user(
         self,

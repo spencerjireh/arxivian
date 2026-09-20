@@ -47,8 +47,7 @@ class BaseLLMClient(ABC):
         timeout: float | None = None,
     ) -> AsyncIterator[str]:
         """Generate a streaming completion from the LLM."""
-        pass
-        yield  # pragma: no cover -- makes this a valid abstract async generator
+        yield ""  # pragma: no cover -- makes this a valid abstract async generator
 
     @abstractmethod
     async def generate_structured(

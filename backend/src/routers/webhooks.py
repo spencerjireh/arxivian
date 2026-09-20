@@ -1,5 +1,7 @@
 """Clerk webhook endpoint for user lifecycle events."""
 
+import json
+
 from fastapi import APIRouter, Request
 from sqlalchemy import delete
 
@@ -28,11 +30,19 @@ def _verify_svix_signature(payload: bytes, headers: dict[str, str], secret: str)
     from svix.webhooks import Webhook, WebhookVerificationError
 
     try:
-        wh = Webhook(secret)
-        return wh.verify(payload, headers)
+        # svix 2: verify() only raises on a bad signature and no longer returns the payload.
+        Webhook(secret).verify(payload, headers)
     except WebhookVerificationError as exc:
         log.warning("webhook signature verification failed", error=str(exc))
         raise ValidationError("Invalid webhook signature") from exc
+
+    try:
+        event = json.loads(payload)
+    except ValueError as exc:
+        raise ValidationError("Webhook payload is not JSON") from exc
+    if not isinstance(event, dict):
+        raise ValidationError("Webhook payload is not an object")
+    return event
 
 
 @router.post("/clerk")

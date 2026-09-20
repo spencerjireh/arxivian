@@ -205,7 +205,7 @@ class PaperRepository:
         """
         result = await self.session.execute(delete(Paper).where(Paper.id == paper_id))
         await self.session.flush()
-        deleted = (result.rowcount or 0) > 0  # type: ignore[possibly-missing-attribute]
+        deleted = (result.rowcount or 0) > 0  # ty: ignore[unresolved-attribute]
         if deleted:
             log.info("paper deleted", paper_id=paper_id)
         return deleted
@@ -225,7 +225,7 @@ class PaperRepository:
         stmt = delete(Paper).where(Paper.arxiv_id == arxiv_id)
         result = await self.session.execute(stmt)
         await self.session.flush()
-        deleted = (result.rowcount or 0) > 0  # type: ignore[possibly-missing-attribute]
+        deleted = (result.rowcount or 0) > 0  # ty: ignore[unresolved-attribute]
         if deleted:
             log.info("paper deleted", arxiv_id=arxiv_id)
         return deleted
