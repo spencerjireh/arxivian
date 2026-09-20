@@ -125,4 +125,4 @@ class Settings(BaseSettings):
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """Get cached settings instance."""
-    return Settings()  # ty: ignore[missing-argument]  # pydantic_settings reads from env
+    return Settings()  # pydantic_settings reads from env

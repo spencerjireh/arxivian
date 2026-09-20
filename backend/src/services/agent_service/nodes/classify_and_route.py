@@ -57,7 +57,7 @@ async def classify_and_route_node(state: AgentState, config: RunnableConfig) -> 
         )
 
     # ── Layer 2: Fast-path for short follow-ups ─────────────────────
-    last_score = metadata.get("last_guardrail_score")
+    last_score: int | None = metadata.get("last_guardrail_score")
     prior_in_scope = last_score is None or last_score >= context.guardrail_threshold
     if (
         history

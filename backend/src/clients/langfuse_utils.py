@@ -64,7 +64,7 @@ def get_langfuse() -> Optional["Langfuse"]:  # type: ignore[name-defined]
                     message="Langfuse is enabled but API keys are not configured. Tracing disabled.",
                 )
                 return None
-            _langfuse_client = Langfuse(  # type: ignore[misc]
+            _langfuse_client = Langfuse(  # ty: ignore[call-non-callable]
                 public_key=settings.langfuse_public_key,
                 secret_key=settings.langfuse_secret_key,
                 host=settings.langfuse_host,
