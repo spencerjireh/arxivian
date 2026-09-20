@@ -4,11 +4,14 @@ import json
 
 from fastapi import APIRouter, Request
 from sqlalchemy import delete
+from sqlalchemy import update as sa_update
+from svix.webhooks import Webhook, WebhookVerificationError
 
 from src.config import get_settings
 from src.database import AsyncSessionLocal
 from src.exceptions import ValidationError
 from src.models.conversation import Conversation
+from src.models.paper import Paper
 from src.models.task_execution import TaskExecution
 from src.models.usage_counter import UsageCounter
 from src.repositories.user_repository import UserRepository
@@ -26,8 +29,6 @@ def _verify_svix_signature(payload: bytes, headers: dict[str, str], secret: str)
     """
     if not secret:
         raise ValidationError("Webhook secret not configured")
-
-    from svix.webhooks import Webhook, WebhookVerificationError
 
     try:
         # svix 2: verify() only raises on a bad signature and no longer returns the payload.
@@ -123,10 +124,6 @@ async def _handle_user_deleted(clerk_id: str) -> None:
         await session.execute(delete(Conversation).where(Conversation.user_id == user_id))
 
         # Nullify paper.ingested_by (nullable FK -- keep paper data)
-        from sqlalchemy import update as sa_update
-
-        from src.models.paper import Paper
-
         await session.execute(
             sa_update(Paper).where(Paper.ingested_by == user_id).values(ingested_by=None)
         )

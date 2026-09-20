@@ -16,7 +16,12 @@ from src.exceptions import (
     MissingTokenError,
     UsageLimitExceededError,
 )
-from src.factories import get_embeddings_client, get_feed_service, get_search_service
+from src.factories import (
+    get_auth_service,
+    get_embeddings_client,
+    get_feed_service,
+    get_search_service,
+)
 from src.models.user import User
 from src.repositories.chunk_repository import ChunkRepository
 from src.repositories.conversation_repository import ConversationRepository
@@ -25,7 +30,6 @@ from src.repositories.task_execution_repository import TaskExecutionRepository
 from src.repositories.usage_counter_repository import UsageCounterRepository
 from src.repositories.user_paper_state_repository import UserPaperStateRepository
 from src.repositories.user_repository import UserRepository
-from src.services.auth_service import get_auth_service
 from src.services.feed_service import FeedService
 from src.services.search_service import SearchService
 from src.tiers import TierPolicy, get_policy

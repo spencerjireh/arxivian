@@ -16,7 +16,7 @@ from src.exceptions import (
 from src.repositories.chunk_repository import ChunkRepository
 from src.repositories.paper_repository import PaperRepository
 from src.schemas.ingest import IngestRequest, IngestResponse, PaperError, PaperResult
-from src.utils.chunking_service import ChunkingService
+from src.services.chunking_service import ChunkingService
 from src.utils.logger import get_logger
 from src.utils.pdf_parser import PDFParser
 

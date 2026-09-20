@@ -20,11 +20,12 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from src.celery_app import celery_app
+from src.config import get_settings
 from src.factories import get_arxiv_client, get_llm_client
 from src.schemas.triage import TriageBatchResult, TriageResult
 from src.services.scoring_service.triage_prompt import get_triage_batch_prompt
+from src.tasks.runtime import run_async
 from src.tasks.score_tasks import score_paper_task
-from src.tasks.utils import run_async
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -59,8 +60,6 @@ def triage_new_papers_task() -> dict[str, Any]:
     log.info("triage_started")
 
     async def _run() -> dict[str, Any]:
-        from src.config import get_settings
-
         settings = get_settings()
         arxiv_client = get_arxiv_client()
         llm_client = get_llm_client()  # cheap default model (no override)

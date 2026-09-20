@@ -26,7 +26,7 @@ from src.schemas.digest import (
     week_start_for,
 )
 from src.schemas.scoring_state import RUBRIC_VERSION
-from src.tasks.utils import run_async
+from src.tasks.runtime import run_async
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
