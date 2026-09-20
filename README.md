@@ -45,7 +45,7 @@ Arxivian scores new ML papers on method clarity, resource feasibility, data avai
 | **Async** | Celery 5 + Redis (broker), RedBeat (scheduler), Flower (monitoring) |
 | **Observability** | Langfuse (self-hosted), structlog with request ID correlation |
 | **Infra** | Docker Compose (dev/test/prod/eval profiles), Alembic migrations, Coolify |
-| **CI** | GitHub Actions -- ruff, ty, pytest, eslint, tsc, vitest |
+| **CI** | GitHub Actions -- lint, unit/api + integration (pgvector service), coverage gates, image builds, PR-title check |
 
 ## Quick Start
 

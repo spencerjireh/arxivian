@@ -215,14 +215,20 @@ class TestUserRepositoryPreferences:
 
     @pytest.mark.asyncio
     async def test_update_preferences_updates_timestamp(self, db_session, created_user):
-        """Verify updated_at timestamp is changed."""
+        """Verify updated_at timestamp is changed.
+
+        The row's initial updated_at is the database clock (server_default now()) while
+        update_preferences writes the Python clock; compare two Python-side writes so a
+        few ms of skew between the two clocks cannot flip the assertion.
+        """
         repo = UserRepository(session=db_session)
 
-        original_updated_at = created_user.updated_at
+        await repo.update_preferences(created_user, {"test": "first"})
+        first_updated_at = created_user.updated_at
 
-        await repo.update_preferences(created_user, {"test": "value"})
+        await repo.update_preferences(created_user, {"test": "second"})
 
-        assert created_user.updated_at > original_updated_at
+        assert created_user.updated_at > first_updated_at
 
     @pytest.mark.asyncio
     async def test_update_preferences_replaces_existing(self, db_session, created_user):

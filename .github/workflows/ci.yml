@@ -10,78 +10,203 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Tests import the app (which instantiates Settings) and mock all downstream network
+  # calls, so these dummies never make a real request. CLERK_DOMAIN is the only field
+  # without a default; the provider keys let the happy-path health check report healthy.
+  CLERK_DOMAIN: test.clerk.accounts.dev
+  OPENAI_API_KEY: ci-dummy-key
+  JINA_API_KEY: ci-dummy-key
+
 jobs:
-  backend:
-    name: Backend
+  backend-lint:
+    name: Backend lint
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
-    env:
-      # Tests import the app (which instantiates Settings) and mock all downstream
-      # network calls, so these dummies never make a real request. CLERK_DOMAIN is the
-      # only field without a default; the provider keys let the happy-path health
-      # check report healthy instead of degraded.
-      CLERK_DOMAIN: test.clerk.accounts.dev
-      OPENAI_API_KEY: ci-dummy-key
-      JINA_API_KEY: ci-dummy-key
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
           cache-dependency-glob: "backend/uv.lock"
-
-      - name: Set up Python
-        run: uv python install 3.11
-
-      - name: Install dependencies
-        run: uv sync --frozen --extra dev
-
+      - run: uv python install 3.11
+      - name: Lockfile is current
+        run: uv lock --check
+      - run: uv sync --frozen --extra dev
       - name: Ruff lint
         run: uv run ruff check src/ tests/ alembic/
-
       - name: Ruff format check
         run: uv run ruff format --check src/ tests/ alembic/
-
       - name: Type check
         run: uv run ty check src/
 
-      - name: Unit tests
-        run: uv run pytest tests/unit -m unit -v
+  backend-test:
+    name: Backend unit + api
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+      - run: uv python install 3.11
+      - run: uv sync --frozen --extra dev
+      - name: Unit + API tests with coverage gate
+        run: >
+          uv run pytest tests/unit tests/api -q
+          --cov=src --cov-report=xml --cov-report=term-missing:skip-covered
+      - name: Coverage summary
+        if: always()
+        run: |
+          total=$(python3 -c "import xml.etree.ElementTree as E; print(round(float(E.parse('coverage.xml').getroot().get('line-rate'))*100, 1))")
+          echo "Backend line coverage: ${total}% (gate: fail_under in pyproject.toml)" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+          retention-days: 7
 
-      - name: API tests
-        run: uv run pytest tests/api -m api -v
+  backend-integration:
+    name: Backend integration
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass  # pragma: allowlist secret
+          POSTGRES_DB: arxiv_rag_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test_user -d arxiv_rag_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      POSTGRES_URL: postgresql+asyncpg://test_user:test_pass@localhost:5432/arxiv_rag_test  # pragma: allowlist secret
+      TEST_DATABASE_URL: postgresql+asyncpg://test_user:test_pass@localhost:5432/arxiv_rag_test  # pragma: allowlist secret
+      LANGFUSE_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+      - run: uv python install 3.11
+      - run: uv sync --frozen --extra dev
+      - name: Migrations round-trip (head, down one, head)
+        run: |
+          uv run alembic upgrade head
+          uv run alembic downgrade -1
+          uv run alembic upgrade head
+      - name: Integration tests
+        run: uv run pytest tests/integration -q -m integration
 
-  frontend:
-    name: Frontend
+  frontend-lint:
+    name: Frontend lint
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
+      - run: npm ci
       - name: ESLint + knip
         run: npm run lint
-
       - name: Prettier check
         run: npm run format:check
-
       - name: TypeScript check
         run: npm run typecheck
 
-      - name: Tests
-        run: npm test
+  frontend-test:
+    name: Frontend tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Vitest with coverage thresholds
+        run: npm run test:coverage 2>&1 | tee vitest.log
+      - name: Coverage summary
+        if: always()
+        run: |
+          echo "Frontend coverage (thresholds in vitest.config.ts):" >> "$GITHUB_STEP_SUMMARY"
+          grep -E "^(Lines|Statements|Functions|Branches)" vitest.log >> "$GITHUB_STEP_SUMMARY" || true
+
+  docker:
+    name: Docker images + coolify compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Coolify compose file interpolates with dummy required vars
+        env:
+          POSTGRES_PASSWORD: x
+          REDIS_PASSWORD: x
+          TYPESAFE_API_KEY: x
+          OPENAI_API_KEY: x
+          JINA_API_KEY: x
+          CLERK_DOMAIN: x
+          CORS_ORIGINS: http://localhost
+          VITE_CLERK_PUBLISHABLE_KEY: pk_test_x
+          FLOWER_BASIC_AUTH: a:b
+          LANGFUSE_DB_PASSWORD: x
+          LANGFUSE_NEXTAUTH_SECRET: x
+          LANGFUSE_PUBLIC_URL: http://localhost
+          LANGFUSE_SALT: x
+        run: docker compose -f docker-compose.coolify.yml config -q
+      - name: Build backend image (production target)
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          target: production
+          push: false
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+      - name: Build frontend image (production target)
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          target: production
+          push: false
+          build-args: |
+            VITE_CLERK_PUBLISHABLE_KEY=pk_test_x
+            VITE_MAINTENANCE_MODE=false
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+  pr-title:
+    name: PR title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conventional-commit title (squash-merge uses it as the commit subject)
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if ! printf '%s' "$TITLE" | grep -Eq '^(feat|fix|docs|test|chore|refactor|perf|ci)(\([a-z0-9-]+\))?: .+$'; then
+            echo "::error::PR title must match type(scope): summary, e.g. 'feat(feed): add week selector (SPE-275)'"
+            exit 1
+          fi
