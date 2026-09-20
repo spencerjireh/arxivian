@@ -4331,17 +4331,12 @@ wheels = [
 
 [[package]]
 name = "standardwebhooks"
-version = "1.0.1"
+version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "attrs" },
-    { name = "deprecated" },
-    { name = "httpx" },
-    { name = "python-dateutil" },
-    { name = "types-deprecated" },
-    { name = "types-python-dateutil" },
+sdist = { url = "https://files.pythonhosted.org/packages/50/81/a26b812525dd9ad6cc0f6ba2f8eafd5bf595542e319d95123aa92b51bf22/standardwebhooks-1.1.0.tar.gz", hash = "sha256:e5cb66e21a6356ebb9375aeb57f1348583323015808d475a7c1baaa4b718068a", size = 3232, upload-time = "2026-07-21T15:49:51.45Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/21/dc/0cd2bd9a536e61ad0ee9de3b724492a38faa88ce1828fbc15940824664c3/standardwebhooks-1.1.0-py3-none-any.whl", hash = "sha256:9a88d48a1f198be61517fc7ad328cf58ba02b73f0fbd8941d4213e9c0b6c2a61", size = 3538, upload-time = "2026-07-21T15:49:50.519Z" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c4/7d/04fc3aa177403472d3ddae90953d8f878dc5fd21ba29c02fc9e97e10703f/standardwebhooks-1.0.1.tar.gz", hash = "sha256:b557bb2e4b16ada179a517ec0fe6cbec5acf976c5619922bf29c457f89a451bd", size = 5103, upload-time = "2026-02-18T19:13:06.793Z" }
 
 [[package]]
 name = "starlette"
@@ -4367,7 +4362,7 @@ wheels = [
 
 [[package]]
 name = "svix"
-version = "1.86.0"
+version = "2.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
@@ -4376,12 +4371,10 @@ dependencies = [
     { name = "pydantic" },
     { name = "python-dateutil" },
     { name = "standardwebhooks" },
-    { name = "types-deprecated" },
-    { name = "types-python-dateutil" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fb/2a/e66a08a5f41946344fa47d3df79e7aa8b15bec13f98397e80dc20f06441a/svix-1.86.0.tar.gz", hash = "sha256:3d1d7e3c7cc2ea6a0d6e1479f902bdb968f4b1bb657a61957964c02025946f7a", size = 59324, upload-time = "2026-02-23T17:24:26.454Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/24/60/fbc034ede96d2d669939ec304e5c2635168b82d27a0a28d2ca8ac61edd4a/svix-2.5.0.tar.gz", hash = "sha256:4bef913b872070565852233ad40e67fecdef1313e559842fb58de1538986cacb", size = 60478, upload-time = "2026-09-11T19:25:37.929Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/47/61/980b1ed385b9798e50191efe2527d89188902af458c6d704e925ef59e58d/svix-1.86.0-py3-none-any.whl", hash = "sha256:b8d4e42ad499f715e4dd4ad0957af1fb67b7a438e2a3482a9bbcf128799f4b9b", size = 132534, upload-time = "2026-02-23T17:24:25.049Z" },
+    { url = "https://files.pythonhosted.org/packages/e3/85/4c6fc3fc05e5b60356e2434b0574cb4cf4a182d8babf187134f588f3bbbf/svix-2.5.0-py3-none-any.whl", hash = "sha256:9d88ed3030640400e217c3f112ab5085d4adbfcd7075bb89468c6869545b8636", size = 166234, upload-time = "2026-09-11T19:25:36.251Z" },
 ]
 
 [[package]]
@@ -4840,24 +4833,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/21/ca/950278884e2ca20547ff3eb109478c6baf6b8cf219318e6bc4f666fad8e8/typer-0.19.2.tar.gz", hash = "sha256:9ad824308ded0ad06cc716434705f691d4ee0bfd0fb081839d2e426860e7fdca", size = 104755, upload-time = "2025-09-23T09:47:48.256Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/00/22/35617eee79080a5d071d0f14ad698d325ee6b3bf824fc0467c03b30e7fa8/typer-0.19.2-py3-none-any.whl", hash = "sha256:755e7e19670ffad8283db353267cb81ef252f595aa6834a0d1ca9312d9326cb9", size = 46748, upload-time = "2025-09-23T09:47:46.777Z" },
-]
-
-[[package]]
-name = "types-deprecated"
-version = "1.3.1.20260130"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b5/97/9924e496f88412788c432891cacd041e542425fe0bffff4143a7c1c89ac4/types_deprecated-1.3.1.20260130.tar.gz", hash = "sha256:726b05e5e66d42359b1d6631835b15de62702588c8a59b877aa4b1e138453450", size = 8455, upload-time = "2026-01-30T03:58:17.401Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d2/b2/6f920582af7efcd37165cd6321707f3ad5839dd24565a8a982f2bd9c6fd1/types_deprecated-1.3.1.20260130-py3-none-any.whl", hash = "sha256:593934d85c38ca321a9d301f00c42ffe13e4cf830b71b10579185ba0ce172d9a", size = 9077, upload-time = "2026-01-30T03:58:16.633Z" },
-]
-
-[[package]]
-name = "types-python-dateutil"
-version = "2.9.0.20260302"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/06/7d/4eb84ea2d4ea72b14f180ed2a5c2e7ac3c8e9fd425f7d69a6516cf127f3b/types_python_dateutil-2.9.0.20260302.tar.gz", hash = "sha256:05a3580c790e6ccad228411ed45245ed739c81e78ba49b1cfdbeb075f42bcab0", size = 16885, upload-time = "2026-03-02T04:02:05.012Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/91/80dca6ca3da5078de2a808b648aec2a27c83b3dee1b832ae394a683ebe51/types_python_dateutil-2.9.0.20260302-py3-none-any.whl", hash = "sha256:6e7e65e190fb78c267e58a7426b00f0dd41a6dfb02c12aab910263cfa0bcc3ca", size = 18334, upload-time = "2026-03-02T04:02:04.01Z" },
 ]
 
 [[package]]
