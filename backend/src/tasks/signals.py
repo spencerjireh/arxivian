@@ -1,8 +1,9 @@
-"""Celery signals for worker lifecycle, Langfuse shutdown, and task status tracking."""
+"""Celery signals for worker lifecycle, tracing, and task status tracking."""
 
 import asyncio
 import threading
 
+import logfire
 from celery.signals import (
     task_failure,
     task_prerun,
@@ -12,6 +13,8 @@ from celery.signals import (
     worker_shutdown,
 )
 
+from src.database import engine
+from src.observability import configure_tracing, flush
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -47,6 +50,11 @@ def _on_worker_process_init(**_kwargs) -> None:
     _worker_loop_thread = threading.Thread(target=_run_loop, daemon=True)
     _worker_loop_thread.start()
 
+    # Tracing is per forked process: exporter, Celery task spans, SQL spans.
+    configure_tracing("arxivian-worker")
+    logfire.instrument_celery()
+    logfire.instrument_sqlalchemy(engine=engine)
+
     log.info("worker_event_loop_created")
 
 
@@ -67,17 +75,15 @@ def _on_worker_process_shutdown(**_kwargs) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 2. Langfuse shutdown (#3)
+# 2. Tracing flush (#3)
 # ---------------------------------------------------------------------------
 
 
 @worker_shutdown.connect
 def _on_worker_shutdown(**_kwargs) -> None:
-    """Flush and shutdown Langfuse client on worker shutdown."""
-    from src.tasks.tracing import shutdown_task_langfuse
-
-    shutdown_task_langfuse()
-    log.info("langfuse_shutdown_on_worker_exit")
+    """Flush pending spans on worker shutdown."""
+    flush()
+    log.info("tracing_flushed_on_worker_exit")
 
 
 # ---------------------------------------------------------------------------

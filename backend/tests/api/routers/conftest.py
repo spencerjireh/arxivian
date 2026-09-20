@@ -119,7 +119,6 @@ def mock_settings():
     settings.default_llm_model = "openai/gpt-5-nano"
     settings.openai_api_key = "test-openai-key"
     settings.jina_api_key = "test-jina-key"
-    settings.langfuse_enabled = False
     settings.agent_timeout_seconds = 180
     settings.ondemand_score_lock_seconds = 1800
     settings.cors_origins = ""

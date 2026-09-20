@@ -43,7 +43,7 @@ Arxivian scores new ML papers on method clarity, resource feasibility, data avai
 | **Embeddings** | Jina Embeddings v3 (1024d) |
 | **Auth** | Clerk (JWT + Google OAuth), tiered rate limiting |
 | **Async** | Celery 5 + Redis (broker), RedBeat (scheduler), Flower (monitoring) |
-| **Observability** | Langfuse (self-hosted), structlog with request ID correlation |
+| **Observability** | Pydantic Logfire (OpenTelemetry; FastAPI, SQL, LangGraph, LiteLLM, Celery), structlog with request ID correlation |
 | **Infra** | Docker Compose (dev/test/prod/eval profiles), Alembic migrations, Coolify |
 | **CI** | GitHub Actions -- lint, unit/api + integration (pgvector service), coverage gates, image builds, PR-title check |
 
@@ -64,7 +64,6 @@ just dev                # Build and start everything with hot reload
 |---------|-----|
 | Frontend | http://localhost:5173 |
 | API docs | http://localhost:8000/docs |
-| Langfuse | http://localhost:3001 |
 | Flower | http://localhost:5555 |
 
 ### Required API Keys
@@ -106,7 +105,7 @@ just --list             # All recipes
 
 **Communal knowledge base.** Ingested papers are shared across users; scoring a paper once serves everyone.
 
-**Langfuse over LangSmith.** Self-hosted, open-source, native LiteLLM integration; traces link through the trace id returned in SSE metadata.
+**OpenTelemetry for tracing.** Instrumentation is vendor-neutral (FastAPI, SQLAlchemy, httpx, Celery, LiteLLM, LangGraph via OpenInference); Logfire is the exporter today and swappable by env.
 
 ## Testing
 

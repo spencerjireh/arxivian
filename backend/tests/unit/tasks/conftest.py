@@ -136,7 +136,6 @@ def mock_settings():
     """Mock settings for tasks."""
     settings = Mock()
     settings.cleanup_retention_days = 30
-    settings.langfuse_enabled = False
     settings.celery_broker_url = "redis://localhost:6379/0"
     settings.celery_result_backend = "redis://localhost:6379/0"
     settings.celery_task_timeout = 3600

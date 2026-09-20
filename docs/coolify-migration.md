@@ -6,11 +6,10 @@ How to move the Arxivian stack from one VPS / Coolify server to another.
 
 | Volume | Service | Contents | Critical? |
 |---|---|---|---|
-| `postgres_data` | `db` (pgvector) | Papers, chunks, conversations, users, agent executions | **Yes** |
-| `langfuse_postgres_data` | `langfuse-db` | LLM observability history | Optional |
-| `redis_data` | `redis` | Celery broker queue, LangGraph checkpoints, embedding cache | No -- ephemeral |
+| `postgres_data` | `db` (pgvector) | Papers, chunks, scores, digests, conversations, users | **Yes** |
+| `redis_data` | `redis` | Celery broker queue, rate-limit counters, Semantic Scholar slot | No -- ephemeral |
 
-Everything else (app, celery-worker, celery-beat, frontend, flower, langfuse) is **stateless** and rebuilt from images + env vars on deploy.
+Everything else (app, celery-worker, celery-beat, frontend, flower) is **stateless** and rebuilt from images + env vars on deploy.
 
 ## Migration steps
 
@@ -19,9 +18,6 @@ Everything else (app, celery-worker, celery-beat, frontend, flower, langfuse) is
 ```bash
 # Main database (required)
 docker exec <db_container> pg_dump -U arxiv_user -d arxiv_rag -Fc > arxiv_rag.dump
-
-# Langfuse database (optional -- can start fresh)
-docker exec <langfuse_db_container> pg_dump -U langfuse -d langfuse -Fc > langfuse.dump
 ```
 
 `-Fc` produces a custom-format dump that handles pgvector extensions and supports selective `pg_restore`.
@@ -45,7 +41,6 @@ docker cp <redis_container>:/data/dump.rdb ./dump.rdb
 
 ```bash
 scp arxiv_rag.dump new-server:/tmp/
-scp langfuse.dump new-server:/tmp/       # if migrating Langfuse
 scp dump.rdb new-server:/tmp/            # if migrating Redis
 ```
 
@@ -62,10 +57,6 @@ scp dump.rdb new-server:/tmp/            # if migrating Redis
 # Main database
 docker exec -i <new_db_container> pg_restore \
   -U arxiv_user -d arxiv_rag --clean --if-exists < /tmp/arxiv_rag.dump
-
-# Langfuse database (if migrating)
-docker exec -i <new_langfuse_db_container> pg_restore \
-  -U langfuse -d langfuse --clean --if-exists < /tmp/langfuse.dump
 ```
 
 For Redis: stop the Redis container, copy `dump.rdb` into the volume mount path, restart.
@@ -84,7 +75,7 @@ docker exec -it <new_db_container> psql -U arxiv_user -d arxiv_rag \
 ### 7. DNS cutover
 
 - Update DNS A/CNAME records to point to the new server IP.
-- Re-assign domains in Coolify UI for frontend, flower, and langfuse.
+- Re-assign domains in Coolify UI for frontend and flower.
 - Enable TLS in Coolify for each public service.
 
 ## Migrating Coolify itself

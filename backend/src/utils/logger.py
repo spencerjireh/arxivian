@@ -4,6 +4,7 @@ import logging
 import sys
 from contextvars import ContextVar
 
+import logfire
 import structlog
 from structlog.types import EventDict, Processor, WrappedLogger
 
@@ -38,6 +39,8 @@ def configure_logging(log_level: str = "INFO", debug: bool = False) -> None:
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
         add_request_id,
+        # Ships each line to Logfire attached to the active span (no-op without a token).
+        logfire.StructlogProcessor(),
     ]
 
     # Dev: colored key-value output

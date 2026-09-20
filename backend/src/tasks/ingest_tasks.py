@@ -6,7 +6,6 @@ from src.celery_app import celery_app
 from src.database import AsyncSessionLocal
 from src.factories import get_ingest_service
 from src.schemas.ingest import IngestRequest
-from src.tasks.tracing import trace_task
 from src.tasks.utils import run_async
 from src.utils.logger import get_logger
 
@@ -75,41 +74,22 @@ def ingest_papers_task(
             await session.commit()
             return result.model_dump()
 
-    with trace_task(
-        "ingest_papers",
-        task_id,
-        {
-            "query": query,
-            "max_results": max_results,
-            "categories": categories,
-            "attempt": attempt,
-        },
-    ) as trace:
-        try:
-            result = run_async(_run())
-            log.info(
-                "ingest_task_completed",
-                task_id=task_id,
-                papers_processed=result.get("papers_processed", 0),
-                chunks_created=result.get("chunks_created", 0),
-            )
-
-            # Add result metadata to trace
-            if trace:
-                trace.update(
-                    metadata={
-                        "papers_processed": result.get("papers_processed", 0),
-                        "chunks_created": result.get("chunks_created", 0),
-                    }
-                )
-
-            return result
-        except Exception as exc:
-            log.error(
-                "ingest_task_failed",
-                task_id=task_id,
-                attempt=attempt,
-                max_retries=self.max_retries,
-                error=str(exc),
-            )
-            raise  # autoretry_for handles retry logic
+    # The Celery instrumentation opens the task span; the log lines carry the counts.
+    try:
+        result = run_async(_run())
+        log.info(
+            "ingest_task_completed",
+            task_id=task_id,
+            papers_processed=result.get("papers_processed", 0),
+            chunks_created=result.get("chunks_created", 0),
+        )
+        return result
+    except Exception as exc:
+        log.error(
+            "ingest_task_failed",
+            task_id=task_id,
+            attempt=attempt,
+            max_retries=self.max_retries,
+            error=str(exc),
+        )
+        raise  # autoretry_for handles retry logic

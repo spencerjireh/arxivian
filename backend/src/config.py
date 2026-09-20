@@ -85,11 +85,7 @@ class Settings(BaseSettings):
     # When true, all API routes except health return 503 (pivot maintenance curtain).
     maintenance_mode: bool = False
 
-    # Langfuse Observability
-    langfuse_enabled: bool = False
-    langfuse_public_key: str | None = None
-    langfuse_secret_key: str | None = None
-    langfuse_host: str = "http://langfuse:3000"  # Self-hosted default
+    # Tracing: Logfire reads LOGFIRE_TOKEN / LOGFIRE_ENVIRONMENT itself (src/observability.py).
 
     # Clerk Authentication
     clerk_domain: str  # e.g. "your-app.clerk.accounts.dev"

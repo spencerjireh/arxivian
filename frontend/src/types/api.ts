@@ -43,7 +43,6 @@ export interface MetadataEventData {
   guardrail_score?: number
   session_id?: string
   turn_number: number
-  trace_id?: string | null
 }
 
 export interface ErrorEventData {

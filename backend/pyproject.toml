@@ -38,7 +38,6 @@ dependencies = [
     # Logging
     "structlog>=24.4.0",
     # Observability
-    "langfuse>=2.60.0,<3.0.0",
     # Authentication
     "pyjwt[crypto]>=2.8.0",
     "svix>=1.21.0",
@@ -46,6 +45,8 @@ dependencies = [
     "celery[redis]>=5.4.0",
     "celery-redbeat>=2.2.0",
     "redis>=5.0.0",
+    "logfire[celery,fastapi,httpx,litellm,sqlalchemy]>=5.1.0",
+    "openinference-instrumentation-langchain>=0.1.76",
 ]
 
 [project.optional-dependencies]
