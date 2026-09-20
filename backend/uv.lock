@@ -612,7 +612,7 @@ wheels = [
 
 [[package]]
 name = "clerk-backend-api"
-version = "4.2.0"
+version = "7.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
@@ -621,9 +621,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "pyjwt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/58/60/c08464d19b849a38860dd1adb5acc54bf5047e9fc740a6e85d84af14a39f/clerk_backend_api-4.2.0.tar.gz", hash = "sha256:e253f4dcde2fd62280e8f04d76db256be76e7142312d85ac2142cced7b8919e6", size = 216448, upload-time = "2025-12-11T20:20:39.079Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d8/48/de97a14a8fcc9da3f37ed2d6320be489f4dd076e640c9bac60482f620e59/clerk_backend_api-7.0.0.tar.gz", hash = "sha256:2ff8eab7a75d7ff527cadfaf4ebba53ee5316ac1f7bc22f0d0d6f1b8033082f0", size = 291950, upload-time = "2026-08-11T13:50:25.109Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/82/1b/9444f4d406b0076d5a12a347fdfd5832f0f743e927391f35177e593ecfc6/clerk_backend_api-4.2.0-py3-none-any.whl", hash = "sha256:777a63a2821cb8965db81003b9d23a34443eaeb4cbedb4f6d98eb0037b934164", size = 441620, upload-time = "2025-12-11T20:20:37.916Z" },
+    { url = "https://files.pythonhosted.org/packages/f4/11/ba1731756d7e8bce06ac3428604629600cde7c17f1b8415277f62f18657c/clerk_backend_api-7.0.0-py3-none-any.whl", hash = "sha256:8df8639dcdaa600dbd1a26878ecaeb6dcc724b2d21247eb6abef4cbd73be9eb5", size = 598066, upload-time = "2026-08-11T13:50:23.67Z" },
 ]
 
 [[package]]
