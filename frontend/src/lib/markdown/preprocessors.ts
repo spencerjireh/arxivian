@@ -1,3 +1,4 @@
+// String-level normalizers applied to model output before react-markdown.
 /**
  * Text preprocessors that normalize content before it reaches ReactMarkdown.
  *

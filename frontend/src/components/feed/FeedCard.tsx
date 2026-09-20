@@ -1,3 +1,4 @@
+// Feed card: one ranked paper from GET /feed (backend schemas/feed.py::FeedItem).
 import { Link } from 'react-router-dom'
 import { ExternalLink } from 'lucide-react'
 import ScoreBadge from './ScoreBadge'
@@ -5,7 +6,7 @@ import VerdictLine from './VerdictLine'
 import SignalChips from './SignalChips'
 import CardActions, { type PendingAction } from './CardActions'
 import { DIMENSION_LABELS } from '../../lib/scoring'
-import { formatAuthors, formatDate } from '../../utils/formatting'
+import { formatAuthors, formatDate } from '../../lib/formatting'
 import type { FeedItem } from '../../types/api'
 
 export interface FeedCardProps {

@@ -1,3 +1,4 @@
+// remark plugin: turns bare arXiv ids into arxiv.org links.
 /**
  * Remark plugin that auto-links arXiv paper IDs to arxiv.org.
  *

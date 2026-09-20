@@ -1,3 +1,4 @@
+// /onboarding route: first-run feed profile form, outside the sidebar layout.
 import { Navigate, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useUpdateFeedProfile } from '../api/users'

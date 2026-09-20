@@ -1,3 +1,4 @@
+// Heading components with GitHub-style slugs so in-document anchors work (privacy page).
 import { createElement, type ReactNode } from 'react'
 import type { Components } from 'react-markdown'
 

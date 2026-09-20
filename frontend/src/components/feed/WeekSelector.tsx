@@ -1,3 +1,4 @@
+// Feed: digest week picker over the available_weeks list.
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import Button from '../ui/Button'
 import { selectClass } from '../../lib/formClasses'

@@ -1,3 +1,4 @@
+// Registers Clerk's getToken with api/client.ts so every request carries the bearer token.
 import { useEffect, useCallback } from 'react'
 import { useAuth, useClerk } from '@clerk/clerk-react'
 import { useNavigate } from 'react-router-dom'

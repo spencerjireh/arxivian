@@ -1,3 +1,4 @@
+// Public pages: site footer with the privacy link.
 import { Link } from 'react-router-dom'
 
 const Footer = () => {

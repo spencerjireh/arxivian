@@ -1,3 +1,4 @@
+// 404 page.
 import { useNavigate } from 'react-router-dom'
 import { BookX } from 'lucide-react'
 import Button from '../components/ui/Button'

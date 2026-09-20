@@ -1,3 +1,4 @@
+// Public pages: top bar with logo, pricing link and the sign-in / open-app call to action.
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { ArrowRight } from 'lucide-react'
