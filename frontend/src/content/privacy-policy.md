@@ -90,7 +90,7 @@ We process your personal information for a variety of reasons, depending on how 
 - **To respond to user inquiries/offer support to users.** We may process your information to respond to your inquiries and solve any potential issues you might have with the requested service.
 - **To protect our Services.** We may process your information as part of our efforts to keep our Services safe and secure, including fraud monitoring and prevention.
 - **To identify usage trends.** We may process information about how you use our Services to better understand how they are being used so we can improve them.
-- **To improve response quality.** We use self-hosted observability tooling (Langfuse) to monitor and improve the quality of AI-generated responses. Traces are stored on our own infrastructure.
+- **To improve response quality.** We use an observability service (Pydantic Logfire) to monitor and improve the quality of AI-generated responses. Traces include your chat messages and the paper text sent to the language model; they are used only for debugging and quality review.
 - **To save or protect an individual's vital interest.** We may process your information when necessary to save or protect an individual's vital interest, such as to prevent harm.
 
 We do not sell your personal data. We do not use your data for advertising.
@@ -142,7 +142,7 @@ The third parties we may share personal information with are as follows:
 - **TypeSafe** -- typed judgment model used to score papers. Only paper text is sent, never your data. Subject to TypeSafe's privacy policy.
 - **Semantic Scholar** -- citation counts for scored papers. Only paper identifiers are sent.
 - **Jina AI** -- text embedding service used to convert paper content into vector representations for search and retrieval. Paper text is sent to Jina's API for embedding. Subject to [Jina AI's Privacy Policy](https://jina.ai/legal/#privacy-policy).
-- **Langfuse** -- self-hosted LLM observability for monitoring response quality. Traces are stored on our own infrastructure.
+- **Pydantic Logfire** -- application and LLM observability. Request traces, including chat messages and paper text sent to the language model, are stored with Logfire for debugging and quality review. Subject to [Pydantic's Privacy Policy](https://pydantic.dev/legal/privacy).
 - **arXiv** -- paper metadata and content retrieval. We access publicly available papers through arXiv's API.
 
 We also may need to share your personal information in the following situations:

@@ -26,7 +26,7 @@ docker exec <db_container> pg_dump -U arxiv_user -d arxiv_rag -Fc > arxiv_rag.du
 
 Redis data in this stack is mostly ephemeral:
 
-- DB 0: Celery broker + LangGraph checkpoints (losing this means users restart conversations)
+- DB 0: Celery broker (safe to lose between deploys; queued tasks are re-enqueued by beat)
 - DB 1: Celery result backend (safe to lose)
 - DB 2: Embedding cache (rebuilt automatically on next queries)
 
