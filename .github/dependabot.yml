@@ -5,6 +5,10 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    # PR title = squash subject; the pr-title check requires build(deps): / build(deps-dev):
+    commit-message:
+      prefix: build
+      include: scope
     groups:
       backend-minor-patch:
         update-types: [minor, patch]
@@ -14,6 +18,10 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    # PR title = squash subject; the pr-title check requires build(deps): / build(deps-dev):
+    commit-message:
+      prefix: build
+      include: scope
     groups:
       frontend-minor-patch:
         update-types: [minor, patch]
@@ -23,6 +31,10 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    # PR title = squash subject; the pr-title check requires build(deps): / build(deps-dev):
+    commit-message:
+      prefix: build
+      include: scope
     groups:
       actions:
         update-types: [minor, patch, major]
