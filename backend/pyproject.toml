@@ -110,6 +110,11 @@ known-first-party = ["src", "tests"]
 python-version = "3.11"
 python-platform = "all"
 
+[tool.ty.terminal]
+# ty 0.0.82 exits 1 on warnings by default; the rules below are deliberately warnings
+# (library-typing false positives), so only errors fail the gate.
+error-on-warning = false
+
 [tool.ty.rules]
 # Tool execute methods intentionally use explicit parameters for better DX
 invalid-method-override = "warn"
