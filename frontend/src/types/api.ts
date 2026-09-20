@@ -1,34 +1,16 @@
 // API types mirroring backend schemas
 
-// Stream types
-
-export type LLMProvider = 'openai' | 'nvidia_nim'
-
-interface IngestConfirmation {
-  session_id: string
-  thread_id: string
-  approved: boolean
-  selected_ids: string[]
-}
+// Stream types (paper-scoped chat)
 
 export interface StreamRequest {
-  query?: string
-  /** Paper-scoped chat: narrow the conversation to one ingested paper (first turn only). */
-  arxiv_id?: string
-  provider?: LLMProvider
-  model?: string
-  top_k?: number
-  guardrail_threshold?: number
-  max_retrieval_attempts?: number
-  temperature?: number
+  query: string
+  /** The ingested paper this conversation is scoped to. */
+  arxiv_id: string
   session_id?: string
-  conversation_window?: number
-  resume?: IngestConfirmation
 }
 
 export type StreamEventType =
-  | 'status' | 'content' | 'sources' | 'metadata' | 'error' | 'done'
-  | 'citations' | 'confirm_ingest' | 'ingest_complete'
+  | 'status' | 'content' | 'sources' | 'metadata' | 'error' | 'done' | 'citations'
 
 export interface StatusEventData {
   step: string
@@ -58,13 +40,10 @@ export interface MetadataEventData {
   query: string
   execution_time_ms: number
   retrieval_attempts: number
-  rewritten_query?: string
   guardrail_score?: number
-  provider: string
-  model: string
   session_id?: string
   turn_number: number
-  reasoning_steps: string[]
+  trace_id?: string | null
 }
 
 export interface ErrorEventData {
@@ -86,112 +65,24 @@ export interface CitationsEventData {
   references: string[]
 }
 
-// HITL ingest confirmation types
-
-interface IngestProposalPaper {
-  arxiv_id: string
-  title: string
-  authors: string[]
-  abstract: string
-  published_date?: string
-  pdf_url?: string
-}
-
-export interface ConfirmIngestEventData {
-  papers: IngestProposalPaper[]
-  session_id: string
-  thread_id: string
-}
-
-export interface IngestCompleteEventData {
-  papers_processed: number
-  chunks_created: number
-  duration_seconds: number
-  errors: string[]
-}
-
-// Persisted thinking step shape (from backend JSONB)
-
-export interface PersistedThinkingStep {
-  step: string
-  message: string
-  details?: Record<string, unknown> | null
-  tool_name?: string | null
-  started_at: string
-  completed_at: string
-}
-
-// Thinking/Reasoning types for UI
-
-export type ActivityStepKind =
-  | 'retrieve'
-  | 'arxiv_search'
-  | 'ingest'
-  | 'list_papers'
-  | 'explore_citations'
-  | 'propose_ingest'
-  | 'generating'
-  | 'refining'
-
-export type InternalStepKind =
-  | 'guardrail'
-  | 'routing'
-  | 'executing'
-  | 'grading'
-  | 'generation'
-  | 'out_of_scope'
-  | 'confirming'
-  | 'ingesting'
-
-type ThinkingStepStatus = 'running' | 'complete' | 'error'
-
-export interface ActivityStep {
-  id: string
-  kind: ActivityStepKind
-  toolName: string
-  label: string
-  message: string
-  details?: Record<string, unknown>
-  status: ThinkingStepStatus
-  startTime: Date
-  endTime?: Date
-  isInternal: false
-}
-
-export interface InternalStep {
-  id: string
-  kind: InternalStepKind
-  label: string
-  message: string
-  details?: Record<string, unknown>
-  status: ThinkingStepStatus
-  startTime: Date
-  endTime?: Date
-  isInternal: true
-}
-
-export type ThinkingStep = ActivityStep | InternalStep
-
 // Conversation types
 
-interface ConversationTurnResponse {
+export interface ConversationTurn {
   turn_number: number
   user_query: string
   agent_response: string
   provider: string
   model: string
-  guardrail_score?: number
+  guardrail_score?: number | null
   retrieval_attempts: number
-  rewritten_query?: string
-  sources?: Record<string, unknown>[]
-  reasoning_steps?: string[]
-  thinking_steps?: PersistedThinkingStep[] | null
+  rewritten_query?: string | null
+  sources?: Record<string, unknown>[] | null
+  reasoning_steps?: string[] | null
   citations?: Record<string, unknown> | null
-  pending_confirmation?: ConfirmIngestEventData | null
   created_at: string
 }
 
-export interface ConversationListItem {
+interface ConversationListItem {
   session_id: string
   arxiv_id?: string | null
   title?: string
@@ -214,12 +105,7 @@ export interface ConversationDetailResponse {
   title?: string
   created_at: string
   updated_at: string
-  turns: ConversationTurnResponse[]
-}
-
-export interface DeleteConversationResponse {
-  session_id: string
-  turns_deleted: number
+  turns: ConversationTurn[]
 }
 
 // Paper types
@@ -267,10 +153,6 @@ export interface MeResponse {
   tier: 'free' | 'pro'
   daily_chat_limit: number | null  // null = unlimited
   chats_used_today: number
-  can_adjust_settings: boolean
-  daily_ingest_limit: number | null  // null = unlimited
-  ingests_used_today: number
-  can_view_execution_details: boolean
   preferences?: UserPreferences
   onboarded?: boolean
 }
@@ -301,14 +183,10 @@ export interface Message {
   content: string
   sources?: SourceInfo[]
   metadata?: MetadataEventData
-  thinkingSteps?: ThinkingStep[]
   isStreaming?: boolean
   error?: MessageError
   createdAt: Date
   citations?: CitationsEventData
-  ingestProposal?: ConfirmIngestEventData
-  ingestResolved?: boolean
-  ingestDeclined?: boolean
 }
 
 // Feed / scoring types (Phase 2, SPE-274)

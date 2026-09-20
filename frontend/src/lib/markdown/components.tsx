@@ -1,7 +1,7 @@
 import type { Components } from 'react-markdown'
 import { ExternalLink } from 'lucide-react'
 
-export const markdownComponentsBase: Components = {
+export const markdownComponents: Components = {
   h1: ({ children }) => (
     <h1 className="font-display text-2xl text-stone-900 mb-4 mt-6 first:mt-0 leading-tight">
       {children}
@@ -85,24 +85,41 @@ export const markdownComponentsBase: Components = {
     </blockquote>
   ),
 
-  // Plain <pre> fallback for code blocks (no syntax highlighting)
+  // Plain code blocks; MarkdownBody swaps in the syntax highlighter for chat.
   code: (props) => {
     const { children, className, node, ...rest } = props
-    const match = /language-(\w+)/.exec(className || '')
-    const language = match ? match[1] : ''
-    const isInline = !node?.position
-
-    return !isInline && language ? (
-      <div className="my-4 rounded-lg overflow-hidden">
-        <pre className="bg-[#282c34] text-stone-200 p-4 rounded-xl text-sm overflow-x-auto">
-          <code>{String(children).replace(/\n$/, '')}</code>
-        </pre>
-      </div>
+    const isBlock = !!node?.position && /language-/.test(className || '')
+    return isBlock ? (
+      <pre className="my-4 bg-[#282c34] text-stone-200 p-4 rounded-xl text-sm overflow-x-auto">
+        <code>{String(children).replace(/\n$/, '')}</code>
+      </pre>
     ) : (
       <code className="bg-stone-100 text-stone-800 px-1.5 py-0.5 rounded text-sm font-mono" {...rest}>
         {children}
       </code>
     )
+  },
+
+  // remark-math / rehype-katex wrappers
+  div: ({ className, children, ...props }) => {
+    if (className === 'math math-display') {
+      return (
+        <div className="math-display my-6 overflow-x-auto overflow-y-hidden" {...props}>
+          {children}
+        </div>
+      )
+    }
+    return <div className={className} {...props}>{children}</div>
+  },
+  span: ({ className, children, ...props }) => {
+    if (className === 'math math-inline') {
+      return (
+        <span className="math-inline text-stone-800" {...props}>
+          {children}
+        </span>
+      )
+    }
+    return <span className={className} {...props}>{children}</span>
   },
 
   table: ({ children }) => (

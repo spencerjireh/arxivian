@@ -8,10 +8,8 @@ import type { Message } from '../../types/api'
 import MarkdownRenderer from './MarkdownRenderer'
 import MessageErrorDisplay from './MessageErrorDisplay'
 
-const ThinkingTimeline = lazy(() => import('./ThinkingTimeline'))
 const SourcesSection = lazy(() => import('./SourcesSection'))
 const CitationTree = lazy(() => import('./CitationTree'))
-const IngestConfirmation = lazy(() => import('./IngestConfirmation'))
 import {
   cursorTransitionVariants,
   sourcesRevealContainer,
@@ -30,14 +28,11 @@ export default function ChatMessage({
   onRetry,
   retryQuery,
 }: ChatMessageProps) {
-  const hasProposal = !!message.ingestProposal
-  const storeIsIngesting = useChatStore((s) => (hasProposal ? s.isIngesting : false))
   const isUser = message.role === 'user'
   const content = message.content
   const shouldReduceMotion = useReducedMotion()
-  const thinkingSteps = message.thinkingSteps
-
-  const hasToolActivity = !isUser && thinkingSteps?.some((s) => !s.isInternal && s.kind !== 'generating')
+  // One status line while the turn is in flight (replaces the thinking timeline).
+  const currentStatus = useChatStore((s) => (isStreaming ? s.currentStatus : null))
 
   const [cursorPhase, setCursorPhase] = useState<'streaming' | 'complete'>('streaming')
   const prevIsStreaming = useRef(isStreaming)
@@ -149,30 +144,10 @@ export default function ChatMessage({
         </div>
 
         <div className={clsx(isUser ? 'pr-9 text-right' : 'pl-9')}>
-          {!isUser && thinkingSteps && thinkingSteps.length > 0 && (
-            <div className="mb-4">
-              <Suspense fallback={<div className="h-8" />}>
-                <ThinkingTimeline steps={thinkingSteps} isStreaming={isStreaming} metadata={message.metadata} />
-              </Suspense>
-            </div>
-          )}
-
-          {!isUser && message.ingestProposal && (
-            <Suspense fallback={null}>
-              <IngestConfirmation
-                proposal={message.ingestProposal}
-                isResolved={message.ingestResolved}
-                isIngesting={storeIsIngesting}
-                ingestDeclined={message.ingestDeclined}
-              />
-            </Suspense>
-          )}
-
-          {!isUser && !isStreaming && thinkingSteps && thinkingSteps.length > 0 && content && (
-            <div className="thinking-divider">
-              <div className="thinking-divider-line" />
-              <div className="thinking-divider-diamond" />
-            </div>
+          {!isUser && isStreaming && !content && currentStatus && (
+            <p className="mb-3 text-xs text-stone-400" role="status" aria-live="polite">
+              {currentStatus}
+            </p>
           )}
 
           <div className="text-stone-800">
@@ -224,7 +199,7 @@ export default function ChatMessage({
             </motion.div>
           )}
 
-          {!isUser && showFooter && !message.sources && !hasToolActivity && content && !message.error && (
+          {!isUser && showFooter && !message.sources && !message.citations && content && !message.error && (
             <motion.div
               className="mt-4 flex items-center gap-2 text-xs text-stone-400"
               variants={shouldReduceMotion ? undefined : sourcesRevealContainer}

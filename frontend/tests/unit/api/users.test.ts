@@ -14,8 +14,7 @@ vi.mock('../../../src/api/client', () => ({
 
 const me = {
   id: 'u', email: null, first_name: null, last_name: null, tier: 'free' as const,
-  daily_chat_limit: null, chats_used_today: 0, can_adjust_settings: true,
-  daily_ingest_limit: null, ingests_used_today: 0, can_view_execution_details: false,
+  daily_chat_limit: null, chats_used_today: 0,
   preferences: { feed_profile: { categories: ['cs.LG'], compute_profile: 'laptop' as const, keywords: [] } },
   onboarded: false,
 }

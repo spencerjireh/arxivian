@@ -15,7 +15,7 @@ const Layout = () => {
   const fastTransition = { duration: 0.15, ease: 'easeOut' as const }
 
   // Use stable key per section to prevent unmount/remount during within-section navigation
-  const pageKey = location.pathname.startsWith('/chat') ? 'chat' : location.pathname
+  const pageKey = location.pathname
 
   return (
     <div className="h-screen bg-[#FAFAF9] flex overflow-hidden">

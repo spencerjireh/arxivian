@@ -36,19 +36,19 @@ describe('LandingPage', () => {
     expect(link).toHaveAttribute('href', '/pricing')
   })
 
-  it('redirects to /chat when authenticated', async () => {
+  it('redirects to /feed when authenticated', async () => {
     mockAuth.isSignedIn = true
 
     renderWithProviders(
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/chat" element={<div data-testid="chat-page">Chat</div>} />
+        <Route path="/feed" element={<div data-testid="feed-page">Feed</div>} />
       </Routes>,
       { initialEntries: ['/'] },
     )
 
     await waitFor(() => {
-      expect(screen.getByTestId('chat-page')).toBeInTheDocument()
+      expect(screen.getByTestId('feed-page')).toBeInTheDocument()
     })
   })
 })

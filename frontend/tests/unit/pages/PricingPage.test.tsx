@@ -38,10 +38,6 @@ describe('PricingPage', () => {
         tier: 'free',
         daily_chat_limit: 20,
         chats_used_today: 0,
-        can_adjust_settings: false,
-        daily_ingest_limit: 10,
-        ingests_used_today: 0,
-        can_view_execution_details: false,
       },
     })
 

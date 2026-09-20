@@ -178,9 +178,9 @@ Additive and reversible (system is in production):
    with narrowed context. *Shipped 2026-09-19 (SPE-273..277; PRs #18-#22).*
 3. **Flip and remove (v1).** Feed becomes default home; global chat tab + conversation-history
    UI removed; conversation data archived. Library and lifecycle states ship here if not
-   earlier. *Backend half shipped 2026-09-21 (SPE-298): the agent is paper-scoped only, HITL
-   ingest / corpus tools / per-request LLM knobs removed, migration 022. Frontend flip is
-   SPE-299; library is SPE-296.*
+   earlier. *Shipped 2026-09-21: backend SPE-298 (paper-scoped agent only, HITL ingest / corpus
+   tools / per-request LLM knobs removed, migration 022) and frontend SPE-299 (feed is
+   home, `/chat` removed, scoped panel only). Library grouped by state is SPE-296.*
 4. **Code gap (v1.1).** Once the spike clears the recall bar, ship `github_client` + the
    `score_code_gap` node; surface an unweighted "possible existing implementations" chip,
    then promote code gap to the highest-weighted ranking signal and enable the

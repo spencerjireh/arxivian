@@ -91,6 +91,20 @@ describe('App routes', () => {
     expect(await screen.findByRole('heading', { name: /Feed page stub/ })).toBeInTheDocument()
   })
 
+  it('redirects old /chat links to the feed', async () => {
+    const router = createMemoryRouter(routes, { initialEntries: ['/chat/abc-123'] })
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    )
+
+    expect(await screen.findByRole('heading', { name: /Feed page stub/ })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/feed')
+  })
+
   it('renders PaperDetailPage at /papers/:arxivId', async () => {
     const router = createMemoryRouter(routes, {
       initialEntries: ['/papers/2401.00001'],
