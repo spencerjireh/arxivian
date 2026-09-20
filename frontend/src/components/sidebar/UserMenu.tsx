@@ -1,3 +1,4 @@
+// App shell: avatar button with the user name and a sign-out action.
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser, useClerk } from '@clerk/clerk-react'

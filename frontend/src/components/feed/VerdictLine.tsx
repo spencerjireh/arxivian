@@ -1,3 +1,4 @@
+// Feed card: the template verdict sentence built server-side from the Jev judgments.
 import clsx from 'clsx'
 
 interface VerdictLineProps {

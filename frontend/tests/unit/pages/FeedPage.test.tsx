@@ -15,7 +15,7 @@ const clearMutateAsync = vi.fn().mockResolvedValue(undefined)
 vi.mock('../../../src/api/feed', () => ({
   useInfiniteFeed: (params: unknown) => mockUseInfiniteFeed(params),
 }))
-vi.mock('../../../src/api/paperState', () => ({
+vi.mock('../../../src/api/paperStates', () => ({
   useSetPaperState: () => ({ mutateAsync: setMutateAsync }),
   useClearPaperState: () => ({ mutateAsync: clearMutateAsync }),
 }))

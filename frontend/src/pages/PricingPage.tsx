@@ -1,3 +1,4 @@
+// /pricing route: static tier comparison.
 import { Link } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import clsx from 'clsx'

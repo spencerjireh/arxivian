@@ -1,3 +1,4 @@
+// Scoped chat: collapsible tree of the citations returned in the CITATIONS SSE event.
 import { useState } from 'react'
 import { GitBranch, ChevronRight } from 'lucide-react'
 import { AnimatedCollapse } from '../ui/AnimatedCollapse'

@@ -1,8 +1,9 @@
+// /papers/:arxivId route: header, score breakdown (polls the 202) and the scoped chat panel.
 import { useCallback, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { usePaperScore } from '../api/scores'
-import { useClearPaperState, useSetPaperState } from '../api/paperState'
+import { useClearPaperState, useSetPaperState } from '../api/paperStates'
 import AttributeChips from '../components/paper/AttributeChips'
 import PaperHeader from '../components/paper/PaperHeader'
 import PaperNotFound from '../components/paper/PaperNotFound'

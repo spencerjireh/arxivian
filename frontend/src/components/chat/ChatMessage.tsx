@@ -1,3 +1,4 @@
+// Scoped chat: one user or assistant turn, with markdown, sources and citations.
 import { lazy, Suspense, useState, useRef, useEffect } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Lightbulb, User } from 'lucide-react'

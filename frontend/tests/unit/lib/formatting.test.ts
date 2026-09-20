@@ -1,4 +1,4 @@
-import { formatAuthors, formatDate } from '../../../src/utils/formatting'
+import { formatAuthors, formatDate } from '../../../src/lib/formatting'
 
 describe('formatAuthors', () => {
   it('lists up to three authors', () => {

@@ -1,6 +1,7 @@
+// Settings: edit the feed profile with the onboarding form.
 import { toast } from 'sonner'
 import { useUpdateFeedProfile } from '../../api/users'
-import FeedProfileForm from '../../components/onboarding/FeedProfileForm'
+import FeedProfileForm from '../onboarding/FeedProfileForm'
 import { useUserStore } from '../../stores/userStore'
 
 export default function FeedProfileSection() {

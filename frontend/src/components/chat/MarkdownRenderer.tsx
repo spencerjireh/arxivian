@@ -1,3 +1,4 @@
+// The one markdown entry point: lazily loads MarkdownBody, shows a streaming cursor.
 import { lazy, Suspense } from 'react'
 import clsx from 'clsx'
 

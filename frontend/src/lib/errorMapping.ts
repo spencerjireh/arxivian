@@ -1,3 +1,4 @@
+// Maps backend error codes (exceptions.py) to user-facing title, message and retry policy.
 type ErrorDisplay = 'inline' | 'toast' | 'none'
 
 export interface ErrorTreatment {

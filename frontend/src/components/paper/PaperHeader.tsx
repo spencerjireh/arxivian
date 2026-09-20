@@ -1,7 +1,8 @@
+// Paper detail: title, authors, date, categories, arXiv link and lifecycle actions.
 import { Link } from 'react-router-dom'
 import { ArrowLeft, ExternalLink } from 'lucide-react'
 import CardActions, { type PendingAction } from '../feed/CardActions'
-import { formatDate } from '../../utils/formatting'
+import { formatDate } from '../../lib/formatting'
 import type { FeedPaper, PaperState } from '../../types/api'
 
 interface PaperHeaderProps {
