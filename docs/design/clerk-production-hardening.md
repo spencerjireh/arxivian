@@ -1,5 +1,8 @@
 # Clerk Authentication: Production Hardening
 
+> **Status:** Design record. Items marked done were implemented before the feed pivot;
+> `CLAUDE.md` describes the current auth path.
+
 ## Context
 
 The Clerk auth integration is architecturally sound -- JWKS-based JWT verification, proper route protection via dependency injection, isolated API key auth for ops, and solid test coverage. However, a detailed audit identified 11 gaps ranging from missing claim validation to information disclosure. This document covers each issue, its risk, and the proposed fix.

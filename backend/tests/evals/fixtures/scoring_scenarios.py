@@ -23,7 +23,8 @@ compute/data notes cite the basis. Interpretation rules applied during the revie
   training procedure): 0-1 = LOW, 2 = MED, 3-4 = HIGH.
 
 Coverage notes:
-- 20 rows are re-labeled from `spikes/github-code-gap/golden_papers.json` (the code-gap seed);
+- 20 rows are re-labeled from `code_gap_golden_papers.json` in this directory (the code-gap
+  seed; formerly `spikes/github-code-gap/golden_papers.json`);
   ~10 are added to span LOW feasibility / FAIL data, since the seed skews toward famous,
   high-feasibility papers and would not exercise the "cluster-scale rated single-GPU" failure
   the eval exists to catch.
@@ -62,7 +63,7 @@ class ScoringScenario:
 
 
 SCORING_SCENARIOS: list[ScoringScenario] = [
-    # --- Re-labeled from the code-gap seed (spikes/github-code-gap/golden_papers.json) -------
+    # --- Re-labeled from the code-gap seed (code_gap_golden_papers.json) -------------------
     ScoringScenario(
         id="lora",
         arxiv_id="2106.09685",

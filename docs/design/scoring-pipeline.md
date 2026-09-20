@@ -32,7 +32,7 @@ comes from this pipeline. The design goals, in priority order:
 data availability, demand) with **zero GitHub dependency**. The **code-gap** dimension --
 highest-weighted but also least reliable (unproven recall, aggressive rate limits, stale in
 the weekly cache) -- is **deferred to v1.1**, where it debuts as an unweighted evidence chip
-and is promoted to a weighted signal only after the `spikes/github-code-gap/` spike proves
+and is promoted to a weighted signal only after the code-gap spike (SPE-297 removed the script; seed in `tests/evals/fixtures`) proves
 recall. See the deferral decision below.
 
 ### Decisions resolved during design review
@@ -55,7 +55,8 @@ recall. See the deferral decision below.
   and drops `score_code_gap`, `github_client.py`, and `GithubSearchTool` from v1 scope. Code
   gap returns in **v1.1**, first as an *unweighted* "possible existing implementations, as
   of `<date>`" evidence chip, then promoted to a weighted ranking signal only once the spike
-  (`spikes/github-code-gap/`) and real usage prove recall clears the bar. This also means
+  (Phase 4; the throwaway script was removed in SPE-297) and real usage prove recall clears
+  the bar. This also means
   v1 has **zero GitHub dependency** and only one soft external API (Semantic Scholar). Do
   not ship any "no existing code" claim in the product until code gap is actually weighted.
 - **Judgments are typed, not generated (v2).** Demand is a Semantic Scholar lookup; the
@@ -284,7 +285,7 @@ dimension) and is gated behind the spike.
   runs for Celery/RedBeat/checkpointing, so the infrastructure exists; there is just no
   client-side caching pattern in the repo to copy). GitHub code search is aggressively
   rate-limited; caching and backoff are load-bearing, not optional. Efficacy is gated by
-  the `spikes/github-code-gap/` spike before this client is built.
+  the code-gap spike (SPE-297 removed the script; seed in `tests/evals/fixtures`) before this client is built.
 
 ### Tools (BaseTool wrappers)
 
@@ -377,12 +378,13 @@ Two bets are unproven and cheap to test before any schema is committed:
 
 - **Code-gap recall (highest-weighted, highest-risk).** Whether GitHub search can actually
   find a paper's known implementation is an efficacy question, not a coding question. A
-  throwaway spike lives at `spikes/github-code-gap/`: it runs several GitHub Search API
-  query strategies over ~20 papers with known repos and reports recall@k per strategy plus
-  observed rate-limit behavior. Decision rule: if combined recall@10 on
-  papers-with-known-code is materially below the bar (~0.8), the code-gap signal needs
-  rethinking before the client and `paper_scores` schema are built. The spike's
-  `golden_papers.json` doubles as the seed for the eval golden set above.
+  throwaway spike (git history: `spikes/github-code-gap/`, removed 2026-09-20 in SPE-297)
+  ran several GitHub Search API query strategies over ~20 papers with known repos and
+  reported recall@k per strategy plus observed rate-limit behavior. Decision rule: if
+  combined recall@10 on papers-with-known-code is materially below the bar (~0.8), the
+  code-gap signal needs rethinking before the client is built. The spike's labeled seed
+  survives as `backend/tests/evals/fixtures/code_gap_golden_papers.json` and doubles as the
+  seed for the eval golden set above.
 
 ---
 
@@ -418,7 +420,7 @@ Two bets are unproven and cheap to test before any schema is committed:
 |---|---|
 | Scoring cost | Stage 1 cheap-model filter; only survivors incur full-text cost; digests cached weekly. |
 | False authority | Evidence-first records, golden-set eval gate, dismissal feedback as training signal. **Chief mitigation for the riskiest signal: code gap is deferred out of v1 and debuts unweighted in v1.1.** |
-| GitHub search recall (v1.1) | Gated by the `spikes/github-code-gap/` spike before build; search arXiv IDs + title variants + author repos; surface the raw results in evidence so misses are visible. |
+| GitHub search recall (v1.1) | Gated by the code-gap spike (SPE-297 removed the script; seed in `tests/evals/fixtures`) before build; search arXiv IDs + title variants + author repos; surface the raw results in evidence so misses are visible. |
 | S2 rate limits (v1); GitHub rate limits (v1.1, the real bottleneck) | Net-new Redis cache + backoff from day one (reuse the `embeddings_client.py` backoff pattern; add the cache, which does not yet exist in any client). |
 | Code-gap staleness (v1.1) | "As of `<date>`" stamp + re-score/decay policy; unweighted chip first. |
 | Judgment quality | Typed Jev judgments with calibrated confidence; golden-set gate plus a calibration report; low-confidence marker in the product rather than a hidden number. |

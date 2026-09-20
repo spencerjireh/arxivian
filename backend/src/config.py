@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     # LLM Configuration (LiteLLM-format model strings: "provider/model")
     default_llm_model: str = "openai/gpt-5-nano"
     allowed_llm_models: str = "openai/gpt-5-nano,nvidia_nim/openai/gpt-oss-120b,openai/gpt-4o-mini"
-    # Model override for structured output calls (router, guardrail, grading).
+    # Model override for structured-output calls (classify_and_route, evaluate_batch, triage).
     # None means use default_llm_model.
     structured_output_model: str | None = "openai/gpt-5-nano"
 
@@ -64,7 +64,6 @@ class Settings(BaseSettings):
     # Agent Configuration
     guardrail_threshold: int = 75
     max_retrieval_attempts: int = 3
-    default_max_iterations: int = 5
 
     # Request Lifecycle Configuration
     agent_timeout_seconds: int = 180  # 3 minutes max per request

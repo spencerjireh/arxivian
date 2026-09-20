@@ -114,9 +114,3 @@ class ChunkingService:
                 i += self.target_words - self.overlap_words
 
         return chunks
-
-    def estimate_chunks(self, text: str) -> int:
-        """Estimate number of chunks for a text."""
-        word_count = len(text.split())
-        step_size = self.target_words - self.overlap_words
-        return max(1, (word_count - self.overlap_words) // step_size)

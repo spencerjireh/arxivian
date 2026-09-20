@@ -12,7 +12,7 @@ export function bandFor(score: number): ScoreBand {
   return 'HIGH'
 }
 
-export const LOW_CONFIDENCE_THRESHOLD = 0.5
+const LOW_CONFIDENCE_THRESHOLD = 0.5
 
 export function isLowConfidence(confidence: number): boolean {
   return confidence < LOW_CONFIDENCE_THRESHOLD
@@ -41,7 +41,7 @@ export const EVIDENCE_KIND_LABELS: Record<string, string> = {
   code: 'Code mentions',
 }
 
-export const JUDGMENT_LABELS: Record<string, string> = {
+const JUDGMENT_LABELS: Record<string, string> = {
   algorithm_given: 'Algorithm or equations given',
   architecture_specified: 'Architecture specified',
   hyperparameters_stated: 'Hyperparameters stated',

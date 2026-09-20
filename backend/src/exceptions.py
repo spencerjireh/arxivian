@@ -28,14 +28,6 @@ class BaseAPIException(Exception):
         self.error_code = error_code or self.__class__.__name__
         self.details = details or {}
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert exception to dictionary for API response."""
-        return {
-            "code": self.error_code,
-            "message": self.message,
-            "details": self.details,
-        }
-
 
 # ============================================================================
 # Validation Errors (400)
@@ -47,17 +39,6 @@ class ValidationError(BaseAPIException):
 
     def __init__(self, message: str, details: Optional[dict[str, Any]] = None):
         super().__init__(message, status_code=400, error_code="VALIDATION_ERROR", details=details)
-
-
-class InvalidProviderError(ValidationError):
-    """Raised when an invalid LLM provider is specified."""
-
-    def __init__(self, provider: str, valid_providers: list[str]):
-        super().__init__(
-            message=f"Invalid provider '{provider}'",
-            details={"provider": provider, "valid_providers": valid_providers},
-        )
-        self.error_code = "INVALID_PROVIDER"
 
 
 class InvalidModelError(ValidationError):
@@ -164,28 +145,6 @@ class InsufficientChunksError(BusinessLogicError):
         self.error_code = "INSUFFICIENT_CHUNKS"
 
 
-class ProcessingLimitError(BusinessLogicError):
-    """Raised when processing limits are exceeded."""
-
-    def __init__(self, limit_type: str, current: int, maximum: int):
-        super().__init__(
-            message=f"Processing limit exceeded for {limit_type}",
-            details={"limit_type": limit_type, "current": current, "maximum": maximum},
-        )
-        self.error_code = "PROCESSING_LIMIT_EXCEEDED"
-
-
-class CheckpointExpiredError(BusinessLogicError):
-    """Raised when a LangGraph checkpoint is missing or expired during HITL resume."""
-
-    def __init__(self, session_id: str, thread_id: str):
-        super().__init__(
-            message="The confirmation window has expired. Please try again.",
-            details={"session_id": session_id, "thread_id": thread_id},
-        )
-        self.error_code = "CHECKPOINT_EXPIRED"
-
-
 # ============================================================================
 # Usage Limit Errors (429)
 # ============================================================================
@@ -243,16 +202,6 @@ class ArxivAPIError(ExternalServiceError):
     def __init__(self, message: str, details: Optional[dict[str, Any]] = None):
         super().__init__(service_name="arXiv", message=message, details=details)
         self.error_code = "ARXIV_API_ERROR"
-
-
-class LLMProviderError(ExternalServiceError):
-    """Raised when LLM provider encounters an error."""
-
-    def __init__(self, provider: str, message: str, details: Optional[dict[str, Any]] = None):
-        details = details or {}
-        details["provider"] = provider
-        super().__init__(service_name=f"LLM-{provider}", message=message, details=details)
-        self.error_code = "LLM_PROVIDER_ERROR"
 
 
 class EmbeddingServiceError(ExternalServiceError):
@@ -403,31 +352,6 @@ class ConnectionError(DatabaseError):
         self.error_code = "DATABASE_CONNECTION_ERROR"
 
 
-class TransactionError(DatabaseError):
-    """Raised when database transaction fails."""
-
-    def __init__(self, operation: str, message: str):
-        super().__init__(
-            message=f"Transaction error during {operation}: {message}",
-            details={"operation": operation},
-        )
-        self.error_code = "TRANSACTION_ERROR"
-
-
-# ============================================================================
-# Configuration Errors (500)
-# ============================================================================
-
-
-class ConfigurationError(BaseAPIException):
-    """Raised when application configuration is invalid."""
-
-    def __init__(self, message: str, details: Optional[dict[str, Any]] = None):
-        super().__init__(
-            message, status_code=500, error_code="CONFIGURATION_ERROR", details=details
-        )
-
-
 # ============================================================================
 # Request Lifecycle Errors (499/504)
 # ============================================================================
@@ -444,18 +368,6 @@ class LLMTimeoutError(ExternalServiceError):
             details={"provider": provider, "timeout_seconds": timeout_seconds},
         )
         self.error_code = "LLM_TIMEOUT"
-
-
-class StreamCancelledError(BaseAPIException):
-    """Raised when stream is cancelled by user."""
-
-    def __init__(self, session_id: str):
-        super().__init__(
-            message=f"Stream cancelled for session {session_id}",
-            status_code=499,  # Client Closed Request (nginx convention)
-            error_code="STREAM_CANCELLED",
-            details={"session_id": session_id},
-        )
 
 
 # ============================================================================

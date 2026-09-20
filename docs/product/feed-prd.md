@@ -1,8 +1,9 @@
 # Arxivian -- Implementation-Opportunity Feed Product Requirements Document
 
 **Version:** 1.0-feed
-**Last updated:** 2026-07-16
-**Status:** Draft (product-of-record for the feed pivot)
+**Last updated:** 2026-09-20
+**Status:** Product-of-record for the feed pivot. Phases 1-2 shipped 2026-09-19 (see §9);
+Phase 3 in progress. `CLAUDE.md` describes the code as built.
 **Supersedes:** `docs/product/beta-prd.md` (chat-first beta)
 **Related:** `proposal.md` (direction pitch), `docs/design/scoring-pipeline.md` (backbone)
 
@@ -123,7 +124,7 @@ A card must answer "why should I care?" in about two seconds.
 
 ### Out of scope (deferred)
 - **Code-gap dimension + GitHub search -> v1.1** (fast-follow, not far-future). The
-  differentiator, gated on the `spikes/github-code-gap/` recall spike; ships first as an
+  differentiator, gated on the code-gap recall spike (Phase 4); ships first as an
   unweighted evidence chip.
 - Automated implementation generation (paper-to-code agents). The product finds and
   scopes; the human implements.
@@ -159,7 +160,7 @@ are no longer primary.
 |---|---|---|
 | False authority (wrong score at top of feed) | High (kills trust) | Evidence-first UI, golden-set eval gate, dismissal feedback as signal; the riskiest signal (code gap) is deferred out of v1 and debuts unweighted in v1.1 |
 | Scoring cost | Medium | Stage 1 cheap filter; only survivors full-text scored; weekly cached digests |
-| GitHub search recall / rate limits (v1.1) | Medium | Gated by the `spikes/github-code-gap/` spike; arXiv IDs + title variants + author repos; surface raw results as evidence; Redis cache + backoff |
+| GitHub search recall / rate limits (v1.1) | Medium | Gated by the code-gap spike (Phase 4); arXiv IDs + title variants + author repos; surface raw results as evidence; Redis cache + backoff |
 | Cold-start relevance | Medium | Onboarding (categories + compute profile) shapes the first digest |
 | Scope creep back toward chat | Medium | Chat deliberately scoped to one paper; pressure to re-globalize -> improve the feed instead |
 

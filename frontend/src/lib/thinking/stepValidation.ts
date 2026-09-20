@@ -1,6 +1,6 @@
 import type { StatusEventData } from '../../types/api'
 
-export const COMPLETION_PATTERNS: Record<string, RegExp[]> = {
+const COMPLETION_PATTERNS: Record<string, RegExp[]> = {
   guardrail: [/is (in|out of) scope/i, /passed|failed/i],
   routing: [/decided to/i, /routing to/i],
   executing: [/executed|completed|failed|retrieved|found/i],

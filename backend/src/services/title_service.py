@@ -12,7 +12,8 @@ log = get_logger(__name__)
 async def generate_title(llm_client: BaseLLMClient, query: str) -> str | None:
     """Generate a short descriptive title for a conversation.
 
-    Uses gpt-4o-mini to produce a 4-8 word title from the first user query.
+    Uses the client's configured model to produce a 4-8 word title from the first user
+    query (a reasoning model ignores `temperature`; LiteLLM drops it).
     Returns None on any failure so callers can fall back gracefully.
     """
     try:
@@ -21,7 +22,6 @@ async def generate_title(llm_client: BaseLLMClient, query: str) -> str | None:
                 {"role": "system", "content": TITLE_SYSTEM_PROMPT},
                 {"role": "user", "content": query},
             ],
-            model="openai/gpt-4o-mini",
             temperature=0.3,
             max_tokens=30,
         )

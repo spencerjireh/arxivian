@@ -189,4 +189,4 @@ what a user would expect from the landing page promise.
 |---|---|---|
 | User Stories | `docs/product/user-stories.md` | Epics, stories, acceptance criteria |
 | Langfuse Setup | `docs/langfuse-setup.md` | Observability configuration guide |
-| Redis Cache Design | `docs/redis-embedding-cache-ingestion-lock.md` | Technical design for PERF epic |
+| Redis Cache Design | (removed 2026-09-20; git history) | Never implemented |

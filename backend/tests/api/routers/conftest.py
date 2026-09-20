@@ -198,9 +198,7 @@ def mock_task_exec_repo():
     """Create a mock TaskExecutionRepository."""
     repo = AsyncMock()
     repo.create = AsyncMock()
-    repo.get_by_user_and_celery_task_id = AsyncMock(return_value=None)
     repo.get_by_celery_task_id = AsyncMock(return_value=None)
-    repo.list_by_user = AsyncMock(return_value=([], 0))
     repo.update_status = AsyncMock()
     return repo
 
@@ -273,7 +271,6 @@ def _create_test_client(
         get_chunk_repository,
         get_conversation_repository,
         get_search_service_dep,
-        get_ingest_service_dep,
         get_current_user_required,
         get_tier_policy,
         enforce_chat_limit,
@@ -297,7 +294,6 @@ def _create_test_client(
     app.dependency_overrides[get_chunk_repository] = lambda: mock_chunk_repo
     app.dependency_overrides[get_conversation_repository] = lambda: mock_conversation_repo
     app.dependency_overrides[get_search_service_dep] = lambda: mock_search_service
-    app.dependency_overrides[get_ingest_service_dep] = lambda: mock_ingest_service
     app.dependency_overrides[get_embeddings_client] = lambda: mock_embeddings_client
     app.dependency_overrides[get_settings] = lambda: mock_settings
     app.dependency_overrides[get_task_execution_repository] = lambda: mock_task_exec_repo

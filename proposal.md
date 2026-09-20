@@ -1,6 +1,7 @@
 # Proposal: Pivoting Arxivian from Chat-First RAG to an Implementation-Opportunity Feed
 
-**Status:** Draft for review
+**Status:** Accepted 2026-07; executing (Phases 1-2 shipped 2026-09-19). Product-of-record
+is `docs/product/feed-prd.md`.
 **Author:** Spencer Jireh
 **Date:** July 2026
 **Affects:** arxivian (production)

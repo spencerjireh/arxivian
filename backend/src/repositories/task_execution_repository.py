@@ -47,18 +47,6 @@ class TaskExecutionRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_user_and_celery_task_id(
-        self, user_id: UUID, celery_task_id: str
-    ) -> Optional[TaskExecution]:
-        """Get task execution by user ID and Celery task ID (ownership check)."""
-        result = await self.session.execute(
-            select(TaskExecution).where(
-                TaskExecution.user_id == user_id,
-                TaskExecution.celery_task_id == celery_task_id,
-            )
-        )
-        return result.scalar_one_or_none()
-
     async def update_status(
         self,
         celery_task_id: str,
@@ -77,25 +65,6 @@ class TaskExecutionRepository:
             .where(TaskExecution.celery_task_id == celery_task_id)
             .values(**values)
         )
-
-    async def list_by_user(
-        self, user_id: UUID, limit: int = 20, offset: int = 0
-    ) -> tuple[list[TaskExecution], int]:
-        """List task executions for a user with pagination."""
-        count_result = await self.session.execute(
-            select(func.count()).select_from(TaskExecution).where(TaskExecution.user_id == user_id)
-        )
-        total = count_result.scalar_one()
-
-        result = await self.session.execute(
-            select(TaskExecution)
-            .where(TaskExecution.user_id == user_id)
-            .order_by(TaskExecution.created_at.desc())
-            .offset(offset)
-            .limit(limit)
-        )
-        tasks = list(result.scalars().all())
-        return tasks, total
 
     async def list_all(self, limit: int = 20, offset: int = 0) -> tuple[list[TaskExecution], int]:
         """List all task executions with pagination (ops use)."""

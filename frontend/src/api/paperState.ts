@@ -73,7 +73,7 @@ function restore(queryClient: QueryClient, arxivId: string, snapshot?: Snapshot)
   }
 }
 
-export interface SetPaperStateVariables {
+interface SetPaperStateVariables {
   arxivId: string
   body: SetPaperStateBody
 }

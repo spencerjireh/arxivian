@@ -2,7 +2,6 @@
 
 import json
 
-import pytest
 
 from src.services.agent_service.prompts import (
     ANSWER_SYSTEM_PROMPT,

@@ -1,7 +1,7 @@
 """Tests for confirm_ingest_node."""
 
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 
 class TestConfirmIngestNode:

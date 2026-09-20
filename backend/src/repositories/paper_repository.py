@@ -83,30 +83,6 @@ class PaperRepository:
         self.session.expire_all()
         return await self.get_by_id(paper_id)
 
-    async def mark_as_processed(
-        self, paper_id: str, raw_text: str, sections: List[dict], parser_used: str
-    ) -> Optional[Paper]:
-        """Mark paper as processed with content."""
-        return await self.update(
-            paper_id,
-            {
-                "raw_text": raw_text,
-                "sections": sections,
-                "pdf_processed": True,
-                "pdf_processing_date": datetime.now(timezone.utc),
-                "parser_used": parser_used,
-            },
-        )
-
-    async def get_unprocessed_papers(self, limit: int = 100) -> List[Paper]:
-        """Get papers that haven't been processed yet."""
-        result = await self.session.execute(
-            select(Paper).where(Paper.pdf_processed.is_(False)).limit(limit)
-        )
-        papers = list(result.scalars().all())
-        log.debug("unprocessed papers query", count=len(papers))
-        return papers
-
     async def exists(self, arxiv_id: str) -> bool:
         """Check if paper exists by arXiv ID."""
         result = await self.session.execute(select(Paper.id).where(Paper.arxiv_id == arxiv_id))

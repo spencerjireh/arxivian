@@ -5,7 +5,7 @@ import ComputeProfilePicker from './ComputeProfilePicker'
 import KeywordInput from './KeywordInput'
 import type { ComputeProfile, FeedProfileInput } from '../../types/api'
 
-export interface FeedProfileInitial {
+interface FeedProfileInitial {
   categories?: string[]
   compute_profile?: ComputeProfile | null
   keywords?: string[]

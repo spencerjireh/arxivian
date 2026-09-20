@@ -158,7 +158,6 @@ def mock_user_repository():
     """Create a mock UserRepository for auth tests."""
     repo = AsyncMock()
     repo.get_by_clerk_id = AsyncMock(return_value=None)
-    repo.get_by_email = AsyncMock(return_value=None)
     repo.create = AsyncMock()
     repo.get_or_create = AsyncMock()
     repo.update_on_login = AsyncMock()

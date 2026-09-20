@@ -4,7 +4,7 @@
 
 export type LLMProvider = 'openai' | 'nvidia_nim'
 
-export interface IngestConfirmation {
+interface IngestConfirmation {
   session_id: string
   thread_id: string
   approved: boolean
@@ -88,7 +88,7 @@ export interface CitationsEventData {
 
 // HITL ingest confirmation types
 
-export interface IngestProposalPaper {
+interface IngestProposalPaper {
   arxiv_id: string
   title: string
   authors: string[]
@@ -143,7 +143,7 @@ export type InternalStepKind =
   | 'confirming'
   | 'ingesting'
 
-export type ThinkingStepStatus = 'running' | 'complete' | 'error'
+type ThinkingStepStatus = 'running' | 'complete' | 'error'
 
 export interface ActivityStep {
   id: string
@@ -174,7 +174,7 @@ export type ThinkingStep = ActivityStep | InternalStep
 
 // Conversation types
 
-export interface ConversationTurnResponse {
+interface ConversationTurnResponse {
   turn_number: number
   user_query: string
   agent_response: string
@@ -283,13 +283,13 @@ export interface FeedProfileInput {
 
 export type ComputeProfile = 'laptop' | 'single_gpu' | 'cloud'
 
-export interface FeedProfile {
+interface FeedProfile {
   categories: string[]
   compute_profile: ComputeProfile | null
   keywords: string[]
 }
 
-export interface UserPreferences {
+interface UserPreferences {
   feed_profile?: FeedProfile
 }
 
@@ -337,7 +337,7 @@ export interface FeedPaper {
   pdf_url: string
 }
 
-export interface FeedScores {
+interface FeedScores {
   method_clarity: number | null
   resource_feasibility: number | null
   data_availability: number | null
@@ -393,23 +393,11 @@ export interface FeedParams {
   limit?: number
 }
 
-export interface UserPaperListItem {
-  paper: FeedPaper
-  state: PaperState
-}
-
-export interface UserPaperListResponse {
-  total: number
-  offset: number
-  limit: number
-  items: UserPaperListItem[]
-}
-
 // Paper score detail (Phase 2, SPE-276)
 
 export type ScoreBand = 'LOW' | 'MED' | 'HIGH'
-export type JudgmentKind = 'noul' | 'choice' | 'score'
-export type EvidenceKind = 'pseudocode' | 'compute' | 'dataset' | 'citation' | 'code'
+type JudgmentKind = 'noul' | 'choice' | 'score'
+type EvidenceKind = 'pseudocode' | 'compute' | 'dataset' | 'citation' | 'code'
 
 export interface Judgment {
   key: string

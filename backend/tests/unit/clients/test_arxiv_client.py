@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import arxiv
 import pytest
 
-from src.clients.arxiv_client import ArxivClient, ArxivPaper, _DATE_FILTER_SCAN_LIMIT
+from src.clients.arxiv_client import ArxivClient, _DATE_FILTER_SCAN_LIMIT
 
 
 def _make_result(

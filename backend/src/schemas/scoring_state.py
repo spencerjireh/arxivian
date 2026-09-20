@@ -186,7 +186,7 @@ class PaperScoreState(TypedDict):
     resource_feasibility_result: DimensionScore | None
     data_availability_result: DimensionScore | None
     demand_result: DimensionScore | None
-    # code_gap_result: DimensionScore   # v1.1 -- added with the github_search node
+    # v1.1 adds code_gap_result here together with the github_search node.
 
     # Product attributes ride on the method_clarity request (same state).
     attributes_result: PaperAttributes | None
