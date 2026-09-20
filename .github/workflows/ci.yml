@@ -95,7 +95,6 @@ jobs:
     env:
       POSTGRES_URL: postgresql+asyncpg://test_user:test_pass@localhost:5432/arxiv_rag_test  # pragma: allowlist secret
       TEST_DATABASE_URL: postgresql+asyncpg://test_user:test_pass@localhost:5432/arxiv_rag_test  # pragma: allowlist secret
-      LANGFUSE_ENABLED: "false"
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
@@ -172,10 +171,6 @@ jobs:
           CORS_ORIGINS: http://localhost
           VITE_CLERK_PUBLISHABLE_KEY: pk_test_x
           FLOWER_BASIC_AUTH: a:b
-          LANGFUSE_DB_PASSWORD: x
-          LANGFUSE_NEXTAUTH_SECRET: x
-          LANGFUSE_PUBLIC_URL: http://localhost
-          LANGFUSE_SALT: x
         run: docker compose -f docker-compose.coolify.yml config -q
       - name: Build backend image (production target)
         uses: docker/build-push-action@v7

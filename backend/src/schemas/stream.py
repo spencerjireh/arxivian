@@ -67,7 +67,6 @@ class MetadataEventData(BaseModel):
     guardrail_score: int | None = None
     session_id: str | None = None
     turn_number: int = 0
-    trace_id: str | None = None  # Langfuse trace ID for feedback
 
 
 class ErrorEventData(BaseModel):

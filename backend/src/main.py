@@ -2,6 +2,7 @@
 
 from contextlib import asynccontextmanager
 
+import logfire
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -10,6 +11,7 @@ from src.database import AsyncSessionLocal, engine, init_db
 
 # Import middleware
 from src.middleware import logging_middleware, maintenance_middleware, register_exception_handlers
+from src.observability import configure_tracing, flush
 
 # Import routers
 from src.routers import (
@@ -28,7 +30,8 @@ from src.utils.logger import configure_logging, get_logger
 
 settings = get_settings()
 
-# Configure logging early
+# Tracing before logging so the structlog processor finds a configured provider
+configure_tracing("arxivian-api")
 configure_logging(log_level=settings.log_level, debug=settings.debug)
 log = get_logger(__name__)
 
@@ -45,11 +48,6 @@ async def lifespan(app: FastAPI):
 
     litellm.suppress_debug_info = True  # type: ignore[invalid-assignment]
     litellm.set_verbose = False
-
-    if settings.langfuse_enabled:
-        litellm.success_callback = ["langfuse"]
-        litellm.failure_callback = ["langfuse"]
-        log.info("langfuse_enabled", host=settings.langfuse_host)
 
     # Redis for rate limiting and caching
     import redis.asyncio as aioredis
@@ -73,17 +71,10 @@ async def lifespan(app: FastAPI):
     # Shutdown Redis (rate-limit client)
     await app.state.redis.aclose()
 
-    # Flush any pending Langfuse events on shutdown
-    try:
-        from src.clients.langfuse_utils import shutdown_langfuse
-
-        shutdown_langfuse()
-    except Exception as e:
-        log.warning("langfuse_shutdown_failed", error=str(e))
-
     log.info("shutting down application")
     await engine.dispose()
     log.info("database connections closed")
+    flush()
 
 
 app = FastAPI(
@@ -94,6 +85,10 @@ app = FastAPI(
     docs_url="/docs" if settings.debug else None,
     redoc_url="/redoc" if settings.debug else None,
 )
+
+# Tracing: one span per request (health excluded) and per SQL statement
+logfire.instrument_fastapi(app, excluded_urls="/api/v1/health")
+logfire.instrument_sqlalchemy(engine=engine)
 
 # Register exception handlers first
 register_exception_handlers(app)

@@ -48,7 +48,7 @@ Test markers: `@pytest.mark.unit`, `@pytest.mark.api`, `@pytest.mark.integration
 
 ### Backend (`/backend/src/`)
 
-Layered: `routers/` -> `services/` -> `repositories/` -> `models/` (async SQLAlchemy). Also: `schemas/` (Pydantic), `clients/` (LiteLLM/LLM, arXiv, Jina, Semantic Scholar, TypeSafe Jev, Langfuse; planned: GitHub), `middleware/`, `factories.py` (the one construction module for clients, services and the agent; `dependencies.py` only wires FastAPI `Depends`).
+Layered: `routers/` -> `services/` -> `repositories/` -> `models/` (async SQLAlchemy). Also: `schemas/` (Pydantic), `clients/` (LiteLLM/LLM, arXiv, Jina, Semantic Scholar, TypeSafe Jev; planned: GitHub), `middleware/`, `factories.py` (the one construction module for clients, services and the agent; `dependencies.py` only wires FastAPI `Depends`).
 
 **Agent service** (`services/agent_service/`, paper-scoped only since Phase 3 / SPE-298): a LangGraph workflow compiled once without a checkpointer: classify_and_route -> executor -> evaluate_batch -> generate, plus out_of_scope; the evaluate step can loop back to classify for a rewrite up to `MAX_ITERATIONS`. Three tools (in `tools/`): retrieve_chunks (`SearchService.retrieve_within_paper`, no RRF threshold), explore_citations, semantic_scholar. SSE events: STATUS, CONTENT, SOURCES, CITATIONS, METADATA, ERROR, DONE. `POST /stream` takes `{query, arxiv_id, session_id?}` and nothing else (no per-request model or tuning; `extra="forbid"`); the scope is persisted on `conversations.paper_id` (migration 021) and wins on follow-ups (`routers/stream.py::resolve_scoped_paper`; 409 `PAPER_NOT_INGESTED` / `SCOPE_MISMATCH`). One LLM for everything: `DEFAULT_LLM_MODEL` (structured calls may use `STRUCTURED_OUTPUT_MODEL`); the other knobs live in `Settings` (`GUARDRAIL_THRESHOLD`, `DEFAULT_TOP_K`, `MAX_ITERATIONS`, `CONVERSATION_WINDOW`, `DEFAULT_TEMPERATURE`, `AGENT_TIMEOUT_SECONDS`). `GET /conversations?arxiv_id=` (required) lists a paper's threads; a session id that belongs to another user is a 403. There is no HITL ingest, no corpus search tool, no resume, no server-side cancel (the client aborts the fetch).
 
@@ -61,7 +61,7 @@ Layered: `routers/` -> `services/` -> `repositories/` -> `models/` (async SQLAlc
 **Key patterns:**
 - Dependency injection via `Depends()` with `Annotated` type aliases in `dependencies.py`
 - Custom exceptions in `exceptions.py` with HTTP status mapping
-- Structured logging via structlog + `get_logger(__name__)` with request ID correlation
+- Structured logging via structlog + `get_logger(__name__)` with request ID correlation; lines also carry the OTel trace/span id when tracing is on
 - Clerk JWT auth for users; API key auth (`X-Api-Key`) for ops endpoints. Tiers (`tiers.py`): `TierPolicy(daily_chats)` only -- free 10/day, pro unlimited; `GET /users/me` returns `daily_chat_limit` / `chats_used_today` plus the feed profile.
 - Hybrid search: pgvector + full-text with Reciprocal Rank Fusion
 - LLM calls via LiteLLM with model prefix routing (`DEFAULT_LLM_MODEL`, currently `openai/gpt-5-nano`)
@@ -76,7 +76,9 @@ PostgreSQL 16 + pgvector. Migrations via Alembic (`backend/alembic/`). Tables: p
 
 ### Infrastructure
 
-Docker profiles: `dev`, `prod`, `test`, `eval`. Redis, Langfuse (self-hosted), Flower. See `docker-compose.yml` for service details.
+Docker profiles: `dev`, `prod`, `test`, `eval`. Redis, Flower. See `docker-compose.yml` for service details.
+
+**Tracing (SPE-303):** Pydantic Logfire over OpenTelemetry, configured in `src/observability.py` (the only module that imports `logfire`). `configure_tracing()` runs at API import and in each Celery worker process (`tasks/signals.py`); it instruments LiteLLM, httpx and LangGraph (OpenInference), `main.py` adds FastAPI + SQLAlchemy, the worker adds Celery + SQLAlchemy, and `utils/logger.py` ships structlog lines to the active span. `LOGFIRE_TOKEN` empty (dev, CI) means nothing is exported; set it plus `LOGFIRE_ENVIRONMENT` in Coolify for prod. Prompts and paper text are sent by design. `AgentService.ask_stream` wraps a turn in a `chat.turn` span with `guardrail_score`, `retrieval_attempts`, `tools_used`, `turn_number` attributes.
 
 ### Deployment (Coolify) & branch strategy
 

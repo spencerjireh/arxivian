@@ -1,7 +1,7 @@
 """Unit tests for ingest background tasks."""
 
 from contextlib import asynccontextmanager, contextmanager
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -49,11 +49,7 @@ class TestIngestPapersTask:
         with (
             patch("src.tasks.ingest_tasks.AsyncSessionLocal", mock_session_ctx),
             patch("src.tasks.ingest_tasks.get_ingest_service", return_value=mock_service),
-            patch("src.tasks.ingest_tasks.trace_task") as mock_trace,
         ):
-            mock_trace.return_value.__enter__ = Mock(return_value=None)
-            mock_trace.return_value.__exit__ = Mock(return_value=False)
-
             from src.tasks.ingest_tasks import ingest_papers_task
 
             # Use push_request to set up task context
@@ -92,11 +88,7 @@ class TestIngestPapersTask:
         with (
             patch("src.tasks.ingest_tasks.AsyncSessionLocal", mock_session_ctx),
             patch("src.tasks.ingest_tasks.get_ingest_service", return_value=mock_service),
-            patch("src.tasks.ingest_tasks.trace_task") as mock_trace,
         ):
-            mock_trace.return_value.__enter__ = Mock(return_value=None)
-            mock_trace.return_value.__exit__ = Mock(return_value=False)
-
             from src.tasks.ingest_tasks import ingest_papers_task
 
             with task_context(ingest_papers_task):
@@ -126,11 +118,7 @@ class TestIngestPapersTask:
         with (
             patch("src.tasks.ingest_tasks.AsyncSessionLocal", mock_session_ctx),
             patch("src.tasks.ingest_tasks.get_ingest_service", return_value=mock_service),
-            patch("src.tasks.ingest_tasks.trace_task") as mock_trace,
         ):
-            mock_trace.return_value.__enter__ = Mock(return_value=None)
-            mock_trace.return_value.__exit__ = Mock(return_value=False)
-
             from src.tasks.ingest_tasks import ingest_papers_task
 
             with task_context(ingest_papers_task):
@@ -166,11 +154,7 @@ class TestIngestPapersTask:
         with (
             patch("src.tasks.ingest_tasks.AsyncSessionLocal", mock_session_ctx),
             patch("src.tasks.ingest_tasks.get_ingest_service", return_value=mock_service),
-            patch("src.tasks.ingest_tasks.trace_task") as mock_trace,
         ):
-            mock_trace.return_value.__enter__ = Mock(return_value=None)
-            mock_trace.return_value.__exit__ = Mock(return_value=False)
-
             from src.tasks.ingest_tasks import ingest_papers_task
 
             with task_context(ingest_papers_task), pytest.raises(Exception) as exc_info:
@@ -180,81 +164,6 @@ class TestIngestPapersTask:
                 )
 
         assert "Service failure" in str(exc_info.value)
-
-    def test_ingest_task_creates_trace_when_langfuse_enabled(self, mock_ingest_response):
-        """Verify the task creates Langfuse trace when enabled."""
-        mock_session = AsyncMock()
-        mock_session.commit = AsyncMock()
-
-        mock_service = AsyncMock()
-        mock_service.ingest_papers = AsyncMock(return_value=mock_ingest_response)
-
-        mock_trace_obj = Mock()
-        mock_trace_obj.update = Mock()
-
-        @asynccontextmanager
-        async def mock_session_ctx():
-            yield mock_session
-
-        with (
-            patch("src.tasks.ingest_tasks.AsyncSessionLocal", mock_session_ctx),
-            patch("src.tasks.ingest_tasks.get_ingest_service", return_value=mock_service),
-            patch("src.tasks.ingest_tasks.trace_task") as mock_trace_ctx,
-        ):
-            mock_trace_ctx.return_value.__enter__ = Mock(return_value=mock_trace_obj)
-            mock_trace_ctx.return_value.__exit__ = Mock(return_value=False)
-
-            from src.tasks.ingest_tasks import ingest_papers_task
-
-            with task_context(ingest_papers_task, "traced-task-id"):
-                ingest_papers_task._orig_run(
-                    query="test",
-                    max_results=10,
-                )
-
-            # Verify trace_task was called with correct params
-            mock_trace_ctx.assert_called_once_with(
-                "ingest_papers",
-                "traced-task-id",
-                {
-                    "query": "test",
-                    "max_results": 10,
-                    "categories": None,
-                    "attempt": 1,
-                },
-            )
-
-    def test_ingest_task_works_without_langfuse(self, mock_ingest_response):
-        """Verify the task works when trace returns None (Langfuse disabled)."""
-        mock_session = AsyncMock()
-        mock_session.commit = AsyncMock()
-
-        mock_service = AsyncMock()
-        mock_service.ingest_papers = AsyncMock(return_value=mock_ingest_response)
-
-        @asynccontextmanager
-        async def mock_session_ctx():
-            yield mock_session
-
-        with (
-            patch("src.tasks.ingest_tasks.AsyncSessionLocal", mock_session_ctx),
-            patch("src.tasks.ingest_tasks.get_ingest_service", return_value=mock_service),
-            patch("src.tasks.ingest_tasks.trace_task") as mock_trace,
-        ):
-            # Return None for trace (Langfuse disabled)
-            mock_trace.return_value.__enter__ = Mock(return_value=None)
-            mock_trace.return_value.__exit__ = Mock(return_value=False)
-
-            from src.tasks.ingest_tasks import ingest_papers_task
-
-            with task_context(ingest_papers_task):
-                result = ingest_papers_task._orig_run(
-                    query="test",
-                    max_results=10,
-                )
-
-        # Should complete successfully even without trace
-        assert result["status"] == "completed"
 
     def test_ingest_task_uses_default_values(self, mock_ingest_response):
         """Verify the task uses default values for optional parameters."""
@@ -271,11 +180,7 @@ class TestIngestPapersTask:
         with (
             patch("src.tasks.ingest_tasks.AsyncSessionLocal", mock_session_ctx),
             patch("src.tasks.ingest_tasks.get_ingest_service", return_value=mock_service),
-            patch("src.tasks.ingest_tasks.trace_task") as mock_trace,
         ):
-            mock_trace.return_value.__enter__ = Mock(return_value=None)
-            mock_trace.return_value.__exit__ = Mock(return_value=False)
-
             from src.tasks.ingest_tasks import ingest_papers_task
 
             with task_context(ingest_papers_task):

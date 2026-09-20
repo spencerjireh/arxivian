@@ -80,16 +80,15 @@ class TestWorkerLifecycleSignals:
 
 
 class TestWorkerShutdownSignal:
-    """Tests for worker shutdown (Langfuse) signal."""
+    """Tests for the worker shutdown (tracing flush) signal."""
 
-    def test_calls_shutdown_task_langfuse(self):
-        """Verify worker_shutdown calls shutdown_task_langfuse."""
+    def test_flushes_tracing(self):
         from src.tasks.signals import _on_worker_shutdown
 
-        with patch("src.tasks.tracing.shutdown_task_langfuse") as mock_shutdown:
+        with patch("src.tasks.signals.flush") as mock_flush:
             _on_worker_shutdown()
 
-        mock_shutdown.assert_called_once()
+        mock_flush.assert_called_once()
 
 
 class TestTaskStatusSignals:

@@ -11,19 +11,11 @@ from uuid import UUID
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
+import logfire
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.graph.state import CompiledStateGraph
 
 from src.clients.base_llm_client import BaseLLMClient
-from src.clients.langfuse_utils import set_trace_context
-from src.config import get_settings
-
-try:
-    from langfuse.callback import CallbackHandler
-
-    LANGFUSE_CALLBACK_AVAILABLE = True
-except ImportError:
-    LANGFUSE_CALLBACK_AVAILABLE = False
 from src.clients.semantic_scholar_client import SemanticScholarClient
 from src.repositories.conversation_repository import ConversationRepository
 from src.repositories.paper_repository import PaperRepository
@@ -295,7 +287,13 @@ class AgentService:
             log.debug("loaded conversation history", session_id=session_id, turns=len(turns))
 
         config: dict = {"configurable": {"context": self.context}}
-        trace_id = self._attach_langfuse_callback(config, session_id, {"query": query[:200]})
+        span = logfire.span(
+            "chat.turn",
+            session_id=session_id,
+            arxiv_id=self.scoped_paper.arxiv_id,
+            model=self.context.llm_client.model,
+        )
+        span.__enter__()
 
         initial_state: dict = {
             "messages": [HumanMessage(content=query)],
@@ -344,38 +342,49 @@ class AgentService:
                             session_id, title, user_id=self.user_id
                         )
 
-        finally:
-            set_trace_context(None)  # Clear trace context
+        except BaseException as exc:
+            span.__exit__(type(exc), exc, exc.__traceback__)
+            raise
 
         execution_time = (time.time() - start_time) * 1000
 
         tool_history = final_state.get("tool_history", [])
+        tools_used = [t.tool_name for t in tool_history]
         classification_result = final_state.get("classification_result")
         guardrail_score = classification_result.scope_score if classification_result else None
+        retrieval_attempts = final_state.get("retrieval_attempts", 0)
+
+        # Turn-level outcome attributes (previously separate tracing scores).
+        span.set_attributes(
+            {
+                "guardrail_score": guardrail_score,
+                "retrieval_attempts": retrieval_attempts,
+                "tools_used": tools_used,
+                "turn_number": turn_number,
+                "iterations": final_state.get("iteration", 0),
+            }
+        )
+        span.__exit__(None, None, None)
 
         log.info(
             "streaming query complete",
             session_id=session_id,
             iterations=final_state.get("iteration", 0),
-            tools_used=[t.tool_name for t in tool_history],
+            tools_used=tools_used,
             guardrail_score=guardrail_score,
             turn_number=turn_number,
             execution_time_ms=execution_time,
         )
-
-        if trace_id:
-            self._submit_langfuse_scores(trace_id, guardrail_score, final_state)
 
         yield StreamEvent(
             event=StreamEventType.METADATA,
             data=MetadataEventData(
                 query=query,
                 execution_time_ms=execution_time,
-                retrieval_attempts=final_state.get("retrieval_attempts", 0),
+                retrieval_attempts=retrieval_attempts,
                 guardrail_score=guardrail_score,
                 session_id=session_id,
                 turn_number=turn_number,
-                trace_id=trace_id,
             ),
         )
 
@@ -384,59 +393,6 @@ class AgentService:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
-
-    def _attach_langfuse_callback(
-        self,
-        config: dict,
-        session_id: str | None,
-        extra_metadata: dict | None = None,
-    ) -> str | None:
-        """Attach a Langfuse callback to the LangGraph config if enabled.
-
-        Returns the trace_id if a callback was attached, else None.
-        """
-        if not LANGFUSE_CALLBACK_AVAILABLE:
-            return None
-        settings = get_settings()
-        if not settings.langfuse_enabled:
-            return None
-        metadata = {"model": self.context.llm_client.model}
-        if extra_metadata:
-            metadata.update(extra_metadata)
-        callback = CallbackHandler(
-            public_key=settings.langfuse_public_key,
-            secret_key=settings.langfuse_secret_key,
-            host=settings.langfuse_host,
-            session_id=session_id,
-            user_id=str(self.user_id) if self.user_id else session_id,
-            metadata=metadata,
-        )
-        config["callbacks"] = [callback]
-        set_trace_context(callback.trace_id)
-        return callback.trace_id
-
-    @staticmethod
-    def _submit_langfuse_scores(
-        trace_id: str, guardrail_score: int | None, final_state: dict
-    ) -> None:
-        """Submit per-turn analytics scores; failures only log."""
-        try:
-            from src.clients.langfuse_utils import get_langfuse
-
-            langfuse = get_langfuse()
-            if not langfuse:
-                return
-            if guardrail_score is not None:
-                langfuse.score(
-                    trace_id=trace_id, name="guardrail_score", value=guardrail_score / 100
-                )
-            langfuse.score(
-                trace_id=trace_id,
-                name="retrieval_attempts",
-                value=final_state.get("retrieval_attempts", 0),
-            )
-        except Exception as e:
-            log.warning("langfuse_score_submission_failed", error=str(e), trace_id=trace_id)
 
     @staticmethod
     def _extract_answer(final_state: dict) -> str:
