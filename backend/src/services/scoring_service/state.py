@@ -1,7 +1,7 @@
 """Scoring pipeline state and stored-score models (Stage 2 deep scoring, rubric v2).
 
 Backbone of the feed pivot's scoring graph. Mirrors the conventions in
-`schemas/langgraph_state.py`: flat Pydantic models with `extra="forbid"` and field
+`services/agent_service/state.py`: flat Pydantic models with `extra="forbid"` and field
 descriptions that double as documentation for the JSONB payloads.
 
 v2 stores judgments natively: every dimension is a distribution over ordered levels

@@ -4,7 +4,17 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-from src.schemas.common import SourceInfo
+
+class SourceInfo(BaseModel):
+    """A retrieved source paper, as sent in the SOURCES event."""
+
+    arxiv_id: str
+    title: str
+    authors: list[str]
+    pdf_url: str
+    relevance_score: float
+    published_date: str | None = None
+    was_graded_relevant: bool | None = None
 
 
 class StreamRequest(BaseModel):

@@ -20,8 +20,8 @@ from src.config import get_settings
 from src.database import AsyncSessionLocal
 from src.factories import get_semantic_scholar_client
 from src.repositories.scoring_repository import ScoringRepository
-from src.schemas.scoring_state import DEMAND_BAND_TO_SCORE, RUBRIC_VERSION, EvidenceSpan
 from src.services.scoring_service.judgments import demand_from_band
+from src.services.scoring_service.state import DEMAND_BAND_TO_SCORE, RUBRIC_VERSION, EvidenceSpan
 from src.tasks.runtime import run_async
 from src.utils.logger import get_logger
 

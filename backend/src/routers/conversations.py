@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query
 
 from src.dependencies import ConversationRepoDep, CurrentUserRequired, PaperRepoDep
 from src.exceptions import ResourceNotFoundError
-from src.schemas.conversation import (
+from src.schemas.conversations import (
     ConversationDetailResponse,
     ConversationListItem,
     ConversationListResponse,

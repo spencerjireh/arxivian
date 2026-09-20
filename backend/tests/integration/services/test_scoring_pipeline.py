@@ -17,10 +17,10 @@ from src.clients.typesafe_client import ChoiceResult, ScoreResult, SystemOneResu
 from src.models.paper_score import PaperScore, ScoreEvidence
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.scoring_repository import ScoringRepository
-from src.schemas.scoring_state import RUBRIC_VERSION, DimensionScore, PaperAttributes
 from src.services.scoring_service import questions as q
 from src.services.scoring_service.context import ScoringContext
 from src.services.scoring_service.scoring_graph_builder import build_scoring_graph
+from src.services.scoring_service.state import RUBRIC_VERSION, DimensionScore, PaperAttributes
 
 
 async def _fake_ask(state, questions, *, request_name) -> SystemOneResult:

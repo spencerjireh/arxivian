@@ -13,7 +13,7 @@ Graph flow:
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from src.schemas.langgraph_state import AgentState
+from src.services.agent_service.state import AgentState
 
 from .edges import (
     route_after_classify,

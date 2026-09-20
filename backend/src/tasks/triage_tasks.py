@@ -22,8 +22,11 @@ from typing import Any
 from src.celery_app import celery_app
 from src.config import get_settings
 from src.factories import get_arxiv_client, get_llm_client
-from src.schemas.triage import TriageBatchResult, TriageResult
-from src.services.scoring_service.triage_prompt import get_triage_batch_prompt
+from src.services.scoring_service.triage import (
+    TriageBatchResult,
+    TriageResult,
+    get_triage_batch_prompt,
+)
 from src.tasks.runtime import run_async
 from src.tasks.score_tasks import score_paper_task
 from src.utils.logger import get_logger

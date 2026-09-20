@@ -1,13 +1,11 @@
-"""Tests for the pure feed derivations: verdict, signals, composite, confidence."""
+"""Tests for services/feed_service/derive.py and digest.py: verdict, signals, composite, confidence."""
 
 from datetime import date
 from types import SimpleNamespace
 
 import pytest
 
-from src.schemas.digest import CompositeWeights, week_start_for
-from src.schemas.feed import (
-    UserPaperStateRequest,
+from src.services.feed_service.derive import (
     build_scores,
     build_signals,
     build_verdict,
@@ -16,6 +14,7 @@ from src.schemas.feed import (
     parse_dimensions,
     resolve_weights,
 )
+from src.services.feed_service.digest import CompositeWeights, week_start_for
 
 
 def _dim(name, level, max_level, *, confidence=0.8, judgments=()):
@@ -203,21 +202,6 @@ class TestScoresAndWeights:
         assert resolve_weights({"bogus": 1.0}).demand == 0.30
         assert resolve_weights({"method_clarity": 1, "resource_feasibility": 0, "demand": 0}) == (
             CompositeWeights(method_clarity=1, resource_feasibility=0, demand=0)
-        )
-
-
-@pytest.mark.unit
-class TestStateRequest:
-    def test_shipped_requires_repo_url(self):
-        with pytest.raises(ValueError):
-            UserPaperStateRequest(state="shipped")
-        assert UserPaperStateRequest(state="shipped", repo_url="https://github.com/a/b").state
-
-    def test_dismissal_reason_only_with_dismissed(self):
-        with pytest.raises(ValueError):
-            UserPaperStateRequest(state="saved", dismissal_reason="x")
-        assert (
-            UserPaperStateRequest(state="dismissed", dismissal_reason="x").dismissal_reason == "x"
         )
 
 

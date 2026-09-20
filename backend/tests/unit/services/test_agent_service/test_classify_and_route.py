@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock
 import pytest
 from langchain_core.messages import HumanMessage
 
-from src.schemas.langgraph_state import ClassificationResult, ToolCall, ToolExecution
 from src.services.agent_service.context import ConversationFormatter
 from src.services.agent_service.prompts import get_classify_and_route_prompt
 from src.services.agent_service.security import scan_for_injection
+from src.services.agent_service.state import ClassificationResult, ToolCall, ToolExecution
 
 
 class TestInjectionScanner:
