@@ -141,27 +141,3 @@ class AuthService:
         except Exception as e:
             log.error("token verification failed", error=str(e), error_type=type(e).__name__)
             raise InvalidTokenError("Token verification failed") from e
-
-
-# Singleton instance
-_auth_service: AuthService | None = None
-
-
-def get_auth_service() -> AuthService:
-    """Get singleton auth service instance."""
-    global _auth_service
-    if _auth_service is None:
-        from src.config import get_settings
-
-        settings = get_settings()
-        _auth_service = AuthService(
-            allowed_domain=settings.clerk_domain,
-            audience=settings.clerk_jwt_audience or None,
-        )
-    return _auth_service
-
-
-def reset_auth_service() -> None:
-    """Reset singleton for testing."""
-    global _auth_service
-    _auth_service = None

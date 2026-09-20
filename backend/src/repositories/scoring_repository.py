@@ -38,7 +38,6 @@ class ScoringRepository:
         attributes: dict[str, Any] | None = None,
         model: str | None = None,
         input_tokens: int | None = None,
-        details: dict[str, Any] | None = None,
     ) -> PaperScore:
         """Insert or update the `(paper_id, rubric_version)` score and replace its evidence.
 
@@ -52,7 +51,6 @@ class ScoringRepository:
             attributes: PaperAttributes JSON (product chips), if judged.
             model: Jev model id echoed by the server.
             input_tokens: Summed input tokens across the paper's Jev requests.
-            details: Legacy v1 audit metadata; None under v2.
 
         Returns:
             The persisted PaperScore (flushed, not committed -- the caller owns commit).
@@ -76,7 +74,6 @@ class ScoringRepository:
                 attributes=attributes,
                 model=model,
                 input_tokens=input_tokens,
-                details=details,
                 **scores,
             )
             self.session.add(score)
@@ -88,7 +85,6 @@ class ScoringRepository:
             score.attributes = attributes
             score.model = model
             score.input_tokens = input_tokens
-            score.details = details
             # Clear old evidence first; delete-orphan removes the rows on flush.
             score.evidence = []
             await self.session.flush()

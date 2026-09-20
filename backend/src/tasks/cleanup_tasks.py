@@ -10,7 +10,7 @@ from src.celery_app import celery_app
 from src.config import get_settings
 from src.database import AsyncSessionLocal
 from src.models.conversation import Conversation
-from src.tasks.utils import run_async
+from src.tasks.runtime import run_async
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)

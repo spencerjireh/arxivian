@@ -31,8 +31,8 @@ from src.schemas.stream import (
     StreamEvent,
     StreamEventType,
 )
+from src.services.agent_service.title import generate_title
 from src.services.search_service import SearchService
-from src.services.title_service import generate_title
 from src.utils.logger import get_logger
 
 from .context import AgentContext, ScopedPaper

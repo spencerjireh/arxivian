@@ -26,7 +26,7 @@ from src.exceptions import ScoringError, TypeSafeConnectionError, TypeSafeRateLi
 from src.factories import get_scoring_context
 from src.schemas.scoring_state import RUBRIC_VERSION
 from src.services.scoring_service.scoring_graph_builder import build_scoring_graph
-from src.tasks.utils import run_async
+from src.tasks.runtime import run_async
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)

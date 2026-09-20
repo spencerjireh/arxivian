@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.models.chunk import Chunk
 from src.models.paper import Paper
 from src.utils.logger import get_logger
 
@@ -152,8 +153,6 @@ class PaperRepository:
         Returns:
             List of orphaned Paper objects
         """
-        from src.models.chunk import Chunk
-
         # Use NOT EXISTS for better performance on large datasets
         has_chunk = select(1).where(Chunk.paper_id == Paper.id).exists()
 

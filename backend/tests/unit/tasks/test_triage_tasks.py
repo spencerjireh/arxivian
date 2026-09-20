@@ -66,7 +66,7 @@ def _run_triage(crawl_by_category, batch_results, triage_settings):
     with (
         patch("src.tasks.triage_tasks.get_arxiv_client", return_value=mock_arxiv),
         patch("src.tasks.triage_tasks.get_llm_client", return_value=mock_llm),
-        patch("src.config.get_settings", return_value=triage_settings),
+        patch("src.tasks.triage_tasks.get_settings", return_value=triage_settings),
         patch("src.tasks.triage_tasks.score_paper_task") as mock_score_task,
     ):
         mock_score_task.apply_async = mock_apply_async

@@ -6,7 +6,7 @@ from src.celery_app import celery_app
 from src.database import AsyncSessionLocal
 from src.factories import get_ingest_service
 from src.schemas.ingest import IngestRequest
-from src.tasks.utils import run_async
+from src.tasks.runtime import run_async
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)

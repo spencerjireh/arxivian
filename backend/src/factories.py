@@ -31,11 +31,12 @@ from src.schemas.digest import category_key_for
 from src.schemas.scoring_state import RUBRIC_VERSION
 from src.services.agent_service import AgentService
 from src.services.agent_service.context import ScopedPaper
+from src.services.auth_service import AuthService
+from src.services.chunking_service import ChunkingService
 from src.services.feed_service import FeedService
 from src.services.ingest_service import IngestService
 from src.services.scoring_service.context import ScoringContext
 from src.services.search_service import SearchService
-from src.utils.chunking_service import ChunkingService
 from src.utils.pdf_parser import PDFParser
 
 # ---------------------------------------------------------------------------
@@ -52,6 +53,15 @@ def get_arxiv_client() -> ArxivClient:
 def get_embeddings_client() -> JinaEmbeddingsClient:
     settings = get_settings()
     return JinaEmbeddingsClient(api_key=settings.jina_api_key, model="jina-embeddings-v3")
+
+
+@lru_cache(maxsize=1)
+def get_auth_service() -> AuthService:
+    settings = get_settings()
+    return AuthService(
+        allowed_domain=settings.clerk_domain,
+        audience=settings.clerk_jwt_audience or None,
+    )
 
 
 @lru_cache(maxsize=1)
