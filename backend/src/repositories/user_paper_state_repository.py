@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.paper import Paper
@@ -85,23 +85,14 @@ class UserPaperStateRepository:
         result = await self.session.execute(stmt)
         return (result.rowcount or 0) > 0  # ty: ignore[unresolved-attribute]
 
-    async def list_for_user(
-        self,
-        user_id: uuid.UUID,
-        *,
-        state: str | None = None,
-        offset: int = 0,
-        limit: int = 50,
-    ) -> tuple[list[tuple[UserPaperState, Paper]], int]:
-        """The user's rows joined to their papers, newest update first, plus the total."""
-        base = select(UserPaperState, Paper).join(Paper, UserPaperState.paper_id == Paper.id)
-        base = base.where(UserPaperState.user_id == user_id)
-        if state is not None:
-            base = base.where(UserPaperState.state == state)
-
-        count_stmt = select(func.count()).select_from(base.subquery())
-        total = (await self.session.execute(count_stmt)).scalar_one()
-
-        stmt = base.order_by(UserPaperState.updated_at.desc()).offset(offset).limit(limit)
+    async def list_for_user(self, user_id: uuid.UUID) -> list[tuple[UserPaperState, Paper]]:
+        """The user's library rows (everything but dismissals) with their papers, newest
+        update first. A library is hand-curated, so it is read whole."""
+        stmt = (
+            select(UserPaperState, Paper)
+            .join(Paper, UserPaperState.paper_id == Paper.id)
+            .where(UserPaperState.user_id == user_id, UserPaperState.state != "dismissed")
+            .order_by(UserPaperState.updated_at.desc())
+        )
         rows = (await self.session.execute(stmt)).all()
-        return [(row[0], row[1]) for row in rows], int(total)
+        return [(row[0], row[1]) for row in rows]

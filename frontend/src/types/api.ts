@@ -107,41 +107,6 @@ export interface ConversationDetailResponse {
   turns: ConversationTurn[]
 }
 
-// Paper types
-
-export interface PaperListItem {
-  arxiv_id: string
-  title: string
-  authors: string[]
-  abstract: string
-  categories: string[]
-  published_date: string
-  pdf_url: string
-  sections: string[] | null
-  pdf_processed: boolean
-  pdf_processing_date: string | null
-  parser_used: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface PaperListResponse {
-  total: number
-  offset: number
-  limit: number
-  papers: PaperListItem[]
-}
-
-export interface PaperListParams {
-  offset?: number
-  limit?: number
-  processed_only?: boolean
-  category?: string
-  author?: string
-  sort_by?: 'created_at' | 'published_date' | 'updated_at'
-  sort_order?: 'asc' | 'desc'
-}
-
 // User/Tier types
 
 export interface MeResponse {
@@ -233,16 +198,23 @@ export interface FeedSignals {
 export type ScoreDimension =
   'method_clarity' | 'resource_feasibility' | 'data_availability' | 'demand'
 
+/** One card. The library can carry a paper without a current score, so the score-derived
+ *  fields are nullable; the feed always fills them. */
 export interface FeedItem {
   paper: FeedPaper
-  scores: FeedScores
-  verdict: string
-  signals: FeedSignals
+  scores: FeedScores | null
+  verdict: string | null
+  signals: FeedSignals | null
   low_confidence: ScoreDimension[]
   keyword_match: boolean
   state: PaperState | null
-  scored_at: string
+  scored_at: string | null
 }
+
+/** GET /users/me/library: the caller's papers grouped by lifecycle state (SPE-296). */
+export type LibraryGroup = Exclude<PaperLifecycleState, 'dismissed'>
+
+export type LibraryResponse = Record<LibraryGroup, FeedItem[]>
 
 export interface AvailableWeek {
   week_start: string

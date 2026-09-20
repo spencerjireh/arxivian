@@ -72,7 +72,6 @@ def mock_db_session():
 def mock_paper_repo():
     """Create a mock PaperRepository."""
     repo = AsyncMock()
-    repo.get_all = AsyncMock(return_value=([], 0))
     repo.get_by_arxiv_id = AsyncMock(return_value=None)
     repo.delete_by_arxiv_id = AsyncMock(return_value=True)
     repo.count = AsyncMock(return_value=0)
@@ -184,7 +183,7 @@ def mock_state_repo():
     repo.get_many = AsyncMock(return_value={})
     repo.upsert = AsyncMock()
     repo.delete = AsyncMock(return_value=True)
-    repo.list_for_user = AsyncMock(return_value=([], 0))
+    repo.list_for_user = AsyncMock(return_value=[])
     return repo
 
 
@@ -193,6 +192,7 @@ def mock_feed_service():
     """Create a mock FeedService."""
     service = AsyncMock()
     service.get_feed = AsyncMock()
+    service.get_library = AsyncMock()
     return service
 
 

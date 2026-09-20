@@ -13,15 +13,18 @@ export interface FeedCardProps {
   onSave: (arxivId: string) => void
   onDismiss: (arxivId: string) => void
   onImplementing: (arxivId: string) => void
+  onShip?: (arxivId: string, repoUrl: string) => void
   pendingAction?: PendingAction
 }
 
-/** One ranked paper. Answers "why should I care?" from the verdict line alone. */
+/** One ranked paper. Answers "why should I care?" from the verdict line alone. A card
+ *  without a current score (library only) shows the paper and its actions. */
 export default function FeedCard({
   item,
   onSave,
   onDismiss,
   onImplementing,
+  onShip,
   pendingAction = null,
 }: FeedCardProps) {
   const { paper, scores, verdict, signals, low_confidence, state } = item
@@ -56,17 +59,23 @@ export default function FeedCard({
             {formatDate(paper.published_date)}
           </p>
         </div>
-        <ScoreBadge
-          score={scores.composite}
-          lowConfidence={lowConfidence}
-          lowConfidenceTitle={lowConfidenceTitle}
-          className="shrink-0"
-        />
+        {scores && (
+          <ScoreBadge
+            score={scores.composite}
+            lowConfidence={lowConfidence}
+            lowConfidenceTitle={lowConfidenceTitle}
+            className="shrink-0"
+          />
+        )}
       </div>
 
-      <VerdictLine verdict={verdict} className="mb-3" />
+      {verdict ? (
+        <VerdictLine verdict={verdict} className="mb-3" />
+      ) : (
+        <p className="mb-3 text-sm text-stone-400">Not scored yet</p>
+      )}
 
-      <SignalChips signals={signals} />
+      {signals && <SignalChips signals={signals} />}
 
       <div className="mt-3 flex items-center justify-between border-t border-stone-100 pt-3">
         <CardActions
@@ -74,6 +83,7 @@ export default function FeedCard({
           onSave={() => onSave(id)}
           onDismiss={() => onDismiss(id)}
           onImplementing={() => onImplementing(id)}
+          onShip={onShip && ((repoUrl) => onShip(id, repoUrl))}
           pending={pendingAction}
         />
         <a

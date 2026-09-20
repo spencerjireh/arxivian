@@ -13,7 +13,7 @@ references the backend/frontend files that need changes.
 > **Pivot note.** Epics below the divider (CHAT / CITE / FEED / LIB) are chat-first beta
 > work. Under the feed pivot (`feed-prd.md`) they are reframed: CHAT/CITE apply only to
 > the scoped per-paper chat panel; FEED (thumbs) is deprecated in favor of card
-> save/dismiss signals; LIB folds into the new LIFECYCLE epic. OPS and PERF are
+> save/dismiss signals; the old LIB epic was absorbed by LIFECYCLE and removed. OPS and PERF are
 > pivot-agnostic infra and carry forward unchanged. The **new pivot epics** (FEED-DIGEST,
 > SCORE, ONBOARD, LIFECYCLE, SCOPED-CHAT) are defined first, below.
 
@@ -72,7 +72,7 @@ design in `docs/design/scoring-pipeline.md`.
   `user_paper_states` (repo URL on shipped; dismissal reason optional). AC: dismissals
   double as labeled feedback.
 - **LIFECYCLE-2 (Must):** Library grouped by state; shipped items show the linked repo.
-  (Supersedes LIB-1's read-only detail modal.)
+  (Shipped in SPE-296: `GET /users/me/library`, `frontend/src/pages/LibraryPage.tsx`.)
 
 ### Epic: SCOPED-CHAT -- Per-Paper Chat Panel
 
@@ -229,58 +229,6 @@ results appear as plain text in the agent response with no structured rendering.
 **Files likely touched:**
 - `frontend/src/components/chat/` (suggestion chips component)
 - `frontend/src/stores/chatStore.ts` (derive suggestion from latest metadata/sources)
-
----
-
-## Epic: LIB -- Paper Library Enhancement
-
-Elevate the library from a basic grid to a core feature. The backend already serves
-full paper detail via `GET /papers/{arxiv_id}` including `raw_text`, `sections`,
-and `references`.
-
-### LIB-1: Paper detail view
-
-**Priority:** Must
-**As a** researcher browsing the library,
-**I want** to click a paper card and see its full details,
-**so that** I can read the abstract, see all authors, check sections, and access the
-PDF without leaving the app.
-
-**Acceptance criteria:**
-
-- [ ] Clicking a paper card opens a detail view (modal or slide-over panel)
-- [ ] Detail view shows:
-  - Full title
-  - All authors (not truncated)
-  - Full abstract
-  - arXiv ID (linked to arXiv abstract page)
-  - Categories as tags
-  - Published date
-  - Processing status and date
-  - Sections list (if available from PDF parsing)
-  - Reference count
-  - Link to open PDF
-- [ ] Detail view loads data from `GET /papers/{arxiv_id}` endpoint
-- [ ] Loading state while fetching (skeleton or spinner)
-- [ ] Close via X button, Escape key, or clicking outside
-- [ ] URL updates to `/library/{arxiv_id}` so the detail view is shareable/bookmarkable
-  (optional enhancement)
-
-**Implementation notes:**
-
-- `PaperResponse` schema already includes `raw_text`, `sections`, and all metadata.
-  The `PaperListItem` in the grid does not include `raw_text` or `references`, so
-  a separate fetch to the detail endpoint is needed.
-- `sections` is `list[dict] | None` -- inspect the actual shape stored by the PDF
-  parser to determine what to render (likely `{name, content}` or similar).
-
-**Frontend files:**
-- New component: `frontend/src/components/library/PaperDetailModal.tsx`
-- `frontend/src/components/library/PaperCard.tsx` (add click handler)
-- `frontend/src/api/` (add `getPaper(arxivId)` function if not present)
-- `frontend/src/types/api.ts` (ensure `PaperResponse` type includes detail fields)
-
-**Backend:** No changes needed. Endpoint exists.
 
 ---
 
@@ -579,7 +527,6 @@ Phase 1 -- Foundation (do first, unblocks everything)
 Phase 2 -- Core UX gaps (the "must" user-facing features)
   FEED-1 Thumbs up/down        (quick win, high signal for quality)
   FEED-2 Bug report button     (beta users need a way to report issues)
-  LIB-1  Paper detail view     (library becomes a real feature)
   CITE-1 Citation rendering    (fulfills the landing page promise)
 
 Phase 3 -- Polish and optimization (should-haves)

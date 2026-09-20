@@ -242,6 +242,46 @@ class TestGetFeed:
         assert out.categories_available == ["cs.AI", "cs.LG"]
 
 
+@pytest.mark.unit
+class TestGetLibrary:
+    def _service_for(self, rows, scores):
+        svc = _service(weeks=[], digest=None, papers=[], scores=scores, states=[])
+        svc.state_repo.list_for_user = AsyncMock(return_value=rows)
+        return svc
+
+    async def test_groups_by_state_and_keeps_order(self):
+        a, b, c = _paper("a"), _paper("b"), _paper("c")
+        rows = [(_state(c, "shipped"), c), (_state(b, "saved"), b), (_state(a, "saved"), a)]
+        rows[0][0].repo_url = "https://github.com/x/y"
+        svc = self._service_for(rows, [_score(a), _score(b), _score(c)])
+
+        out = await svc.get_library(_user())
+
+        assert [i.paper.arxiv_id for i in out.saved] == ["b", "a"]
+        assert out.implementing == []
+        assert out.shipped[0].state.repo_url == "https://github.com/x/y"
+        assert out.saved[0].scores.composite > 0 and out.saved[0].verdict
+        svc.scoring_repo.get_by_paper_ids.assert_awaited_once()
+        assert set(svc.scoring_repo.get_by_paper_ids.await_args.args[0]) == {a.id, b.id, c.id}
+
+    async def test_unscored_paper_keeps_its_card(self):
+        a = _paper("a", title="Sparse attention")
+        svc = self._service_for([(_state(a, "implementing"), a)], [])
+
+        out = await svc.get_library(_user({"feed_profile": {"keywords": ["attention"]}}))
+
+        card = out.implementing[0]
+        assert card.scores is None and card.verdict is None and card.signals is None
+        assert card.scored_at is None and card.low_confidence == []
+        assert card.keyword_match is True
+        assert card.state.state == "implementing"
+
+    async def test_empty_library(self):
+        svc = self._service_for([], [])
+        out = await svc.get_library(_user())
+        assert (out.saved, out.implementing, out.shipped) == ([], [], [])
+
+
 def _evidence(dimension, kind, text):
     return SimpleNamespace(dimension=dimension, kind=kind, text=text, source="raw_text")
 

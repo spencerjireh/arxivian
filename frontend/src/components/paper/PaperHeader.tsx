@@ -10,6 +10,7 @@ interface PaperHeaderProps {
   onSave: () => void
   onDismiss: () => void
   onImplementing: () => void
+  onShip: (repoUrl: string) => void
   pending?: PendingAction
 }
 
@@ -19,6 +20,7 @@ export default function PaperHeader({
   onSave,
   onDismiss,
   onImplementing,
+  onShip,
   pending = null,
 }: PaperHeaderProps) {
   const absUrl = `https://arxiv.org/abs/${paper.arxiv_id}`
@@ -65,6 +67,7 @@ export default function PaperHeader({
         onSave={onSave}
         onDismiss={onDismiss}
         onImplementing={onImplementing}
+        onShip={onShip}
         pending={pending}
         size="md"
       />
