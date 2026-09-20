@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from src.schemas.conversation import ConversationMessage
-from src.schemas.langgraph_state import ToolExecution
+from src.services.agent_service.state import ConversationMessage, ToolExecution
 
 
 @dataclass

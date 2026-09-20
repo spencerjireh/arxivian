@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from src.schemas.langgraph_state import ClassificationResult, ToolCall
+from src.services.agent_service.state import ClassificationResult, ToolCall
 from src.services.agent_service.tools import EXPLORE_CITATIONS, SEMANTIC_SCHOLAR, ToolResult
 
 

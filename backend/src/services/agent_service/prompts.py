@@ -8,8 +8,7 @@ from typing import TYPE_CHECKING
 from src.services.agent_service.tools import RETRIEVE_CHUNKS
 
 if TYPE_CHECKING:
-    from src.schemas.conversation import ConversationMessage
-    from src.schemas.langgraph_state import ToolOutput
+    from src.services.agent_service.state import ConversationMessage, ToolOutput
 
     from .context import ConversationFormatter
 

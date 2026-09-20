@@ -22,15 +22,11 @@ from src.repositories.digest_repository import DigestRepository
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.scoring_repository import ScoringRepository
 from src.repositories.user_paper_state_repository import UserPaperStateRepository
-from src.schemas.digest import DigestRankingEntry, week_start_for
-from src.schemas.feed import (
-    AvailableWeek,
-    FeedItem,
-    FeedPaper,
-    FeedResponse,
-    LibraryResponse,
-    PaperScoreDetailResponse,
-    UserPaperStateResponse,
+from src.schemas.feed import AvailableWeek, FeedItem, FeedPaper, FeedResponse, LibraryResponse
+from src.schemas.paper_states import UserPaperStateResponse
+from src.schemas.papers import PaperScoreDetailResponse
+from src.schemas.users import FeedProfile
+from src.services.feed_service.derive import (
     build_attributes_detail,
     build_dimension_details,
     build_scores,
@@ -40,8 +36,8 @@ from src.schemas.feed import (
     parse_dimensions,
     resolve_weights,
 )
-from src.schemas.scoring_state import RUBRIC_VERSION
-from src.schemas.users import FeedProfile
+from src.services.feed_service.digest import DigestRankingEntry, week_start_for
+from src.services.scoring_service.state import RUBRIC_VERSION
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
