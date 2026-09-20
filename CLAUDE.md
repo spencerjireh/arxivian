@@ -30,6 +30,8 @@ just lint-frontend      # ESLint (type-checked) + knip via docker
 just test-frontend      # Vitest via docker
 ```
 
+CI (`.github/workflows/ci.yml`) runs seven jobs on every PR: `backend-lint` (uv lock check, ruff on src/tests/alembic, ty), `backend-test` (unit + api with the coverage gate), `backend-integration` (pgvector service container, `alembic upgrade head / downgrade -1 / upgrade head`, `tests/integration`), `frontend-lint` (eslint + knip, prettier, tsc), `frontend-test` (vitest with coverage thresholds), `docker` (coolify compose interpolation with dummy vars + production image builds for both services; the only check that exercises the relaunch path), `pr-title` (conventional-commit title; squash-merge uses it). Dependabot (`.github/dependabot.yml`) opens grouped weekly PRs for uv, npm and actions. `main` and `production` are protected by rulesets: PR required, the six CI checks required on `main`, no force-push or deletion, squash merges only.
+
 One-time: `uvx pre-commit install` wires ruff (backend) and lint-staged (eslint + prettier on staged frontend files) into `git commit`.
 
 Backend tools (run inside container or with `just exec-backend`):
