@@ -6,7 +6,7 @@ const Footer = () => {
     <footer className="border-t border-stone-200 bg-white">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex items-center justify-center gap-3 text-sm text-stone-500">
-          <p>2026 Arxivian. Built for researchers.</p>
+          <p>2026 Arxivian. Built for people who implement papers.</p>
           <span className="text-stone-300" aria-hidden="true">
             |
           </span>

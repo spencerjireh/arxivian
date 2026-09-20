@@ -39,9 +39,9 @@ export default function Hero() {
             transition={transitions.slow}
             className="font-display letterpress mb-2 text-5xl leading-[1.1] tracking-tight text-stone-900 sm:text-6xl"
           >
-            Understand research
+            Papers you could
             <br />
-            at depth
+            actually implement
           </motion.h1>
           <motion.div
             className="mx-auto mt-4 mb-6 h-px w-20 bg-stone-300"
@@ -55,8 +55,9 @@ export default function Hero() {
             transition={transitions.slow}
             className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-stone-500 sm:text-xl"
           >
-            An intelligent research assistant that reads, indexes, and reasons over academic papers
-            -- so you can focus on the ideas that matter.
+            Every week, new arXiv papers are scored on method clarity, resource feasibility, data
+            availability and demand, ranked for your compute budget, and shown with the evidence
+            behind each score.
           </motion.p>
 
           <motion.div
@@ -70,7 +71,7 @@ export default function Hero() {
                 size="lg"
                 rightIcon={<ArrowRight className="h-4 w-4" strokeWidth={2} />}
               >
-                {isSignedIn ? 'Open Chat' : 'Try a research question'}
+                {isSignedIn ? 'Open feed' : 'Get started'}
               </Button>
             </Link>
             {!isSignedIn && (

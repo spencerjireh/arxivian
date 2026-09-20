@@ -46,7 +46,7 @@ export default function PublicHeader() {
                 size="sm"
                 rightIcon={<ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />}
               >
-                Go to Chat
+                Open feed
               </Button>
             </Link>
           ) : (

@@ -1,47 +1,47 @@
 // Landing feature grid: the four product features, each with an icon, copy and illustration.
 import { motion, useReducedMotion } from 'framer-motion'
-import { Sparkles, BookOpen, Search, GitBranch } from 'lucide-react'
+import { Bookmark, CalendarDays, MessageSquare, Quote } from 'lucide-react'
 import clsx from 'clsx'
 import { staggerContainer, staggerItem, transitions } from '../../lib/animations'
 import {
-  CitationExplorerIllustration,
-  PaperLibraryIllustration,
-  ResearchAssistantIllustration,
-  SmartSearchIllustration,
+  EvidenceIllustration,
+  LifecycleIllustration,
+  ScopedChatIllustration,
+  WeeklyDigestIllustration,
 } from './FeatureIllustrations'
 
 const features = [
   {
-    icon: Sparkles,
-    title: 'Research Assistant',
+    icon: CalendarDays,
+    title: 'Weekly digest',
     description:
-      'Ask questions about papers and receive grounded answers with citations drawn directly from the literature.',
+      'New submissions in your arXiv categories are triaged and scored once a week. Cards rank by a composite of four dimensions and by fit with your compute profile: laptop, single GPU or cloud.',
     size: 'large' as const,
-    illustration: ResearchAssistantIllustration,
+    illustration: WeeklyDigestIllustration,
   },
   {
-    icon: BookOpen,
-    title: 'Paper Library',
+    icon: Quote,
+    title: 'Evidence behind every score',
     description:
-      'Build a personal collection of arXiv papers, automatically processed and indexed for semantic retrieval.',
+      'Each dimension stores the passages it was judged on. Open a paper to see the level distribution, every atomic judgment and its quoted evidence.',
     size: 'small' as const,
-    illustration: PaperLibraryIllustration,
+    illustration: EvidenceIllustration,
   },
   {
-    icon: Search,
-    title: 'Smart Search',
+    icon: Bookmark,
+    title: 'Save, dismiss, implement',
     description:
-      'Answers are powered by hybrid retrieval -- vector similarity and full-text matching work together to find the most relevant passages.',
+      'Triage from the cards alone. Saved and in-progress papers live in your library; dismissals are one click.',
     size: 'small' as const,
-    illustration: SmartSearchIllustration,
+    illustration: LifecycleIllustration,
   },
   {
-    icon: GitBranch,
-    title: 'Citation Explorer',
+    icon: MessageSquare,
+    title: 'Chat scoped to one paper',
     description:
-      'Trace the lineage of ideas by exploring citation graphs -- see what a paper builds on and what builds on it.',
+      "Ask about the core method, a minimal repo layout or the risky parts of a reproduction. Answers retrieve from that paper's full text only.",
     size: 'small' as const,
-    illustration: CitationExplorerIllustration,
+    illustration: ScopedChatIllustration,
   },
 ]
 

@@ -15,18 +15,18 @@ describe('LandingPage', () => {
   it('renders hero and Get started CTA when unauthenticated', () => {
     renderWithProviders(<LandingPage />)
 
-    expect(screen.getByRole('heading', { name: /Understand research/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Papers you could/ })).toBeInTheDocument()
     // "Get started" appears in both nav and hero CTA
     const buttons = screen.getAllByText('Get started')
     expect(buttons.length).toBeGreaterThanOrEqual(1)
   })
 
-  it('shows Go to Chat button when authenticated', () => {
+  it('shows Open feed when authenticated', () => {
     mockAuth.isSignedIn = true
 
     renderWithProviders(<LandingPage />)
 
-    expect(screen.getByText('Go to Chat')).toBeInTheDocument()
+    expect(screen.getAllByText('Open feed').length).toBeGreaterThanOrEqual(1)
   })
 
   it('shows See plans link to /pricing when unauthenticated', () => {
