@@ -184,7 +184,9 @@ jobs:
           target: production
           push: false
           cache-from: type=gha,scope=backend
-          cache-to: type=gha,mode=max,scope=backend
+          # Exporting the backend layers (torch, docling) to the GHA cache took 13 of the
+          # job's 16 minutes; only the push-to-main run refreshes the cache, PRs read it.
+          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=min,scope=backend' || '' }}
       - name: Build frontend image (production target)
         uses: docker/build-push-action@v6
         with:
@@ -195,7 +197,7 @@ jobs:
             VITE_CLERK_PUBLISHABLE_KEY=pk_test_x
             VITE_MAINTENANCE_MODE=false
           cache-from: type=gha,scope=frontend
-          cache-to: type=gha,mode=max,scope=frontend
+          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=min,scope=frontend' || '' }}
 
   pr-title:
     name: PR title
@@ -206,7 +208,7 @@ jobs:
         env:
           TITLE: ${{ github.event.pull_request.title }}
         run: |
-          if ! printf '%s' "$TITLE" | grep -Eq '^(feat|fix|docs|test|chore|refactor|perf|ci)(\([a-z0-9-]+\))?: .+$'; then
-            echo "::error::PR title must match type(scope): summary, e.g. 'feat(feed): add week selector (SPE-275)'"
+          if ! printf '%s' "$TITLE" | grep -Eq '^(feat|fix|docs|test|chore|refactor|perf|ci|build)(\([a-z0-9-]+\))?: .+$'; then
+            echo "::error::PR title must match type(scope): summary, e.g. 'feat(feed): add week selector (SPE-275)'; Dependabot uses build(deps)"
             exit 1
           fi
