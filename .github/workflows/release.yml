@@ -1,0 +1,29 @@
+name: Release
+
+# Every push to `production` (a main -> production promotion merged with a merge commit)
+# is tagged with the deploy date and gets release notes generated from the merged PR
+# titles. Those notes are the changelog; there is no CHANGELOG.md.
+on:
+  push:
+    branches: [production]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Tag production and publish release notes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Create calver tag and release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          day="v$(date -u +%Y.%m.%d)"
+          tag="$day"; n=1
+          while gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; do
+            tag="$day.$((n++))"
+          done
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "$tag" --generate-notes
