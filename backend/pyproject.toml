@@ -19,7 +19,7 @@ dependencies = [
     # AI/ML
     "litellm>=1.50.0",
     # litellm 1.102 requires openai<3; bump both together.
-    "openai>=1.54.3,<3",
+    "openai>=1.54.3,<4",
     "langchain>=0.3.7",
     "langchain-openai>=0.2.5",
     "langchain-core>=0.3.15",
