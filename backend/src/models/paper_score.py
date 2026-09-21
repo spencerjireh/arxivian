@@ -54,9 +54,6 @@ class PaperScore(Base):
     model: Mapped[str | None] = mapped_column(String(50))
     input_tokens: Mapped[int | None] = mapped_column(Integer)
 
-    # v1 audit metadata ({dimension: {reasoning, model}}); no longer written under v2.
-    details: Mapped[dict | None] = mapped_column(JSONB)
-
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()
     )

@@ -36,7 +36,6 @@ async def _make_scored_paper(
             resource_feasibility_score=feasibility,
             data_availability_score=data,
             demand_score=demand,
-            details={},
             created_at=created_at,
         )
     )

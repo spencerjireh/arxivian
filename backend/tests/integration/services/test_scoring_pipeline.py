@@ -117,7 +117,6 @@ async def test_scoring_graph_persists_scores_and_evidence(db_session, sample_pro
     assert score.demand_score == 85  # HIGH band
     assert score.model == "jev-1.13.0"
     assert score.input_tokens == 1500  # 3 Jev requests x 500
-    assert score.details is None
 
     # v2 source of truth round-trips through JSONB
     method = DimensionScore.from_jsonb(score.dimensions["method_clarity"])
