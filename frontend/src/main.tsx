@@ -1,3 +1,4 @@
+// Entry point: ClerkProvider, QueryClient, ErrorBoundary and <App/>; VITE_MAINTENANCE_MODE swaps in MaintenanceScreen.
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -8,7 +9,7 @@ import App from './App.tsx'
 import ErrorBoundary from './components/ui/ErrorBoundary.tsx'
 import PageErrorFallback from './components/ui/PageErrorFallback.tsx'
 import Toaster from './components/ui/Toaster.tsx'
-import MaintenanceScreen from './components/MaintenanceScreen.tsx'
+import MaintenanceScreen from './components/layout/MaintenanceScreen'
 import { isAuthError, getUserMessage } from './lib/errors.ts'
 
 const root = createRoot(document.getElementById('root')!)

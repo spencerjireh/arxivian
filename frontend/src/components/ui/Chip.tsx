@@ -1,3 +1,4 @@
+// UI primitive: small rounded label, optionally removable.
 import clsx from 'clsx'
 
 type ChipTone = 'neutral' | 'accent' | 'success' | 'info' | 'warning'

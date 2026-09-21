@@ -1,5 +1,6 @@
 """Repository for Conversation model operations."""
 
+from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy import desc, func, select
@@ -9,10 +10,25 @@ from sqlalchemy.orm import selectinload
 
 from src.exceptions import ForbiddenError
 from src.models.conversation import Conversation, ConversationTurn
-from src.schemas.conversation import TurnData
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
+
+
+@dataclass
+class TurnData:
+    """Data for saving a conversation turn."""
+
+    user_query: str
+    agent_response: str
+    provider: str
+    model: str
+    guardrail_score: int | None = None
+    retrieval_attempts: int = 1
+    rewritten_query: str | None = None
+    sources: list[dict] | None = None
+    reasoning_steps: list[str] | None = None
+    citations: dict | None = None
 
 
 class ConversationRepository:

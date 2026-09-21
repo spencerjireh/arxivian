@@ -1,3 +1,4 @@
+// Scoped chat: the turn list with auto-scroll and retry on a failed turn.
 import ChatMessage from './ChatMessage'
 import { useAutoScroll } from '../../hooks/useAutoScroll'
 import type { Message } from '../../types/api'

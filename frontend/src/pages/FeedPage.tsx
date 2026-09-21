@@ -1,8 +1,9 @@
+// /feed route: the weekly digest with filters, week selector and lifecycle actions.
 import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AlertCircle, Loader2, Newspaper } from 'lucide-react'
 import { useInfiniteFeed } from '../api/feed'
-import { useClearPaperState, useSetPaperState } from '../api/paperState'
+import { useClearPaperState, useSetPaperState } from '../api/paperStates'
 import FeedList from '../components/feed/FeedList'
 import FeedFilterBar, { type FeedFilters } from '../components/feed/FeedFilterBar'
 import WeekSelector from '../components/feed/WeekSelector'

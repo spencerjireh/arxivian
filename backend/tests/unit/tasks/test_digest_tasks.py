@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
-from src.schemas.digest import (
+from src.services.feed_service.digest import (
     CompositeWeights,
     compute_composite,
     compute_provisional_composite,

@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.user import User
@@ -95,14 +96,32 @@ class UserRepository:
             )
             return user, False
 
-        # Create new user
-        user = await self.create(
-            clerk_id=clerk_id,
-            email=email,
-            first_name=first_name,
-            last_name=last_name,
-            profile_image_url=profile_image_url,
-        )
+        # First sign-in fires several requests at once and each one runs this dependency,
+        # so a parallel request may insert the row between the lookup and this insert.
+        # This runs before any other work in the request, so rolling back only discards
+        # the failed insert; the loser then adopts the row.
+        try:
+            user = await self.create(
+                clerk_id=clerk_id,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                profile_image_url=profile_image_url,
+            )
+        except IntegrityError:
+            await self.session.rollback()
+            user = await self.get_by_clerk_id(clerk_id)
+            if user is None:
+                raise
+            log.info("user create raced, adopted existing row", clerk_id=clerk_id)
+            await self.update_on_login(
+                user,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                profile_image_url=profile_image_url,
+            )
+            return user, False
         return user, True
 
     async def update_on_login(

@@ -1,16 +1,15 @@
 # Scoring Pipeline: Two-Stage Paper Triage and Implementability Scoring
 
-The backbone of the feed pivot (see `proposal.md`). A two-stage pipeline triages new
+The backbone of the feed pivot. A two-stage pipeline triages new
 arXiv submissions and produces an evidence-backed implementability score per paper. This
 doc is the implementation blueprint; it is grounded in the existing
 `services/agent_service/` scaffolding so the new graph reads as native to the codebase.
 
-**Status:** Phase 1 shipped and running dark (Stage 1 triage, the Stage 2 scoring graph, `build_digest_task`, the golden-set eval gate). As of 2026-09-19 (SPE-286, rubric **v2**) Stage 2 judgments come from **TypeSafe Jev** instead of gpt-5-nano: each judged dimension is a set of atomic typed questions combined in code, and the stored score is a distribution over levels plus the atomic judgments (migration `020`). Nano remains only in Stage 1 triage. See `docs/design/scoring-rubric.md` for the v2 rubric.
+**Status:** Shipped (Stage 1 triage, the Stage 2 scoring graph, `build_digest_task`, the feed read path, on-demand scoring, the golden-set scoring eval). As of 2026-09-19 (SPE-286, rubric **v2**) Stage 2 judgments come from **TypeSafe Jev** instead of gpt-5-nano: each judged dimension is a set of atomic typed questions combined in code, and the stored score is a distribution over levels plus the atomic judgments (migration `020`). Nano remains only in Stage 1 triage. See `docs/design/scoring-rubric.md` for the v2 rubric.
 **Author:** Spencer Jireh
 **Date:** July 2026
-**Related:** `proposal.md` (direction pitch), `docs/product/feed-prd.md` (product),
-`docs/design/scoring-rubric.md` (the concrete v1 rubric anchors + band scale),
-`docs/design/agent-graph-refactor.md` (the sibling chat graph)
+**Related:** `docs/product/feed-prd.md` (product), `docs/design/scoring-rubric.md` (the v2
+questions, combine rules and band scale), `AGENTS.md` (the sibling chat graph as built)
 
 ---
 
@@ -41,7 +40,7 @@ recall. See the deferral decision below.
   per-dimension sub-scores plus evidence. The user-weighted composite and the
   compute-profile feasibility match are computed **at read time**, per user, when a digest
   renders. This resolves the tension between one shared cached ranking and per-user
-  personalization (`proposal.md` Open Question 3): you cannot cache a single global order
+  personalization: you cannot cache a single global order
   *and* personalize by compute profile, but you can cache the sub-scores and do the cheap
   arithmetic per request. `digests` caches a candidate ranking snapshot, not a final
   per-user order.
@@ -140,7 +139,7 @@ New package: `backend/src/services/scoring_service/`, mirroring `agent_service/`
 | `scoring_graph_builder.py` | `agent_service/graph_builder.py` | `build_scoring_graph(checkpointer=None)` |
 | `nodes/` | `agent_service/nodes/` | one node fn per stage/dimension |
 | `context.py` | `agent_service/context.py` | `ScoringContext` (deps + tools) |
-| `schemas/scoring_state.py` | `schemas/langgraph_state.py` | `PaperScoreState` TypedDict + dimension models |
+| `scoring_service/state.py` | `agent_service/state.py` | `PaperScoreState` TypedDict + dimension models |
 
 This is a **fixed DAG**, not an agentic tool-selection loop: every paper takes the same
 path, so a deterministic map-reduce is cheaper, testable, and eval-friendly. It is still
@@ -188,7 +187,7 @@ join node runs once after all complete), `add_edge("compose_and_persist", END)`,
 | Demand | v1 | Medium | Citation velocity via Semantic Scholar | No (API) |
 | Code gap | **v1.1** | Highest (when weighted) | GitHub code/README search for title + arXiv ID; repo stars/issue health | Light (match judge) |
 
-Full-rubric weights match `proposal.md` Section 5.1. **Code gap is deferred to v1.1** (see
+Weights live in `docs/design/scoring-rubric.md`. **Code gap is deferred to v1.1** (see
 the deferral decision above): in v1 it is absent, then reintroduced as an unweighted
 evidence chip before becoming the highest-weighted signal. Per paper, Stage 2 makes three
 Jev requests (one per judged node; the attributes ride on the method-clarity request) and
@@ -206,21 +205,35 @@ never collides. Dimension payloads are `DimensionScore` models: `level`, `max_le
 `utils/section_splitter.py`) and `extracted_spans` (retrieval probes + `code_mentions`).
 
 ```python
+# Sketch of services/scoring_service/state.py (rubric v2); the code is the source of truth.
 class DimensionScore(BaseModel):
     dimension: str
-    score: int = Field(..., ge=0, le=100)   # or a gate flag for data availability
-    evidence: list[EvidenceSpan]            # quoted spans / external hits, source pointers
+    level: int                       # argmax over the ordered levels
+    max_level: int
+    expected: float
+    probabilities: dict[int, float]  # calibrated distribution from Jev
+    confidence: float                # argmax mass
+    judgments: list[Judgment]        # the atomic typed answers that produced it
+    evidence: list[EvidenceSpan]     # quoted spans, source pointers
     reasoning: str
+    def derived_score(self) -> int: ...   # 0-100, recomputable
+
+class PaperAttributes(BaseModel):    # product chips, not scored
+    code_released: Judgment | None
+    task_type: Judgment | None
+    model_family: Judgment | None
 
 class PaperScoreState(TypedDict):
     paper_id: str
     arxiv_id: str
-    extracted_spans: dict           # pseudocode / compute / dataset candidates
-    method_clarity_result: DimensionScore
-    resource_feasibility_result: DimensionScore
-    data_availability_result: DimensionScore
-    demand_result: DimensionScore
-    # code_gap_result: DimensionScore   # v1.1 -- added with the github_search node
+    paper_meta: dict
+    extracted_spans: dict
+    sections: dict
+    method_clarity_result: DimensionScore | None      # and *_usage per dimension
+    resource_feasibility_result: DimensionScore | None
+    data_availability_result: DimensionScore | None
+    demand_result: DimensionScore | None
+    attributes_result: PaperAttributes | None
     rubric_version: str
 ```
 
@@ -289,7 +302,7 @@ dimension) and is gated behind the spike.
 
 ### Tools (BaseTool wrappers)
 
-- `SemanticScholarTool` (**v1**) / `GithubSearchTool` (**v1.1**) subclass `BaseTool`
+- `SemanticScholarTool` (**v1**, `services/agent_service/tools/semantic_scholar.py`) subclasses `BaseTool`; a v1.1 `GithubSearchTool` would follow the same shape
   (`services/agent_service/tools/base.py`): `extends_chunks=False`, implement
   `parameters_schema` + `async execute(...) -> ToolResult`; return
   `ToolResult(success, data={...}, prompt_text=<summary>, tool_name=...)` -- copy the
@@ -322,7 +335,7 @@ Onboarding profile (categories, compute profile, interest keywords) extends the 
 `preferences["arxiv_searches"]` blob `scheduled_tasks.py::daily_ingest_task` reads. It is a
 column, not a `user_preferences` table; no new table is needed for the profile.
 
-**Read path (Phase 2, SPE-274):** `services/feed_service/` + `schemas/feed.py`. The digest
+**Read path (Phase 2, SPE-274):** `services/feed_service/` (`service.py`, `derive.py`, `digest.py`) + `schemas/feed.py`. The digest
 row is only the candidate set; every card is rebuilt from the live `papers` / `paper_scores`
 / `user_paper_states` rows (three `IN` batch loads per page). Read-time personalization:
 per-user composite weights (`compute_composite`, NULL sub-scores renormalize -- SPE-284),
@@ -361,16 +374,18 @@ re-score/decay policy (open question below).
 
 - **Golden set** of 30-50 hand-labeled papers (implementable or not, and why), maintained
   under the existing eval infrastructure.
-- Rubric-accuracy eval runs under the `@pytest.mark.eval` profile in CI, alongside the
-  existing 80% coverage gate. Target: >=85% agreement with hand labels on the feasibility
+- Rubric-accuracy eval is `tests/evals/integration/test_scoring_eval.py`
+  (`@pytest.mark.inteval`: `just inteval-seed`, then `just inteval -k scoring`). It needs a
+  real TypeSafe key and the seeded test DB, so it runs by hand, not in CI; CI's coverage gate
+  covers unit + api only. Target: >=85% agreement with hand labels on the feasibility
   dimension in v1 (add code-gap agreement in v1.1); must not regress.
 - User dismissals tagged "misjudged" flow into the golden set over time.
-- **The eval gate is what licenses the cheap models.** Using a small model for the two
-  judgment dimensions is safe precisely because the golden set catches drift -- e.g. a
-  cluster-scale training paper rated "single-GPU feasible."
-- **The golden set is a prerequisite, not a later step.** Because the eval gate is what
-  licenses the cheap models, the 30-50 labeled papers must exist before the two LLM
-  dimensions can be trusted -- build the labeled set alongside (not after) the pipeline.
+- **The eval is what licenses the judge.** The golden set catches drift in the Jev
+  judgments and the combine rules -- e.g. a cluster-scale training paper rated "single-GPU
+  feasible" -- and is the check to re-run after any change to `questions.py` or
+  `judgments.py`.
+- **The golden set is a prerequisite, not a later step.** The labeled papers must exist
+  before a rubric change ships.
 
 ### Validation before build (spikes)
 
@@ -393,11 +408,11 @@ Two bets are unproven and cheap to test before any schema is committed:
 | Area | Files | Status |
 |---|---|---|
 | Tasks | `tasks/triage_tasks.py` (Stage 1), `tasks/score_tasks.py` (Stage 2 driver, rate-limit-safe retry policy), `tasks/digest_tasks.py` (`build_digest_task`) | shipped |
-| Scoring graph | `services/scoring_service/` (builder, `questions.py`, `judgments.py`, `nodes/`, context), `schemas/scoring_state.py` | shipped (v2) |
+| Scoring graph | `services/scoring_service/` (builder, `questions.py`, `judgments.py`, `nodes/`, context, `state.py`) | shipped (v2) |
 | Sections | `utils/section_splitter.py` (heading split, positional fallbacks, code mentions over `paper.raw_text`) | shipped (v2) |
 | Clients | `clients/typesafe_client.py`, `clients/semantic_scholar_client.py` | shipped |
 | Tools | `services/agent_service/tools/semantic_scholar.py` | shipped |
-| DB | migrations `019_add_scoring_tables`, `020_add_score_dimensions` (`dimensions`, `attributes`, `model`, `input_tokens` on `paper_scores`) | shipped |
+| DB | migrations `019_add_scoring_tables`, `020_add_score_dimensions` (`dimensions`, `attributes`, `model`, `input_tokens` on `paper_scores`), `021_add_conversation_paper_id`, `022_drop_chat_first_leftovers` | shipped |
 | Eval | `tests/evals/integration/test_scoring_eval.py` (implementable gate + calibration report), `tests/evals/fixtures/scoring_scenarios.py` | shipped |
 | Code gap | `clients/github_client.py`, `.../tools/github_search.py`, `score_code_gap` node | **v1.1** |
 
@@ -405,10 +420,11 @@ Two bets are unproven and cheap to test before any schema is committed:
 
 ## Testing Strategy
 
-- Unit: dimension nodes with mocked `llm_client` / clients (`@pytest.mark.unit`).
-- Integration: full scoring graph over a fixture paper against the test DB
-  (`@pytest.mark.integration`, port 5433).
-- Eval: golden-set rubric accuracy (`@pytest.mark.eval`).
+- Unit: dimension nodes with a mocked `TypeSafeClient` / `SemanticScholarClient`
+  (`tests/unit/services/test_scoring_service/`).
+- Integration: `tests/integration/services/test_{scoring_pipeline,digest_build,feed_service}.py`
+  against the test DB (port 5433).
+- Eval: golden-set rubric accuracy (`@pytest.mark.inteval`, see Evaluation).
 - Clients: `semantic_scholar_client` (v1; `github_client` in v1.1) against recorded
   fixtures with rate-limit/backoff paths exercised.
 
@@ -436,4 +452,4 @@ Two bets are unproven and cheap to test before any schema is committed:
 3. Exact read-time composite formula and how compute-profile buckets (laptop / single GPU
    / cloud) map onto the resource-feasibility sub-score.
 4. AGPL implications if the scored index is exposed via a public API later
-   (`proposal.md` Open Question 4).
+   (open since the direction pitch; no decision recorded).

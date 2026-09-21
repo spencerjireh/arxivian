@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from src.schemas.ingest import IngestResponse
+from src.services.ingest_service import IngestResponse
 
 
 @pytest.fixture

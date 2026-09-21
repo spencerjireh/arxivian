@@ -1,3 +1,4 @@
+// Feed profile form shared by /onboarding and Settings (backend schemas/users.py::FeedProfile).
 import { useState } from 'react'
 import Button from '../ui/Button'
 import CategoryPicker from './CategoryPicker'

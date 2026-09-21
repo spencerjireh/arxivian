@@ -2,8 +2,6 @@
 
 import type { ScoreDimension, ScoreBand } from '../types/api'
 
-export type { ScoreBand } from '../types/api'
-
 /** LOW [0,40) - MED [40,70) - HIGH [70,100] */
 export function bandFor(score: number): ScoreBand {
   if (score < 40) return 'LOW'

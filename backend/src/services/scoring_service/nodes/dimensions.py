@@ -20,13 +20,6 @@ from langchain_core.runnables import RunnableConfig
 
 from src.clients.typesafe_client import Question, SystemOneResult
 from src.exceptions import TypeSafeConnectionError, TypeSafeRateLimitError
-from src.schemas.scoring_state import (
-    DEMAND_BAND_TO_SCORE,
-    EvidenceKind,
-    EvidenceSpan,
-    PaperAttributes,
-    PaperScoreState,
-)
 from src.services.scoring_service import questions as q
 from src.services.scoring_service.judgments import (
     choice_judgment,
@@ -35,6 +28,13 @@ from src.services.scoring_service.judgments import (
     combine_resource_feasibility,
     demand_from_band,
     noul_judgment,
+)
+from src.services.scoring_service.state import (
+    DEMAND_BAND_TO_SCORE,
+    EvidenceKind,
+    EvidenceSpan,
+    PaperAttributes,
+    PaperScoreState,
 )
 from src.utils.logger import get_logger
 

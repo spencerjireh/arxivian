@@ -1,3 +1,4 @@
+// Scoped chat: one retrieved source (backend schemas/stream.py::SourceInfo).
 import { useState } from 'react'
 import { ChevronRight, ExternalLink, FileText, Check, AlertTriangle } from 'lucide-react'
 import { AnimatedCollapse } from '../ui/AnimatedCollapse'

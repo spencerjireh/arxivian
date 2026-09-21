@@ -1,3 +1,4 @@
+// UI primitive: button with variant, size, loading state and optional icons.
 import { forwardRef } from 'react'
 import { Loader2 } from 'lucide-react'
 import clsx from 'clsx'

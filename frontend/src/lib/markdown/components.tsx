@@ -1,3 +1,4 @@
+// react-markdown component map: code blocks (Prism), links, tables, KaTeX output.
 import { ExternalLink } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { Components } from 'react-markdown'

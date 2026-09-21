@@ -1,3 +1,4 @@
+// Display formatting for author lists and dates.
 export function formatAuthors(authors: string[]): string {
   if (authors.length <= 3) return authors.join(', ')
   return `${authors.slice(0, 3).join(', ')} +${authors.length - 3} more`

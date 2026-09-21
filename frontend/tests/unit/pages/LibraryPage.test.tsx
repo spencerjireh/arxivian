@@ -14,7 +14,7 @@ const clearMutateAsync = vi.fn().mockResolvedValue(undefined)
 vi.mock('../../../src/api/library', () => ({
   useLibrary: () => mockUseLibrary(),
 }))
-vi.mock('../../../src/api/paperState', () => ({
+vi.mock('../../../src/api/paperStates', () => ({
   useSetPaperState: () => ({ mutateAsync: setMutateAsync }),
   useClearPaperState: () => ({ mutateAsync: clearMutateAsync }),
 }))

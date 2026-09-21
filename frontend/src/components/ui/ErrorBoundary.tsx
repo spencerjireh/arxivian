@@ -1,3 +1,4 @@
+// UI primitive: React error boundary that renders a fallback component with reset.
 import { Component, type ReactNode } from 'react'
 
 export interface FallbackProps {

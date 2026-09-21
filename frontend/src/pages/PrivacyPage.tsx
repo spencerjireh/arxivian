@@ -1,3 +1,4 @@
+// /privacy route: renders content/privacy-policy.md through the markdown component map.
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import PublicHeader from '../components/layout/PublicHeader'

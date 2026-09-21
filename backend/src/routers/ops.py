@@ -18,18 +18,16 @@ from src.schemas.ops import (
     BulkIngestRequest,
     BulkIngestResponse,
     CleanupResponse,
+    DeletePaperResponse,
     OrphanedPaper,
-    SystemSearchesResponse,
-    UpdateSystemSearchesRequest,
-    UpdateTierRequest,
-    UpdateTierResponse,
-)
-from src.schemas.papers import DeletePaperResponse
-from src.schemas.tasks import (
     RevokeTaskResponse,
+    SystemSearchesResponse,
     TaskListItem,
     TaskListResponse,
     TaskStatusResponse,
+    UpdateSystemSearchesRequest,
+    UpdateTierRequest,
+    UpdateTierResponse,
 )
 from src.tasks.ingest_tasks import ingest_papers_task
 from src.tiers import SYSTEM_USER_CLERK_ID, UserTier, get_system_user_id

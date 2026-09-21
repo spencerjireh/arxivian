@@ -5,7 +5,7 @@ from typing import Any
 from src.celery_app import celery_app
 from src.database import AsyncSessionLocal
 from src.factories import get_ingest_service
-from src.schemas.ingest import IngestRequest
+from src.services.ingest_service import IngestRequest
 from src.tasks.runtime import run_async
 from src.utils.logger import get_logger
 
