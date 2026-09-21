@@ -8,6 +8,7 @@ from src.services.scoring_service.triage import (
     TriageBatchResult,
     TriageResult,
     get_triage_batch_prompt,
+    normalize_arxiv_id,
 )
 
 
@@ -85,13 +86,31 @@ class TestGetTriageBatchPrompt:
         ]
         _, user = get_triage_batch_prompt(papers)
 
-        assert "1. arXiv:2401.001" in user
-        assert "2. arXiv:2401.002" in user
+        assert "1. arxiv_id: 2401.001" in user
+        assert "2. arxiv_id: 2401.002" in user
         assert "abs one" in user and "abs two" in user
         assert "2 papers" in user  # batch count stated
 
     def test_handles_missing_fields(self):
         papers = [{"arxiv_id": "2401.003"}]  # no title/abstract
         _, user = get_triage_batch_prompt(papers)
-        assert "arXiv:2401.003" in user
+        assert "arxiv_id: 2401.003" in user
         assert "Unknown title" in user
+
+
+class TestNormalizeArxivId:
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            ("2609.22064", "2609.22064"),
+            ("arXiv:2609.22064", "2609.22064"),
+            ("ARXIV:2609.22064v2", "2609.22064"),
+            (" arXiv:2609.22064v10 ", "2609.22064"),
+            ("https://arxiv.org/abs/2609.22064v1", "2609.22064"),
+            ("http://www.arxiv.org/pdf/2609.22064v3.pdf", "2609.22064"),
+            ("hep-th/9901001v2", "hep-th/9901001"),
+            ("arXiv:cs.LG/0701001", "cs.LG/0701001"),
+        ],
+    )
+    def test_reduces_to_the_bare_crawled_form(self, raw, expected):
+        assert normalize_arxiv_id(raw) == expected

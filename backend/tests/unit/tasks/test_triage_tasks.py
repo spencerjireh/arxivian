@@ -155,6 +155,24 @@ class TestTriageNewPapersTask:
         assert result["crawled"] == 3  # deduped, not 4
         assert apply_async.call_count == 3
 
+    def test_decorated_echoed_ids_still_match(self, triage_settings):
+        """gpt-5-nano echoes `arXiv:2609.22064` (and sometimes a version) for a bare crawled
+        id; on 2026-09-21 that dropped all 336 papers of the first production cycle."""
+        papers = [_paper("2401.001"), _paper("2401.002"), _paper("2401.003")]
+        batch = TriageBatchResult(
+            results=[
+                _verdict("arXiv:2401.001", True),
+                _verdict("arXiv:2401.002v2", False),
+                _verdict("https://arxiv.org/abs/2401.003", True),
+            ]
+        )
+        result, apply_async, _ = _run_triage({"cs.LG": papers}, [batch], triage_settings)
+
+        assert result["survivors"] == 2
+        assert result["rejected"] == 1
+        enqueued_ids = {c.kwargs["kwargs"]["arxiv_id"] for c in apply_async.call_args_list}
+        assert enqueued_ids == {"2401.001", "2401.003"}  # bare ids, as crawled
+
     def test_batch_failure_is_skipped(self, triage_settings):
         papers = [_paper("2401.001"), _paper("2401.002")]
         result, apply_async, _ = _run_triage(
