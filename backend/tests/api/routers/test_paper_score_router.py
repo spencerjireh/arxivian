@@ -94,12 +94,21 @@ class TestGetPaperScore:
         mock_feed_service.get_score_detail.return_value = None
         redis = AsyncMock()
         redis.set.return_value = True
+        redis.incr.side_effect = [1, 1]
         _use_redis(redis)
         with patch("src.routers.papers.score_paper_task") as task:
             resp = client.get("/api/v1/papers/2301.00001/score")
         assert resp.status_code == 202
         body = resp.json()
         assert body["status"] == "pending" and body["arxiv_id"] == "2301.00001"
+        day = datetime.now(UTC).date().isoformat()
+        incremented = [c.args[0] for c in redis.incr.await_args_list]
+        assert incremented == [
+            f"score:ondemand:day:{day}",
+            f"score:ondemand:user:{mock_user.id}:{day}",
+        ]
+        assert redis.expire.await_count == 2
+        redis.decr.assert_not_awaited()
         assert body["task_id"].startswith("ondemand-2301.00001-")
         redis.set.assert_awaited_once()
         assert redis.set.await_args.args[0] == "score:ondemand:2301.00001"
@@ -128,6 +137,33 @@ class TestGetPaperScore:
         assert resp.json()["task_id"] == "ondemand-2301.00001-abcd1234"
         task.apply_async.assert_not_called()
         mock_task_exec_repo.create.assert_not_awaited()
+        redis.incr.assert_not_awaited()  # a poll never counts against the budgets
+
+    @pytest.mark.parametrize(
+        ("counts", "scope", "current", "limit"),
+        [
+            ([3, 11], "user", 10, 10),  # per-user cap (default 10) spent
+            ([31, 4], "global", 30, 30),  # global budget (default 30) spent
+        ],
+    )
+    def test_budget_spent_is_429_and_releases_the_lock(
+        self, client, mock_feed_service, mock_task_exec_repo, counts, scope, current, limit
+    ):
+        mock_feed_service.get_score_detail.return_value = None
+        redis = AsyncMock()
+        redis.set.return_value = True
+        redis.incr.side_effect = counts
+        _use_redis(redis)
+        with patch("src.routers.papers.score_paper_task") as task:
+            resp = client.get("/api/v1/papers/2301.00001/score")
+        assert resp.status_code == 429
+        error = resp.json()["error"]
+        assert error["code"] == "SCORING_LIMIT_EXCEEDED"
+        assert error["details"] == {"scope": scope, "current": current, "limit": limit}
+        task.apply_async.assert_not_called()
+        mock_task_exec_repo.create.assert_not_awaited()
+        assert redis.decr.await_count == 2  # both counters undone
+        redis.delete.assert_awaited_once_with("score:ondemand:2301.00001")
 
     def test_accepts_versioned_ids(self, client, mock_feed_service):
         mock_feed_service.get_score_detail.return_value = _detail()

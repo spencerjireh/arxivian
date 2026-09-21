@@ -122,6 +122,8 @@ def mock_settings():
     settings.jina_api_key = "test-jina-key"
     settings.agent_timeout_seconds = 180
     settings.ondemand_score_lock_seconds = 1800
+    settings.ondemand_score_daily_budget = 30
+    settings.ondemand_score_daily_per_user = 10
     settings.cors_origins = ""
     settings.debug = False
     settings.log_level = "INFO"

@@ -117,7 +117,10 @@ a digest week. Routers: `feed` (`GET /feed`), `paper_states` (`PUT`/`DELETE
 /papers/{arxiv_id}/state`, `GET /users/me/library` grouped saved / implementing / shipped),
 `papers` (`GET /papers/{arxiv_id}/score`: full breakdown with `score_evidence` spans; an
 unscored paper enqueues `score_paper_task` behind a Redis `SET NX` lock
-`score:ondemand:{arxiv_id}` and answers 202 until a poll finds a score). The onboarding
+`score:ondemand:{arxiv_id}` and answers 202 until a poll finds a score; each new enqueue
+counts against two Redis day counters, `ONDEMAND_SCORE_DAILY_BUDGET` across all users and
+`ONDEMAND_SCORE_DAILY_PER_USER`, past which it is a 429 `SCORING_LIMIT_EXCEEDED`). The
+onboarding
 profile lives in `users.preferences["feed_profile"]` (`schemas/users.py::FeedProfile`,
 `PATCH /users/me/preferences`, read back on `GET /users/me` with `onboarded`); per-user
 `weights` are reserved, not settable.
@@ -192,7 +195,8 @@ generated release notes (`release.yml`). Moving the stack between servers:
 - Compose env wiring: only variables listed under a service's `environment:` reach that
   container. Settings are validated at import, so `celery-beat` carries `CLERK_DOMAIN` plus
   the schedule crons; feed knobs (`TRIAGE_*`, `ONDEMAND_SCORE_LOCK_SECONDS`) are on `app`
-  and `celery-worker`. `TYPESAFE_API_KEY` is required for `backend` and `worker`.
+  and `celery-worker`, the `ONDEMAND_SCORE_DAILY_*` budgets on `app` only.
+  `TYPESAFE_API_KEY` is required for `backend` and `worker`.
 - Semantic Scholar runs keyless: a Redis slot (`SEMANTIC_SCHOLAR_MIN_INTERVAL_MS`) spaces
   requests across workers; a 429 soft-fails to NULL demand and the nightly backfill retries.
 - Stale Coolify keys (`ALLOWED_LLM_MODELS`, `NVIDIA_NIM_*`, `REDIS_CHECKPOINT_URL`,
