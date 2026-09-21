@@ -18,7 +18,8 @@ dependencies = [
     "pgvector>=0.3.4",
     # AI/ML
     "litellm>=1.50.0",
-    "openai>=1.54.3",
+    # litellm 1.102 requires openai<3; bump both together.
+    "openai>=1.54.3,<3",
     "langchain>=0.3.7",
     "langchain-openai>=0.2.5",
     "langchain-core>=0.3.15",
@@ -58,7 +59,7 @@ dev = [
     "pytest-cov>=6.0.0",
     # Exact pins: CI, the pre-commit hook and `just lint` all run the locked binary, and
     # ruff/ty change diagnostics between releases. Dependabot bumps these.
-    "ruff==0.14.14",
+    "ruff==0.16.8",
     "ty==0.0.82",
     "vulture>=2.14",
 ]
