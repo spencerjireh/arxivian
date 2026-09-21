@@ -37,7 +37,9 @@ export function usePaperScore(arxivId: string | undefined) {
     queryFn: () => fetchPaperScore(arxivId!),
     enabled: !!arxivId,
     staleTime: 5 * 60_000,
-    retry: (count, err) => !(err instanceof ApiError && err.status === 404) && count < 1,
+    // 404: no such paper; 429: today's on-demand scoring budget is spent (SPE-302).
+    retry: (count, err) =>
+      !(err instanceof ApiError && (err.status === 404 || err.status === 429)) && count < 1,
     refetchIntervalInBackground: false,
     refetchInterval: (q) => {
       const data = q.state.data
