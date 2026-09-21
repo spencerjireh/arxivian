@@ -1,3 +1,4 @@
+// The only router: lazy pages, ProtectedRoute and OnboardingGate wrappers, /chat/* -> /feed redirect.
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { AuthenticateWithRedirectCallback } from '@clerk/clerk-react'

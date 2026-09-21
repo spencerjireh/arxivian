@@ -1,3 +1,4 @@
+// Feed profile form: laptop / single GPU / cloud choice.
 import { Cloud, Cpu, Laptop } from 'lucide-react'
 import clsx from 'clsx'
 import type { ComputeProfile } from '../../types/api'

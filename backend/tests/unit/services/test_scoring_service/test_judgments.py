@@ -3,11 +3,6 @@
 import pytest
 
 from src.clients.typesafe_client import ChoiceResult, ScoreResult
-from src.schemas.scoring_state import (
-    DEMAND_BAND_TO_SCORE,
-    DimensionScore,
-    score_to_band,
-)
 from src.services.scoring_service.judgments import (
     argmax,
     combine_data_availability,
@@ -19,6 +14,11 @@ from src.services.scoring_service.judgments import (
     score_judgment,
 )
 from src.services.scoring_service.questions import GATE_PASS_OPTIONS, METHOD_CLARITY_CRITERIA
+from src.services.scoring_service.state import (
+    DEMAND_BAND_TO_SCORE,
+    DimensionScore,
+    score_to_band,
+)
 
 
 class TestPoissonBinomial:

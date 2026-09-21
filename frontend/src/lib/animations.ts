@@ -1,3 +1,4 @@
+// framer-motion variants and transitions shared by the landing page and chat.
 import type { Variants, Transition } from 'framer-motion'
 
 export const staggerContainer: Variants = {

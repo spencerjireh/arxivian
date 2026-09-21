@@ -17,22 +17,22 @@ from langgraph.graph.state import CompiledStateGraph
 
 from src.clients.base_llm_client import BaseLLMClient
 from src.clients.semantic_scholar_client import SemanticScholarClient
-from src.repositories.conversation_repository import ConversationRepository
+from src.repositories.conversation_repository import ConversationRepository, TurnData
 from src.repositories.paper_repository import PaperRepository
-from src.schemas.common import SourceInfo
-from src.schemas.conversation import ConversationMessage, TurnData
 from src.schemas.stream import (
     CitationsEventData,
     ContentEventData,
     DoneEventData,
     MetadataEventData,
+    SourceInfo,
     SourcesEventData,
     StatusEventData,
     StreamEvent,
     StreamEventType,
 )
+from src.services.agent_service.state import ConversationMessage
+from src.services.agent_service.title import generate_title
 from src.services.search_service import SearchService
-from src.services.title_service import generate_title
 from src.utils.logger import get_logger
 
 from .context import AgentContext, ScopedPaper

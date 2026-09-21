@@ -9,7 +9,8 @@ from src.dependencies import (
     UserPaperStateRepoDep,
 )
 from src.exceptions import ResourceNotFoundError
-from src.schemas.feed import LibraryResponse, UserPaperStateRequest, UserPaperStateResponse
+from src.schemas.feed import LibraryResponse
+from src.schemas.paper_states import UserPaperStateRequest, UserPaperStateResponse
 
 router = APIRouter()
 

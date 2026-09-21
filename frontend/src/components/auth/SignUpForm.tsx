@@ -1,3 +1,4 @@
+// Auth pages: sign-up form with email verification over Clerk's useSignUp.
 import { Link } from 'react-router-dom'
 import OAuthButtons from './OAuthButtons'
 

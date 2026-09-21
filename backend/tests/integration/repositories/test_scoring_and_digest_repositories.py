@@ -10,7 +10,7 @@ import pytest
 from src.repositories.digest_repository import DigestRepository
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.scoring_repository import ScoringRepository
-from src.schemas.scoring_state import RUBRIC_VERSION
+from src.services.scoring_service.state import RUBRIC_VERSION
 
 
 async def _scored(db_session, sample_paper_data, arxiv_id, *, evidence=()):

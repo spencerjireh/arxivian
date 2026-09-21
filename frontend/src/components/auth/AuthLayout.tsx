@@ -1,3 +1,4 @@
+// Auth pages: centered card with title and subtitle around a sign-in or sign-up form.
 import logoIcon from '../../assets/logo-icon.png'
 
 interface AuthLayoutProps {

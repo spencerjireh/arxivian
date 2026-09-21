@@ -1,3 +1,4 @@
+// UI primitive: text input with label and error text.
 import { forwardRef, useId } from 'react'
 import clsx from 'clsx'
 

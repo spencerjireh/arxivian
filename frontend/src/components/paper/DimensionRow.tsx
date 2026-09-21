@@ -1,3 +1,4 @@
+// Paper detail: one rubric dimension row, expandable to its judgments and evidence.
 import { useState } from 'react'
 import { AlertCircle, ChevronDown } from 'lucide-react'
 import clsx from 'clsx'

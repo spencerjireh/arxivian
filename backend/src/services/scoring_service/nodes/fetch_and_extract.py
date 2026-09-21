@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from langchain_core.runnables import RunnableConfig
 
 from src.exceptions import ScoringError
-from src.schemas.scoring_state import PaperScoreState
+from src.services.scoring_service.state import PaperScoreState
 from src.utils.logger import get_logger
 from src.utils.section_splitter import code_mentions, extract_sections
 

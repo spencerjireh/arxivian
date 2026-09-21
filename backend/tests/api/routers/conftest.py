@@ -27,6 +27,8 @@ def mock_database_init():
         stack.enter_context(patch("src.database.init_db", new_callable=AsyncMock))
         mock_engine = stack.enter_context(patch("src.database.engine"))
         mock_engine.dispose = AsyncMock()
+        # main.py instruments the engine at import; a MagicMock engine has no events.
+        stack.enter_context(patch("logfire.instrument_sqlalchemy"))
         stack.enter_context(patch("src.main.AsyncSessionLocal", side_effect=mock_session_factory))
         stack.enter_context(patch("src.tiers.init_system_user", new_callable=AsyncMock))
         mock_redis_factory = stack.enter_context(patch("redis.asyncio.from_url"))

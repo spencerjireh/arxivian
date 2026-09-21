@@ -1,3 +1,4 @@
+// Feed card: Save / Dismiss / Implementing (and optional Ship) buttons with optimistic state.
 import { useState } from 'react'
 import { Bookmark, BookmarkCheck, ExternalLink, Hammer, Rocket, X } from 'lucide-react'
 import Button from '../ui/Button'

@@ -1,3 +1,4 @@
+// App shell: button that opens or collapses the sidebar (stores/sidebarStore).
 import { PanelLeft } from 'lucide-react'
 import { useSidebarStore } from '../../stores/sidebarStore'
 import Button from '../ui/Button'

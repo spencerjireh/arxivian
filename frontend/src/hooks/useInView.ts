@@ -1,3 +1,4 @@
+// useInView: IntersectionObserver hook for reveal-on-scroll.
 import { useEffect, useRef, useState } from 'react'
 
 interface UseInViewOptions {

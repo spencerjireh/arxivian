@@ -8,7 +8,7 @@ import json
 from langchain_core.runnables import RunnableConfig
 from langgraph.config import get_stream_writer
 
-from src.schemas.langgraph_state import AgentState, ToolCall, ToolExecution, ToolOutput
+from src.services.agent_service.state import AgentState, ToolCall, ToolExecution, ToolOutput
 from src.services.agent_service.tools import ToolResult
 from src.utils.logger import get_logger
 

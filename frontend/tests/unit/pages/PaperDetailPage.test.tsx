@@ -16,7 +16,7 @@ const restartPolling = vi.fn()
 vi.mock('../../../src/api/scores', () => ({
   usePaperScore: (id: string) => mockUsePaperScore(id),
 }))
-vi.mock('../../../src/api/paperState', () => ({
+vi.mock('../../../src/api/paperStates', () => ({
   useSetPaperState: () => ({ mutateAsync: setMutateAsync }),
   useClearPaperState: () => ({ mutateAsync: clearMutateAsync }),
 }))

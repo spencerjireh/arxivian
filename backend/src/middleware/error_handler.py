@@ -45,12 +45,12 @@ async def base_exception_handler(_request: Request, exc: BaseAPIException) -> JS
 async def validation_exception_handler(
     _request: Request, exc: RequestValidationError | PydanticValidationError
 ) -> JSONResponse:
-    """Handle Pydantic validation errors from request parsing."""
-    log.warning("validation error", errors=exc.errors())
-
-    # exc.errors() may contain non-serializable objects (e.g. ValueError in ctx),
-    # so strip the ctx key which can hold raw exception instances.
-    errors = [{k: v for k, v in e.items() if k != "ctx"} for e in exc.errors()]
+    """Handle Pydantic validation errors from request parsing and response building."""
+    # `ctx` can hold raw exception instances and `input` the offending object (for a
+    # response-model failure that is an ORM row whose repr may need a closed session),
+    # so neither is logged nor returned.
+    errors = [{k: v for k, v in e.items() if k not in ("ctx", "input")} for e in exc.errors()]
+    log.warning("validation error", errors=errors)
 
     error_response = ErrorResponse(
         error=ErrorDetail(
