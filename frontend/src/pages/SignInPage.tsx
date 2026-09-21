@@ -4,7 +4,7 @@ import SignInForm from '../components/auth/SignInForm'
 
 export default function SignInPage() {
   return (
-    <AuthLayout title="Welcome back" subtitle="Sign in to your research workspace">
+    <AuthLayout title="Welcome back" subtitle="Sign in to your weekly feed">
       <SignInForm />
     </AuthLayout>
   )
