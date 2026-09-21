@@ -1,6 +1,6 @@
 """Streaming request and response schemas with SSE event types."""
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
@@ -34,7 +34,7 @@ class StreamRequest(BaseModel):
 # SSE Event Types
 
 
-class StreamEventType(str, Enum):
+class StreamEventType(StrEnum):
     """Types of SSE events emitted during streaming."""
 
     STATUS = "status"  # Workflow step updates (classify, execute, evaluate, generate)
