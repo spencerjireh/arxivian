@@ -14,12 +14,30 @@ position papers, non-implementable theory). Output is validated against
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 PaperClass = Literal["method", "survey", "benchmark", "theory", "position"]
+
+_ARXIV_ID_PREFIX_RE = re.compile(
+    r"^(?:https?://(?:www\.)?arxiv\.org/(?:abs|pdf)/|arxiv:)", re.IGNORECASE
+)
+_ARXIV_ID_SUFFIX_RE = re.compile(r"(?:v\d+)?(?:\.pdf)?$", re.IGNORECASE)
+
+
+def normalize_arxiv_id(raw: str) -> str:
+    """Reduce an arXiv id as an LLM or a user may write it to the bare form the crawl uses.
+
+    Strips whitespace, an `arXiv:` prefix or an arxiv.org abs/pdf URL, a `vN` version and
+    a `.pdf` suffix: `arXiv:2609.22064v2` -> `2609.22064`. The crawl stores ids bare and
+    unversioned (`clients/arxiv_client.py`), and the LLM echo must match them exactly.
+    """
+    value = raw.strip()
+    value = _ARXIV_ID_PREFIX_RE.sub("", value)
+    return _ARXIV_ID_SUFFIX_RE.sub("", value)
 
 
 class TriageResult(BaseModel):
@@ -64,13 +82,17 @@ Return exactly one result per input paper, echoing its arxiv_id."""
 
 
 def _format_papers(papers: Sequence[dict[str, Any]]) -> str:
-    """Render the batch as a numbered list of id / title / abstract blocks."""
+    """Render the batch as a numbered list of id / title / abstract blocks.
+
+    The id is rendered bare (no `arXiv:` prefix) so the echoed `arxiv_id` matches the
+    crawled id; `normalize_arxiv_id` on the consumer side covers a decorated echo anyway.
+    """
     blocks: list[str] = []
     for i, paper in enumerate(papers, start=1):
         arxiv_id = paper.get("arxiv_id", "unknown")
         title = paper.get("title", "Unknown title")
         abstract = (paper.get("abstract") or "").strip()
-        blocks.append(f"{i}. arXiv:{arxiv_id}\nTitle: {title}\nAbstract: {abstract}")
+        blocks.append(f"{i}. arxiv_id: {arxiv_id}\nTitle: {title}\nAbstract: {abstract}")
     return "\n\n".join(blocks)
 
 
