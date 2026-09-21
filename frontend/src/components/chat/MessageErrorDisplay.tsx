@@ -1,3 +1,4 @@
+// Scoped chat: error card for a failed turn, mapped through lib/errorMapping, with retry.
 import { AlertCircle, RotateCcw } from 'lucide-react'
 import { getErrorTreatment } from '../../lib/errorMapping'
 import type { MessageError } from '../../types/api'

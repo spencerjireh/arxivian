@@ -1,3 +1,4 @@
+// Feed profile form: arXiv category multi-select (lib/arxivCategories.ts).
 import clsx from 'clsx'
 import { ARXIV_CATEGORIES } from '../../lib/arxivCategories'
 

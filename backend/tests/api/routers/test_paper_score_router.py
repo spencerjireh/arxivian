@@ -5,14 +5,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.schemas.feed import (
-    DimensionDetail,
-    FeedPaper,
-    FeedScores,
-    FeedSignals,
-    PaperAttributesDetail,
-    PaperScoreDetailResponse,
-)
+from src.schemas.feed import FeedPaper, FeedScores, FeedSignals
+from src.schemas.papers import DimensionDetail, PaperAttributesDetail, PaperScoreDetailResponse
 
 
 def _detail():

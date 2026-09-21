@@ -6,7 +6,7 @@ import re
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 
-from src.schemas.langgraph_state import AgentState, ClassificationResult, ToolCall
+from src.services.agent_service.state import AgentState, ClassificationResult, ToolCall
 from src.utils.logger import get_logger
 
 from ..context import AgentContext

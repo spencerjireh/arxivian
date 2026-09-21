@@ -1,3 +1,4 @@
+// App shell for signed-in routes: collapsible sidebar plus the routed page (Outlet).
 import { Outlet, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import Sidebar from '../sidebar/Sidebar'

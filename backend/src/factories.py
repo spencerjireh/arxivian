@@ -27,15 +27,15 @@ from src.repositories.paper_repository import PaperRepository
 from src.repositories.scoring_repository import ScoringRepository
 from src.repositories.search_repository import SearchRepository
 from src.repositories.user_paper_state_repository import UserPaperStateRepository
-from src.schemas.digest import category_key_for
-from src.schemas.scoring_state import RUBRIC_VERSION
 from src.services.agent_service import AgentService
 from src.services.agent_service.context import ScopedPaper
 from src.services.auth_service import AuthService
 from src.services.chunking_service import ChunkingService
 from src.services.feed_service import FeedService
+from src.services.feed_service.digest import category_key_for
 from src.services.ingest_service import IngestService
 from src.services.scoring_service.context import ScoringContext
+from src.services.scoring_service.state import RUBRIC_VERSION
 from src.services.search_service import SearchService
 from src.utils.pdf_parser import PDFParser
 

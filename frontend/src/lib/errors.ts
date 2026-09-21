@@ -1,3 +1,4 @@
+// ApiError helpers: auth detection and the message to show a user.
 import { ApiError } from '../api/client'
 
 export function isAuthError(error: unknown): boolean {

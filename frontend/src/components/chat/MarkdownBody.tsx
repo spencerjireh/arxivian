@@ -1,3 +1,4 @@
+// Markdown renderer body (lazy-loaded): react-markdown with the plugins from lib/markdown.
 import ReactMarkdown, { type Components } from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'

@@ -1,9 +1,10 @@
+// Settings: account details, daily chat usage and sign-out.
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser, useClerk } from '@clerk/clerk-react'
 import clsx from 'clsx'
 import { LogOut, Trash2 } from 'lucide-react'
-import Button from '../../components/ui/Button'
+import Button from '../ui/Button'
 import { useUserStore } from '../../stores/userStore'
 
 export default function AccountSection() {

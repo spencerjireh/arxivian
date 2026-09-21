@@ -1,3 +1,4 @@
+// Public pages: top bar with logo, pricing link and the sign-in / open-app call to action.
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { ArrowRight } from 'lucide-react'
@@ -45,7 +46,7 @@ export default function PublicHeader() {
                 size="sm"
                 rightIcon={<ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />}
               >
-                Go to Chat
+                Open feed
               </Button>
             </Link>
           ) : (

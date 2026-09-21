@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from src.schemas.triage import TriageBatchResult, TriageResult
+from src.services.scoring_service.triage import TriageBatchResult, TriageResult
 
 
 def _paper(arxiv_id: str, title: str = "T", abstract: str = "A", categories=None):

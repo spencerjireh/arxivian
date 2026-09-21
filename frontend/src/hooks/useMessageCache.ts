@@ -1,3 +1,4 @@
+// useMessageCache: TanStack Query cache of a thread's turns (GET /conversations/{id}), keyed per paper for drafts.
 import { useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useChatStore } from '../stores/chatStore'

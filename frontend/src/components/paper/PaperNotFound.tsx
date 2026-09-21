@@ -1,3 +1,4 @@
+// Paper detail: 404 state for an unknown arXiv id.
 import { Link } from 'react-router-dom'
 import { BookX } from 'lucide-react'
 

@@ -1,4 +1,4 @@
-import { generateId, generateStepId, generateMessageId } from '../../../src/utils/id'
+import { generateId, generateMessageId } from '../../../src/lib/id'
 
 describe('generateId', () => {
   it('returns prefix-timestamp-random when prefix is given', () => {
@@ -20,12 +20,6 @@ describe('generateId', () => {
   it('produces unique ids on successive calls', () => {
     const ids = new Set(Array.from({ length: 50 }, () => generateId()))
     expect(ids.size).toBe(50)
-  })
-})
-
-describe('generateStepId', () => {
-  it('starts with "step-"', () => {
-    expect(generateStepId()).toMatch(/^step-/)
   })
 })
 

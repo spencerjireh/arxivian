@@ -1,10 +1,11 @@
+// Paper detail: per-dimension breakdown from GET /papers/{id}/score (backend schemas/papers.py).
 import ScoreBadge from '../feed/ScoreBadge'
 import VerdictLine from '../feed/VerdictLine'
 import SignalChips from '../feed/SignalChips'
 import DimensionRow from './DimensionRow'
 import EvidenceList from './EvidenceList'
 import { DIMENSION_LABELS } from '../../lib/scoring'
-import { formatDate } from '../../utils/formatting'
+import { formatDate } from '../../lib/formatting'
 import type { PaperScoreDetail } from '../../types/api'
 
 interface ScoreBreakdownProps {

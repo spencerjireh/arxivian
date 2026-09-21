@@ -1,3 +1,4 @@
+// Paper detail: quoted evidence spans for a dimension.
 import { EVIDENCE_KIND_LABELS } from '../../lib/scoring'
 import type { EvidenceSpan } from '../../types/api'
 

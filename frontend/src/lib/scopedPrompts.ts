@@ -1,3 +1,4 @@
+// Seeded prompt suggestions for an empty paper-scoped chat.
 import { AlertTriangle, BookOpen, FolderGit2 } from 'lucide-react'
 import type { Suggestion } from '../components/chat/SuggestionChips'
 

@@ -1,3 +1,4 @@
+// App shell: Feed / Library / Settings navigation and the user menu.
 import { useNavigate, useLocation } from 'react-router-dom'
 import { PanelLeftClose, BookOpen, Settings, Newspaper } from 'lucide-react'
 import clsx from 'clsx'

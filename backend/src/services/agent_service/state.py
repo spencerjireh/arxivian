@@ -1,4 +1,4 @@
-"""LangGraph state and structured output models."""
+"""Paper-scoped chat graph: LangGraph state, structured-output models, message shape."""
 
 from typing import Annotated, Any, Literal, Required, TypedDict
 
@@ -6,7 +6,13 @@ from langchain_core.messages import AnyMessage
 from langgraph.graph.message import add_messages
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.schemas.conversation import ConversationMessage
+
+class ConversationMessage(TypedDict):
+    """A single message in a conversation."""
+
+    role: Literal["user", "assistant"]
+    content: str
+
 
 # Execution status types
 ExecutionStatus = Literal["running", "completed", "failed"]

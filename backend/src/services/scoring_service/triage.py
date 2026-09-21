@@ -1,19 +1,50 @@
-"""Prompt for Stage 1 cheap triage (batched abstract classification).
+"""Stage 1 cheap triage: result schemas and the batched abstract-classification prompt.
 
-Stage 1 runs a single coarse keep/drop judgment over a batch of abstracts on the cheap
-default model -- it is NOT one of the Stage 2 rubric dimensions in `prompts.py`. The goal is
-recall-biased elimination of the obvious non-candidates (surveys, position papers,
-non-implementable theory) before any full-text cost, not a precise score. Stage 2 does the
-real scoring on the survivors.
+Stage 1 crawls new arXiv submissions (title + abstract only, no PDF) and runs a single
+coarse keep/drop classification over a batch of abstracts on the cheap default model.
+Survivors are enqueued into Stage 2 deep scoring; the bulk (~70-80%) is dropped before any
+full-text cost is incurred. See `docs/design/scoring-pipeline.md` -> "Stage 1 -- Cheap Triage".
 
-Mirrors the `(system_prompt, user_prompt)` builder convention in `prompts.py`. Output is
-validated against `TriageBatchResult` by `generate_structured`.
+The schema is deliberately lighter than the Stage 2 `DimensionScore` in `state.py`: one
+verdict per paper, no evidence spans. The prompt is NOT one of the Stage 2 rubric
+dimensions; it is recall-biased elimination of the obvious non-candidates (surveys,
+position papers, non-implementable theory). Output is validated against
+`TriageBatchResult` by `generate_structured`.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field
+
+PaperClass = Literal["method", "survey", "benchmark", "theory", "position"]
+
+
+class TriageResult(BaseModel):
+    """One coarse keep/drop verdict for a single crawled abstract."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    arxiv_id: str
+    paper_class: PaperClass
+    rough_implementability: int = Field(..., ge=0, le=100)
+    keep: bool  # survives to Stage 2
+    reasoning: str
+
+
+class TriageBatchResult(BaseModel):
+    """Wrapper so a single `generate_structured` call classifies a whole batch.
+
+    `generate_structured` returns one object, so batching N abstracts into one LLM call
+    requires the response schema to hold a list.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    results: list[TriageResult]
+
 
 TRIAGE_SYSTEM_PROMPT = """You triage new arXiv papers for an "implementation feed": papers worth turning into \
 working software by an individual engineer. You see only title + abstract, so judge coarsely \

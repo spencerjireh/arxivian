@@ -1,3 +1,4 @@
+// Landing hero: static decorative artwork behind the headline.
 import clsx from 'clsx'
 
 const GLYPHS = [

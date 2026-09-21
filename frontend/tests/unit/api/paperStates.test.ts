@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider, type InfiniteData } from '@tanstack/r
 import { createElement } from 'react'
 import { feedKeys } from '../../../src/api/feed'
 import { libraryKeys } from '../../../src/api/library'
-import { applyStateToCaches, useSetPaperState } from '../../../src/api/paperState'
+import { applyStateToCaches, useSetPaperState } from '../../../src/api/paperStates'
 import { makeFeedItem, makeLibraryResponse, makeFeedResponse } from '../../fixtures/feed'
 import type { ReactNode } from 'react'
 import type { FeedResponse, LibraryResponse, PaperState } from '../../../src/types/api'

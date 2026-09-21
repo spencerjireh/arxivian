@@ -1,37 +1,8 @@
-"""Conversation schemas for multi-turn memory."""
+"""Response schemas for GET/DELETE /conversations (routers/conversations.py)."""
 
-from dataclasses import dataclass
 from datetime import datetime
-from typing import Literal
 
 from pydantic import BaseModel, Field
-from typing_extensions import TypedDict
-
-
-class ConversationMessage(TypedDict):
-    """A single message in a conversation."""
-
-    role: Literal["user", "assistant"]
-    content: str
-
-
-@dataclass
-class TurnData:
-    """Data for saving a conversation turn."""
-
-    user_query: str
-    agent_response: str
-    provider: str
-    model: str
-    guardrail_score: int | None = None
-    retrieval_attempts: int = 1
-    rewritten_query: str | None = None
-    sources: list[dict] | None = None
-    reasoning_steps: list[str] | None = None
-    citations: dict | None = None
-
-
-# API Response Schemas
 
 
 class ConversationTurnResponse(BaseModel):

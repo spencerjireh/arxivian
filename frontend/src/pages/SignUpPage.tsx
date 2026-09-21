@@ -1,3 +1,4 @@
+// /sign-up route.
 import AuthLayout from '../components/auth/AuthLayout'
 import SignUpForm from '../components/auth/SignUpForm'
 
