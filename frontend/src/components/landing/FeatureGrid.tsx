@@ -62,7 +62,7 @@ export default function FeatureGrid() {
           transition={transitions.base}
           className="font-display mb-12 text-center text-2xl tracking-tight text-stone-900 sm:text-3xl"
         >
-          Built for serious research
+          What a card tells you
         </motion.h2>
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
