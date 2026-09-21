@@ -1,3 +1,4 @@
+// Feed: the card list with loading, empty and error states.
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import FeedCard from './FeedCard'
 import type { PendingAction } from './CardActions'

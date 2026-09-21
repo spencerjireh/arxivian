@@ -1,6 +1,6 @@
 """Repository for Chunk model operations."""
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.chunk import Chunk
@@ -58,7 +58,5 @@ class ChunkRepository:
 
     async def count(self) -> int:
         """Get total count of chunks."""
-        from sqlalchemy import func
-
         result = await self.session.execute(select(func.count()).select_from(Chunk))
         return result.scalar_one()

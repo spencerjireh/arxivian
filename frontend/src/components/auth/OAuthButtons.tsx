@@ -1,3 +1,4 @@
+// Auth pages: Google OAuth button (Clerk authenticateWithRedirect), lands on /feed.
 import { useSignIn } from '@clerk/clerk-react'
 import Button from '../ui/Button'
 

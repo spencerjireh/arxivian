@@ -8,6 +8,7 @@ import pytest
 
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.user_paper_state_repository import UserPaperStateRepository
+from src.schemas.feed import UserPaperStateResponse
 
 
 async def _paper(db_session, sample_paper_data, arxiv_id):
@@ -35,6 +36,10 @@ async def test_upsert_updates_in_place(db_session, sample_paper_data, created_us
     )
     assert second.id == first.id
     assert second.state == "dismissed" and second.dismissal_reason == "not my area"
+    # The update path expires `updated_at` (onupdate); the row must be readable without a
+    # lazy load, because the router validates it into the response model right away.
+    assert second.updated_at is not None
+    UserPaperStateResponse.model_validate(second)
 
     assert (await repo.get(created_user.id, paper.id)).state == "dismissed"
 

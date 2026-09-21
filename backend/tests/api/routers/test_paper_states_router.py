@@ -5,7 +5,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from src.schemas.feed import FeedItem, FeedPaper, LibraryResponse, UserPaperStateResponse
+from src.schemas.feed import FeedItem, FeedPaper, LibraryResponse
+from src.schemas.paper_states import UserPaperStateResponse
 
 
 def _state_row(state="saved", repo_url=None, dismissal_reason=None):

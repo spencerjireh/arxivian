@@ -14,7 +14,7 @@ vi.mock('../../../src/components/auth/ProtectedRoute', () => ({
 // Mock lazy-loaded pages with lightweight stubs so the route tests
 // verify routing logic only -- page rendering is covered by page-level tests.
 vi.mock('../../../src/pages/LandingPage', () => ({
-  default: () => <h1>Understand research</h1>,
+  default: () => <h1>Papers you could</h1>,
 }))
 vi.mock('../../../src/pages/PricingPage', () => ({
   default: () => <h1>Simple, transparent pricing</h1>,
@@ -59,7 +59,7 @@ describe('App routes', () => {
 
     render(<RouterProvider router={router} />)
 
-    expect(await screen.findByRole('heading', { name: /Understand research/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /Papers you could/ })).toBeInTheDocument()
   })
 
   it('renders PricingPage at /pricing', async () => {

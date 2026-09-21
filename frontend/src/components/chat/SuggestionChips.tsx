@@ -1,3 +1,4 @@
+// Scoped chat: seeded prompt chips shown on an empty thread (lib/scopedPrompts.ts).
 import { BookOpen, Search, Lightbulb, GitCompare } from 'lucide-react'
 import clsx from 'clsx'
 import type { LucideIcon } from 'lucide-react'

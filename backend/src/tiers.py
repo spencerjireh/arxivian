@@ -10,6 +10,8 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from src.repositories.user_repository import UserRepository
+
 if TYPE_CHECKING:
     from src.models.user import User
 
@@ -52,7 +54,6 @@ def get_system_user_id() -> UUID:
 async def init_system_user(db: object) -> None:
     """Load the system user ID from the database. Call once at startup."""
     global _system_user_id
-    from src.repositories.user_repository import UserRepository
 
     user = await UserRepository(db).get_by_clerk_id(SYSTEM_USER_CLERK_ID)  # type: ignore[arg-type]
     if user is None:

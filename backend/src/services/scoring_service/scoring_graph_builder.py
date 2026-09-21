@@ -12,7 +12,6 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from src.schemas.scoring_state import PaperScoreState
 from src.services.scoring_service.nodes import (
     compose_and_persist_node,
     fetch_and_extract_node,
@@ -21,6 +20,7 @@ from src.services.scoring_service.nodes import (
     score_method_clarity_node,
     score_resource_feasibility_node,
 )
+from src.services.scoring_service.state import PaperScoreState
 
 # Dimension node name -> node fn. Adding code gap in v1.1 is one more entry here.
 _DIMENSION_NODES = {

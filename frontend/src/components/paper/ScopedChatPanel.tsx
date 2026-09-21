@@ -1,3 +1,4 @@
+// The only chat surface: a thread scoped to one paper (useChat + ?session= selection).
 import { useEffect } from 'react'
 import { MessageSquare, Plus } from 'lucide-react'
 import { useConversation, usePaperConversations } from '../../api/conversations'

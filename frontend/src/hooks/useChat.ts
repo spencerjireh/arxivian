@@ -1,3 +1,4 @@
+// useChat: one paper-scoped conversation over POST /stream (SSE), writing turns into chatStore and the message cache.
 import { useCallback, useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -5,7 +6,7 @@ import { streamChat, StreamAbortError, StreamError } from '../api/stream'
 import { conversationKeys } from '../api/conversations'
 import { useChatStore } from '../stores/chatStore'
 import { useUserStore } from '../stores/userStore'
-import { generateMessageId } from '../utils/id'
+import { generateMessageId } from '../lib/id'
 import { useMessageCache, chatKeys } from './useMessageCache'
 import { getErrorTreatment } from '../lib/errorMapping'
 import type { StreamCallbacks } from '../api/stream'

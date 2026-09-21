@@ -9,7 +9,7 @@ Design notes:
 - The wrapper is the cached singleton and holds config only. Each ``ask`` opens a fresh
   ``AsyncTypeSafeClient`` (which owns an httpx2 connection pool), mirroring
   ``SemanticScholarClient._fetch``'s per-call ``httpx.AsyncClient``. Celery tasks run each
-  invocation on a temporary event loop (``tasks/utils.run_async``), so a long-lived async
+  invocation on a temporary event loop (``tasks/runtime.run_async``), so a long-lived async
   client bound to one loop would break on the next task.
 - ``RetryPolicy(timeout=None)``: the SDK's default 30 s *total* retry budget is smaller
   than a single 60 s request timeout, which would silently disable retries.

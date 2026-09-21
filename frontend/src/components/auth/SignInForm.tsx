@@ -1,3 +1,4 @@
+// Auth pages: email + password sign-in form over Clerk's useSignIn.
 import { Link } from 'react-router-dom'
 import OAuthButtons from './OAuthButtons'
 

@@ -1,3 +1,4 @@
+// Feed card: signal chips (pseudocode, public datasets, single GPU, code released, compute fit).
 import { Code2, Cpu, Database, GitBranch, Zap } from 'lucide-react'
 import Chip from '../ui/Chip'
 import type { FeedSignals } from '../../types/api'

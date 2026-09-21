@@ -164,11 +164,13 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "uv run celery -A src.celery_app inspect ping --timeout 5 2>/dev/null | grep -q pong || exit 1"]
+      # `inspect ping` always waits its full --timeout, and importing the app takes a few
+      # seconds; keep the ping short and the check budget above both.
+      test: ["CMD-SHELL", "uv run celery -A src.celery_app inspect ping --timeout 2 2>/dev/null | grep -q pong || exit 1"]
       interval: 30s
-      timeout: 10s
+      timeout: 25s
       retries: 3
-      start_period: 30s
+      start_period: 60s
 
   celery-beat:
     build:

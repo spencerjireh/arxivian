@@ -1,5 +1,6 @@
-import AccountSection from './settings/AccountSection'
-import FeedProfileSection from './settings/FeedProfileSection'
+// /settings route: account and feed profile sections.
+import AccountSection from '../components/settings/AccountSection'
+import FeedProfileSection from '../components/settings/FeedProfileSection'
 
 export default function SettingsPage() {
   return (

@@ -11,8 +11,8 @@ from deepeval import assert_test
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
-from src.schemas.langgraph_state import ClassificationResult
 from src.services.agent_service.nodes.out_of_scope import out_of_scope_node
+from src.services.agent_service.state import ClassificationResult
 
 from .fixtures.out_of_scope_scenarios import OUT_OF_SCOPE_SCENARIOS, OutOfScopeScenario
 from .helpers import build_initial_state

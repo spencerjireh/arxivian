@@ -1,3 +1,4 @@
+// Scoped chat: auto-growing textarea with submit and abort controls.
 import { useState, useRef, useEffect, type FormEvent, type KeyboardEvent } from 'react'
 import clsx from 'clsx'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'

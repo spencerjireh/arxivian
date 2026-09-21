@@ -1,3 +1,4 @@
+// Router errorElement: 404 for missing routes, PageErrorFallback for everything else.
 import { useRouteError, isRouteErrorResponse } from 'react-router-dom'
 import NotFoundPage from './NotFoundPage'
 import PageErrorFallback from '../components/ui/PageErrorFallback'

@@ -1,3 +1,4 @@
+// Paper detail: product attribute chips (code released, task type, model family).
 import { GitBranch, Layers, Target } from 'lucide-react'
 import Chip from '../ui/Chip'
 import { formatAnswer } from '../../lib/scoring'

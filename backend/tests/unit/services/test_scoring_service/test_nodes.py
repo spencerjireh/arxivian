@@ -7,7 +7,6 @@ import pytest
 from src.clients.semantic_scholar_client import CitationMetrics
 from src.clients.typesafe_client import ChoiceResult, ScoreResult, SystemOneResult
 from src.exceptions import ScoringError, TypeSafeConnectionError, TypeSafeRateLimitError
-from src.schemas.scoring_state import RUBRIC_VERSION, DimensionScore, EvidenceSpan
 from src.services.scoring_service import questions as q
 from src.services.scoring_service.judgments import demand_from_band
 from src.services.scoring_service.nodes.compose import compose_and_persist_node
@@ -22,6 +21,7 @@ from src.services.scoring_service.nodes.fetch_and_extract import (
     DIMENSION_PROBES,
     fetch_and_extract_node,
 )
+from src.services.scoring_service.state import RUBRIC_VERSION, DimensionScore, EvidenceSpan
 
 PAPER_ID = "11111111-1111-1111-1111-111111111111"
 

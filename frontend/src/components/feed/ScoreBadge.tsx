@@ -1,6 +1,8 @@
+// Feed card: composite score badge colored by band (lib/scoring.ts).
 import { AlertCircle } from 'lucide-react'
 import clsx from 'clsx'
-import { bandFor, type ScoreBand } from '../../lib/scoring'
+import { bandFor } from '../../lib/scoring'
+import type { ScoreBand } from '../../types/api'
 
 interface ScoreBadgeProps {
   score: number

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.schemas.ingest import IngestResponse
+from src.services.ingest_service import IngestResponse
 
 
 @contextmanager

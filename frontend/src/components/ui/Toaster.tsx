@@ -1,3 +1,4 @@
+// UI primitive: app-wide toast container (sonner).
 import { Toaster as SonnerToaster } from 'sonner'
 
 export default function Toaster() {

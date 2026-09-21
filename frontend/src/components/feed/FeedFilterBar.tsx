@@ -1,3 +1,4 @@
+// Feed: category and minimum-score filters, mapped to query params by lib/feedParams.ts.
 import clsx from 'clsx'
 import Button from '../ui/Button'
 import { segmentedActiveClass, segmentedInactiveClass, selectClass } from '../../lib/formClasses'

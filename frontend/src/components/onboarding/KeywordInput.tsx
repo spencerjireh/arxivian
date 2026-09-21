@@ -1,3 +1,4 @@
+// Feed profile form: free-text keyword chips.
 import { useState } from 'react'
 import { X } from 'lucide-react'
 import Input from '../ui/Input'

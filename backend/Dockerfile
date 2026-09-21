@@ -49,6 +49,9 @@ RUN addgroup --system --gid 1001 appgroup \
 
 # UV needs a writable cache dir; --system users have no home directory
 ENV UV_CACHE_DIR=/tmp/uv-cache
+# The venv is final after the --no-dev sync above: every `uv run` (CMD, compose commands,
+# healthchecks) must not re-sync, which would pull the dev group at runtime on each call.
+ENV UV_NO_SYNC=1
 
 USER appuser
 

@@ -1,15 +1,15 @@
 """Tests for edge routing functions."""
 
-from src.schemas.langgraph_state import (
-    BatchEvaluation,
-    ClassificationResult,
-    ToolCall,
-    ToolExecution,
-)
 from src.services.agent_service.edges import (
     route_after_classify,
     route_after_eval,
     route_after_executor,
+)
+from src.services.agent_service.state import (
+    BatchEvaluation,
+    ClassificationResult,
+    ToolCall,
+    ToolExecution,
 )
 from src.services.agent_service.tools import EXPLORE_CITATIONS, RETRIEVE_CHUNKS, SEMANTIC_SCHOLAR
 
