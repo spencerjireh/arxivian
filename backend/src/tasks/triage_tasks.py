@@ -26,6 +26,7 @@ from src.services.scoring_service.triage import (
     TriageBatchResult,
     TriageResult,
     get_triage_batch_prompt,
+    normalize_arxiv_id,
 )
 from src.tasks.runtime import run_async
 from src.tasks.score_tasks import score_paper_task
@@ -118,7 +119,7 @@ def triage_new_papers_task() -> dict[str, Any]:
                 log.error("triage_batch_failed", error=str(exc), batch_size=len(batch))
                 continue
             for verdict in result.results:
-                verdicts[verdict.arxiv_id] = verdict
+                verdicts[normalize_arxiv_id(verdict.arxiv_id)] = verdict
 
         # Enqueue survivors; log rejects.
         enqueued: list[dict[str, str]] = []

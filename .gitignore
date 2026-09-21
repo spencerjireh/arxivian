@@ -13,7 +13,7 @@ htmlcov/
 *.egg-info/
 
 # Node
-node_modules/
+node_modules
 dist/
 coverage/
 *.tsbuildinfo

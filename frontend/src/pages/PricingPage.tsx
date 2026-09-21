@@ -26,7 +26,7 @@ const tiers = [
     name: 'Pro',
     price: '$0',
     period: 'during beta',
-    description: 'For people who read a lot of papers.',
+    description: 'For people who implement a lot of papers.',
     features: ['Everything in Free', 'Unlimited paper chat turns', 'Priority support'],
     highlighted: true,
   },

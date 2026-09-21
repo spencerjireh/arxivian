@@ -107,11 +107,11 @@ services:
       - ./backend:/app
       - /app/.venv
     healthcheck:
-      test: ["CMD-SHELL", "uv run celery -A src.celery_app inspect ping --timeout 5 2>/dev/null | grep -q pong || exit 1"]
+      test: ["CMD-SHELL", "uv run celery -A src.celery_app inspect ping --timeout 2 2>/dev/null | grep -q pong || exit 1"]
       interval: 30s
-      timeout: 10s
+      timeout: 25s
       retries: 3
-      start_period: 30s
+      start_period: 60s
     networks:
       - arxivian-network
     profiles:
