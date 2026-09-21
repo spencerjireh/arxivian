@@ -1,3 +1,4 @@
+// Paper detail: level probability distribution as a segmented bar.
 import clsx from 'clsx'
 
 interface DistributionBarProps {

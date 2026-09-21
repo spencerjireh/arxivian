@@ -171,7 +171,7 @@ omit = [
     "src/schemas/ops.py",
     # Utils that wrap external libraries - tested via integration
     "src/utils/pdf_parser.py",
-    "src/utils/chunking_service.py",
+    "src/services/chunking_service.py",
     "src/utils/logger.py",
     # LangGraph orchestration and nodes - tested via integration/E2E
     "src/services/agent_service/service.py",

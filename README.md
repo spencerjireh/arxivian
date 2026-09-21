@@ -23,7 +23,7 @@ Arxivian scores new ML papers on method clarity, resource feasibility, data avai
 3. **Digest (weekly).** Scores are snapshotted into a ranked digest per category set.
 4. **Feed (read time).** Cards show a composite score, a one-line verdict, signal chips (pseudocode, public datasets, single GPU, code released) and a fit marker for your compute profile. Save, dismiss or mark papers as implementing; open one for the per-dimension breakdown and a chat scoped to that paper.
 
-`docs/product/feed-prd.md` is the product-of-record; `docs/design/scoring-pipeline.md` and `docs/design/scoring-rubric.md` describe the pipeline and the rubric; `CLAUDE.md` maps the code.
+`docs/product/feed-prd.md` is the product-of-record; `docs/design/scoring-pipeline.md` and `docs/design/scoring-rubric.md` describe the pipeline and the rubric; `AGENTS.md` maps the code for people and coding agents (`CLAUDE.md` is a symlink to it); `CONTRIBUTING.md` covers branches, checks and releases; `docs/ops/coolify-migration.md` is the server-move runbook.
 
 ## Architecture
 
@@ -49,14 +49,14 @@ Arxivian scores new ML papers on method clarity, resource feasibility, data avai
 
 ## Quick Start
 
-**Prerequisites:** Docker, Docker Compose, [just](https://github.com/casey/just)
+**Prerequisites:** Docker, Docker Compose, [just](https://github.com/casey/just). For the git hooks also uv and Node 22 (see `CONTRIBUTING.md`).
 
 ```bash
 git clone https://github.com/spencerjireh/arxivian.git
 cd arxivian
 
-just setup              # Create .env files from examples
-# Edit backend/.env and frontend/.env with your API keys (see below)
+just setup              # Copy backend/.env, backend/.env.test, frontend/.env from their .example files
+# Fill in the keys listed below in backend/.env and frontend/.env
 just dev                # Build and start everything with hot reload
 ```
 
@@ -71,28 +71,29 @@ just dev                # Build and start everything with hot reload
 | Key | File | Purpose |
 |-----|------|---------|
 | `OPENAI_API_KEY` | `backend/.env` | Triage and chat LLM calls via LiteLLM |
-| `TYPESAFE_API_KEY` | `backend/.env` | Stage 2 scoring (Jev) |
+| `TYPESAFE_API_KEY` | `backend/.env` | Stage 2 scoring (Jev). Chat and triage do not use it; the API starts without it |
 | `JINA_API_KEY` | `backend/.env` | Document embeddings (Jina v3) |
-| `CLERK_SECRET_KEY` | `backend/.env` | JWT verification |
+| `CLERK_DOMAIN` | `backend/.env` | Clerk instance domain; JWTs are verified against its JWKS. The only setting with no default |
 | `VITE_CLERK_PUBLISHABLE_KEY` | `frontend/.env` | Clerk auth UI |
 
-Semantic Scholar runs keyless (requests are paced through Redis).
+Semantic Scholar runs keyless (requests are paced through a Redis slot). Host-port overrides (`BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`, `REDIS_PORT`, `FLOWER_PORT`) are compose interpolation variables: set them in the shell, not in `backend/.env`.
 
 ## Development
 
 ```bash
-just dev                # Start all services with hot reload
-just down               # Stop services
-just test               # Backend test suite (unit, api, integration)
-just test -k "pattern"  # Tests matching a pattern
-just check              # Lint + typecheck (backend)
-just fix                # Auto-fix lint + format
-just lint-frontend      # ESLint
-just test-frontend      # Vitest
-just eval               # LLM-backed evals (requires API keys)
-just inteval -k scoring # Golden-set scoring eval against the real judge
-just migrate            # Run Alembic migrations
-just --list             # All recipes
+just dev                          # Start all services with hot reload
+just down                         # Stop services
+just test tests/unit tests/api    # Backend unit + api (what CI gates)
+just test tests/integration       # Repositories and migrations against the test DB
+just test -k "pattern"            # Any pytest args pass through
+just check                        # Lint + typecheck, both trees
+just ci                           # Every CI step locally (needs just up-d)
+just fix                          # Auto-fix backend lint + format
+just test-frontend                # Vitest
+just eval                         # LLM-backed evals (requires API keys)
+just inteval-seed && just inteval -k scoring   # Golden-set scoring eval against the real judge
+just migrate                      # Run Alembic migrations
+just --list                       # All recipes, grouped
 ```
 
 ## Key Design Decisions
@@ -114,12 +115,13 @@ just --list             # All recipes
 | Unit | `unit` | Schemas, services, nodes, tasks, clients (mocked I/O) |
 | API | `api` | Routers with mocked dependencies |
 | Integration | `integration` | Repositories and migrations against a real pgvector database |
-| Eval | `eval`, `inteval` | Golden-set agreement for triage and scoring (real API keys) |
+| Eval | `eval`, `inteval` | Golden-set agreement for chat and scoring (real API keys; run by hand, not in CI) |
 
 ```bash
-just test                          # unit + api + integration
-just test tests/unit               # one suite
-just eval                          # LLM evals
+just test tests/unit tests/api     # unit + api
+just test tests/integration        # integration (test DB on port 5433)
+just eval                          # LLM evals (real OPENAI_API_KEY)
+just inteval-seed && just inteval  # golden-set scoring eval (real TypeSafe key + seeded DB)
 ```
 
 ## License

@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from src.clients.typesafe_client import ChoiceResult, ScoreResult
-from src.schemas.scoring_state import (
+from src.services.scoring_service.state import (
     DEMAND_LEVELS,
     DIMENSION_MAX_LEVEL,
     DimensionScore,

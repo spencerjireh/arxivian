@@ -1,3 +1,4 @@
+// GET /feed query params <-> URL search params, plus week label formatting.
 import type { FeedParams } from '../types/api'
 
 const WEEK_RE = /^\d{4}-\d{2}-\d{2}$/

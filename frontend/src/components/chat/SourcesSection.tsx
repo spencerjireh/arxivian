@@ -1,3 +1,4 @@
+// Scoped chat: the collapsible Sources list under an assistant turn.
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronRight, FileText } from 'lucide-react'

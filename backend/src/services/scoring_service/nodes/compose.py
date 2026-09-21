@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 from langchain_core.runnables import RunnableConfig
 
-from src.schemas.scoring_state import DimensionScore, PaperScoreState
+from src.services.scoring_service.state import DimensionScore, PaperScoreState
 from src.utils.logger import get_logger
 
 if TYPE_CHECKING:

@@ -6,8 +6,7 @@ import pytest
 
 from src.exceptions import ForbiddenError
 from src.models.user import User
-from src.repositories.conversation_repository import ConversationRepository
-from src.schemas.conversation import TurnData
+from src.repositories.conversation_repository import ConversationRepository, TurnData
 
 # =============================================================================
 # User Fixtures for Ownership Tests
@@ -525,8 +524,8 @@ class TestConversationPaperScope:
     async def test_save_turn_sets_scope_on_create_only(
         self, db_session, created_user, sample_paper_data
     ):
+        from src.repositories.conversation_repository import TurnData
         from src.repositories.paper_repository import PaperRepository
-        from src.schemas.conversation import TurnData
 
         paper = await PaperRepository(db_session).create(
             {**sample_paper_data, "arxiv_id": "scope-1"}

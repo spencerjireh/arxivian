@@ -1,6 +1,6 @@
 """Conditional edge functions for graph routing."""
 
-from src.schemas.langgraph_state import AgentState
+from src.services.agent_service.state import AgentState
 from src.services.agent_service.tools import RETRIEVE_CHUNKS
 
 

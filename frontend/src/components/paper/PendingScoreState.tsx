@@ -1,3 +1,4 @@
+// Paper detail: shown while GET /papers/{id}/score answers 202 (on-demand scoring).
 import { Loader2, Clock } from 'lucide-react'
 import Button from '../ui/Button'
 

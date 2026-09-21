@@ -10,9 +10,9 @@ from src.repositories.digest_repository import DigestRepository
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.scoring_repository import ScoringRepository
 from src.repositories.user_paper_state_repository import UserPaperStateRepository
-from src.schemas.digest import category_key_for
-from src.schemas.scoring_state import RUBRIC_VERSION
 from src.services.feed_service import FeedService
+from src.services.feed_service.digest import category_key_for
+from src.services.scoring_service.state import RUBRIC_VERSION
 from src.tasks.digest_tasks import build_digest_for_week
 
 

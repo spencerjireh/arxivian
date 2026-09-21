@@ -1,3 +1,4 @@
+// Route wrapper: redirects a signed-in user with me.onboarded === false to /onboarding.
 import { Navigate, useLocation } from 'react-router-dom'
 import { useUserStore } from '../../stores/userStore'
 

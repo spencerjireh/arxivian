@@ -19,21 +19,21 @@ from src.config import get_settings
 from src.database import AsyncSessionLocal
 from src.repositories.digest_repository import DigestRepository
 from src.repositories.scoring_repository import ScoringRepository
-from src.schemas.digest import (
+from src.services.feed_service.digest import (
     DigestRankingEntry,
     category_key_for,
     compute_provisional_composite,
     week_start_for,
 )
-from src.schemas.scoring_state import RUBRIC_VERSION
-from src.tasks.utils import run_async
+from src.services.scoring_service.state import RUBRIC_VERSION
+from src.tasks.runtime import run_async
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
 
 
 # Kept as module-level names for the existing unit tests; the helpers live in
-# `schemas/digest.py` so the feed read path can import them without pulling in Celery.
+# `services/feed_service/digest.py` so the feed read path can import them without pulling in Celery.
 _week_start = week_start_for
 _category_key = category_key_for
 

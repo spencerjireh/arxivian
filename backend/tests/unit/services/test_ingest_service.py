@@ -8,8 +8,7 @@ import pytest
 from sqlalchemy.exc import OperationalError
 
 from src.exceptions import EmbeddingServiceError, InsufficientChunksError, PDFProcessingError
-from src.schemas.ingest import IngestRequest
-from src.services.ingest_service import IngestService
+from src.services.ingest_service import IngestRequest, IngestService
 
 TEST_USER_ID = str(uuid.uuid4())
 

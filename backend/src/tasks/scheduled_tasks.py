@@ -8,7 +8,7 @@ from src.celery_app import celery_app
 from src.database import AsyncSessionLocal
 from src.repositories.user_repository import UserRepository
 from src.tasks.ingest_tasks import ingest_papers_task
-from src.tasks.utils import run_async
+from src.tasks.runtime import run_async
 from src.tiers import SYSTEM_USER_CLERK_ID
 from src.utils.logger import get_logger
 

@@ -16,7 +16,7 @@ from src.models.digest import Digest
 from src.models.paper_score import PaperScore
 from src.repositories.digest_repository import DigestRepository
 from src.repositories.paper_repository import PaperRepository
-from src.schemas.scoring_state import RUBRIC_VERSION
+from src.services.scoring_service.state import RUBRIC_VERSION
 from src.tasks.digest_tasks import _category_key, _week_start, build_digest_for_week
 
 

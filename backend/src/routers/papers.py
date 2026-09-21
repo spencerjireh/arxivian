@@ -14,7 +14,7 @@ from src.dependencies import (
     TaskExecRepoDep,
 )
 from src.exceptions import InvalidParameterError
-from src.schemas.feed import PaperScoreDetailResponse, ScorePendingResponse
+from src.schemas.papers import PaperScoreDetailResponse, ScorePendingResponse
 from src.tasks.score_tasks import ondemand_lock_key, score_paper_task
 
 router = APIRouter()

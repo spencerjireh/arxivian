@@ -1,3 +1,4 @@
+// Paper detail: the atomic Jev judgments behind a dimension, with probabilities.
 import { AlertCircle } from 'lucide-react'
 import { formatAnswer, isLowConfidence, judgmentLabel } from '../../lib/scoring'
 import type { Judgment } from '../../types/api'
