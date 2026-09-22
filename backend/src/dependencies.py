@@ -167,8 +167,24 @@ async def get_current_user_required(
     return await _sync_user(authorization, db)
 
 
+async def get_current_user_optional(
+    db: DbSession,
+    authorization: Annotated[str | None, Header(alias="Authorization")] = None,
+) -> User | None:
+    """The caller when a bearer token is present, None when the header is absent.
+
+    For the public read routes (feed, paper score). A present-but-invalid token is still
+    a 401; it is never degraded to anonymous.
+    """
+    if not authorization:
+        return None
+
+    return await _sync_user(authorization, db)
+
+
 # Type aliases for auth dependencies
 CurrentUserRequired = Annotated[User, Depends(get_current_user_required)]
+CurrentUserOptional = Annotated[User | None, Depends(get_current_user_optional)]
 
 
 # ============================================================================

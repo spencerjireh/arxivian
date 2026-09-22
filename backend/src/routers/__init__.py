@@ -2,8 +2,10 @@
 
 from src.routers import (
     conversations,
+    feed,
     health,
     ops,
+    paper_states,
     papers,
     stream,
     users,
@@ -12,8 +14,10 @@ from src.routers import (
 
 __all__ = [
     "conversations",
+    "feed",
     "health",
     "ops",
+    "paper_states",
     "papers",
     "stream",
     "users",

@@ -1,4 +1,4 @@
-"""Tests for services/feed_service/derive.py and digest.py: verdict, signals, composite, confidence."""
+"""Tests for services/feed_service/derive.py and digest.py: headline, meta, composite, confidence."""
 
 from datetime import date
 from types import SimpleNamespace
@@ -6,9 +6,9 @@ from types import SimpleNamespace
 import pytest
 
 from src.services.feed_service.derive import (
+    build_headline,
+    build_meta,
     build_scores,
-    build_signals,
-    build_verdict,
     compute_match,
     low_confidence_dimensions,
     parse_dimensions,
@@ -58,16 +58,29 @@ def _choice(key, answer, p=0.9):
 def _dims(
     *,
     clarity_algo=0.9,
+    hyper=0.9,
     feas_level=3,
+    weights=0.9,
     data_level=1,
     data_access="public benchmark or standard dataset",
 ):
     return parse_dimensions(
         {
             "method_clarity": _dim(
-                "method_clarity", 3, 4, judgments=[_noul("algorithm_given", clarity_algo)]
+                "method_clarity",
+                3,
+                4,
+                judgments=[
+                    _noul("algorithm_given", clarity_algo),
+                    _noul("hyperparameters_stated", hyper),
+                ],
             ),
-            "resource_feasibility": _dim("resource_feasibility", feas_level, 4),
+            "resource_feasibility": _dim(
+                "resource_feasibility",
+                feas_level,
+                4,
+                judgments=[_noul("pretrained_weights_released", weights)],
+            ),
             "data_availability": _dim(
                 "data_availability", data_level, 1, judgments=[_choice("data_access", data_access)]
             ),
@@ -99,62 +112,54 @@ class TestParseDimensions:
 
 
 @pytest.mark.unit
-class TestVerdict:
+class TestHeadline:
     def test_full(self):
-        assert (
-            build_verdict(_dims(), _attrs())
-            == "Transformer for machine translation; one consumer GPU; public data"
-        )
+        assert build_headline(_attrs()) == "Transformer for machine translation"
 
     def test_family_other(self):
-        assert build_verdict(_dims(), _attrs(family="other")).startswith(
-            "Method for machine translation;"
-        )
+        assert build_headline(_attrs(family="other")) == "Method for machine translation"
 
     def test_task_other(self):
-        assert build_verdict(_dims(), _attrs(task="other")).startswith("Transformer;")
+        assert build_headline(_attrs(task="other")) == "Transformer"
 
-    def test_both_other_and_missing_dims(self):
-        assert build_verdict({}, _attrs(task="other", family="other")) == "Method paper"
-        assert build_verdict({}, None) == "Method paper"
-
-    def test_unknown_data_label_omitted(self):
-        verdict = build_verdict(_dims(data_access="weird"), _attrs())
-        assert verdict == "Transformer for machine translation; one consumer GPU"
+    def test_both_other_and_missing(self):
+        assert build_headline(_attrs(task="other", family="other")) == "Method paper"
+        assert build_headline(None) == "Method paper"
+        assert build_headline({"task_type": {"bogus": 1}}) == "Method paper"
 
 
 @pytest.mark.unit
-class TestSignals:
-    def test_all_true(self):
-        s = build_signals(_dims(), _attrs(), "single_gpu")
-        assert s.model_dump() == {
-            "pseudocode_present": True,
-            "public_datasets": True,
-            "single_gpu": True,
-            "code_released": True,
-            "compute_match": True,
-        }
+class TestMeta:
+    def test_full_order(self):
+        assert build_meta(_dims(), _attrs()) == [
+            "one consumer GPU",
+            "public data",
+            "code released",
+            "weights released",
+            "pseudocode given",
+            "hyperparameters stated",
+        ]
 
-    def test_all_false(self):
-        s = build_signals(
-            _dims(
-                clarity_algo=0.2, feas_level=1, data_level=0, data_access="proprietary or private"
-            ),
-            _attrs(code=0.1),
-            None,
-        )
-        assert s.model_dump() == {
-            "pseudocode_present": False,
-            "public_datasets": False,
-            "single_gpu": False,
-            "code_released": False,
-            "compute_match": None,
-        }
+    def test_negative_facts_are_omitted_not_negated(self):
+        dims = _dims(clarity_algo=0.2, hyper=0.1, feas_level=1, weights=0.2)
+        assert build_meta(dims, _attrs(code=0.1)) == ["multi-GPU node", "public data"]
+        assert build_meta(dims, None) == ["multi-GPU node", "public data"]
 
-    def test_not_stated_is_not_public(self):
-        s = build_signals(_dims(data_access="not stated"), None, None)
-        assert s.public_datasets is False
+    def test_unknown_data_label_omitted(self):
+        assert build_meta(_dims(data_access="weird"), None)[:2] == [
+            "one consumer GPU",
+            "weights released",
+        ]
 
+    def test_not_stated_is_named_not_claimed_public(self):
+        assert build_meta(_dims(data_access="not stated"), None)[1] == "data source not stated"
+
+    def test_empty(self):
+        assert build_meta({}, None) == []
+
+
+@pytest.mark.unit
+class TestComputeMatch:
     @pytest.mark.parametrize(
         ("profile", "level", "expected"),
         [

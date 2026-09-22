@@ -140,8 +140,9 @@ class TestProcessSinglePaper:
         mock_paper_repository,
         sample_arxiv_paper,
     ):
-        """Verify skip when paper exists and not force_reprocess."""
+        """Verify skip when paper exists with full text and not force_reprocess."""
         existing_paper = Mock()
+        existing_paper.pdf_processed = True
         mock_paper_repository.get_by_arxiv_id.return_value = existing_paper
 
         result = await ingest_service._process_single_paper(
@@ -149,6 +150,47 @@ class TestProcessSinglePaper:
         )
 
         assert result is None
+        mock_paper_repository.get_by_arxiv_id_for_update.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_process_fills_metadata_only_row_in_place(
+        self,
+        ingest_service,
+        mock_paper_repository,
+        mock_chunk_repository,
+        mock_pdf_parser,
+        mock_chunking_service,
+        mock_embeddings_client,
+        sample_arxiv_paper,
+        sample_parsed_pdf,
+        sample_chunks,
+    ):
+        """A row written by the public score endpoint (pdf_processed=False) is not a skip:
+        it is updated in place, never re-inserted."""
+        stub = Mock()
+        stub.id = uuid.uuid4()
+        stub.arxiv_id = sample_arxiv_paper.arxiv_id
+        stub.title = sample_arxiv_paper.title
+        stub.pdf_processed = False
+        mock_paper_repository.get_by_arxiv_id.return_value = stub
+        mock_paper_repository.get_by_arxiv_id_for_update.return_value = stub
+        mock_paper_repository.update.return_value = stub
+        mock_pdf_parser.parse_pdf.return_value = sample_parsed_pdf
+        mock_chunking_service.chunk_document.return_value = sample_chunks
+        mock_embeddings_client.embed_documents.return_value = [[0.1] * 1024] * len(sample_chunks)
+
+        result = await ingest_service._process_single_paper(
+            sample_arxiv_paper, force_reprocess=False
+        )
+
+        assert result is not None and result.status == "success"
+        mock_paper_repository.create.assert_not_awaited()
+        mock_paper_repository.update.assert_awaited_once()
+        paper_id, data = mock_paper_repository.update.await_args.args
+        assert paper_id == str(stub.id)
+        assert data["pdf_processed"] is True and data["raw_text"] == sample_parsed_pdf.raw_text
+        mock_chunk_repository.delete_by_paper_id.assert_awaited_once_with(str(stub.id))
+        mock_chunk_repository.create_bulk.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_process_handles_download_failure(
