@@ -148,22 +148,22 @@ inteval *args:
 # Ruff lint + format check (src, tests, alembic)
 [group('quality')]
 lint:
-    docker compose --profile dev exec app uv run ruff check src/ tests/ alembic/
-    docker compose --profile dev exec app uv run ruff format --check src/ tests/ alembic/
+    docker compose --profile dev exec app uv run ruff check src/ tests/ alembic/ scripts/
+    docker compose --profile dev exec app uv run ruff format --check src/ tests/ alembic/ scripts/
 
 [group('quality')]
 format:
-    docker compose --profile dev exec app uv run ruff format src/ tests/ alembic/
+    docker compose --profile dev exec app uv run ruff format src/ tests/ alembic/ scripts/
 
 [group('quality')]
 typecheck:
-    docker compose --profile dev exec app uv run ty check src/
+    docker compose --profile dev exec app uv run ty check src/ scripts/
 
 # Auto-fix backend lint and formatting
 [group('quality')]
 fix:
-    docker compose --profile dev exec app uv run ruff format src/ tests/ alembic/
-    docker compose --profile dev exec app uv run ruff check src/ tests/ alembic/ --fix
+    docker compose --profile dev exec app uv run ruff format src/ tests/ alembic/ scripts/
+    docker compose --profile dev exec app uv run ruff check src/ tests/ alembic/ scripts/ --fix
 
 # Likely-dead backend code (config in pyproject [tool.vulture]; advisory, decorator-registered code is noise)
 [group('quality')]
@@ -178,6 +178,12 @@ lint-frontend:
 [group('quality')]
 format-frontend:
     docker compose --profile dev run --rm --no-deps frontend npm run format
+
+# Regenerate frontend/openapi.json from the backend and src/types/api.gen.ts from it (needs just up-d)
+[group('quality')]
+types:
+    docker compose --profile dev exec -T app uv run python -m scripts.export_openapi > frontend/openapi.json
+    docker compose --profile dev run --rm --no-deps frontend npm run types:generate
 
 # Lint + typecheck, both trees
 [group('quality')]
@@ -195,6 +201,8 @@ ci:
     set -euo pipefail
     docker compose --profile dev exec app uv lock --check
     just check
+    just types
+    git diff --exit-code -- frontend/openapi.json frontend/src/types/api.gen.ts
     just test tests/unit tests/api --cov=src --cov-report=term-missing:skip-covered
     just test tests/integration
     just test-frontend --coverage

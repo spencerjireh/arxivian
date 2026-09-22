@@ -18,7 +18,7 @@ from pydantic import ValidationError
 from src.schemas.feed import FeedScores
 from src.schemas.papers import DimensionDetail, EvidenceItem, PaperAttributesDetail
 from src.services.feed_service.digest import DEFAULT_WEIGHTS, CompositeWeights, compute_composite
-from src.services.scoring_service.state import DimensionScore, Judgment
+from src.services.scoring_service.state import DimensionScore, Judgment, ScoreDimension
 from src.utils.logger import get_logger
 
 if TYPE_CHECKING:
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 log = get_logger(__name__)
 
 # Dimension order for breakdown displays.
-DIMENSION_ORDER: tuple[str, ...] = (
+DIMENSION_ORDER: tuple[ScoreDimension, ...] = (
     "method_clarity",
     "resource_feasibility",
     "data_availability",
@@ -166,11 +166,11 @@ def build_meta(dims: dict[str, DimensionScore], attributes: dict[str, Any] | Non
     return phrases
 
 
-def low_confidence_dimensions(dims: dict[str, DimensionScore]) -> list[str]:
+def low_confidence_dimensions(dims: dict[str, DimensionScore]) -> list[ScoreDimension]:
     return sorted(
         name
-        for name, dim in dims.items()
-        if name != "demand" and dim.confidence < LOW_CONFIDENCE_THRESHOLD
+        for name in DIMENSION_ORDER
+        if name != "demand" and name in dims and dims[name].confidence < LOW_CONFIDENCE_THRESHOLD
     )
 
 

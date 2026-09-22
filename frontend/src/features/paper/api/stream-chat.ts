@@ -8,6 +8,7 @@ import {
   reportUnauthorized,
 } from '@/lib/api-client'
 import type {
+  ApiErrorResponse,
   StreamRequest,
   StreamEventType,
   StatusEventData,
@@ -68,8 +69,8 @@ export async function streamChat(
         try {
           const parsed: unknown = JSON.parse(errorText)
           // Structured error from error middleware: { error: { code, message } }
-          const structured = (parsed as { error?: { code?: unknown; message?: unknown } }).error
-          if (structured && typeof structured.code === 'string') {
+          const structured = (parsed as Partial<ApiErrorResponse>).error
+          if (typeof structured?.code === 'string') {
             errorCode = structured.code
             errorMessage = typeof structured.message === 'string' ? structured.message : errorText
           } else {

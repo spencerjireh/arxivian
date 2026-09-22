@@ -28,13 +28,13 @@ repos:
         entry: uv run --project backend --frozen --only-group dev ruff check --fix --force-exclude
         language: system
         types: [python]
-        files: ^backend/(src|tests|alembic)/
+        files: ^backend/(src|tests|alembic|scripts)/
       - id: ruff-format
         name: ruff format (backend)
         entry: uv run --project backend --frozen --only-group dev ruff format --force-exclude
         language: system
         types: [python]
-        files: ^backend/(src|tests|alembic)/
+        files: ^backend/(src|tests|alembic|scripts)/
       # Frontend: eslint --fix + prettier on the staged files only (config in package.json).
       - id: lint-staged-frontend
         name: lint-staged (frontend)

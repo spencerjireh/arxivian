@@ -35,11 +35,19 @@ function makeClient() {
 }
 
 function completeStream(request: StreamRequest, callbacks: StreamCallbacks) {
-  callbacks.onStatus?.({ step: 'classifying', message: 'Classifying query...' })
+  callbacks.onStatus?.({ step: 'classifying', message: 'Classifying query...', details: null })
   callbacks.onContent?.({ token: 'Hi' })
   callbacks.onSources?.({
     sources: [
-      { arxiv_id: request.arxiv_id, title: 'T', authors: [], pdf_url: '', relevance_score: 1 },
+      {
+        arxiv_id: request.arxiv_id,
+        title: 'T',
+        authors: [],
+        pdf_url: '',
+        relevance_score: 1,
+        published_date: null,
+        was_graded_relevant: null,
+      },
     ],
   })
   callbacks.onMetadata?.({
@@ -47,6 +55,7 @@ function completeStream(request: StreamRequest, callbacks: StreamCallbacks) {
     query: request.query,
     execution_time_ms: 1,
     retrieval_attempts: 1,
+    guardrail_score: null,
     turn_number: 0,
   })
   callbacks.onDone?.()
@@ -60,6 +69,11 @@ const turn: ConversationTurn = {
   provider: 'openai',
   model: 'gpt-5-nano',
   retrieval_attempts: 1,
+  guardrail_score: null,
+  rewritten_query: null,
+  sources: null,
+  reasoning_steps: null,
+  citations: null,
   created_at: '2026-08-03T00:00:00Z',
 }
 

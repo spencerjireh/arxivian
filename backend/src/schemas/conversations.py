@@ -2,10 +2,13 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, Field
+
+from src.schemas.base import ResponseModel
+from src.schemas.stream import CitationsEventData, SourceInfo
 
 
-class ConversationTurnResponse(BaseModel):
+class ConversationTurnResponse(ResponseModel):
     """Response schema for a single conversation turn."""
 
     turn_number: int
@@ -16,15 +19,15 @@ class ConversationTurnResponse(BaseModel):
     guardrail_score: int | None = None
     retrieval_attempts: int = 1
     rewritten_query: str | None = None
-    sources: list[dict] | None = None
+    sources: list[SourceInfo] | None = None
     reasoning_steps: list[str] | None = None
-    citations: dict | None = None
+    citations: CitationsEventData | None = None
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
-class ConversationListItem(BaseModel):
+class ConversationListItem(ResponseModel):
     """Summary item for conversation list."""
 
     session_id: str
@@ -36,7 +39,7 @@ class ConversationListItem(BaseModel):
     arxiv_id: str | None = Field(None, description="Paper this thread is scoped to, if any")
 
 
-class ConversationListResponse(BaseModel):
+class ConversationListResponse(ResponseModel):
     """Paginated list of conversations."""
 
     total: int
@@ -45,7 +48,7 @@ class ConversationListResponse(BaseModel):
     conversations: list[ConversationListItem]
 
 
-class ConversationDetailResponse(BaseModel):
+class ConversationDetailResponse(ResponseModel):
     """Full conversation with all turns."""
 
     session_id: str
@@ -56,7 +59,7 @@ class ConversationDetailResponse(BaseModel):
     turns: list[ConversationTurnResponse]
 
 
-class DeleteConversationResponse(BaseModel):
+class DeleteConversationResponse(ResponseModel):
     """Response after deleting a conversation."""
 
     session_id: str

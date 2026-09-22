@@ -181,7 +181,12 @@ describe('FeedPage', () => {
   it('merges profile categories into the category options', () => {
     mockSession.me = makeMe({
       preferences: {
-        feed_profile: { categories: ['stat.ML'], compute_profile: 'laptop', keywords: [] },
+        feed_profile: {
+          categories: ['stat.ML'],
+          compute_profile: 'laptop',
+          keywords: [],
+          weights: null,
+        },
       },
     })
     mockUseInfiniteFeed.mockReturnValue(onePage(makeFeedItem()))
