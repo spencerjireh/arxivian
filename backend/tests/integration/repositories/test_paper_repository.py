@@ -95,6 +95,22 @@ class TestPaperRepositoryCRUD:
         assert exists is True
 
     @pytest.mark.asyncio
+    async def test_create_if_absent_adopts_the_existing_row(self, db_session, sample_paper_data):
+        """The public score endpoint's metadata-only insert never raises on a duplicate."""
+        repo = PaperRepository(session=db_session)
+        metadata = {k: v for k, v in sample_paper_data.items() if k != "ingested_by"} | {
+            "pdf_processed": False,
+            "ingested_by": None,
+        }
+
+        first = await repo.create_if_absent(metadata)
+        second = await repo.create_if_absent({**metadata, "title": "Different"})
+
+        assert first.id == second.id
+        assert second.title == sample_paper_data["title"]
+        assert second.pdf_processed is False and second.raw_text is None
+
+    @pytest.mark.asyncio
     async def test_exists_returns_false(self, db_session):
         """Verify exists returns False for nonexistent paper."""
         repo = PaperRepository(session=db_session)

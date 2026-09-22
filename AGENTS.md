@@ -111,17 +111,22 @@ attributes in `paper_scores.attributes`. See `docs/design/scoring-pipeline.md` a
 **Feed read path** (`services/feed_service/`): `digest.py` (week key, composite weights,
 `compute_composite`) is written by the weekly `build_digest_task` and read by
 `FeedService`; `derive.py` turns a `PaperScore` row into card fields in pure code (read-time
-composite with NULL renormalization, compute-profile match, template verdict from the Jev
-judgments, signal chips, low-confidence marker); `service.py` batch-loads the live rows for
-a digest week. Routers: `feed` (`GET /feed`), `paper_states` (`PUT`/`DELETE
-/papers/{arxiv_id}/state`, `GET /users/me/library` grouped saved / implementing / shipped),
-`papers` (`GET /papers/{arxiv_id}/score`: full breakdown with `score_evidence` spans; an
-unscored paper enqueues `score_paper_task` behind a Redis `SET NX` lock
-`score:ondemand:{arxiv_id}` and answers 202 until a poll finds a score; each new enqueue
-counts against two Redis day counters, `ONDEMAND_SCORE_DAILY_BUDGET` across all users and
-`ONDEMAND_SCORE_DAILY_PER_USER`, past which it is a 429 `SCORING_LIMIT_EXCEEDED`). The
-onboarding
-profile lives in `users.preferences["feed_profile"]` (`schemas/users.py::FeedProfile`,
+composite with NULL renormalization, compute-profile match, `headline` "<family> for
+<task>" and the truthy-only `meta` phrases from the Jev judgments, low-confidence marker);
+`service.py` batch-loads the live rows for a digest week. `GET /feed` and `GET
+/papers/{arxiv_id}/score` are public (`CurrentUserOptional`: no header -> anonymous,
+default weights, no state, no profile match; a bad token is still 401). Routers: `feed`
+(`GET /feed`), `paper_states` (`PUT`/`DELETE /papers/{arxiv_id}/state`, `GET
+/users/me/library` grouped saved / implementing / shipped), `papers` (`GET
+/papers/{arxiv_id}/score`: full breakdown with `score_evidence` spans; a version suffix is
+stripped; an unscored paper answers 202 with its metadata, and for a signed-in caller
+enqueues `score_paper_task` behind a Redis `SET NX` lock `score:ondemand:{arxiv_id}` until
+a poll finds a score; each new enqueue counts against two Redis day counters,
+`ONDEMAND_SCORE_DAILY_BUDGET` across all users and `ONDEMAND_SCORE_DAILY_PER_USER`, past
+which it is a 429 `SCORING_LIMIT_EXCEEDED`; an anonymous caller never enqueues; a paper
+unknown to the index is fetched from arXiv on read (`ArxivClient.get_paper_by_id`, 404 /
+503 `ARXIV_UNAVAILABLE`) and stored metadata-only via `PaperRepository.create_if_absent`).
+The onboarding profile lives in `users.preferences["feed_profile"]` (`schemas/users.py::FeedProfile`,
 `PATCH /users/me/preferences`, read back on `GET /users/me` with `onboarded`); per-user
 `weights` are reserved, not settable.
 
@@ -233,6 +238,9 @@ generated release notes (`release.yml`). Moving the stack between servers:
 - `POST /stream` rejects unknown fields; the chat store allows one mounted panel at a time.
 - Scoring needs `TYPESAFE_API_KEY`, but the client is built only inside the task, so the API
   starts without it. An on-demand score joins the feed only at the next digest build.
+- A public read of an unknown paper leaves a `papers` row with `pdf_processed=false` and no
+  text; `IngestService` treats such a row as absent and fills it in place, so never add an
+  exists-only skip there.
 - `tasks/__init__.py`, `models/__init__.py` and `routers/__init__.py` are load-bearing
   indexes; the other package inits are docstrings only.
 - If this file passes ~200 lines, move the Backend and Frontend sections into

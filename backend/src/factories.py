@@ -179,6 +179,7 @@ def get_feed_service(db_session: AsyncSession) -> FeedService:
         scoring_repo=ScoringRepository(db_session),
         paper_repo=PaperRepository(db_session),
         state_repo=UserPaperStateRepository(db_session),
+        arxiv_client=get_arxiv_client(),
         category_key=category_key_for(settings.triage_categories),
     )
 

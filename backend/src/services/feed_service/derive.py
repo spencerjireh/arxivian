@@ -1,10 +1,11 @@
 """Pure read-side derivations over a stored `PaperScore` row (Phase 2, SPE-274).
 
 The feed and the paper-detail endpoint share one vocabulary: the derived 0-100 sub-scores,
-a read-time composite, a template verdict line, the signal chips, and a low-confidence
-marker. Everything here is pure -- no I/O -- so the routers and the digest task can reuse
-it. The verdict is composed in code from the Jev judgments (task type, model family,
-compute tier, data access); no LLM call is made at read time. See
+a read-time composite, the card headline and meta line, the compute-profile match, and a
+low-confidence marker. Everything here is pure -- no I/O -- so the routers and the digest
+task can reuse it. The headline and meta line are composed in code from the stored Jev
+judgments (task type, model family, compute tier, data access, code / weights released,
+pseudocode, hyperparameters); no LLM call is made at read time. See
 `docs/product/feed-prd.md` section 4 and `docs/design/scoring-rubric.md`.
 """
 
@@ -14,7 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
 
-from src.schemas.feed import FeedScores, FeedSignals
+from src.schemas.feed import FeedScores
 from src.schemas.papers import DimensionDetail, EvidenceItem, PaperAttributesDetail
 from src.services.feed_service.digest import DEFAULT_WEIGHTS, CompositeWeights, compute_composite
 from src.services.scoring_service.state import DimensionScore, Judgment
@@ -111,56 +112,58 @@ def compute_match(dims: dict[str, DimensionScore], compute_profile: str | None) 
     return level >= COMPUTE_PROFILE_MIN_LEVEL.get(compute_profile, 0)
 
 
-def build_signals(
-    dims: dict[str, DimensionScore],
-    attributes: dict[str, Any] | None,
-    compute_profile: str | None,
-) -> FeedSignals:
-    algorithm = judgment(dims.get("method_clarity"), "algorithm_given")
-    data_dim = dims.get("data_availability")
-    data_access = judgment(data_dim, "data_access")
-    code = attribute(attributes, "code_released")
-    level = feasibility_level(dims)
-    return FeedSignals(
-        pseudocode_present=algorithm is not None and algorithm.answer is True,
-        # PASS includes the recall-biased "not stated" default; do not claim public data
-        # for it.
-        public_datasets=(
-            data_dim is not None
-            and data_dim.level == 1
-            and data_access is not None
-            and data_access.answer != "not stated"
-        ),
-        single_gpu=level is not None and level >= 2,
-        code_released=code is not None and code.answer is True,
-        compute_match=compute_match(dims, compute_profile),
-    )
+# Truthy-only meta facts, in card order, after the tier and data phrases:
+# (phrase, where the judgment lives, judgment key). "attributes" reads
+# `paper_scores.attributes`; anything else is a dimension in `paper_scores.dimensions`.
+_META_FACTS: tuple[tuple[str, str, str], ...] = (
+    ("code released", "attributes", "code_released"),
+    ("weights released", "resource_feasibility", "pretrained_weights_released"),
+    ("pseudocode given", "method_clarity", "algorithm_given"),
+    ("hyperparameters stated", "method_clarity", "hyperparameters_stated"),
+)
 
 
-def build_verdict(dims: dict[str, DimensionScore], attributes: dict[str, Any] | None) -> str:
-    """Template verdict: '<family> for <task>; <compute tier>; <data access>'."""
+def build_headline(attributes: dict[str, Any] | None) -> str:
+    """'<Model family> for <task type>' from the stored attributes.
+
+    Fallbacks, in order: 'Method for <task>', '<Family>', 'Method paper'.
+    """
     family_j = attribute(attributes, "model_family")
     task_j = attribute(attributes, "task_type")
     family = str(family_j.answer) if family_j is not None else _OTHER
     task = str(task_j.answer) if task_j is not None else _OTHER
 
     if family != _OTHER and task != _OTHER:
-        head = f"{family[0].upper()}{family[1:]} for {task}"
-    elif task != _OTHER:
-        head = f"Method for {task}"
-    elif family != _OTHER:
-        head = f"{family[0].upper()}{family[1:]}"
-    else:
-        head = "Method paper"
+        return f"{family[0].upper()}{family[1:]} for {task}"
+    if task != _OTHER:
+        return f"Method for {task}"
+    if family != _OTHER:
+        return f"{family[0].upper()}{family[1:]}"
+    return "Method paper"
 
-    parts = [head]
+
+def build_meta(dims: dict[str, DimensionScore], attributes: dict[str, Any] | None) -> list[str]:
+    """Ordered short phrases for the card's meta line.
+
+    Compute tier (`TIER_PHRASES`), data access (`DATA_PHRASES`), then each `_META_FACTS`
+    phrase whose Noul answered yes. A missing, false or unparseable judgment is omitted,
+    never negated: there is no "no code" phrase (feed-prd section 1).
+    """
+    phrases: list[str] = []
     level = feasibility_level(dims)
     if level is not None and level in TIER_PHRASES:
-        parts.append(TIER_PHRASES[level])
+        phrases.append(TIER_PHRASES[level])
     data_access = judgment(dims.get("data_availability"), "data_access")
     if data_access is not None and str(data_access.answer) in DATA_PHRASES:
-        parts.append(DATA_PHRASES[str(data_access.answer)])
-    return "; ".join(parts)
+        phrases.append(DATA_PHRASES[str(data_access.answer)])
+    for phrase, source, key in _META_FACTS:
+        if source == "attributes":
+            fact = attribute(attributes, key)
+        else:
+            fact = judgment(dims.get(source), key)
+        if fact is not None and fact.answer is True:
+            phrases.append(phrase)
+    return phrases
 
 
 def low_confidence_dimensions(dims: dict[str, DimensionScore]) -> list[str]:

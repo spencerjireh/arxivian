@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 
+from src.clients.arxiv_client import ArxivClient
 from src.repositories.digest_repository import DigestRepository
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.scoring_repository import ScoringRepository
@@ -117,6 +118,7 @@ async def test_feed_end_to_end(db_session, sample_paper_data, created_user):
         scoring_repo=ScoringRepository(db_session),
         paper_repo=PaperRepository(db_session),
         state_repo=UserPaperStateRepository(db_session),
+        arxiv_client=ArxivClient(rate_limit_delay=0.0),
         category_key=category_key_for(categories),
     )
 
@@ -127,18 +129,15 @@ async def test_feed_end_to_end(db_session, sample_paper_data, created_user):
     )
     assert page.available_weeks[0].paper_count == 2
     first = page.items[0]
-    assert (
-        first.verdict
-        == "Convolutional network for image classification; multi-GPU node; public data"
-    )
-    assert first.signals.model_dump() == {
-        "pseudocode_present": True,
-        "public_datasets": True,
-        "single_gpu": False,
-        "code_released": True,
-        "compute_match": None,
-    }
+    assert first.headline == "Convolutional network for image classification"
+    assert first.meta == ["multi-GPU node", "public data", "code released", "pseudocode given"]
+    assert first.compute_match is None
     assert first.scores.composite == 88.5
+
+    # anonymous: same cards, default order, no state
+    anon = await service.get_feed(None)
+    assert [i.paper.arxiv_id for i in anon.items] == ["f-top", "f-fits"]
+    assert all(i.state is None and i.compute_match is None for i in anon.items)
 
     # category filter + dismissed exclusion
     await UserPaperStateRepository(db_session).upsert(
@@ -160,7 +159,7 @@ async def test_feed_end_to_end(db_session, sample_paper_data, created_user):
     }
     page = await service.get_feed(created_user, include_dismissed=True)
     assert [i.paper.arxiv_id for i in page.items] == ["f-fits", "f-top"]
-    assert page.items[0].signals.compute_match is True
+    assert page.items[0].compute_match is True
     assert fits.id is not None
 
 
@@ -208,6 +207,7 @@ async def test_score_detail_partitions_evidence(db_session, sample_paper_data, c
         scoring_repo=ScoringRepository(db_session),
         paper_repo=PaperRepository(db_session),
         state_repo=UserPaperStateRepository(db_session),
+        arxiv_client=ArxivClient(rate_limit_delay=0.0),
         category_key="cs.LG",
     )
 
