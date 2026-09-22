@@ -106,7 +106,7 @@ def mock_conversation_repo():
 
 @pytest.fixture
 def mock_embeddings_client():
-    """Create a mock JinaEmbeddingsClient."""
+    """Create a mock EmbeddingsClient (duck-typed; health reads api_key)."""
     client = AsyncMock()
     client.api_key = "test-api-key"
     client.embed_query = AsyncMock(return_value=[0.1] * 1024)
@@ -119,9 +119,10 @@ def mock_settings():
     settings = Mock()
     settings.default_llm_model = "openai/gpt-5-nano"
     settings.openai_api_key = "test-openai-key"
-    settings.jina_api_key = "test-jina-key"
     settings.agent_timeout_seconds = 180
     settings.ondemand_score_lock_seconds = 1800
+    settings.ondemand_score_daily_budget = 30
+    settings.ondemand_score_daily_per_user = 10
     settings.cors_origins = ""
     settings.debug = False
     settings.log_level = "INFO"

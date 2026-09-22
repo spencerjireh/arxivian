@@ -1,7 +1,7 @@
 # Arxivian -- Implementation-Opportunity Feed Product Requirements Document
 
 **Version:** 1.0-feed
-**Last updated:** 2026-09-20
+**Last updated:** 2026-09-22
 **Status:** Product-of-record for the feed pivot. Phases 1-3 shipped (see section 9); v1.1
 (code gap) not started. `AGENTS.md` describes the code as built.
 **Supersedes:** the chat-first beta PRD (removed 2026-09-20; in git history)
@@ -182,6 +182,9 @@ Additive and reversible (system is in production):
    earlier. *Shipped 2026-09-20: backend SPE-298 (paper-scoped agent only, HITL ingest / corpus
    tools / per-request LLM knobs removed, migration 022) and frontend SPE-299 (feed is
    home, `/chat` removed, scoped panel only). Library grouped by state is SPE-296.*
+   *Relaunched to production 2026-09-21 behind the maintenance curtain; the first weekly
+   cycle came out empty (SPE-306, triage id echo), the fix shipped 2026-09-22, the
+   2026-09-21 digest was rebuilt by hand (268 papers) and the curtain came down the same day.*
 4. **Code gap (v1.1).** Once the spike clears the recall bar, ship `github_client` + the
    `score_code_gap` node; surface an unweighted "possible existing implementations" chip,
    then promote code gap to the highest-weighted ranking signal and enable the

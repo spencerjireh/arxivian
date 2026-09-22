@@ -13,8 +13,10 @@ rate-limit cannot snowball across the survivor fan-out. A TypeSafe 429 retries a
 server's `retry_after` (at least 60 s). Any other error fails the task.
 """
 
+from datetime import date
 from functools import lru_cache
 from typing import Any
+from uuid import UUID
 
 import redis
 from langgraph.graph.state import CompiledStateGraph
@@ -35,6 +37,12 @@ log = get_logger(__name__)
 def ondemand_lock_key(arxiv_id: str) -> str:
     """Redis key that dedupes on-demand scoring requests for one paper (SPE-276)."""
     return f"score:ondemand:{arxiv_id}"
+
+
+def ondemand_budget_keys(user_id: UUID | str, day: date) -> tuple[str, str]:
+    """Redis counters that bound on-demand scoring per UTC day (SPE-302): global, per user."""
+    stamp = day.isoformat()
+    return f"score:ondemand:day:{stamp}", f"score:ondemand:user:{user_id}:{stamp}"
 
 
 def release_ondemand_lock(arxiv_id: str) -> None:

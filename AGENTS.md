@@ -49,7 +49,7 @@ backend/
   src/services/                agent_service/, scoring_service/, feed_service/, ingest, search, auth, chunking
   src/repositories/            one module per table (async SQLAlchemy)
   src/models/                  ORM models (models/__init__ is star-imported by alembic/env.py)
-  src/clients/                 LiteLLM, arXiv, Jina, Semantic Scholar, TypeSafe
+  src/clients/                 LiteLLM (chat + embeddings), arXiv, Semantic Scholar, TypeSafe
   src/tasks/                   Celery tasks; runtime.py owns the worker loop; signals.py the hooks
   src/middleware/              error handler, request logging, maintenance curtain
   src/utils/                   logger, pdf_parser, section_splitter
@@ -117,7 +117,10 @@ a digest week. Routers: `feed` (`GET /feed`), `paper_states` (`PUT`/`DELETE
 /papers/{arxiv_id}/state`, `GET /users/me/library` grouped saved / implementing / shipped),
 `papers` (`GET /papers/{arxiv_id}/score`: full breakdown with `score_evidence` spans; an
 unscored paper enqueues `score_paper_task` behind a Redis `SET NX` lock
-`score:ondemand:{arxiv_id}` and answers 202 until a poll finds a score). The onboarding
+`score:ondemand:{arxiv_id}` and answers 202 until a poll finds a score; each new enqueue
+counts against two Redis day counters, `ONDEMAND_SCORE_DAILY_BUDGET` across all users and
+`ONDEMAND_SCORE_DAILY_PER_USER`, past which it is a 429 `SCORING_LIMIT_EXCEEDED`). The
+onboarding
 profile lives in `users.preferences["feed_profile"]` (`schemas/users.py::FeedProfile`,
 `PATCH /users/me/preferences`, read back on `GET /users/me` with `onboarded`); per-user
 `weights` are reserved, not settable.
@@ -125,7 +128,9 @@ profile lives in `users.preferences["feed_profile"]` (`schemas/users.py::FeedPro
 **Celery** (`tasks/`): Redis broker, RedBeat scheduler, Flower on 5555. `ingest_tasks`,
 `cleanup_tasks`, `scheduled_tasks` (nightly ingest), `triage_tasks` (weekly Stage 1),
 `score_tasks` (Stage 2; retries only on no-full-text / TypeSafe transient errors, honors
-`retry_after`), `digest_tasks` (weekly), `demand_tasks` (nightly backfill of NULL demand).
+`retry_after`), `digest_tasks` (weekly), `demand_tasks` (nightly backfill of NULL demand),
+`embedding_tasks` (`reembed_chunks_task`, run by hand after an embedding-model change;
+keyset cursor, re-enqueues itself under the task time limit).
 `runtime.py` owns the per-process event loop and `run_async`; `signals.py` starts it,
 configures tracing and tracks `task_executions` status. `tasks/__init__.py` imports every
 task module so `autodiscover_tasks` registers them; keep it that way.
@@ -188,11 +193,16 @@ generated release notes (`release.yml`). Moving the stack between servers:
 
 - Maintenance curtain: backend `MAINTENANCE_MODE=true` -> 503 for all routes except health;
   frontend `VITE_MAINTENANCE_MODE=true` is a build arg (`frontend/Dockerfile`), so flipping
-  it means a rebuild.
+  it means a rebuild. The two flags are the rollback lever: set both in the Coolify env
+  (prod and preview rows) and redeploy, no code change. Relaunched 2026-09-21 curtained,
+  opened 2026-09-22.
+- Run a task by hand: `docker exec <celery-worker> uv run celery -A src.celery_app call
+  src.tasks.triage_tasks.triage_new_papers_task` (same for `digest_tasks.build_digest_task`).
 - Compose env wiring: only variables listed under a service's `environment:` reach that
   container. Settings are validated at import, so `celery-beat` carries `CLERK_DOMAIN` plus
   the schedule crons; feed knobs (`TRIAGE_*`, `ONDEMAND_SCORE_LOCK_SECONDS`) are on `app`
-  and `celery-worker`. `TYPESAFE_API_KEY` is required for `backend` and `worker`.
+  and `celery-worker`, the `ONDEMAND_SCORE_DAILY_*` budgets on `app` only.
+  `TYPESAFE_API_KEY` is required for `backend` and `worker`.
 - Semantic Scholar runs keyless: a Redis slot (`SEMANTIC_SCHOLAR_MIN_INTERVAL_MS`) spaces
   requests across workers; a 429 soft-fails to NULL demand and the nightly backfill retries.
 - Stale Coolify keys (`ALLOWED_LLM_MODELS`, `NVIDIA_NIM_*`, `REDIS_CHECKPOINT_URL`,

@@ -293,7 +293,7 @@ dimension) and is gated behind the spike.
 - `clients/github_client.py` (**v1.1**) -- GitHub code/repo search for arXiv ID, title
   variants, and author repos. Returns hits (repo, stars, last commit, README snippet).
   **Backoff-aware + Redis-cached** -- copy the tenacity `Retry-After`-aware backoff pattern
-  from `clients/embeddings_client.py` (`JinaEmbeddingsClient`). Note: that client has the
+  from `clients/embeddings_client.py` (`EmbeddingsClient`). Note: that client has the
   backoff/retry pattern but **no cache** -- the Redis cache is net-new here (Redis already
   runs for Celery/RedBeat/rate limiting, so the infrastructure exists; there is just no
   client-side caching pattern in the repo to copy). GitHub code search is aggressively

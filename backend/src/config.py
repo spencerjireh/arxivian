@@ -24,9 +24,6 @@ class Settings(BaseSettings):
     # Provider API Keys
     openai_api_key: str = ""
 
-    # Embeddings
-    jina_api_key: str = ""
-
     # Semantic Scholar (demand signal -- citation velocity)
     # Key is optional: the keyless public pool works, just with tighter rate limits
     # (the client's backoff path handles 429s either way).
@@ -49,6 +46,10 @@ class Settings(BaseSettings):
     # On-demand scoring (paper detail, SPE-276): Redis lock TTL that dedupes repeated
     # GET /papers/{id}/score polls into one score_paper_task per paper.
     ondemand_score_lock_seconds: int = 1800
+    # Daily budget for on-demand scoring (SPE-302). Scoring is a shared cost, so the caps
+    # are a global count across all users plus a flat per-user count, both per UTC day.
+    ondemand_score_daily_budget: int = 30
+    ondemand_score_daily_per_user: int = 10
 
     # Search configuration
     default_top_k: int = 3

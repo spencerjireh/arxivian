@@ -82,11 +82,15 @@ describe('usePaperScore', () => {
     }
   })
 
-  it('does not retry a 404', async () => {
-    apiGet.mockRejectedValue(new ApiError(404, 'Not Found', 'Paper not found'))
+  it.each([
+    [404, 'Paper not found'],
+    [429, "You reached today's limit of 10 on-demand scores. Resets at midnight UTC."],
+  ])('does not retry a %i', async (status, message) => {
+    apiGet.mockRejectedValue(new ApiError(status, 'Error', message))
     const { result } = renderHook(() => usePaperScore('9999.99999'), { wrapper: createWrapper() })
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(apiGet).toHaveBeenCalledTimes(1)
-    expect(result.current.error?.status).toBe(404)
+    expect(result.current.error?.status).toBe(status)
+    expect(result.current.error?.message).toBe(message)
   })
 })

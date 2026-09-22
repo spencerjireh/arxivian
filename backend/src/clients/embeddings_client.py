@@ -1,9 +1,16 @@
-"""Jina AI embeddings client."""
+"""OpenAI embeddings client (text-embedding-3-small through LiteLLM).
+
+Vectors are requested at 1024 dimensions so `chunks.embedding Vector(1024)` and its HNSW
+index are model-independent. LiteLLM runs with `drop_params = True` (see
+`litellm_client.py`), which would silently discard `dimensions` for a provider that lacks
+it and yield 1536-wide vectors, so every response is length-checked here.
+"""
 
 import logging
 import math
+from typing import Any
 
-import httpx
+import litellm
 from tenacity import (
     RetryCallState,
     before_sleep_log,
@@ -13,11 +20,16 @@ from tenacity import (
     wait_exponential,
 )
 
-from src.exceptions import EmbeddingRateLimitError
+from src.exceptions import EmbeddingRateLimitError, EmbeddingServiceError
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
 _tenacity_logger = logging.getLogger(f"{__name__}.retry")
+
+EMBEDDING_MODEL = "openai/text-embedding-3-small"
+EMBEDDING_DIMENSION = 1024
+# OpenAI accepts up to 2048 inputs per call; 100 keeps a retry cheap and a request small.
+BATCH_SIZE = 100
 
 
 def _rate_limit_aware_wait(retry_state: RetryCallState) -> float:
@@ -33,113 +45,96 @@ def _rate_limit_aware_wait(retry_state: RetryCallState) -> float:
     return wait_exponential(multiplier=2, min=4, max=30)(retry_state)
 
 
-class JinaEmbeddingsClient:
-    """Client for Jina AI embeddings API."""
+def _retry_after_from(exc: BaseException) -> float | None:
+    """Read a numeric Retry-After header off a LiteLLM/OpenAI exception, if it has one."""
+    response = getattr(exc, "response", None)
+    headers = getattr(response, "headers", None)
+    raw = headers.get("retry-after") if headers is not None else None
+    try:
+        return float(raw) if raw is not None else None
+    except (TypeError, ValueError):
+        return None
 
-    def __init__(self, api_key: str, model: str = "jina-embeddings-v3"):
+
+class EmbeddingsClient:
+    """Embeds queries and documents with OpenAI text-embedding-3-small via LiteLLM."""
+
+    def __init__(self, api_key: str, model: str = EMBEDDING_MODEL, timeout: float = 60.0):
         self.api_key = api_key
         self.model = model
-        self.api_url = "https://api.jina.ai/v1/embeddings"
-        self.dimension = 1024
-
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _parse_retry_after(response: httpx.Response) -> float | None:
-        """Extract ``Retry-After`` header as a float, or None."""
-        raw = response.headers.get("retry-after")
-        if raw is None:
-            return None
-        try:
-            return float(raw)
-        except (ValueError, TypeError):
-            return None
+        self.timeout = timeout
+        self.dimension = EMBEDDING_DIMENSION
 
     @retry(
         stop=stop_after_attempt(5),
         wait=_rate_limit_aware_wait,
         retry=retry_if_exception_type(
-            (EmbeddingRateLimitError, httpx.ConnectError, httpx.TimeoutException)
+            (EmbeddingRateLimitError, litellm.APIConnectionError, litellm.Timeout)
         ),
         before_sleep=before_sleep_log(_tenacity_logger, logging.WARNING),
         reraise=True,
     )
-    async def _embed_batch(
-        self,
-        batch: list[str],
-        task: str,
-        batch_num: int,
-        timeout: float = 60.0,
-    ) -> list[list[float]]:
-        """Embed a single batch with retry logic.
-
-        Raises ``EmbeddingRateLimitError`` on 429 so tenacity can use the
-        rate-limit-aware wait strategy.
-        """
-        log.debug("embedding batch", batch=batch_num, size=len(batch), task=task)
-
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(
-                self.api_url,
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": self.model,
-                    "task": task,
-                    "input": batch,
-                },
+    async def _embed_batch(self, batch: list[str], batch_num: int) -> list[list[float]]:
+        """Embed one batch; rate limits become ``EmbeddingRateLimitError`` for tenacity."""
+        log.debug("embedding batch", batch=batch_num, size=len(batch))
+        try:
+            response = await litellm.aembedding(
+                model=self.model,
+                input=batch,
+                dimensions=self.dimension,
+                api_key=self.api_key,
+                timeout=self.timeout,
             )
+        except litellm.RateLimitError as e:
+            raise EmbeddingRateLimitError(
+                message=f"Rate limited on batch {batch_num} (429)",
+                retry_after=_retry_after_from(e),
+            ) from e
+        except (litellm.APIConnectionError, litellm.Timeout):
+            raise
+        except Exception as e:  # provider errors are not one litellm base class
+            raise EmbeddingServiceError(
+                f"Embedding request failed on batch {batch_num}: {e}"
+            ) from e
 
-            if response.status_code == 429:
-                retry_after = self._parse_retry_after(response)
-                raise EmbeddingRateLimitError(
-                    message=f"Rate limited on batch {batch_num} (429)",
-                    retry_after=retry_after,
+        items: list[Any] = sorted(response.data, key=_item_index)
+        embeddings = [_item_embedding(item) for item in items]
+        if len(embeddings) != len(batch):
+            raise EmbeddingServiceError(
+                f"Expected {len(batch)} embeddings on batch {batch_num}, got {len(embeddings)}"
+            )
+        for vector in embeddings:
+            if len(vector) != self.dimension:
+                raise EmbeddingServiceError(
+                    f"Expected {self.dimension}-dimensional embeddings, got {len(vector)}"
                 )
-
-            response.raise_for_status()
-            data = response.json()
-
-        return [item["embedding"] for item in data["data"]]
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+        return embeddings
 
     async def embed_query(self, query: str) -> list[float]:
-        """Generate embedding for a search query.
-
-        Returns a 1024-dimensional embedding vector.
-        """
+        """Embed a search query; returns a 1024-dimensional vector."""
         log.debug("embedding query", query_len=len(query))
-        embeddings = await self._embed_batch(
-            batch=[query], task="retrieval.query", batch_num=1, timeout=30.0
-        )
+        embeddings = await self._embed_batch(batch=[query], batch_num=1)
         return embeddings[0]
 
     async def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        """Generate embeddings for multiple documents.
-
-        Processes in batches of 50.  Retry is per-batch, so already-succeeded
-        batches are never re-sent.
-        """
-        batch_size = 50
-        total_batches = math.ceil(len(texts) / batch_size)
-
+        """Embed documents in batches; retry is per batch, so succeeded batches are not re-sent."""
+        total_batches = math.ceil(len(texts) / BATCH_SIZE)
         log.info("embedding documents", count=len(texts), batches=total_batches)
 
         all_embeddings: list[list[float]] = []
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i : i + batch_size]
-            batch_num = i // batch_size + 1
-            embeddings = await self._embed_batch(
-                batch=batch, task="retrieval.passage", batch_num=batch_num
+        for i in range(0, len(texts), BATCH_SIZE):
+            batch = texts[i : i + BATCH_SIZE]
+            all_embeddings.extend(
+                await self._embed_batch(batch=batch, batch_num=i // BATCH_SIZE + 1)
             )
-            all_embeddings.extend(embeddings)
 
         log.info("documents embedded", count=len(all_embeddings))
         return all_embeddings
+
+
+def _item_index(item: Any) -> int:
+    return int(item["index"] if isinstance(item, dict) else item.index)
+
+
+def _item_embedding(item: Any) -> list[float]:
+    return list(item["embedding"] if isinstance(item, dict) else item.embedding)

@@ -151,6 +151,24 @@ class UsageLimitExceededError(BaseAPIException):
         )
 
 
+class ScoringLimitExceededError(BaseAPIException):
+    """Today's on-demand scoring budget is spent (SPE-302): per user or across all users."""
+
+    def __init__(self, scope: str, current: int, limit: int):
+        if scope == "user":
+            message = (
+                f"You reached today's limit of {limit} on-demand scores. Resets at midnight UTC."
+            )
+        else:
+            message = "On-demand scoring is paused for today; the weekly digest is unaffected."
+        super().__init__(
+            message,
+            status_code=429,
+            error_code="SCORING_LIMIT_EXCEEDED",
+            details={"scope": scope, "current": current, "limit": limit},
+        )
+
+
 # --- 500 / 502 / 504 ----------------------------------------------------------
 
 
@@ -199,7 +217,7 @@ class EmbeddingServiceError(ExternalServiceError):
         details: dict[str, Any] | None = None,
         error_code: str = "EMBEDDING_SERVICE_ERROR",
     ):
-        super().__init__("Jina Embeddings", message, error_code=error_code, details=details)
+        super().__init__("OpenAI Embeddings", message, error_code=error_code, details=details)
 
 
 class EmbeddingRateLimitError(EmbeddingServiceError, _RateLimited):

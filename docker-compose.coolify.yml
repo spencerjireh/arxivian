@@ -62,10 +62,8 @@ services:
       # TypeSafe Jev (Stage 2 scoring)
       TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:?Set TYPESAFE_API_KEY}
       TYPESAFE_MODEL: ${TYPESAFE_MODEL:-jev-1.13.0}
+      # Triage, chat and embeddings (text-embedding-3-small) through LiteLLM
       OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY}
-
-      # Embeddings
-      JINA_API_KEY: ${JINA_API_KEY:?Set JINA_API_KEY}
 
       # Auth
       CLERK_DOMAIN: ${CLERK_DOMAIN:?Set CLERK_DOMAIN}
@@ -111,6 +109,8 @@ services:
       TRIAGE_LOOKBACK_DAYS: ${TRIAGE_LOOKBACK_DAYS:-7}
       TRIAGE_MAX_PER_CATEGORY: ${TRIAGE_MAX_PER_CATEGORY:-100}
       ONDEMAND_SCORE_LOCK_SECONDS: ${ONDEMAND_SCORE_LOCK_SECONDS:-1800}
+      ONDEMAND_SCORE_DAILY_BUDGET: ${ONDEMAND_SCORE_DAILY_BUDGET:-30}
+      ONDEMAND_SCORE_DAILY_PER_USER: ${ONDEMAND_SCORE_DAILY_PER_USER:-10}
     depends_on:
       db:
         condition: service_healthy
@@ -135,7 +135,6 @@ services:
       CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/0
       CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/1
       OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY}
-      JINA_API_KEY: ${JINA_API_KEY:?Set JINA_API_KEY}
       DEFAULT_LLM_MODEL: ${DEFAULT_LLM_MODEL:-openai/gpt-5-nano}
       STRUCTURED_OUTPUT_MODEL: ${STRUCTURED_OUTPUT_MODEL:-openai/gpt-5-nano}
       # TypeSafe Jev (Stage 2 scoring)

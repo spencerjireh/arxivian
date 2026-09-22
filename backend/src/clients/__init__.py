@@ -1,1 +1,1 @@
-"""External API clients: LiteLLM, arXiv, Jina, Semantic Scholar, TypeSafe."""
+"""External API clients: LiteLLM (chat + embeddings), arXiv, Semantic Scholar, TypeSafe."""

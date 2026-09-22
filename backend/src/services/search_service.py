@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 
-from src.clients.embeddings_client import JinaEmbeddingsClient
+from src.clients.embeddings_client import EmbeddingsClient
 from src.repositories.search_repository import SearchRepository, SearchResult
 from src.utils.logger import get_logger
 
@@ -15,7 +15,7 @@ class SearchService:
     def __init__(
         self,
         search_repository: SearchRepository,
-        embeddings_client: JinaEmbeddingsClient,
+        embeddings_client: EmbeddingsClient,
         rrf_k: int = 60,
     ):
         self.search_repo = search_repository

@@ -21,7 +21,6 @@ env:
   # without a default; the provider keys let the happy-path health check report healthy.
   CLERK_DOMAIN: test.clerk.accounts.dev
   OPENAI_API_KEY: ci-dummy-key
-  JINA_API_KEY: ci-dummy-key
 
 jobs:
   backend-lint:
@@ -177,7 +176,6 @@ jobs:
           REDIS_PASSWORD: x
           TYPESAFE_API_KEY: x
           OPENAI_API_KEY: x
-          JINA_API_KEY: x
           CLERK_DOMAIN: x
           CORS_ORIGINS: http://localhost
           VITE_CLERK_PUBLISHABLE_KEY: pk_test_x
