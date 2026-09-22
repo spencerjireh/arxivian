@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import OperationalError
 
 from src.clients.arxiv_client import ArxivClient, ArxivPaper
-from src.clients.embeddings_client import JinaEmbeddingsClient
+from src.clients.embeddings_client import EmbeddingsClient
 from src.exceptions import (
     EmbeddingServiceError,
     InsufficientChunksError,
@@ -75,7 +75,7 @@ class IngestService:
         self,
         arxiv_client: ArxivClient,
         pdf_parser: PDFParser,
-        embeddings_client: JinaEmbeddingsClient,
+        embeddings_client: EmbeddingsClient,
         chunking_service: ChunkingService,
         paper_repository: PaperRepository,
         chunk_repository: ChunkRepository,

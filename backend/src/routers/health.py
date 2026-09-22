@@ -25,7 +25,7 @@ async def health_check(
     Checks:
     - Database connectivity and counts
     - LLM provider configuration
-    - Jina embeddings API reachability
+    - Embeddings API key presence (OpenAI through LiteLLM)
 
     Returns:
         HealthResponse with status and service details
@@ -67,15 +67,15 @@ async def health_check(
         services["llm"] = ServiceStatus(status="unhealthy", message="Service unavailable")
         overall_status = "degraded"
 
-    # Check Jina
+    # Check embeddings (OpenAI text-embedding-3-small through LiteLLM)
     try:
         if embeddings_client.api_key:
-            services["jina"] = ServiceStatus(status="healthy", message="API key configured")
+            services["embeddings"] = ServiceStatus(status="healthy", message="API key configured")
         else:
             raise ValueError("No API key")
     except Exception as e:
-        log.error("health check failed", service="jina", error=str(e))
-        services["jina"] = ServiceStatus(status="unhealthy", message="Service unavailable")
+        log.error("health check failed", service="embeddings", error=str(e))
+        services["embeddings"] = ServiceStatus(status="unhealthy", message="Service unavailable")
         overall_status = "degraded"
 
     return HealthResponse(

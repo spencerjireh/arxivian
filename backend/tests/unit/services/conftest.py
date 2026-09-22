@@ -17,7 +17,7 @@ def mock_search_repository():
 
 @pytest.fixture
 def mock_embeddings_client():
-    """Create a mock JinaEmbeddingsClient."""
+    """Create a mock EmbeddingsClient."""
     client = AsyncMock()
     client.embed_query = AsyncMock(return_value=[0.1] * 1024)
     client.embed_documents = AsyncMock(return_value=[[0.1] * 1024])

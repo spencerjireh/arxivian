@@ -217,7 +217,7 @@ class EmbeddingServiceError(ExternalServiceError):
         details: dict[str, Any] | None = None,
         error_code: str = "EMBEDDING_SERVICE_ERROR",
     ):
-        super().__init__("Jina Embeddings", message, error_code=error_code, details=details)
+        super().__init__("OpenAI Embeddings", message, error_code=error_code, details=details)
 
 
 class EmbeddingRateLimitError(EmbeddingServiceError, _RateLimited):

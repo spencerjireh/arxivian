@@ -8,7 +8,7 @@ from langgraph.graph.state import CompiledStateGraph
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.clients.embeddings_client import JinaEmbeddingsClient
+from src.clients.embeddings_client import EmbeddingsClient
 from src.config import Settings, get_settings
 from src.database import get_db
 from src.exceptions import (
@@ -43,7 +43,7 @@ DbSession = Annotated[AsyncSession, Depends(get_db)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
 # Client dependencies (singletons)
-EmbeddingsClientDep = Annotated[JinaEmbeddingsClient, Depends(get_embeddings_client)]
+EmbeddingsClientDep = Annotated[EmbeddingsClient, Depends(get_embeddings_client)]
 
 
 # Service dependencies

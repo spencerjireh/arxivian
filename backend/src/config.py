@@ -24,9 +24,6 @@ class Settings(BaseSettings):
     # Provider API Keys
     openai_api_key: str = ""
 
-    # Embeddings
-    jina_api_key: str = ""
-
     # Semantic Scholar (demand signal -- citation velocity)
     # Key is optional: the keyless public pool works, just with tighter rate limits
     # (the client's backoff path handles 429s either way).

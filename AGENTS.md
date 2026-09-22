@@ -49,7 +49,7 @@ backend/
   src/services/                agent_service/, scoring_service/, feed_service/, ingest, search, auth, chunking
   src/repositories/            one module per table (async SQLAlchemy)
   src/models/                  ORM models (models/__init__ is star-imported by alembic/env.py)
-  src/clients/                 LiteLLM, arXiv, Jina, Semantic Scholar, TypeSafe
+  src/clients/                 LiteLLM (chat + embeddings), arXiv, Semantic Scholar, TypeSafe
   src/tasks/                   Celery tasks; runtime.py owns the worker loop; signals.py the hooks
   src/middleware/              error handler, request logging, maintenance curtain
   src/utils/                   logger, pdf_parser, section_splitter
@@ -128,7 +128,9 @@ profile lives in `users.preferences["feed_profile"]` (`schemas/users.py::FeedPro
 **Celery** (`tasks/`): Redis broker, RedBeat scheduler, Flower on 5555. `ingest_tasks`,
 `cleanup_tasks`, `scheduled_tasks` (nightly ingest), `triage_tasks` (weekly Stage 1),
 `score_tasks` (Stage 2; retries only on no-full-text / TypeSafe transient errors, honors
-`retry_after`), `digest_tasks` (weekly), `demand_tasks` (nightly backfill of NULL demand).
+`retry_after`), `digest_tasks` (weekly), `demand_tasks` (nightly backfill of NULL demand),
+`embedding_tasks` (`reembed_chunks_task`, run by hand after an embedding-model change;
+keyset cursor, re-enqueues itself under the task time limit).
 `runtime.py` owns the per-process event loop and `run_async`; `signals.py` starts it,
 configures tracing and tracks `task_executions` status. `tasks/__init__.py` imports every
 task module so `autodiscover_tasks` registers them; keep it that way.

@@ -1,6 +1,6 @@
 """Repository for Chunk model operations."""
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.chunk import Chunk
@@ -55,6 +55,21 @@ class ChunkRepository:
         """Count chunks for a paper."""
         result = await self.session.execute(select(Chunk.id).where(Chunk.paper_id == paper_id))
         return len(list(result.scalars().all()))
+
+    async def list_after(self, after_id: str | None, limit: int) -> list[Chunk]:
+        """Keyset page over all chunks ordered by id (for whole-table backfills)."""
+        query = select(Chunk).order_by(Chunk.id).limit(limit)
+        if after_id is not None:
+            query = query.where(Chunk.id > after_id)
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def update_embeddings(self, rows: list[tuple[object, list[float]]]) -> None:
+        """Rewrite the embedding of each (id, vector) pair. Caller owns commit."""
+        await self.session.execute(
+            update(Chunk), [{"id": chunk_id, "embedding": vector} for chunk_id, vector in rows]
+        )
+        await self.session.flush()
 
     async def count(self) -> int:
         """Get total count of chunks."""

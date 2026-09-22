@@ -183,13 +183,13 @@
         <mxCell id="ext1" value="arXiv API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="840" y="460" width="80" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="ext2" value="Jina v3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="ext2" value="OpenAI embeddings" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="935" y="460" width="70" height="30" as="geometry" />
         </mxCell>
         <mxCell id="ext3" value="Clerk" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="840" y="505" width="70" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="ext_jina_desc" value="Embeddings (1024d)" style="text;html=1;align=center;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=8;fontColor=#999999;" vertex="1" parent="1">
+        <mxCell id="ext_jina_desc" value="text-embedding-3-small (1024d)" style="text;html=1;align=center;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=8;fontColor=#999999;" vertex="1" parent="1">
           <mxGeometry x="920" y="490" width="110" height="20" as="geometry" />
         </mxCell>
 
