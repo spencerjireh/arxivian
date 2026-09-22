@@ -83,6 +83,10 @@
   --color-accent: #b45309;
   --color-accent-soft: #fef3c7;
   --color-accent-muted: #d97706;
+  /* The streaming ring around the assistant avatar (chat/ChatMessage.tsx). */
+  --color-accent-ring: #c2704a;
+  --color-accent-ring-glow: rgba(194, 112, 74, 0.3);
+  --color-accent-ring-soft: rgba(194, 112, 74, 0.15);
 
   /* Status colors - muted and elegant */
   --color-success: #15803d;

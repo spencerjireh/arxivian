@@ -1,8 +1,10 @@
-// useMessageCache: TanStack Query cache of a thread's turns (GET /conversations/{id}), keyed per paper for drafts.
+// useMessageCache: a thread's messages in the TanStack Query cache. A real session id fetches
+// GET /conversations/{id} once; a draft (null session) is keyed per paper and starts empty.
 import { useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useChatStore } from '@/stores/chatStore'
-import type { Message, SourceInfo, CitationsEventData, ConversationTurn } from '@/types/api'
+import { fetchConversation, turnsToMessages } from '../api/get-conversation'
+import type { Message } from '@/types/api'
 
 export const chatKeys = {
   /** A draft (sessionId null) is keyed by its paper so panels never share a draft. */
@@ -12,62 +14,41 @@ export const chatKeys = {
       : (['chat', 'messages', sessionId] as const),
 }
 
-export function useMessageCache(sessionId: string | null, scope?: string) {
+export function useMessageCache(sessionId: string | null, scope: string) {
   const queryClient = useQueryClient()
   const resetStreamingState = useChatStore((s) => s.resetStreamingState)
+  const queryKey = chatKeys.messages(sessionId, scope)
 
-  const { data: messages = [] } = useQuery<Message[]>({
-    queryKey: chatKeys.messages(sessionId, scope),
-    queryFn: () => [],
+  // Streaming writes go through setMessages, so cached data is never stale and never
+  // refetched: a thread the first turn just created under a new id is not clobbered.
+  const { data: messages = [], isPending } = useQuery<Message[]>({
+    queryKey,
+    queryFn: () => fetchConversation(sessionId!).then((c) => turnsToMessages(c.turns)),
+    enabled: sessionId !== null,
+    initialData: sessionId === null ? [] : undefined,
     staleTime: Infinity,
     gcTime: Infinity,
   })
 
   const setMessages = useCallback(
     (updater: Message[] | ((prev: Message[]) => Message[])) => {
-      queryClient.setQueryData<Message[]>(chatKeys.messages(sessionId, scope), (prev) => {
+      queryClient.setQueryData<Message[]>(queryKey, (prev) => {
         const prevMessages = prev ?? []
         return typeof updater === 'function' ? updater(prevMessages) : updater
       })
     },
-    [queryClient, sessionId, scope]
-  )
-
-  const loadFromHistory = useCallback(
-    (turns: ConversationTurn[]) => {
-      setMessages(
-        turns.flatMap((turn): Message[] => [
-          {
-            id: `user-${turn.turn_number}`,
-            role: 'user',
-            content: turn.user_query,
-            createdAt: new Date(turn.created_at),
-          },
-          {
-            id: `assistant-${turn.turn_number}`,
-            role: 'assistant',
-            content: turn.agent_response,
-            sources: (turn.sources as SourceInfo[] | null) ?? undefined,
-            metadata: {
-              query: turn.user_query,
-              execution_time_ms: 0,
-              retrieval_attempts: turn.retrieval_attempts,
-              guardrail_score: turn.guardrail_score ?? undefined,
-              turn_number: turn.turn_number,
-            },
-            citations: (turn.citations as CitationsEventData | null) ?? undefined,
-            createdAt: new Date(turn.created_at),
-          },
-        ])
-      )
-    },
-    [setMessages]
+    [queryClient, queryKey]
   )
 
   const clearMessages = useCallback(() => {
-    queryClient.setQueryData(chatKeys.messages(sessionId, scope), [])
+    queryClient.setQueryData(queryKey, [])
     resetStreamingState()
-  }, [queryClient, sessionId, scope, resetStreamingState])
+  }, [queryClient, queryKey, resetStreamingState])
 
-  return { messages, setMessages, loadFromHistory, clearMessages }
+  return {
+    messages,
+    isLoadingHistory: sessionId !== null && isPending,
+    setMessages,
+    clearMessages,
+  }
 }

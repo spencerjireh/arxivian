@@ -1,25 +1,23 @@
 // / route (public): the weekly issue with the week selector, filters and, when signed in,
-// the lifecycle actions and the profile prompt.
-import { useCallback, useMemo, useState } from 'react'
+// the profile prompt. Each card owns its lifecycle actions.
+import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useAuth } from '@clerk/clerk-react'
-import { AlertCircle, Loader2, Newspaper } from 'lucide-react'
+import { AlertCircle, Newspaper } from 'lucide-react'
+import Button from '@/components/ui/Button'
+import Spinner from '@/components/ui/Spinner'
+import StatusBlock from '@/components/ui/StatusBlock'
 import { useInfiniteFeed } from '@/features/feed/api/get-feed'
-import { useClearPaperState, useSetPaperState } from '@/features/paper/api/paper-state'
-import FeedList from '@/features/feed/components/FeedList'
 import FeedFilterBar, { type FeedFilters } from '@/features/feed/components/FeedFilterBar'
+import FeedList from '@/features/feed/components/FeedList'
 import OnboardingPrompt from '@/features/feed/components/OnboardingPrompt'
 import WeekSelector from '@/features/feed/components/WeekSelector'
-import Button from '@/components/ui/Button'
-import { getUserMessage } from '@/lib/errors'
 import { feedParamsFromSearch, formatWeek } from '@/features/feed/lib/feedParams'
-import { useUserStore } from '@/stores/userStore'
-import type { PendingAction } from '@/features/paper/components/CardActions'
+import { useSession } from '@/lib/auth'
+import { getUserMessage } from '@/lib/errors'
 import type { AvailableWeek, FeedItem } from '@/types/api'
 
 export default function FeedPage() {
-  const { isSignedIn } = useAuth()
-  const signedIn = Boolean(isSignedIn)
+  const { isSignedIn: signedIn, me } = useSession()
   const [search, setSearchParams] = useSearchParams()
   // Dismissals are per-user state: an anonymous reader's URL cannot ask for them.
   const params = useMemo(() => {
@@ -27,7 +25,7 @@ export default function FeedPage() {
     if (!signedIn) delete parsed.include_dismissed
     return parsed
   }, [search, signedIn])
-  const profileCategories = useUserStore((s) => s.me?.preferences?.feed_profile?.categories)
+  const profileCategories = me?.preferences?.feed_profile?.categories
 
   const {
     data,
@@ -38,9 +36,6 @@ export default function FeedPage() {
     fetchNextPage,
     isFetchingNextPage,
   } = useInfiniteFeed(params)
-  const setState = useSetPaperState()
-  const clearState = useClearPaperState()
-  const [pending, setPending] = useState<{ arxivId: string; action: PendingAction } | null>(null)
 
   const items: FeedItem[] = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data])
   const first = data?.pages[0]
@@ -90,41 +85,6 @@ export default function FeedPage() {
     },
     [setSearchParams]
   )
-  const stateOf = useCallback(
-    (arxivId: string) => items.find((i) => i.paper.arxiv_id === arxivId)?.state ?? null,
-    [items]
-  )
-
-  const run = useCallback((arxivId: string, action: PendingAction, fn: () => Promise<unknown>) => {
-    setPending({ arxivId, action })
-    void fn().finally(() => setPending((p) => (p?.arxivId === arxivId ? null : p)))
-  }, [])
-
-  const onSave = useCallback(
-    (arxivId: string) => {
-      if (stateOf(arxivId)?.state === 'saved') {
-        run(arxivId, 'clear', () => clearState.mutateAsync({ arxivId }).catch(() => undefined))
-      } else {
-        run(arxivId, 'saved', () =>
-          setState.mutateAsync({ arxivId, body: { state: 'saved' } }).catch(() => undefined)
-        )
-      }
-    },
-    [stateOf, run, clearState, setState]
-  )
-
-  const onDismiss = useCallback(
-    (arxivId: string) =>
-      run(arxivId, 'dismissed', () =>
-        setState.mutateAsync({ arxivId, body: { state: 'dismissed' } }).catch(() => undefined)
-      ),
-    [run, setState]
-  )
-
-  const pendingFor = useCallback(
-    (arxivId: string): PendingAction => (pending?.arxivId === arxivId ? pending.action : null),
-    [pending]
-  )
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-10">
@@ -168,39 +128,24 @@ export default function FeedPage() {
 
       <div className={isPlaceholderData ? 'opacity-60' : undefined}>
         {isLoading ? (
-          <div className="flex items-center justify-center py-24">
-            <Loader2 className="h-6 w-6 animate-spin text-stone-300" strokeWidth={1.5} />
-          </div>
+          <Spinner />
         ) : error ? (
-          <div className="flex flex-col items-center justify-center py-24">
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-error-soft)]">
-              <AlertCircle className="h-5 w-5 text-[var(--color-error)]" strokeWidth={1.5} />
-            </div>
-            <p className="text-sm text-stone-500">{getUserMessage(error)}</p>
-          </div>
+          <StatusBlock icon={AlertCircle} tone="error" title={getUserMessage(error)} />
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24">
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-stone-100">
-              <Newspaper className="h-5 w-5 text-stone-400" strokeWidth={1.5} />
-            </div>
-            <p className="text-sm font-medium text-stone-700">
-              {hasFilters ? 'No papers match these filters' : 'No papers scored for this week yet'}
-            </p>
-            <p className="mt-1 text-sm text-stone-400">
-              {hasFilters
+          <StatusBlock
+            icon={Newspaper}
+            title={
+              hasFilters ? 'No papers match these filters' : 'No papers scored for this week yet'
+            }
+            hint={
+              hasFilters
                 ? 'Loosen the filters to see more of the digest'
-                : 'The weekly digest is built after the scoring run completes'}
-            </p>
-          </div>
+                : 'The weekly digest is built after the scoring run completes'
+            }
+          />
         ) : (
           <>
-            <FeedList
-              items={items}
-              signedIn={signedIn}
-              onSave={onSave}
-              onDismiss={onDismiss}
-              pendingFor={pendingFor}
-            />
+            <FeedList items={items} signedIn={signedIn} />
             {hasNextPage && (
               <div className="flex justify-center pt-6">
                 <Button

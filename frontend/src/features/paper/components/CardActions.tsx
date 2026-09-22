@@ -1,35 +1,29 @@
-// Feed card and paper header: Save / Dismiss (and optional Implementing / Ship) buttons with optimistic state.
+// Feed card and paper header: Save / Dismiss (and optional Implementing / Ship) buttons; owns the
+// lifecycle mutation through usePaperLifecycle, so parents pass an id and a state only.
 import { useState } from 'react'
 import { Bookmark, BookmarkCheck, ExternalLink, Hammer, Rocket, X } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import Input from '@/components/ui/Input'
-import type { PaperLifecycleState, PaperState } from '@/types/api'
-
-export type PendingAction = PaperLifecycleState | 'clear' | null
+import { usePaperLifecycle } from '../hooks/usePaperLifecycle'
+import type { PaperState } from '@/types/api'
 
 export interface CardActionsProps {
+  arxivId: string
   state: PaperState | null
-  onSave: () => void
-  onDismiss: () => void
-  /** When set, the card offers "Mark as Implementing" (paper detail and Library; not the feed). */
-  onImplementing?: () => void
-  /** When set, an implementing paper gets a "Mark as shipped" action that asks for the repo. */
-  onShip?: (repoUrl: string) => void
-  pending?: PendingAction
+  /** Paper detail and Library offer Mark as Implementing / Mark as shipped; the feed does not. */
+  offerImplementing?: boolean
   size?: 'sm' | 'md'
 }
 
 /** Save / Dismiss, plus Mark as Implementing / Mark as shipped where offered. Dismiss is one click, no confirmation. */
 export default function CardActions({
+  arxivId,
   state,
-  onSave,
-  onDismiss,
-  onImplementing,
-  onShip,
-  pending = null,
+  offerImplementing = false,
   size = 'sm',
 }: CardActionsProps) {
+  const { pending, save, dismiss, toggleImplementing, ship } = usePaperLifecycle(arxivId, state)
   const current = state?.state ?? null
   const iconClass = 'w-4 h-4'
   const isSaved = current === 'saved'
@@ -61,8 +55,8 @@ export default function CardActions({
   const submitShip = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const url = repoUrl.trim()
-    if (!url || !onShip) return
-    onShip(url)
+    if (!url) return
+    ship(url)
     setShipOpen(false)
     setRepoUrl('')
   }
@@ -70,7 +64,7 @@ export default function CardActions({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-1.5">
-        {isImplementing && !onImplementing ? (
+        {isImplementing && !offerImplementing ? (
           // The feed offers no Implementing action: show the state instead of an unpressed
           // Save that would demote the paper on one click.
           <Chip tone="info" size="md">
@@ -80,7 +74,7 @@ export default function CardActions({
           <Button
             variant={isSaved ? 'secondary' : 'ghost'}
             size={size}
-            onClick={onSave}
+            onClick={save}
             isLoading={pending === 'saved' || (pending === 'clear' && isSaved)}
             aria-pressed={isSaved}
             leftIcon={
@@ -94,11 +88,11 @@ export default function CardActions({
             {isSaved ? 'Saved' : 'Save'}
           </Button>
         )}
-        {onImplementing && (
+        {offerImplementing && (
           <Button
             variant={isImplementing ? 'secondary' : 'ghost'}
             size={size}
-            onClick={onImplementing}
+            onClick={toggleImplementing}
             isLoading={pending === 'implementing'}
             aria-pressed={isImplementing}
             leftIcon={<Hammer className={iconClass} strokeWidth={1.5} />}
@@ -106,7 +100,7 @@ export default function CardActions({
             {isImplementing ? 'Implementing' : 'Mark as Implementing'}
           </Button>
         )}
-        {isImplementing && onShip && (
+        {isImplementing && offerImplementing && (
           <Button
             variant="ghost"
             size={size}
@@ -121,7 +115,7 @@ export default function CardActions({
         <Button
           variant="ghost"
           size={size}
-          onClick={onDismiss}
+          onClick={dismiss}
           isLoading={pending === 'dismissed'}
           leftIcon={<X className={iconClass} strokeWidth={1.5} />}
           aria-label="Dismiss"

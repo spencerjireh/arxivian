@@ -4,7 +4,7 @@
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, RouterProvider, useLocation } from 'react-router-dom'
 import { AuthenticateWithRedirectCallback } from '@clerk/clerk-react'
-import { Loader2 } from 'lucide-react'
+import Spinner from '../components/ui/Spinner'
 import Layout from '../components/layout/Layout'
 import AuthSession from '../features/auth/components/AuthSession'
 import ProtectedRoute from '../features/auth/components/ProtectedRoute'
@@ -24,11 +24,7 @@ const NotFoundPage = lazy(() => import('./routes/NotFoundPage'))
 const PrivacyPage = lazy(() => import('./routes/PrivacyPage'))
 
 function PageFallback() {
-  return (
-    <div className="flex flex-1 items-center justify-center py-24">
-      <Loader2 className="h-6 w-6 animate-spin text-stone-300" strokeWidth={1.5} />
-    </div>
-  )
+  return <Spinner className="flex-1" />
 }
 
 function Lazy({

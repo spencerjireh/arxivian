@@ -2,26 +2,22 @@ import { screen, fireEvent } from '@testing-library/react'
 import { Route, Routes } from 'react-router-dom'
 import PaperDetailPage from '@/app/routes/PaperDetailPage'
 import { ApiError } from '@/lib/api-client'
-import { mockAuth } from '../../../mocks/clerk'
-import { renderWithProviders } from '../../../helpers/renderWithProviders'
 import { makePaperMetadata } from '../../../fixtures/feed'
 import { makePaperScoreDetail } from '../../../fixtures/scores'
+import { renderWithProviders } from '../../../helpers/renderWithProviders'
+import { lifecycle, resetLifecycle, usePaperLifecycle } from '../../../mocks/lifecycle'
+import { mockSession, resetSession } from '../../../mocks/auth'
 
-vi.mock('@clerk/clerk-react', () => import('../../../mocks/clerk'))
+vi.mock('@/lib/auth', () => import('../../../mocks/auth'))
 vi.mock('framer-motion', () => import('../../../mocks/framer-motion'))
 
 const mockUsePaperScore = vi.fn()
-const setMutateAsync = vi.fn().mockResolvedValue({})
-const clearMutateAsync = vi.fn().mockResolvedValue(undefined)
 const restartPolling = vi.fn()
 
 vi.mock('@/features/paper/api/get-paper-score', () => ({
   usePaperScore: (id: string, options: unknown) => mockUsePaperScore(id, options),
 }))
-vi.mock('@/features/paper/api/paper-state', () => ({
-  useSetPaperState: () => ({ mutateAsync: setMutateAsync }),
-  useClearPaperState: () => ({ mutateAsync: clearMutateAsync }),
-}))
+vi.mock('@/features/paper/hooks/usePaperLifecycle', () => import('../../../mocks/lifecycle'))
 vi.mock('@/features/paper/components/ScopedChatPanel', () => ({
   default: ({ arxivId, sessionId }: { arxivId: string; sessionId: string | null }) => (
     <div data-testid="scoped-chat">
@@ -53,9 +49,9 @@ function renderPage(path = '/papers/2401.00001') {
 const pending = { status: 'pending', task_id: 't1', paper: makePaperMetadata() }
 
 beforeEach(() => {
-  mockAuth.isSignedIn = true
-  setMutateAsync.mockClear()
-  clearMutateAsync.mockClear()
+  resetSession()
+  mockSession.isSignedIn = true
+  resetLifecycle()
   restartPolling.mockClear()
 })
 
@@ -79,7 +75,7 @@ describe('PaperDetailPage', () => {
   })
 
   it('shows an anonymous reader the metadata preview without polling', () => {
-    mockAuth.isSignedIn = false
+    mockSession.isSignedIn = false
     mockUsePaperScore.mockReturnValue(scoreState({ data: { ...pending, task_id: null } }))
     renderPage()
     expect(mockUsePaperScore).toHaveBeenCalledWith('2401.00001', { poll: false })
@@ -93,7 +89,7 @@ describe('PaperDetailPage', () => {
   })
 
   it('gives an anonymous reader the evidence, a sign-in Save and a chat prompt', () => {
-    mockAuth.isSignedIn = false
+    mockSession.isSignedIn = false
     mockUsePaperScore.mockReturnValue(
       scoreState({ data: { status: 'ready', detail: makePaperScoreDetail() } })
     )
@@ -130,18 +126,16 @@ describe('PaperDetailPage', () => {
     expect(screen.getByRole('button', { name: 'Mark as Implementing' })).toBeInTheDocument()
   })
 
-  it('save and dismiss mutate with the route arXiv id', () => {
+  it('binds the header actions to the route arXiv id', () => {
     mockUsePaperScore.mockReturnValue(
       scoreState({ data: { status: 'ready', detail: makePaperScoreDetail() } })
     )
     renderPage()
+    expect(usePaperLifecycle).toHaveBeenCalledWith('2401.00001', null)
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(setMutateAsync).toHaveBeenCalledWith({ arxivId: '2401.00001', body: { state: 'saved' } })
+    expect(lifecycle.save).toHaveBeenCalledTimes(1)
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
-    expect(setMutateAsync).toHaveBeenCalledWith({
-      arxivId: '2401.00001',
-      body: { state: 'dismissed' },
-    })
+    expect(lifecycle.dismiss).toHaveBeenCalledTimes(1)
   })
 
   it('mounts the scoped chat panel only when ready, with the session from the URL', () => {

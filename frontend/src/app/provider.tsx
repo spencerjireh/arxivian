@@ -2,11 +2,11 @@
 // root ErrorBoundary and the Toaster. main.tsx wraps the router in this.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ClerkProvider } from '@clerk/clerk-react'
-import { toast } from 'sonner'
 import ErrorBoundary from '../components/ui/ErrorBoundary'
 import PageErrorFallback from '../components/ui/PageErrorFallback'
 import Toaster from '../components/ui/Toaster'
 import { isAuthError, getUserMessage } from '../lib/errors'
+import { notify } from '../lib/notifications'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -16,11 +16,9 @@ const queryClient = new QueryClient({
     },
     mutations: {
       onError: (error) => {
-        // Auth errors trigger forced redirect via auth:signout event; skip toast
+        // A 401 already forced a sign-out through lib/api-client; no toast for it
         if (!isAuthError(error)) {
-          toast.error('Action failed', {
-            description: getUserMessage(error),
-          })
+          notify.error('Action failed', getUserMessage(error))
         }
       },
     },

@@ -1,4 +1,12 @@
-import { apiGet, apiPut, apiPatch, apiDelete, ApiError, setAuthTokenGetter } from '@/lib/api-client'
+import {
+  apiGet,
+  apiPut,
+  apiPatch,
+  apiDelete,
+  ApiError,
+  setAuthTokenGetter,
+  setUnauthorizedHandler,
+} from '@/lib/api-client'
 
 function mockFetch(status: number, body: unknown = null) {
   const response = {
@@ -16,6 +24,7 @@ function mockFetch(status: number, body: unknown = null) {
 afterEach(() => {
   vi.unstubAllGlobals()
   setAuthTokenGetter(() => Promise.resolve(null))
+  setUnauthorizedHandler(null)
 })
 
 describe('api client verbs', () => {
@@ -34,6 +43,13 @@ describe('api client verbs', () => {
     const fetchMock = mockFetch(200, { ok: true })
     await apiPatch('/users/me/preferences', { a: 1 })
     expect(fetchMock.mock.calls[0][1].method).toBe('PATCH')
+  })
+
+  it('apiGet sends no body', async () => {
+    const fetchMock = mockFetch(200, { ok: true })
+    await apiGet('/feed')
+    expect(fetchMock.mock.calls[0][1].method).toBe('GET')
+    expect(fetchMock.mock.calls[0][1].body).toBeUndefined()
   })
 
   it('a 204 resolves to undefined without parsing a body', async () => {
@@ -58,20 +74,19 @@ describe('api client verbs', () => {
 describe('401 handling', () => {
   it('does not force a sign-out when the request carried no token', async () => {
     mockFetch(401, { detail: 'nope' })
-    const dispatch = vi.spyOn(window, 'dispatchEvent')
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
     await expect(apiGet('/feed')).rejects.toMatchObject({ status: 401 })
-    expect(dispatch).not.toHaveBeenCalled()
-    dispatch.mockRestore()
+    expect(onUnauthorized).not.toHaveBeenCalled()
   })
 
   it('forces a sign-out when an authenticated request gets a 401', async () => {
     setAuthTokenGetter(() => Promise.resolve('tok'))
     const fetchMock = mockFetch(401, { detail: 'expired' })
-    const dispatch = vi.spyOn(window, 'dispatchEvent')
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
     await expect(apiGet('/users/me')).rejects.toMatchObject({ status: 401 })
     expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer tok')
-    expect(dispatch).toHaveBeenCalledTimes(1)
-    expect(dispatch.mock.calls[0][0].type).toBe('auth:signout')
-    dispatch.mockRestore()
+    expect(onUnauthorized).toHaveBeenCalledTimes(1)
   })
 })

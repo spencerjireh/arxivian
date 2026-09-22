@@ -7,8 +7,8 @@ import {
   type QueryClient,
   type QueryKey,
 } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import { apiDelete, apiPut } from '@/lib/api-client'
+import { notify } from '@/lib/notifications'
 import { feedKeys, libraryKeys, scoreKeys } from '@/lib/query-keys'
 import type {
   FeedParams,
@@ -155,9 +155,7 @@ export function useSetPaperState() {
     },
     onSuccess: (_data, { arxivId, body }) => {
       if (body.state === 'dismissed') {
-        toast('Dismissed', {
-          action: { label: 'Undo', onClick: () => clear.mutate({ arxivId }) },
-        })
+        notify.undoable('Dismissed', () => clear.mutate({ arxivId }))
       }
     },
     onSettled: (_data, _err, { arxivId }) => {

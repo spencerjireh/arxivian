@@ -1,14 +1,14 @@
 import { screen } from '@testing-library/react'
 import AboutPage from '@/app/routes/AboutPage'
-import { mockAuth } from '../../../mocks/clerk'
 import { renderWithProviders } from '../../../helpers/renderWithProviders'
+import { mockSession, resetSession } from '../../../mocks/auth'
 
-vi.mock('@clerk/clerk-react', () => import('../../../mocks/clerk'))
+vi.mock('@/lib/auth', () => import('../../../mocks/auth'))
 vi.mock('framer-motion', () => import('../../../mocks/framer-motion'))
 
 describe('AboutPage', () => {
   beforeEach(() => {
-    mockAuth.isSignedIn = false
+    resetSession()
   })
 
   it('renders the hero with the feed and sign-up calls to action when signed out', () => {
@@ -20,7 +20,7 @@ describe('AboutPage', () => {
   })
 
   it('drops the sign-up call to action when signed in and never redirects', () => {
-    mockAuth.isSignedIn = true
+    mockSession.isSignedIn = true
     renderWithProviders(<AboutPage />, { initialEntries: ['/about'] })
     expect(screen.getByRole('heading', { name: /Papers you could/ })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Open the feed/ })).toHaveAttribute('href', '/')

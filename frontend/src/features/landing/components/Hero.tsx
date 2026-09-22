@@ -1,15 +1,15 @@
 // Landing hero: headline, subheadline, primary CTAs and the product mock.
 import { Link } from 'react-router-dom'
-import { useAuth } from '@clerk/clerk-react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, ChevronDown } from 'lucide-react'
 import { staggerItem, heroStaggerContainer, heroOrnamentLine, transitions } from '@/lib/animations'
+import { useSession } from '@/lib/auth'
 import Button from '@/components/ui/Button'
 import HeroArt from './HeroArt'
 import ProductMock from './ProductMock'
 
 export default function Hero() {
-  const { isSignedIn } = useAuth()
+  const { isSignedIn } = useSession()
   const shouldReduceMotion = useReducedMotion()
 
   return (

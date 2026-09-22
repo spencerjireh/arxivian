@@ -1,11 +1,11 @@
 // Settings: edit the feed profile with the onboarding form.
-import { toast } from 'sonner'
-import { useUserStore } from '@/stores/userStore'
+import { useSession } from '@/lib/auth'
+import { notify } from '@/lib/notifications'
 import { useUpdateFeedProfile } from '../api/update-feed-profile'
 import FeedProfileForm from './FeedProfileForm'
 
 export default function FeedProfileSection() {
-  const profile = useUserStore((s) => s.me?.preferences?.feed_profile)
+  const profile = useSession().me?.preferences?.feed_profile
   const update = useUpdateFeedProfile()
 
   return (
@@ -21,8 +21,8 @@ export default function FeedProfileSection() {
         submitLabel="Save"
         onSubmit={(next) =>
           update.mutate(next, {
-            onSuccess: () => toast.success('Feed profile saved'),
-            onError: () => toast.error('Could not save your profile'),
+            onSuccess: () => notify.success('Feed profile saved'),
+            onError: () => notify.error('Could not save your profile'),
           })
         }
       />

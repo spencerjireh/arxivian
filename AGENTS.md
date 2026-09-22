@@ -60,8 +60,8 @@ frontend/                      see frontend/AGENTS.md for the full map and behav
   src/app/                     provider.tsx (Clerk + QueryClient), router.tsx, routes/ (one file per route)
   src/features/                feed, paper (detail + chat), profile, auth, landing: each api/ components/ hooks/ lib/
   src/components/              ui/ primitives, layout/ (TopNav, Layout, Footer)
-  src/lib/                     api-client.ts (API base /api, nginx rewrites to /api/v1), query-keys.ts, helpers
-  src/stores/                  Zustand (chat streaming, user)
+  src/lib/                     api-client.ts (API base /api, nginx rewrites to /api/v1), auth.ts (useSession + me query), query-keys.ts, notifications.ts, helpers
+  src/stores/                  Zustand (chat streaming state only)
   src/types/api.ts             hand-mirrored backend schemas; update with every schema change
   src/content/privacy-policy.md   rendered at /privacy
   tests/unit/**                vitest + jsdom, mirrors src/

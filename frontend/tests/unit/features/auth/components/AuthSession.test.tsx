@@ -1,17 +1,19 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import AuthSession from '@/features/auth/components/AuthSession'
-import { useUserStore } from '@/stores/userStore'
+import { meKeys } from '@/lib/auth'
 import { mockAuth, mockClerk } from '../../../../mocks/clerk'
 
 vi.mock('@clerk/clerk-react', () => import('../../../../mocks/clerk'))
 
 const apiGet = vi.fn()
 const setAuthTokenGetter = vi.fn()
+const setUnauthorizedHandler = vi.fn()
 vi.mock('@/lib/api-client', () => ({
   apiGet: (...args: unknown[]) => apiGet(...args),
   setAuthTokenGetter: (getter: unknown) => setAuthTokenGetter(getter),
+  setUnauthorizedHandler: (handler: unknown) => setUnauthorizedHandler(handler),
 }))
 
 const me = {
@@ -52,8 +54,8 @@ beforeEach(() => {
   mockAuth.isLoaded = true
   apiGet.mockReset().mockResolvedValue(me)
   setAuthTokenGetter.mockClear()
+  setUnauthorizedHandler.mockClear()
   mockClerk.signOut.mockClear()
-  useUserStore.setState({ me: null, loading: false, error: null })
 })
 
 describe('AuthSession', () => {
@@ -67,9 +69,9 @@ describe('AuthSession', () => {
 
   it('loads /users/me once and registers the Clerk token getter when signed in', async () => {
     mockAuth.isSignedIn = true
-    renderSession()
+    const { queryClient } = renderSession()
     expect(await screen.findByText('public page')).toBeInTheDocument()
-    await vi.waitFor(() => expect(useUserStore.getState().me).toEqual(me))
+    await vi.waitFor(() => expect(queryClient.getQueryData(meKeys.me())).toEqual(me))
     expect(apiGet).toHaveBeenCalledTimes(1)
     expect(apiGet).toHaveBeenCalledWith('/users/me')
     const getter = setAuthTokenGetter.mock.calls[0][0] as () => Promise<string | null>
@@ -86,13 +88,14 @@ describe('AuthSession', () => {
 
   it('signs out and goes to /sign-in on a forced auth:signout', async () => {
     mockAuth.isSignedIn = true
-    useUserStore.setState({ me })
-    const { router: view } = renderSession()
+    const { router: view, queryClient } = renderSession()
     await screen.findByText('public page')
-    fireEvent(window, new CustomEvent('auth:signout'))
+    await vi.waitFor(() => expect(queryClient.getQueryData(meKeys.me())).toEqual(me))
+    const handler = setUnauthorizedHandler.mock.lastCall?.[0] as () => void
+    act(() => handler())
     await vi.waitFor(() => expect(mockClerk.signOut).toHaveBeenCalledTimes(1))
     await vi.waitFor(() => expect(view.state.location.pathname).toBe('/sign-in'))
-    expect(useUserStore.getState().me).toBeNull()
+    expect(queryClient.getQueryData(meKeys.me())).toBeUndefined()
   })
 
   it('drops every cached query when a signed-in session ends', async () => {
@@ -100,13 +103,12 @@ describe('AuthSession', () => {
     const { router, queryClient } = renderSession()
     await screen.findByText('public page')
     queryClient.setQueryData(['feed', 'list', {}], { items: [{ state: 'saved' }] })
-    expect(queryClient.getQueryCache().getAll()).toHaveLength(1)
+    await vi.waitFor(() => expect(queryClient.getQueryData(meKeys.me())).toEqual(me))
 
     mockAuth.isSignedIn = false
     // Clerk flips isSignedIn; the layout re-renders through a navigation to the same route.
     await router.navigate('/')
     await vi.waitFor(() => expect(queryClient.getQueryCache().getAll()).toHaveLength(0))
-    expect(useUserStore.getState().me).toBeNull()
   })
 
   it('keeps the cache for a visitor who was never signed in', async () => {

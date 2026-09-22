@@ -1,36 +1,21 @@
 import { screen, fireEvent, within } from '@testing-library/react'
 import FeedCard from '@/features/feed/components/FeedCard'
-import { renderWithProviders } from '../../../../helpers/renderWithProviders'
 import { makeFeedItem } from '../../../../fixtures/feed'
+import { renderWithProviders } from '../../../../helpers/renderWithProviders'
+import { lifecycle, resetLifecycle, usePaperLifecycle } from '../../../../mocks/lifecycle'
 import type { FeedItem } from '@/types/api'
 
 vi.mock('framer-motion', () => import('../../../../mocks/framer-motion'))
 
+vi.mock('@/features/paper/hooks/usePaperLifecycle', () => import('../../../../mocks/lifecycle'))
+
 function renderCard(
   item: FeedItem = makeFeedItem(),
-  {
-    signedIn = true,
-    onImplementing,
-    onShip,
-  }: {
-    signedIn?: boolean
-    onImplementing?: (arxivId: string) => void
-    onShip?: (arxivId: string, repoUrl: string) => void
-  } = {}
+  { signedIn = true, offerImplementing = false } = {}
 ) {
-  const onSave = vi.fn()
-  const onDismiss = vi.fn()
   renderWithProviders(
-    <FeedCard
-      item={item}
-      signedIn={signedIn}
-      onSave={onSave}
-      onDismiss={onDismiss}
-      onImplementing={onImplementing}
-      onShip={onShip}
-    />
+    <FeedCard item={item} signedIn={signedIn} offerImplementing={offerImplementing} />
   )
-  return { onSave, onDismiss }
 }
 
 const implementing = {
@@ -39,6 +24,10 @@ const implementing = {
   dismissal_reason: null,
   updated_at: 'x',
 }
+
+beforeEach(() => {
+  resetLifecycle()
+})
 
 describe('FeedCard', () => {
   it('links the title to the paper detail route and shows the headline and meta line', () => {
@@ -82,28 +71,27 @@ describe('FeedCard', () => {
     expect(screen.getByText('Fits your compute')).toBeInTheDocument()
   })
 
-  it('offers Save and Dismiss only, and no Implementing button, on the feed', () => {
-    const { onSave, onDismiss } = renderCard()
+  it('binds the lifecycle hook to the card and offers Save and Dismiss only on the feed', () => {
+    renderCard()
+    expect(usePaperLifecycle).toHaveBeenCalledWith('2401.00001', null)
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
-    expect(onSave).toHaveBeenCalledWith('2401.00001')
-    expect(onDismiss).toHaveBeenCalledWith('2401.00001')
+    expect(lifecycle.save).toHaveBeenCalledTimes(1)
+    expect(lifecycle.dismiss).toHaveBeenCalledTimes(1)
     expect(screen.queryByRole('button', { name: 'Mark as Implementing' })).not.toBeInTheDocument()
   })
 
   it('shows an implementing paper as a chip on the feed instead of an unpressed Save', () => {
-    const { onSave } = renderCard(makeFeedItem({ state: implementing }))
+    renderCard(makeFeedItem({ state: implementing }))
     expect(screen.getByText('Implementing')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Save/ })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument()
-    expect(onSave).not.toHaveBeenCalled()
   })
 
-  it('offers Implementing where the handler is given (detail and Library)', () => {
-    const onImplementing = vi.fn()
-    renderCard(makeFeedItem(), { onImplementing })
+  it('offers Implementing where the list allows it (detail and Library)', () => {
+    renderCard(makeFeedItem(), { offerImplementing: true })
     fireEvent.click(screen.getByRole('button', { name: 'Mark as Implementing' }))
-    expect(onImplementing).toHaveBeenCalledWith('2401.00001')
+    expect(lifecycle.toggleImplementing).toHaveBeenCalledTimes(1)
   })
 
   it('shows an anonymous reader a Save that goes to sign-in and no Dismiss', () => {
@@ -111,6 +99,7 @@ describe('FeedCard', () => {
     expect(screen.getByRole('link', { name: 'Save' })).toHaveAttribute('href', '/sign-in')
     expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
+    expect(usePaperLifecycle).not.toHaveBeenCalled()
   })
 
   it('reflects the saved state', () => {
@@ -149,30 +138,37 @@ describe('FeedCard', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
   })
 
-  it('offers "Mark as shipped" only for an implementing paper when onShip is given', () => {
-    renderCard(makeFeedItem({ state: implementing }), { onImplementing: vi.fn() })
+  it('offers "Mark as shipped" only for an implementing paper where Implementing is offered', () => {
+    renderCard(makeFeedItem(), { offerImplementing: true })
+    expect(screen.queryByRole('button', { name: 'Mark as shipped' })).not.toBeInTheDocument()
+    renderCard(makeFeedItem({ state: implementing }))
     expect(screen.queryByRole('button', { name: 'Mark as shipped' })).not.toBeInTheDocument()
   })
 
-  it('asks for the repo url and calls onShip with it', () => {
-    const onShip = vi.fn()
-    renderCard(makeFeedItem({ state: implementing }), { onImplementing: vi.fn(), onShip })
+  it('asks for the repo url and ships with it trimmed', () => {
+    renderCard(makeFeedItem({ state: implementing }), { offerImplementing: true })
 
     fireEvent.click(screen.getByRole('button', { name: 'Mark as shipped' }))
     const input = screen.getByLabelText('Repository URL')
     fireEvent.change(input, { target: { value: '  https://github.com/x/y  ' } })
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
 
-    expect(onShip).toHaveBeenCalledWith('2401.00001', 'https://github.com/x/y')
+    expect(lifecycle.ship).toHaveBeenCalledWith('https://github.com/x/y')
     expect(screen.queryByLabelText('Repository URL')).not.toBeInTheDocument()
   })
 
   it('cancel closes the repo form without shipping', () => {
-    const onShip = vi.fn()
-    renderCard(makeFeedItem({ state: implementing }), { onImplementing: vi.fn(), onShip })
+    renderCard(makeFeedItem({ state: implementing }), { offerImplementing: true })
     fireEvent.click(screen.getByRole('button', { name: 'Mark as shipped' }))
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByLabelText('Repository URL')).not.toBeInTheDocument()
-    expect(onShip).not.toHaveBeenCalled()
+    expect(lifecycle.ship).not.toHaveBeenCalled()
+  })
+
+  it('spins the button whose transition is in flight', () => {
+    usePaperLifecycle.mockReturnValueOnce({ ...lifecycle, pending: 'dismissed' })
+    renderCard()
+    expect(screen.getByRole('button', { name: 'Dismiss' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save' })).not.toBeDisabled()
   })
 })

@@ -1,29 +1,17 @@
-// Feed: the card list with loading, empty and error states.
+// Feed: the card list; a dismissed card collapses out when the cache updater removes it.
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import FeedCard from './FeedCard'
-import type { PendingAction } from '@/features/paper/components/CardActions'
 import type { FeedItem } from '@/types/api'
 
 interface FeedListProps {
   items: FeedItem[]
   signedIn: boolean
-  onSave: (arxivId: string) => void
-  onDismiss: (arxivId: string) => void
-  onImplementing?: (arxivId: string) => void
-  onShip?: (arxivId: string, repoUrl: string) => void
-  pendingFor: (arxivId: string) => PendingAction
+  /** Library lists offer Mark as Implementing / Mark as shipped; the feed does not. */
+  offerImplementing?: boolean
 }
 
-/** Single column; a dismissed card collapses out (the cache updater removes it). */
-export default function FeedList({
-  items,
-  signedIn,
-  onSave,
-  onDismiss,
-  onImplementing,
-  onShip,
-  pendingFor,
-}: FeedListProps) {
+/** Single column; each card owns its lifecycle actions. */
+export default function FeedList({ items, signedIn, offerImplementing = false }: FeedListProps) {
   const reduceMotion = useReducedMotion()
   return (
     <div className="space-y-4">
@@ -36,15 +24,7 @@ export default function FeedList({
             exit={reduceMotion ? undefined : { opacity: 0, height: 0, marginBottom: 0 }}
             transition={{ duration: 0.18 }}
           >
-            <FeedCard
-              item={item}
-              signedIn={signedIn}
-              onSave={onSave}
-              onDismiss={onDismiss}
-              onImplementing={onImplementing}
-              onShip={onShip}
-              pendingAction={pendingFor(item.paper.arxiv_id)}
-            />
+            <FeedCard item={item} signedIn={signedIn} offerImplementing={offerImplementing} />
           </motion.div>
         ))}
       </AnimatePresence>

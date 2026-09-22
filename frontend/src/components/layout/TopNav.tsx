@@ -1,8 +1,8 @@
 // App shell: the one top nav for every visitor (Feed, About, Pricing; Library, Settings and
 // the account menu when signed in; Sign in otherwise).
 import { Link, useLocation } from 'react-router-dom'
-import { useAuth } from '@clerk/clerk-react'
 import clsx from 'clsx'
+import { useSession } from '@/lib/auth'
 import { matchesNav } from '@/lib/nav'
 import SignInLink from '@/components/ui/SignInLink'
 import logoIcon from '@/assets/logo-icon.png'
@@ -20,7 +20,7 @@ const accountItems = [
 ] as const
 
 export default function TopNav() {
-  const { isSignedIn } = useAuth()
+  const { isSignedIn } = useSession()
   const { pathname } = useLocation()
   const items = isSignedIn ? [...publicItems, ...accountItems] : publicItems
 

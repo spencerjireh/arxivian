@@ -92,8 +92,8 @@ export default function ChatMessage({
                     >
                       {shouldReduceMotion ? (
                         <div
-                          className="absolute -inset-[3px] rounded-xl border-2 border-[#C2704A]"
-                          style={{ boxShadow: '0 0 8px rgba(194, 112, 74, 0.3)' }}
+                          className="absolute -inset-[3px] rounded-xl border-2 border-[var(--color-accent-ring)]"
+                          style={{ boxShadow: '0 0 8px var(--color-accent-ring-glow)' }}
                         />
                       ) : (
                         <>
@@ -102,7 +102,7 @@ export default function ChatMessage({
                             className="absolute -inset-[6px] rounded-2xl opacity-40 blur-[4px]"
                             style={{
                               background:
-                                'conic-gradient(from 180deg, transparent 60%, #C2704A 78%, transparent 95%)',
+                                'conic-gradient(from 180deg, transparent 60%, var(--color-accent-ring) 78%, transparent 95%)',
                             }}
                             animate={{ rotate: 360 }}
                             transition={{ duration: 2.4, repeat: Infinity, ease: 'linear' }}
@@ -112,7 +112,7 @@ export default function ChatMessage({
                             className="absolute -inset-[3px] rounded-xl"
                             style={{
                               background:
-                                'conic-gradient(from 180deg, transparent 65%, #C2704A 82%, transparent 95%)',
+                                'conic-gradient(from 180deg, transparent 65%, var(--color-accent-ring) 82%, transparent 95%)',
                             }}
                             animate={{ rotate: 360 }}
                             transition={{ duration: 2.4, repeat: Infinity, ease: 'linear' }}
@@ -126,7 +126,7 @@ export default function ChatMessage({
                   className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-stone-100"
                   style={
                     isStreaming && !shouldReduceMotion
-                      ? { boxShadow: '0 0 6px rgba(194, 112, 74, 0.15)' }
+                      ? { boxShadow: '0 0 6px var(--color-accent-ring-soft)' }
                       : undefined
                   }
                 >

@@ -1,19 +1,14 @@
 // Settings: account details, daily chat usage and sign-out.
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useUser, useClerk } from '@clerk/clerk-react'
 import clsx from 'clsx'
 import { LogOut, Trash2 } from 'lucide-react'
 import Button from '@/components/ui/Button'
-import { useUserStore } from '@/stores/userStore'
+import { useSession } from '@/lib/auth'
 
 export default function AccountSection() {
   const navigate = useNavigate()
-  const { user } = useUser()
-  const { signOut } = useClerk()
-
-  const me = useUserStore((s) => s.me)
-  const clearUserStore = useUserStore((s) => s.clear)
+  const { user, me, signOut } = useSession()
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -22,7 +17,6 @@ export default function AccountSection() {
   if (!user) return null
 
   const handleSignOut = async () => {
-    clearUserStore()
     await signOut()
     await navigate('/')
   }

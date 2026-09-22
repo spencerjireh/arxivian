@@ -1,15 +1,13 @@
 // App shell: avatar button in the top nav with a sign-out dropdown.
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useUser, useClerk } from '@clerk/clerk-react'
 import clsx from 'clsx'
 import { ChevronDown, LogOut } from 'lucide-react'
-import { useUserStore } from '@/stores/userStore'
+import { useSession } from '@/lib/auth'
 
 export default function UserMenu() {
   const navigate = useNavigate()
-  const { user } = useUser()
-  const { signOut } = useClerk()
+  const { user, signOut } = useSession()
 
   const [isOpen, setIsOpen] = useState(false)
 
@@ -28,10 +26,7 @@ export default function UserMenu() {
     return () => document.removeEventListener('click', handleClickOutside)
   }, [isOpen])
 
-  const clearUserStore = useUserStore((s) => s.clear)
-
   const handleSignOut = async () => {
-    clearUserStore()
     await signOut()
     await navigate('/')
   }
