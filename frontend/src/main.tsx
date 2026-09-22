@@ -1,10 +1,11 @@
-// Entry point: mounts <AppProvider><AppRouter/>; VITE_MAINTENANCE_MODE swaps in MaintenanceScreen.
+// Entry point: starts tracing, mounts <AppProvider><AppRouter/>; VITE_MAINTENANCE_MODE swaps in MaintenanceScreen.
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import AppProvider from './app/provider'
 import AppRouter from './app/router'
 import MaintenanceScreen from './components/layout/MaintenanceScreen'
+import { configureObservability } from './lib/observability'
 
 const root = createRoot(document.getElementById('root')!)
 
@@ -22,6 +23,9 @@ if (import.meta.env.VITE_MAINTENANCE_MODE === 'true') {
   if (!CLERK_PUBLISHABLE_KEY) {
     throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY environment variable')
   }
+
+  // No-op without VITE_LOGFIRE_TOKEN; loads the SDK lazily so the bundle stays unchanged.
+  void configureObservability()
 
   root.render(
     <StrictMode>

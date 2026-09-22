@@ -1,13 +1,21 @@
 // The only router: AuthSession above everything, the top-nav Layout for public and signed-in
 // pages, ProtectedRoute on the account pages, /feed and /chat/* redirects to /. Route
 // components live in ./routes; providers in ./provider.
-import { lazy, Suspense } from 'react'
-import { createBrowserRouter, Navigate, RouterProvider, useLocation } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import {
+  createBrowserRouter,
+  matchRoutes,
+  Navigate,
+  RouterProvider,
+  useLocation,
+} from 'react-router-dom'
 import { AuthenticateWithRedirectCallback } from '@clerk/clerk-react'
 import Spinner from '../components/ui/Spinner'
 import Layout from '../components/layout/Layout'
 import AuthSession from '../features/auth/components/AuthSession'
 import ProtectedRoute from '../features/auth/components/ProtectedRoute'
+import { useSession } from '../lib/auth'
+import { setObservabilityContext } from '../lib/observability'
 import RouteErrorPage from './routes/RouteErrorPage'
 import type { RouteObject } from 'react-router-dom'
 
@@ -39,6 +47,17 @@ function Lazy({
   )
 }
 
+/** Stamps the matched route template and the signed-in user's id on browser spans. */
+function ObservabilityContext() {
+  const location = useLocation()
+  const { me } = useSession()
+  const route = matchRoutes(routes, location)?.at(-1)?.route.path
+  useEffect(() => {
+    setObservabilityContext({ route, userId: me?.id ?? null })
+  }, [route, me?.id])
+  return null
+}
+
 /** The feed used to live at /feed; old links keep their query string. */
 function LegacyFeedRedirect() {
   const { search } = useLocation()
@@ -48,7 +67,12 @@ function LegacyFeedRedirect() {
 // eslint-disable-next-line react-refresh/only-export-components
 export const routes: RouteObject[] = [
   {
-    element: <AuthSession />,
+    element: (
+      <>
+        <ObservabilityContext />
+        <AuthSession />
+      </>
+    ),
     errorElement: <RouteErrorPage />,
     children: [
       {

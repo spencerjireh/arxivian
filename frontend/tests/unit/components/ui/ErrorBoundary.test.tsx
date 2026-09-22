@@ -1,6 +1,11 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import ErrorBoundary from '@/components/ui/ErrorBoundary'
 
+const reportError = vi.fn()
+vi.mock('@/lib/observability', () => ({
+  reportError: (...args: unknown[]) => reportError(...args),
+}))
+
 function ThrowingChild({ shouldThrow }: { shouldThrow: boolean }) {
   if (shouldThrow) throw new Error('test error')
   return <p>child content</p>
@@ -57,19 +62,15 @@ describe('ErrorBoundary', () => {
     fireEvent.click(screen.getByText('reset'))
   })
 
-  it('calls componentDidCatch and logs the error', () => {
-    const consoleSpy = vi.spyOn(console, 'error')
-
+  it('reports the caught error with its component stack', () => {
     render(
       <ErrorBoundary fallback={<p>fallback</p>}>
         <ThrowingChild shouldThrow={true} />
       </ErrorBoundary>
     )
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'ErrorBoundary caught:',
-      expect.any(Error),
-      expect.any(String)
-    )
+    expect(reportError).toHaveBeenCalledWith(expect.any(Error), {
+      componentStack: expect.any(String),
+    })
   })
 })

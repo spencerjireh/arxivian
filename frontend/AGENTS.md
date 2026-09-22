@@ -31,6 +31,7 @@ src/components/layout/       Layout, TopNav, UserMenu, Footer, MaintenanceScreen
 src/lib/api-client.ts        fetch wrapper (one request() behind the four verbs); API base is /api (nginx rewrites to /api/v1)
 src/lib/auth.ts              the Clerk wrapper: useSession() (isSignedIn, me, user, signOut) and the me query (GET /users/me)
 src/lib/notifications.ts     the sonner wrapper (notify.success/error/undoable); tests mock this, never sonner
+src/lib/observability.ts     the Logfire browser SDK wrapper (twin of backend/src/observability.py): configure, route/user context, reportError
 src/lib/query-keys.ts        every TanStack Query key factory (feed, library, scores, conversations); shared so features can invalidate each other
 src/lib/                     errors, formatting, formClasses, id, nav, animations, markdown/ (component map, plugins), markdownHeadings
 src/stores/                  Zustand: chatStore (isStreaming + the status line of the one mounted chat)
@@ -111,6 +112,19 @@ remark-math/KaTeX, arXiv links, Prism); the privacy page uses the same component
 `lib/markdown/`. `features/paper/api/get-paper-score.ts` polls the 202 every 5 s for up to
 3 min. Tiers on the client are `daily_chat_limit` / `chats_used_today` only.
 
+## Tracing
+
+`lib/observability.ts` is the only module that touches `@pydantic/logfire-browser`. With
+`VITE_LOGFIRE_TOKEN` and `VITE_LOGFIRE_BASE_URL` set (build args in production, `.env` in
+dev) `main.tsx` loads the SDK lazily (its own `telemetry` chunk) and `configureFrontend`
+auto-instruments fetch, document load, user interaction and Web Vitals; every export is a
+no-op when either is empty (dev default, CI, tests). `app/router.tsx::ObservabilityContext`
+stamps the matched route template and the API's opaque user id on spans (never a name or
+email); `ui/ErrorBoundary` reports caught render errors through `reportError`. Same-origin
+`/api` requests carry `traceparent`, so browser spans join the FastAPI request spans in the
+same Logfire project. The token is a restricted frontend application token, safe to bake
+into the bundle.
+
 ## Testing
 
 vitest + jsdom + Testing Library; `tests/unit/**` mirrors `src/**`, so a test moves with its
@@ -124,7 +138,9 @@ run the same steps from the repo root.
 
 ## Gotchas
 
-- `VITE_*` values are baked at build time in production (`frontend/Dockerfile` build args).
+- `VITE_*` values are baked at build time in production (`frontend/Dockerfile` build args);
+  a new one needs `vite-env.d.ts`, `.env.example`, the Dockerfile, `docker-compose.coolify.yml`
+  and the CI docker job.
 - `POST /stream` rejects unknown fields; the chat store allows one mounted panel at a time.
 - A route component that is also statically imported (RouteErrorPage -> NotFoundPage) does
   not get its own chunk; the build warns and it is harmless.

@@ -3,6 +3,8 @@
 interface ImportMetaEnv {
   readonly VITE_CLERK_PUBLISHABLE_KEY?: string
   readonly VITE_MAINTENANCE_MODE?: string
+  readonly VITE_LOGFIRE_TOKEN?: string
+  readonly VITE_LOGFIRE_BASE_URL?: string
 }
 
 interface ImportMeta {
