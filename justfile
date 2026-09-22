@@ -198,6 +198,6 @@ ci:
     just test tests/unit tests/api --cov=src --cov-report=term-missing:skip-covered
     just test tests/integration
     just test-frontend --coverage
-    POSTGRES_PASSWORD=x REDIS_PASSWORD=x TYPESAFE_API_KEY=x OPENAI_API_KEY=x JINA_API_KEY=x \
+    POSTGRES_PASSWORD=x REDIS_PASSWORD=x TYPESAFE_API_KEY=x OPENAI_API_KEY=x \
     CLERK_DOMAIN=x CORS_ORIGINS=http://localhost VITE_CLERK_PUBLISHABLE_KEY=pk_test_x FLOWER_BASIC_AUTH=a:b \
         docker compose -f docker-compose.coolify.yml config -q

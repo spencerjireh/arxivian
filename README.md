@@ -40,7 +40,7 @@ Arxivian scores new ML papers on method clarity, resource feasibility, data avai
 | **Scoring** | TypeSafe Jev (typed judgments with calibrated probabilities), LangGraph fan-out DAG |
 | **Chat** | LangGraph agent scoped to one paper, LiteLLM, SSE streaming |
 | **Retrieval** | pgvector HNSW (vector), PostgreSQL GIN/tsvector (full-text), Reciprocal Rank Fusion |
-| **Embeddings** | Jina Embeddings v3 (1024d) |
+| **Embeddings** | OpenAI text-embedding-3-small via LiteLLM (1024d) |
 | **Auth** | Clerk (JWT + Google OAuth), tiered rate limiting |
 | **Async** | Celery 5 + Redis (broker), RedBeat (scheduler), Flower (monitoring) |
 | **Observability** | Pydantic Logfire (OpenTelemetry; FastAPI, SQL, LangGraph, LiteLLM, Celery), structlog with request ID correlation |
@@ -70,9 +70,8 @@ just dev                # Build and start everything with hot reload
 
 | Key | File | Purpose |
 |-----|------|---------|
-| `OPENAI_API_KEY` | `backend/.env` | Triage and chat LLM calls via LiteLLM |
+| `OPENAI_API_KEY` | `backend/.env` | Triage, chat and chunk embeddings via LiteLLM |
 | `TYPESAFE_API_KEY` | `backend/.env` | Stage 2 scoring (Jev). Chat and triage do not use it; the API starts without it |
-| `JINA_API_KEY` | `backend/.env` | Document embeddings (Jina v3) |
 | `CLERK_DOMAIN` | `backend/.env` | Clerk instance domain; JWTs are verified against its JWKS. The only setting with no default |
 | `VITE_CLERK_PUBLISHABLE_KEY` | `frontend/.env` | Clerk auth UI |
 

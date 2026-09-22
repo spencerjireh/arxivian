@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.clients.arxiv_client import ArxivClient
 from src.clients.base_llm_client import BaseLLMClient
-from src.clients.embeddings_client import JinaEmbeddingsClient
+from src.clients.embeddings_client import EmbeddingsClient
 from src.clients.litellm_client import LiteLLMClient
 from src.clients.semantic_scholar_client import SemanticScholarClient
 from src.clients.typesafe_client import TypeSafeClient
@@ -50,9 +50,11 @@ def get_arxiv_client() -> ArxivClient:
 
 
 @lru_cache(maxsize=1)
-def get_embeddings_client() -> JinaEmbeddingsClient:
+def get_embeddings_client() -> EmbeddingsClient:
     settings = get_settings()
-    return JinaEmbeddingsClient(api_key=settings.jina_api_key, model="jina-embeddings-v3")
+    return EmbeddingsClient(
+        api_key=settings.openai_api_key, timeout=float(settings.llm_call_timeout_seconds)
+    )
 
 
 @lru_cache(maxsize=1)

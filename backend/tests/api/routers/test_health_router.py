@@ -36,14 +36,14 @@ class TestHealthEndpoint:
         assert data["services"]["llm"]["status"] == "healthy"
         assert "openai" in data["services"]["llm"]["message"]
 
-    def test_health_includes_jina_status(self, client, mock_embeddings_client):
-        """Test that Jina embeddings status is included."""
+    def test_health_includes_embeddings_status(self, client, mock_embeddings_client):
+        """Test that the embeddings service status is included."""
         response = client.get("/api/v1/health")
 
         assert response.status_code == 200
         data = response.json()
-        assert "jina" in data["services"]
-        assert data["services"]["jina"]["status"] == "healthy"
+        assert "embeddings" in data["services"]
+        assert data["services"]["embeddings"]["status"] == "healthy"
 
     def test_health_degraded_on_db_failure(self, client, mock_paper_repo):
         """Test degraded status when database fails."""
@@ -69,8 +69,8 @@ class TestHealthEndpoint:
         assert data["status"] == "degraded"
         assert data["services"]["llm"]["status"] == "unhealthy"
 
-    def test_health_degraded_on_missing_jina_key(self, client, mock_embeddings_client):
-        """Test degraded status when Jina API key is missing."""
+    def test_health_degraded_on_missing_embeddings_key(self, client, mock_embeddings_client):
+        """Test degraded status when the embeddings API key is missing."""
         mock_embeddings_client.api_key = None
 
         response = client.get("/api/v1/health")
@@ -78,7 +78,7 @@ class TestHealthEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "degraded"
-        assert data["services"]["jina"]["status"] == "unhealthy"
+        assert data["services"]["embeddings"]["status"] == "unhealthy"
 
     def test_health_includes_version(self, client):
         """Test that version is included in response."""

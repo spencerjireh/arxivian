@@ -39,7 +39,7 @@ class Chunk(Base):
     page_number: Mapped[int | None] = mapped_column(Integer)
     word_count: Mapped[int | None] = mapped_column(Integer)
 
-    # Embedding (1024 dimensions for Jina v3)
+    # Embedding (1024 dimensions; OpenAI text-embedding-3-small at dimensions=1024)
     embedding: Mapped[Any] = mapped_column(Vector(1024))
 
     # Full-text search vector (generated column - computed by database)
