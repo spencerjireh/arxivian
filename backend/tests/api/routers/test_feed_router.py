@@ -1,17 +1,12 @@
 """Tests for GET /api/v1/feed."""
 
 from datetime import UTC, date, datetime
+from unittest.mock import patch
 
 import pytest
 
-from src.schemas.feed import (
-    AvailableWeek,
-    FeedItem,
-    FeedPaper,
-    FeedResponse,
-    FeedScores,
-    FeedSignals,
-)
+from src.exceptions import InvalidTokenError
+from src.schemas.feed import AvailableWeek, FeedItem, FeedPaper, FeedResponse, FeedScores
 
 
 def _response(items=()):
@@ -43,18 +38,30 @@ def _item():
             demand=85,
             composite=81.5,
         ),
-        verdict="Transformer for machine translation; one consumer GPU; public data",
-        signals=FeedSignals(
-            pseudocode_present=True, public_datasets=True, single_gpu=True, code_released=False
-        ),
+        headline="Transformer for machine translation",
+        meta=["one consumer GPU", "public data", "pseudocode given"],
         scored_at=datetime(2026, 8, 4, tzinfo=UTC),
     )
 
 
 @pytest.mark.api
 class TestGetFeed:
-    def test_requires_auth(self, unauthenticated_client):
-        assert unauthenticated_client.get("/api/v1/feed").status_code == 401
+    def test_anonymous_gets_the_feed(self, unauthenticated_client, mock_feed_service):
+        mock_feed_service.get_feed.return_value = _response([_item()])
+        resp = unauthenticated_client.get("/api/v1/feed?min_score=40")
+        assert resp.status_code == 200
+        assert resp.json()["items"][0]["headline"] == "Transformer for machine translation"
+        assert mock_feed_service.get_feed.await_args.args == (None,)
+        assert mock_feed_service.get_feed.await_args.kwargs["min_score"] == 40
+
+    def test_invalid_token_is_still_401(self, unauthenticated_client, mock_feed_service):
+        with patch("src.dependencies._sync_user", side_effect=InvalidTokenError("bad")):
+            resp = unauthenticated_client.get(
+                "/api/v1/feed", headers={"Authorization": "Bearer bad"}
+            )
+        assert resp.status_code == 401
+        assert resp.json()["error"]["code"] == "INVALID_TOKEN"
+        mock_feed_service.get_feed.assert_not_awaited()
 
     def test_returns_page(self, client, mock_feed_service):
         mock_feed_service.get_feed.return_value = _response([_item()])
@@ -64,8 +71,9 @@ class TestGetFeed:
         assert body["week_start"] == "2026-08-03"
         assert body["total"] == 1
         assert body["items"][0]["paper"]["arxiv_id"] == "2301.00001"
-        assert body["items"][0]["verdict"].startswith("Transformer")
-        assert body["items"][0]["signals"]["compute_match"] is None
+        assert body["items"][0]["headline"] == "Transformer for machine translation"
+        assert body["items"][0]["meta"] == ["one consumer GPU", "public data", "pseudocode given"]
+        assert body["items"][0]["compute_match"] is None
         assert body["items"][0]["state"] is None
 
     def test_forwards_query_params(self, client, mock_feed_service, mock_user):

@@ -417,3 +417,14 @@ class ArxivClient:
 
         log.info("arxiv id fetch complete", requested=len(arxiv_ids), found=len(results))
         return results
+
+    async def get_paper_by_id(self, arxiv_id: str) -> ArxivPaper | None:
+        """One paper's metadata for the read path: a single id_list query with no pacing
+        sleep (`get_papers_by_ids` paces a crawl between results). None when arXiv has no
+        entry for the id; ArxivAPIError after the search retries are spent."""
+        search = arxiv.Search(id_list=[arxiv_id], max_results=1)
+        results = await self._execute_search(search)
+        if not results:
+            log.info("arxiv paper not found", arxiv_id=arxiv_id)
+            return None
+        return ArxivPaper(results[0])

@@ -1,7 +1,8 @@
 """GET /feed and GET /users/me/library response schemas (routers/feed.py, paper_states.py).
 
-The derivations that fill these cards (composite, verdict, chips, confidence marker) live
-in `services/feed_service/derive.py`.
+The derivations that fill these cards (composite, headline, meta line, compute match,
+confidence marker) live in `services/feed_service/derive.py`. `GET /feed` is public: an
+anonymous caller gets the same cards with `state` and `compute_match` unset.
 """
 
 from __future__ import annotations
@@ -36,26 +37,23 @@ class FeedScores(BaseModel):
     composite: float
 
 
-class FeedSignals(BaseModel):
-    """Boolean chips. Only truthy ones render; there is never a negative 'no code' chip."""
-
-    pseudocode_present: bool
-    public_datasets: bool
-    single_gpu: bool
-    code_released: bool
-    compute_match: bool | None = Field(
-        default=None, description="None when the user has no compute profile"
-    )
-
-
 class FeedItem(BaseModel):
     """One card. The feed only emits scored papers; the library also carries papers whose
     score is missing (rubric bump, ops delete), so the score-derived fields are optional."""
 
     paper: FeedPaper
     scores: FeedScores | None = None
-    verdict: str | None = None
-    signals: FeedSignals | None = None
+    headline: str | None = Field(
+        default=None, description="'<Model family> for <task type>' from the stored attributes"
+    )
+    meta: list[str] = Field(
+        default_factory=list,
+        description="Ordered truthy-only phrases: compute tier, data access, code, weights, "
+        "pseudocode, hyperparameters. Never a negative claim.",
+    )
+    compute_match: bool | None = Field(
+        default=None, description="None when the caller has no compute profile (or is anonymous)"
+    )
     low_confidence: list[str] = Field(
         default_factory=list, description="Dimensions whose confidence is below the threshold"
     )

@@ -7,7 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.schemas.feed import FeedPaper, FeedScores, FeedSignals
+from src.schemas.feed import FeedPaper, FeedScores
 from src.schemas.paper_states import UserPaperStateResponse
 from src.services.scoring_service.state import Judgment
 
@@ -47,15 +47,22 @@ class PaperAttributesDetail(BaseModel):
     code_evidence: list[EvidenceItem] = Field(default_factory=list)
 
 
+class PaperMetadata(FeedPaper):
+    """FeedPaper plus the abstract: the detail header and the 202 body."""
+
+    abstract: str
+
+
 class PaperScoreDetailResponse(BaseModel):
     """GET /papers/{arxiv_id}/score when the paper is scored."""
 
-    paper: FeedPaper
+    paper: PaperMetadata
     rubric_version: str
     scored_at: datetime
     scores: FeedScores
-    verdict: str
-    signals: FeedSignals
+    headline: str
+    meta: list[str]
+    compute_match: bool | None
     low_confidence: list[str]
     state: UserPaperStateResponse | None
     attributes: PaperAttributesDetail
@@ -63,8 +70,15 @@ class PaperScoreDetailResponse(BaseModel):
 
 
 class ScorePendingResponse(BaseModel):
-    """GET /papers/{arxiv_id}/score (202) while ingest + scoring runs on demand."""
+    """GET /papers/{arxiv_id}/score (202) while the paper is unscored.
+
+    A signed-in caller has on-demand scoring running (`task_id`); an anonymous caller gets
+    the metadata only, with `task_id` None, since nothing is enqueued for them.
+    """
 
     status: Literal["pending"] = "pending"
     arxiv_id: str
-    task_id: str | None = None
+    paper: PaperMetadata
+    task_id: str | None = Field(
+        default=None, description="None for anonymous callers: nothing was enqueued"
+    )

@@ -4,6 +4,7 @@ import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import delete, func, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.chunk import Chunk
@@ -73,6 +74,27 @@ class PaperRepository:
         await self.session.flush()
         await self.session.refresh(paper)
         log.debug("paper created", arxiv_id=paper.arxiv_id)
+        return paper
+
+    async def create_if_absent(self, paper_data: dict) -> Paper:
+        """Insert a paper unless its arxiv_id exists, then return the row that is there.
+
+        Concurrent first reads of the same paper (the public score endpoint) race on
+        `uq_papers_arxiv_id`; `ON CONFLICT DO NOTHING` makes the loser adopt the winner's
+        row. Caller commits.
+        """
+        values = {"id": uuid.uuid4(), **paper_data}
+        stmt = (
+            pg_insert(Paper)
+            .values(**values)
+            .on_conflict_do_nothing(constraint="uq_papers_arxiv_id")
+        )
+        await self.session.execute(stmt)
+        await self.session.flush()
+        paper = await self.get_by_arxiv_id(paper_data["arxiv_id"])
+        if paper is None:  # pragma: no cover - the row exists after either branch
+            raise RuntimeError(f"paper {paper_data['arxiv_id']} missing after insert")
+        log.debug("paper created or adopted", arxiv_id=paper.arxiv_id)
         return paper
 
     async def update(self, paper_id: str, update_data: dict) -> Paper | None:

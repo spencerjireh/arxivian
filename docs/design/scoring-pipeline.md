@@ -43,7 +43,9 @@ recall. See the deferral decision below.
   personalization: you cannot cache a single global order
   *and* personalize by compute profile, but you can cache the sub-scores and do the cheap
   arithmetic per request. `digests` caches a candidate ranking snapshot, not a final
-  per-user order.
+  per-user order. An anonymous reader (the feed is public, `feed-prd.md` 1.1-public) gets
+  the same rows under the default weights with no profile match and no state; the
+  personal layer is additive.
 - **Code gap is deferred to v1.1; v1 ships a 4-dimension rubric.** Code gap (does an
   implementation already exist?) is simultaneously the highest-weighted signal *and* the
   least reliable one: unproven GitHub-search recall, aggressive rate limits, and a
@@ -96,7 +98,8 @@ paper_scores + score_evidence (global sub-scores, persisted)
 build_digest_task -> digests (cached candidate ranking snapshot)
         |
         v
-[read time] feed renders: user-weighted composite + compute-profile match, per user
+[read time] feed renders: default-weight composite for anonymous readers;
+           user-weighted composite + compute-profile match when signed in
 ```
 
 ---
@@ -335,23 +338,36 @@ Onboarding profile (categories, compute profile, interest keywords) extends the 
 `preferences["arxiv_searches"]` blob `scheduled_tasks.py::daily_ingest_task` reads. It is a
 column, not a `user_preferences` table; no new table is needed for the profile.
 
-**Read path (Phase 2, SPE-274):** `services/feed_service/` (`service.py`, `derive.py`, `digest.py`) + `schemas/feed.py`. The digest
-row is only the candidate set; every card is rebuilt from the live `papers` / `paper_scores`
-/ `user_paper_states` rows (three `IN` batch loads per page). Read-time personalization:
-per-user composite weights (`compute_composite`, NULL sub-scores renormalize -- SPE-284),
-compute-profile match (`laptop` needs feasibility level >= 3, `single_gpu` >= 2, `cloud`
->= 1), keyword tie-break. The verdict line is a code template over the stored judgments
-(task type, model family, compute tier, data access) -- no LLM at read time. Signal chips:
-`pseudocode_present` (`algorithm_given`), `public_datasets` (gate PASS and not "not
-stated"), `single_gpu` (level >= 2), `code_released` (the authors' own statement; never a
-"no code" claim). Dimensions with confidence < 0.5 are flagged, not hidden.
+**Read path (Phase 2, SPE-274; public since the PUBLIC epic):** `services/feed_service/`
+(`service.py`, `derive.py`, `digest.py`) + `schemas/feed.py`. The digest row is only the
+candidate set; every card is rebuilt from the live `papers` / `paper_scores` /
+`user_paper_states` rows (three `IN` batch loads per page; the states load is skipped for
+an anonymous caller). Read-time personalization when signed in: per-user composite weights
+(`compute_composite`, NULL sub-scores renormalize -- SPE-284), compute-profile match
+(`laptop` needs feasibility level >= 3, `single_gpu` >= 2, `cloud` >= 1), keyword
+tie-break. The card text is built in code, no LLM at read time: the **headline** is
+"<model family> for <task type>" over the stored attributes (fallbacks "Method for
+<task>", "<Family>", "Method paper"), and the **meta line** is an ordered list of
+truthy-only phrases: the compute tier (`resource_feasibility.level`), data access
+(`data_access` choice), "code released" (`code_released`), "weights released"
+(`pretrained_weights_released`), "pseudocode given" (`algorithm_given`), "hyperparameters
+stated" (`hyperparameters_stated`). Absent or false judgments are omitted, never negated
+(no "no code" claim). Cards show the four derived sub-scores as a meter; a NULL sub-score
+is a hollow segment. Dimensions with confidence < 0.5 are listed on the card payload and
+shown only under the detail page's "Scoring details".
 
 **Paper detail (SPE-276):** `GET /papers/{arxiv_id}/score` returns every dimension's level
 distribution, atomic judgments and its `score_evidence` spans (the canonical display source;
-`dimensions[*].evidence` is a subset). A paper that is not yet scored is scored on demand:
-the endpoint enqueues `score_paper_task` (which ingests the full text itself) behind a Redis
-`SET NX` lock keyed on the arXiv id, so repeated polls share one task, and answers 202 until
-the score exists. The task releases the lock on completion or hard failure; a rate-limit
+`dimensions[*].evidence` is a subset). The UI shows band, level, reason and evidence open
+and folds the distributions, judgments and confidence under a collapsed section; the
+response shape is the same for anonymous and signed-in callers apart from `state`. A
+paper that is not yet scored is scored on demand for a signed-in caller: the endpoint
+enqueues `score_paper_task` (which ingests the full text itself) behind a Redis `SET NX`
+lock keyed on the arXiv id, so repeated polls share one task, and answers 202 (with the
+paper's metadata) until the score exists. An anonymous caller gets the same 202 body with
+no task: nothing is enqueued and no budget is spent. A paper unknown to the index is
+fetched from arXiv on read and stored as a metadata-only row (`pdf_processed=False`) that
+the scoring ingest later fills in place. The task releases the lock on completion or hard failure; a rate-limit
 retry keeps it. Because digest membership keys on `paper_scores.created_at`, an on-demand
 score joins the feed only after the next `build_digest_task`.
 
