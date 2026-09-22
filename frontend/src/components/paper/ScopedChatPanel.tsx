@@ -52,7 +52,7 @@ export default function ScopedChatPanel({
   return (
     <section
       aria-label="Ask about this paper"
-      className="flex h-[32rem] flex-col rounded-xl border border-stone-200 bg-white lg:sticky lg:top-6 lg:h-[calc(100vh-8rem)]"
+      className="flex h-[32rem] flex-col rounded-xl border border-stone-200 bg-white lg:sticky lg:top-20 lg:h-[calc(100vh-7rem)]"
     >
       <header className="flex items-center gap-2 border-b border-stone-100 px-4 py-3">
         <MessageSquare className="h-4 w-4 text-stone-400" strokeWidth={1.5} />

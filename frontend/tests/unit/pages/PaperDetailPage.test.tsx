@@ -90,7 +90,7 @@ describe('PaperDetailPage', () => {
     expect(screen.getByText('machine translation')).toBeInTheDocument()
     expect(screen.getByText('Method clarity')).toBeInTheDocument()
     expect(screen.getByText('Demand')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Back to feed/ })).toHaveAttribute('href', '/feed')
+    expect(screen.getByRole('link', { name: /Back to feed/ })).toHaveAttribute('href', '/')
   })
 
   it('save and dismiss mutate with the route arXiv id', () => {

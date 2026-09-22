@@ -6,8 +6,6 @@ import { Check, Mail } from 'lucide-react'
 import { useUserStore } from '../stores/userStore'
 import { useInView } from '../hooks/useInView'
 import Button from '../components/ui/Button'
-import PublicHeader from '../components/layout/PublicHeader'
-import Footer from '../components/layout/Footer'
 
 const tiers = [
   {
@@ -49,9 +47,7 @@ export default function PricingPage() {
   const userTier = me?.tier ?? 'free'
 
   return (
-    <div className="paper-grain flex min-h-screen flex-col bg-[#FAFAF9]">
-      <PublicHeader />
-
+    <div className="paper-grain flex flex-1 flex-col">
       {/* Hero */}
       <section className="px-4 pt-20 pb-8 text-center sm:px-6 lg:px-8">
         <div>
@@ -189,8 +185,6 @@ export default function PricingPage() {
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   )
 }

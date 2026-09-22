@@ -65,17 +65,22 @@ export default function Hero() {
             transition={transitions.slow}
             className="flex flex-col items-center justify-center gap-3 sm:flex-row"
           >
-            <Link to={isSignedIn ? '/feed' : '/sign-up'}>
+            <Link to="/">
               <Button
                 variant="primary"
                 size="lg"
                 rightIcon={<ArrowRight className="h-4 w-4" strokeWidth={2} />}
               >
-                {isSignedIn ? 'Open feed' : 'Get started'}
+                Open the feed
               </Button>
             </Link>
             {!isSignedIn && (
               <>
+                <Link to="/sign-up">
+                  <Button variant="secondary" size="lg">
+                    Get started
+                  </Button>
+                </Link>
                 <Link to="/pricing">
                   <Button variant="secondary" size="lg">
                     See plans

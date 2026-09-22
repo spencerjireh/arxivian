@@ -1,6 +1,6 @@
 import { bandFor, isLowConfidence } from '../../../src/lib/scoring'
 import { feedParamsFromSearch, formatWeek } from '../../../src/lib/feedParams'
-import { matchesNav } from '../../../src/lib/nav'
+import { matchesNav, returnPathFrom } from '../../../src/lib/nav'
 
 describe('scoring helpers', () => {
   it('bands at 40 and 70', () => {
@@ -38,10 +38,32 @@ describe('feedParamsFromSearch', () => {
 })
 
 describe('matchesNav', () => {
-  it('treats paper detail as the feed', () => {
-    expect(matchesNav('/feed', '/papers/2401.00001')).toBe(true)
-    expect(matchesNav('/feed', '/feed?week=x')).toBe(true)
+  it('treats paper detail and the legacy /feed as the feed', () => {
+    expect(matchesNav('/', '/')).toBe(true)
+    expect(matchesNav('/', '/papers/2401.00001')).toBe(true)
+    expect(matchesNav('/', '/feed?week=x')).toBe(true)
+    expect(matchesNav('/', '/about')).toBe(false)
     expect(matchesNav('/library', '/library')).toBe(true)
-    expect(matchesNav('/library', '/feed')).toBe(false)
+    expect(matchesNav('/library', '/')).toBe(false)
+  })
+})
+
+describe('returnPathFrom', () => {
+  it('accepts a path string or a router Location', () => {
+    expect(returnPathFrom({ from: '/papers/2401.00001' })).toBe('/papers/2401.00001')
+    expect(returnPathFrom({ from: { pathname: '/', search: '?week=2026-08-03' } })).toBe(
+      '/?week=2026-08-03'
+    )
+  })
+
+  it('falls back to the feed for anything that is not a same-origin path', () => {
+    expect(returnPathFrom(undefined)).toBe('/')
+    expect(returnPathFrom(null)).toBe('/')
+    expect(returnPathFrom({})).toBe('/')
+    expect(returnPathFrom({ from: '//evil.example' })).toBe('/')
+    expect(returnPathFrom({ from: 'https://evil.example/x' })).toBe('/')
+    expect(returnPathFrom({ from: '/\\evil.example' })).toBe('/')
+    expect(returnPathFrom({ from: '/papers\\..\\x' })).toBe('/')
+    expect(returnPathFrom({ from: { pathname: 42 } })).toBe('/')
   })
 })

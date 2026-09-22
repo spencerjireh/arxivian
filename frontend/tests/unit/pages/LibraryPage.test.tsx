@@ -62,7 +62,7 @@ describe('LibraryPage', () => {
     mockUseLibrary.mockReturnValue(ready())
     renderWithProviders(<LibraryPage />)
     expect(screen.getByText('Nothing saved yet')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'feed' })).toHaveAttribute('href', '/feed')
+    expect(screen.getByRole('link', { name: 'feed' })).toHaveAttribute('href', '/')
     expect(screen.queryByRole('heading', { name: 'Saved' })).not.toBeInTheDocument()
   })
 
