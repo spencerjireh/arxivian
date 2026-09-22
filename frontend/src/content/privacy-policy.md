@@ -56,7 +56,7 @@ _In Short: We collect personal information that you provide to us._
 
 We collect personal information that you voluntarily provide to us when you register on the Services, express an interest in obtaining information about us or our products and Services, when you participate in activities on the Services, or otherwise when you contact us.
 
-**Reading without an account.** The weekly feed and paper pages are public. When you read them without signing in we do not collect personal information; our servers keep short-lived request logs (request id, IP address, path, timestamp) to operate and secure the service, and nothing else. No analytics or tracking is attached to anonymous reading.
+**Reading without an account.** The weekly feed and paper pages are public. When you read them without signing in we do not collect personal information; our servers keep short-lived request logs (request id, IP address, path, timestamp) to operate and secure the service, and the same request traces reach our observability provider (Pydantic Logfire, see [when and with whom we share your personal information](#4-when-and-with-whom-do-we-share-your-information)). No analytics or tracking is attached to anonymous reading.
 
 **Personal Information Provided by You.** The personal information that we collect depends on the context of your interactions with us and the Services, the choices you make, and the products and features you use. The personal information we collect may include the following:
 
