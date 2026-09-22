@@ -56,6 +56,8 @@ _In Short: We collect personal information that you provide to us._
 
 We collect personal information that you voluntarily provide to us when you register on the Services, express an interest in obtaining information about us or our products and Services, when you participate in activities on the Services, or otherwise when you contact us.
 
+**Reading without an account.** The weekly feed and paper pages are public. When you read them without signing in we do not collect personal information; our servers keep short-lived request logs (request id, IP address, path, timestamp) to operate and secure the service, and nothing else. No analytics or tracking is attached to anonymous reading.
+
 **Personal Information Provided by You.** The personal information that we collect depends on the context of your interactions with us and the Services, the choices you make, and the products and features you use. The personal information we collect may include the following:
 
 - Names
@@ -67,7 +69,7 @@ We collect personal information that you voluntarily provide to us when you regi
 
 **Usage data.** We track daily usage counters (chat turns) to enforce rate limits. We do not track browsing behavior, page views, or analytics beyond what is needed for the service to function.
 
-**Feed profile and paper states.** The arXiv categories, compute profile and keywords you set, and the papers you save, dismiss or mark as implementing, are stored to rank your feed.
+**Feed profile and paper states.** If you have an account, the arXiv categories, compute profile and keywords you set, and the papers you save, dismiss or mark as implementing, are stored to rank your feed.
 
 **Conversations.** Your chat messages about a paper and the AI-generated responses are stored so you can return to previous threads. Paper text is fetched from arXiv, chunked and embedded for retrieval; it is shared across users because papers are public.
 
@@ -152,7 +154,7 @@ We also may need to share your personal information in the following situations:
 
 _In Short: We use cookies set by Clerk for authentication and browser local storage for your preferences. We do not use tracking or analytics cookies._
 
-Arxivian uses cookies set by Clerk for authentication sessions. We also use browser local storage to persist interface preferences such as sidebar state and unsent chat drafts. We do not use tracking cookies, third-party analytics cookies, or advertising cookies.
+Arxivian uses cookies set by Clerk for authentication sessions. We also use browser local storage to persist interface preferences such as a dismissed setup prompt and unsent chat drafts. We do not use tracking cookies, third-party analytics cookies, or advertising cookies.
 
 We do not permit third parties or service providers to use online tracking technologies on our Services for analytics or advertising purposes.
 

@@ -4,7 +4,7 @@
 
 **A weekly feed of arXiv papers you could actually implement.**
 
-Arxivian scores new ML papers on method clarity, resource feasibility, data availability and demand, ranks them for your compute budget and interests, and lets you chat with each paper's full text.
+Arxivian scores new ML papers on method clarity, resource feasibility, data availability and demand and publishes them as a public weekly issue. An account adds saving, a library, ranking for your compute budget and interests, and a chat with each paper's full text.
 
 [![CI](https://github.com/spencerjireh/arxivian/actions/workflows/ci.yml/badge.svg)](https://github.com/spencerjireh/arxivian/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)
@@ -21,7 +21,7 @@ Arxivian scores new ML papers on method clarity, resource feasibility, data avai
 1. **Triage (weekly, cheap).** New papers in your categories are fetched from arXiv and filtered by a small LLM pass.
 2. **Score (per paper).** The full text is ingested and judged by TypeSafe Jev on four dimensions: method clarity, resource feasibility (compute tier), data availability (a PASS/FAIL gate) and demand (Semantic Scholar citations). Every judgment carries quoted evidence and a calibrated confidence.
 3. **Digest (weekly).** Scores are snapshotted into a ranked digest per category set.
-4. **Feed (read time).** Cards show a composite score, a one-line verdict, signal chips (pseudocode, public datasets, single GPU, code released) and a fit marker for your compute profile. Save, dismiss or mark papers as implementing; open one for the per-dimension breakdown and a chat scoped to that paper.
+4. **Issue (read time, public).** Cards show a headline built from the stored attributes, a meta line (compute tier, data access, code and weights released, pseudocode, hyperparameters) and a four-dimension meter. Open a paper for each dimension's evidence, with the distributions and judgments behind a disclosure. Signed in: save and dismiss papers, track them in a library, get a fit marker for your compute profile, and chat with the paper.
 
 `docs/product/feed-prd.md` is the product-of-record; `docs/design/scoring-pipeline.md` and `docs/design/scoring-rubric.md` describe the pipeline and the rubric; `AGENTS.md` maps the code for people and coding agents (`CLAUDE.md` is a symlink to it); `CONTRIBUTING.md` covers branches, checks and releases; `docs/ops/coolify-migration.md` is the server-move runbook.
 
@@ -41,7 +41,7 @@ Arxivian scores new ML papers on method clarity, resource feasibility, data avai
 | **Chat** | LangGraph agent scoped to one paper, LiteLLM, SSE streaming |
 | **Retrieval** | pgvector HNSW (vector), PostgreSQL GIN/tsvector (full-text), Reciprocal Rank Fusion |
 | **Embeddings** | OpenAI text-embedding-3-small via LiteLLM (1024d) |
-| **Auth** | Clerk (JWT + Google OAuth), tiered rate limiting |
+| **Auth** | Clerk (JWT + Google OAuth); the feed and paper detail are public, the account layer is tiered |
 | **Async** | Celery 5 + Redis (broker), RedBeat (scheduler), Flower (monitoring) |
 | **Observability** | Pydantic Logfire (OpenTelemetry; FastAPI, SQL, LangGraph, LiteLLM, Celery), structlog with request ID correlation |
 | **Infra** | Docker Compose (dev/test/prod/eval profiles), Alembic migrations, Coolify |
@@ -99,7 +99,7 @@ just --list                       # All recipes, grouped
 
 **Typed judgments instead of free-text grading.** Scoring asks a judge model closed questions (yes/no, a choice, a level) and stores the full probability distribution plus the quoted evidence. The stored integers are denormalizations; the composite is recomputed at read time so weights can change without re-scoring.
 
-**Read-time ranking.** The digest caches membership and a provisional order; personalization (compute-profile fit, keyword tie-breaks, NULL-safe weight renormalization) is computed per request from the live rows.
+**Read-time ranking.** The digest caches membership and a provisional order; anonymous readers get the default-weight composite, and personalization (compute-profile fit, keyword tie-breaks, NULL-safe weight renormalization) is computed per request from the live rows for signed-in readers.
 
 **Hybrid retrieval with RRF.** pgvector HNSW plus PostgreSQL GIN/tsvector fused by Reciprocal Rank Fusion, with no external search engine. Paper-scoped chat retrieves inside one paper only.
 
