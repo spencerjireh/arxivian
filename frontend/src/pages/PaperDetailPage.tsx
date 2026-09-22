@@ -1,12 +1,15 @@
-// /papers/:arxivId route: header, score breakdown (polls the 202) and the scoped chat panel.
+// /papers/:arxivId route (public): header, score breakdown, the scoped chat panel when signed
+// in; polls the 202 only for a signed-in reader, shows the metadata preview otherwise.
 import { useCallback, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
+import { useAuth } from '@clerk/clerk-react'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { usePaperScore } from '../api/scores'
 import { useClearPaperState, useSetPaperState } from '../api/paperStates'
-import AttributeChips from '../components/paper/AttributeChips'
+import ChatSignInPrompt from '../components/paper/ChatSignInPrompt'
 import PaperHeader from '../components/paper/PaperHeader'
 import PaperNotFound from '../components/paper/PaperNotFound'
+import PaperPreview from '../components/paper/PaperPreview'
 import PendingScoreState from '../components/paper/PendingScoreState'
 import ScoreBreakdown from '../components/paper/ScoreBreakdown'
 import ScopedChatPanel from '../components/paper/ScopedChatPanel'
@@ -32,7 +35,11 @@ export default function PaperDetailPage() {
     },
     [setSearchParams]
   )
-  const { data, isLoading, error, pollTimedOut, restartPolling } = usePaperScore(arxivId)
+  const { isSignedIn } = useAuth()
+  const signedIn = Boolean(isSignedIn)
+  const { data, isLoading, error, pollTimedOut, restartPolling } = usePaperScore(arxivId, {
+    poll: signedIn,
+  })
   const setState = useSetPaperState()
   const clearState = useClearPaperState()
   const [pending, setPending] = useState<PendingAction>(null)
@@ -83,6 +90,8 @@ export default function PaperDetailPage() {
         <p className="text-sm text-stone-500">{getUserMessage(error)}</p>
       </div>
     )
+  } else if (data?.status === 'pending' && !signedIn) {
+    body = <PaperPreview paper={data.paper} />
   } else if (data?.status === 'pending' || !detail) {
     body = <PendingScoreState timedOut={pollTimedOut} onRetry={restartPolling} />
   } else {
@@ -91,6 +100,7 @@ export default function PaperDetailPage() {
         <div className="min-w-0 space-y-6">
           <PaperHeader
             paper={detail.paper}
+            signedIn={signedIn}
             state={detail.state}
             onSave={onSave}
             onDismiss={onDismiss}
@@ -98,18 +108,21 @@ export default function PaperDetailPage() {
             onShip={onShip}
             pending={pending}
           />
-          <AttributeChips attributes={detail.attributes} />
           <ScoreBreakdown detail={detail} />
         </div>
-        <ScopedChatPanel
-          arxivId={arxivId}
-          paperTitle={detail.paper.title}
-          sessionId={chatSessionId}
-          onSessionChange={setChatSession}
-        />
+        {signedIn ? (
+          <ScopedChatPanel
+            arxivId={arxivId}
+            paperTitle={detail.paper.title}
+            sessionId={chatSessionId}
+            onSessionChange={setChatSession}
+          />
+        ) : (
+          <ChatSignInPrompt />
+        )}
       </div>
     )
   }
 
-  return <div className="flex-1 overflow-y-auto">{body}</div>
+  return <div className="w-full">{body}</div>
 }

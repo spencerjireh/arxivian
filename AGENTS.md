@@ -56,14 +56,14 @@ backend/
   alembic/versions/            NNN_slug.py, named by revision id
   tests/{unit,api,integration,evals}/   mirror the markers; evals/integration is the inteval suite
 frontend/
-  src/App.tsx                  the only router (lazy pages, ProtectedRoute, OnboardingGate)
+  src/App.tsx                  the only router (AuthSession > Layout > lazy pages; ProtectedRoute on account pages)
   src/main.tsx                 Clerk + QueryClient + ErrorBoundary; maintenance switch
   src/api/                     TanStack Query, one module per backend domain, key factories + hooks
   src/api/client.ts            fetch wrapper; API base is /api (nginx rewrites to /api/v1)
   src/types/api.ts             hand-mirrored backend schemas; update with every schema change
-  src/components/<feature>/    feed, paper, chat, onboarding, settings, landing, layout, sidebar, auth, ui
+  src/components/<feature>/    feed, paper, chat, onboarding, settings, landing, layout (TopNav), auth, ui
   src/pages/                   one file per route
-  src/stores/                  Zustand (chat streaming, sidebar, user); src/hooks/; src/lib/
+  src/stores/                  Zustand (chat streaming, user); src/hooks/; src/lib/
   src/content/privacy-policy.md   rendered at /privacy
   tests/unit/**                vitest + jsdom, mirrors src/
 docs/product/feed-prd.md       product-of-record; docs/design/ scoring pipeline + rubric; docs/ops/ runbooks
@@ -111,17 +111,22 @@ attributes in `paper_scores.attributes`. See `docs/design/scoring-pipeline.md` a
 **Feed read path** (`services/feed_service/`): `digest.py` (week key, composite weights,
 `compute_composite`) is written by the weekly `build_digest_task` and read by
 `FeedService`; `derive.py` turns a `PaperScore` row into card fields in pure code (read-time
-composite with NULL renormalization, compute-profile match, template verdict from the Jev
-judgments, signal chips, low-confidence marker); `service.py` batch-loads the live rows for
-a digest week. Routers: `feed` (`GET /feed`), `paper_states` (`PUT`/`DELETE
-/papers/{arxiv_id}/state`, `GET /users/me/library` grouped saved / implementing / shipped),
-`papers` (`GET /papers/{arxiv_id}/score`: full breakdown with `score_evidence` spans; an
-unscored paper enqueues `score_paper_task` behind a Redis `SET NX` lock
-`score:ondemand:{arxiv_id}` and answers 202 until a poll finds a score; each new enqueue
-counts against two Redis day counters, `ONDEMAND_SCORE_DAILY_BUDGET` across all users and
-`ONDEMAND_SCORE_DAILY_PER_USER`, past which it is a 429 `SCORING_LIMIT_EXCEEDED`). The
-onboarding
-profile lives in `users.preferences["feed_profile"]` (`schemas/users.py::FeedProfile`,
+composite with NULL renormalization, compute-profile match, `headline` "<family> for
+<task>" and the truthy-only `meta` phrases from the Jev judgments, low-confidence marker);
+`service.py` batch-loads the live rows for a digest week. `GET /feed` and `GET
+/papers/{arxiv_id}/score` are public (`CurrentUserOptional`: no header -> anonymous,
+default weights, no state, no profile match; a bad token is still 401). Routers: `feed`
+(`GET /feed`), `paper_states` (`PUT`/`DELETE /papers/{arxiv_id}/state`, `GET
+/users/me/library` grouped saved / implementing / shipped), `papers` (`GET
+/papers/{arxiv_id}/score`: full breakdown with `score_evidence` spans; a version suffix is
+stripped; an unscored paper answers 202 with its metadata, and for a signed-in caller
+enqueues `score_paper_task` behind a Redis `SET NX` lock `score:ondemand:{arxiv_id}` until
+a poll finds a score; each new enqueue counts against two Redis day counters,
+`ONDEMAND_SCORE_DAILY_BUDGET` across all users and `ONDEMAND_SCORE_DAILY_PER_USER`, past
+which it is a 429 `SCORING_LIMIT_EXCEEDED`; an anonymous caller never enqueues; a paper
+unknown to the index is fetched from arXiv on read (`ArxivClient.get_paper_by_id`, 404 /
+503 `ARXIV_UNAVAILABLE`) and stored metadata-only via `PaperRepository.create_if_absent`).
+The onboarding profile lives in `users.preferences["feed_profile"]` (`schemas/users.py::FeedProfile`,
 `PATCH /users/me/preferences`, read back on `GET /users/me` with `onboarded`); per-user
 `weights` are reserved, not settable.
 
@@ -151,10 +156,38 @@ token from `backend/.env` itself. Prompts and paper text are sent by design.
 ## Frontend
 
 React 19 + TypeScript strict + Vite; Tailwind v4 (light-only warm stone theme, tokens in
-`src/index.css`); Clerk auth; React Router v7. Routes: `/feed` is home (sign-in, OAuth and
-landing CTAs land there; `/chat/*` redirects), `/papers/:arxivId`, `/library`, `/settings`,
-`/onboarding` outside the sidebar layout, plus `/`, `/pricing`, `/privacy`, `/sign-in`,
-`/sign-up`. `OnboardingGate` redirects `me.onboarded === false` to `/onboarding`.
+`src/index.css`); Clerk auth; React Router v7. The feed is public and lives at `/`
+(`/feed` and `/chat/*` redirect there, keeping the query string); `/papers/:arxivId`,
+`/about` (the marketing page), `/pricing` and `/privacy` are public too; `/library` and
+`/settings` sit behind `ProtectedRoute`; `/onboarding`, `/sign-in`, `/sign-up` and
+`/sso-callback` render outside the shell. `components/auth/AuthSession.tsx` is the root
+layout route: it registers Clerk's token getter with `api/client.ts` (a null getter when
+signed out), waits for Clerk to load, fetches `/users/me` only for a signed-in visitor,
+clears the TanStack Query cache when a signed-in session ends (the public pages must not
+serve the previous user's state) and handles the forced sign-out that `api/client.ts` and
+`api/stream.ts` raise on a 401 to a request that carried a token.
+`components/layout/Layout.tsx` is a document page (window scroll): `TopNav`
+(Feed, About, Pricing; Library, Settings and `UserMenu` when signed in; `SignInLink`
+otherwise), the page, `Footer`. There is no sidebar and no onboarding gate. Sign-in returns
+to `location.state.from` (`lib/nav.ts::returnPathFrom`, same-origin paths only) through
+`OAuthButtons`' `redirectUrlComplete`; every sign-in prompt is `components/auth/SignInLink.tsx`.
+
+Cards (`components/feed/FeedCard.tsx`) show the API's `headline` and `meta` phrases (plus a
+"Fits your compute" chip on `compute_match`) and a `DimensionMeter` over the four 0-100
+sub-scores (a null sub-score is a hollow "not available" segment); no composite number, band
+word or confidence icon on a card. Actions are Save and Dismiss; `CardActions` offers
+Implementing / Ship only where the handlers are passed (paper detail, Library). An anonymous
+reader gets a `SignInLink` Save, no dismissed toggle, and `include_dismissed` is dropped
+from the URL params. `components/feed/OnboardingPrompt.tsx` replaces the gate: it shows
+for `me.onboarded === false` until dismissed (local storage). Paper detail
+(`components/paper/ScoreBreakdown.tsx`) is `ScoreSummary` (headline, meta, meter) ->
+`AttributeChips` -> four always-open `DimensionRow`s (`lib/scoring.ts::bandWord` Strong /
+Mixed / Weak or Pass / Fail, the level label, `dimensionFacts`, the evidence) -> code
+mentions -> `ScoringDetails`, a native `<details>` closed by default that holds the rubric
+version, composite, confidence, `DistributionBar`s and `JudgmentList`s. Anonymous readers
+see `ChatSignInPrompt` instead of the chat panel, and on an unscored paper `PaperPreview`
+(the 202's `paper` metadata) with a sign-in CTA; `usePaperScore(id, { poll: false })` then
+treats the 202 as final.
 
 Server state is TanStack Query v5 (`src/api/*.ts`, key factories + hooks, optimistic
 lifecycle updates in `api/paperStates.ts`); UI state is Zustand (`src/stores/`). Chat exists
@@ -233,6 +266,9 @@ generated release notes (`release.yml`). Moving the stack between servers:
 - `POST /stream` rejects unknown fields; the chat store allows one mounted panel at a time.
 - Scoring needs `TYPESAFE_API_KEY`, but the client is built only inside the task, so the API
   starts without it. An on-demand score joins the feed only at the next digest build.
+- A public read of an unknown paper leaves a `papers` row with `pdf_processed=false` and no
+  text; `IngestService` treats such a row as absent and fills it in place, so never add an
+  exists-only skip there.
 - `tasks/__init__.py`, `models/__init__.py` and `routers/__init__.py` are load-bearing
   indexes; the other package inits are docstrings only.
 - If this file passes ~200 lines, move the Backend and Frontend sections into

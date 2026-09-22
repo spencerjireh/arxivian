@@ -1,5 +1,6 @@
-"""Tests for FeedService.get_feed over mocked repositories."""
+"""Tests for FeedService over mocked repositories: feed, library, detail, metadata."""
 
+import asyncio
 import uuid
 from datetime import UTC, date, datetime
 from types import SimpleNamespace
@@ -7,7 +8,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from src.exceptions import ArxivAPIError, PaperMetadataUnavailableError, ResourceNotFoundError
 from src.services.feed_service import FeedService
+from src.services.feed_service import service as service_module
 
 WEEK = date(2026, 8, 3)
 KEY = "cs.AI,cs.LG"
@@ -54,7 +57,16 @@ def _score(paper, *, method=80, feasibility=80, demand=85, feas_level=3):
             "resource_feasibility": _dim("resource_feasibility", feas_level, 4),
             "data_availability": _dim("data_availability", 1, 1),
         },
-        attributes=None,
+        attributes={
+            "model_family": {
+                "key": "model_family",
+                "kind": "choice",
+                "answer": "transformer",
+                "probabilities": {"transformer": 0.9},
+                "confidence": 0.9,
+                "legend": None,
+            }
+        },
         updated_at=datetime(2026, 8, 4, tzinfo=UTC),
     )
 
@@ -101,6 +113,7 @@ def _service(*, weeks, digest, papers, scores, states):
         scoring_repo=scoring_repo,
         paper_repo=paper_repo,
         state_repo=state_repo,
+        arxiv_client=AsyncMock(),
         category_key=KEY,
     )
 
@@ -209,11 +222,11 @@ class TestGetFeed:
         user = _user({"feed_profile": {"categories": ["cs.LG"], "compute_profile": "laptop"}})
         out = await svc.get_feed(user)
         assert [i.paper.arxiv_id for i in out.items] == ["fits", "big"]
-        assert out.items[0].signals.compute_match is True
-        assert out.items[1].signals.compute_match is False
+        assert out.items[0].compute_match is True
+        assert out.items[1].compute_match is False
         no_profile = await svc.get_feed(_user())
         assert [i.paper.arxiv_id for i in no_profile.items] == ["big", "fits"]
-        assert no_profile.items[0].signals.compute_match is None
+        assert no_profile.items[0].compute_match is None
 
     async def test_keyword_tie_break(self):
         kw, other = _paper("kw", title="Sparse attention"), _paper("other", title="Plain")
@@ -241,6 +254,23 @@ class TestGetFeed:
         out = await svc.get_feed(_user())
         assert out.categories_available == ["cs.AI", "cs.LG"]
 
+    async def test_anonymous_gets_defaults_without_state_load(self):
+        a, b = _paper("a"), _paper("b")
+        svc = _service(
+            weeks=[(WEEK, 2)],
+            digest=_digest([_entry(a), _entry(b)]),
+            papers=[a, b],
+            scores=[_score(a, method=40, feasibility=40, demand=20, feas_level=4), _score(b)],
+            states=[_state(b, "dismissed")],  # never loaded for an anonymous caller
+        )
+        out = await svc.get_feed(None, include_dismissed=False)
+        svc.state_repo.get_many.assert_not_awaited()
+        assert [i.paper.arxiv_id for i in out.items] == ["b", "a"]
+        card = out.items[0]
+        assert card.state is None and card.compute_match is None
+        assert card.keyword_match is False
+        assert card.headline == "Transformer" and card.meta == ["one consumer GPU"]
+
 
 @pytest.mark.unit
 class TestGetLibrary:
@@ -260,7 +290,7 @@ class TestGetLibrary:
         assert [i.paper.arxiv_id for i in out.saved] == ["b", "a"]
         assert out.implementing == []
         assert out.shipped[0].state.repo_url == "https://github.com/x/y"
-        assert out.saved[0].scores.composite > 0 and out.saved[0].verdict
+        assert out.saved[0].scores.composite > 0 and out.saved[0].headline
         svc.scoring_repo.get_by_paper_ids.assert_awaited_once()
         assert set(svc.scoring_repo.get_by_paper_ids.await_args.args[0]) == {a.id, b.id, c.id}
 
@@ -271,7 +301,8 @@ class TestGetLibrary:
         out = await svc.get_library(_user({"feed_profile": {"keywords": ["attention"]}}))
 
         card = out.implementing[0]
-        assert card.scores is None and card.verdict is None and card.signals is None
+        assert card.scores is None and card.headline is None and card.meta == []
+        assert card.compute_match is None
         assert card.scored_at is None and card.low_confidence == []
         assert card.keyword_match is True
         assert card.state.state == "implementing"
@@ -349,6 +380,92 @@ class TestGetScoreDetail:
         assert out.attributes.code_released is not None
         assert out.attributes.code_released.answer is True
         assert [e.text for e in out.attributes.code_evidence] == ["github.com/x/y"]
-        assert out.signals.code_released is True
+        assert out.headline == "Method paper"
+        assert out.meta == ["one datacenter GPU", "code released"]
+        assert out.paper.abstract == "A"
         assert out.state is not None and out.state.state == "saved"
         assert out.scores.composite == 81.5
+
+    async def test_anonymous_detail_has_no_state(self):
+        paper = _paper("x")
+        paper.pdf_processed = True
+        score = _score(paper)
+        score.rubric_version = "v2"
+        score.evidence = []
+        svc = self._service_for(paper, score, state=_state(paper, "saved"))
+
+        out = await svc.get_score_detail(None, "x")
+        assert out is not None
+        svc.state_repo.get.assert_not_awaited()
+        assert out.state is None and out.compute_match is None
+        assert out.headline == "Transformer"
+
+
+def _arxiv_paper(arxiv_id="2301.00001", pdf_url="https://arxiv.org/pdf/2301.00001v1"):
+    return SimpleNamespace(
+        arxiv_id=arxiv_id,
+        title="Fetched",
+        authors=["A", "B"],
+        abstract="An abstract.",
+        categories=["cs.LG"],
+        published_date=datetime(2023, 1, 1, tzinfo=UTC),
+        pdf_url=pdf_url,
+    )
+
+
+@pytest.mark.unit
+class TestGetPaperMetadata:
+    def _service_for(self, existing, fetched=None, *, fetch_side_effect=None):
+        svc = _service(weeks=[], digest=None, papers=[], scores=[], states=[])
+        svc.paper_repo.get_by_arxiv_id = AsyncMock(return_value=existing)
+        svc.paper_repo.create_if_absent = AsyncMock(
+            side_effect=lambda data: SimpleNamespace(id=uuid.uuid4(), **data)
+        )
+        svc.arxiv_client.get_paper_by_id = AsyncMock(
+            return_value=fetched, side_effect=fetch_side_effect
+        )
+        return svc
+
+    async def test_existing_row_is_served_without_arxiv(self):
+        paper = _paper("x", abstract="Stored abstract")
+        svc = self._service_for(paper)
+        out = await svc.get_paper_metadata("x")
+        assert out.abstract == "Stored abstract" and out.arxiv_id == "x"
+        svc.arxiv_client.get_paper_by_id.assert_not_awaited()
+        svc.paper_repo.create_if_absent.assert_not_awaited()
+
+    async def test_missing_row_is_fetched_and_stored_metadata_only(self):
+        svc = self._service_for(None, _arxiv_paper())
+        out = await svc.get_paper_metadata("2301.00001")
+        svc.arxiv_client.get_paper_by_id.assert_awaited_once_with("2301.00001")
+        data = svc.paper_repo.create_if_absent.await_args.args[0]
+        assert data["pdf_processed"] is False and data["ingested_by"] is None
+        assert "raw_text" not in data and data["abstract"] == "An abstract."
+        assert out.title == "Fetched" and out.abstract == "An abstract."
+
+    async def test_missing_pdf_url_falls_back_to_arxiv_pdf(self):
+        svc = self._service_for(None, _arxiv_paper(pdf_url=None))
+        out = await svc.get_paper_metadata("2301.00001")
+        assert out.pdf_url == "https://arxiv.org/pdf/2301.00001"
+
+    async def test_unknown_id_is_not_found(self):
+        svc = self._service_for(None, None)
+        with pytest.raises(ResourceNotFoundError):
+            await svc.get_paper_metadata("2301.99999")
+        svc.paper_repo.create_if_absent.assert_not_awaited()
+
+    async def test_arxiv_error_is_unavailable(self):
+        svc = self._service_for(None, fetch_side_effect=ArxivAPIError("down"))
+        with pytest.raises(PaperMetadataUnavailableError) as exc:
+            await svc.get_paper_metadata("2301.00001")
+        assert exc.value.status_code == 503 and exc.value.error_code == "ARXIV_UNAVAILABLE"
+
+    async def test_slow_arxiv_is_unavailable(self, monkeypatch):
+        monkeypatch.setattr(service_module, "_ARXIV_METADATA_TIMEOUT_SECONDS", 0.01)
+
+        async def slow(_arxiv_id):
+            await asyncio.sleep(1)
+
+        svc = self._service_for(None, fetch_side_effect=slow)
+        with pytest.raises(PaperMetadataUnavailableError):
+            await svc.get_paper_metadata("2301.00001")

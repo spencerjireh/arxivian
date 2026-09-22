@@ -24,7 +24,7 @@ export default function AccountSection() {
   const handleSignOut = async () => {
     clearUserStore()
     await signOut()
-    await navigate('/sign-in')
+    await navigate('/')
   }
 
   const handleDeleteAccount = async () => {

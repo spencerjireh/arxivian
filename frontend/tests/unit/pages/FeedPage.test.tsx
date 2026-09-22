@@ -1,9 +1,11 @@
-import { screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent, within } from '@testing-library/react'
 import { Route, Routes, useLocation } from 'react-router-dom'
+import { mockAuth } from '../../mocks/clerk'
 import { renderWithProviders } from '../../helpers/renderWithProviders'
 import FeedPage from '../../../src/pages/FeedPage'
 import { useUserStore } from '../../../src/stores/userStore'
 import { makeFeedItem, makeFeedResponse } from '../../fixtures/feed'
+import { ONBOARDING_PROMPT_KEY } from '../../../src/components/feed/OnboardingPrompt'
 
 vi.mock('@clerk/clerk-react', () => import('../../mocks/clerk'))
 vi.mock('framer-motion', () => import('../../mocks/framer-motion'))
@@ -34,21 +36,69 @@ function feedState(overrides: Record<string, unknown>) {
 }
 
 beforeEach(() => {
+  mockAuth.isSignedIn = true
   setMutateAsync.mockClear()
   clearMutateAsync.mockClear()
 })
 
+afterEach(() => {
+  useUserStore.setState({ me: null })
+  localStorage.removeItem(ONBOARDING_PROMPT_KEY)
+})
+
 describe('FeedPage', () => {
-  it('shows a spinner while loading', () => {
+  it('shows the masthead and a spinner while loading', () => {
     mockUseInfiniteFeed.mockReturnValue(feedState({ isLoading: true }))
-    renderWithProviders(<FeedPage />, { initialEntries: ['/feed'] })
-    expect(screen.getByText('Feed')).toBeInTheDocument()
+    renderWithProviders(<FeedPage />, { initialEntries: ['/'] })
+    expect(screen.getByText('Arxivian')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Weekly issue' })).toBeInTheDocument()
     expect(document.querySelector('.animate-spin')).toBeInTheDocument()
+  })
+
+  it('reads as one issue to an anonymous reader: no dismissed toggle, Save goes to sign-in', () => {
+    mockAuth.isSignedIn = false
+    mockUseInfiniteFeed.mockReturnValue(
+      feedState({ data: { pages: [makeFeedResponse([makeFeedItem()])], pageParams: [0] } })
+    )
+    renderWithProviders(<FeedPage />, { initialEntries: ['/?dismissed=1&min_score=40'] })
+    expect(screen.getByRole('heading', { level: 1, name: 'Week of Aug 3' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Show dismissed')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Save' })).toHaveAttribute('href', '/sign-in')
+    expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument()
+    expect(mockUseInfiniteFeed).toHaveBeenLastCalledWith({ min_score: 40 })
+  })
+
+  it('prompts a signed-in reader without a profile until dismissed', () => {
+    useUserStore.setState({
+      me: {
+        id: 'u',
+        email: null,
+        first_name: null,
+        last_name: null,
+        tier: 'free',
+        daily_chat_limit: null,
+        chats_used_today: 0,
+        onboarded: false,
+      },
+    })
+    mockUseInfiniteFeed.mockReturnValue(
+      feedState({ data: { pages: [makeFeedResponse([makeFeedItem()])], pageParams: [0] } })
+    )
+    renderWithProviders(<FeedPage />, { initialEntries: ['/'] })
+    const prompt = screen.getByRole('complementary', { name: 'Set up your feed' })
+    expect(within(prompt).getByRole('link', { name: 'Set up' })).toHaveAttribute(
+      'href',
+      '/onboarding'
+    )
+    fireEvent.click(within(prompt).getByRole('button', { name: 'Dismiss' }))
+    expect(
+      screen.queryByRole('complementary', { name: 'Set up your feed' })
+    ).not.toBeInTheDocument()
   })
 
   it('shows the error message', () => {
     mockUseInfiniteFeed.mockReturnValue(feedState({ error: new Error('Network error') }))
-    renderWithProviders(<FeedPage />, { initialEntries: ['/feed'] })
+    renderWithProviders(<FeedPage />, { initialEntries: ['/'] })
     expect(screen.getByText('Network error')).toBeInTheDocument()
   })
 
@@ -56,7 +106,7 @@ describe('FeedPage', () => {
     mockUseInfiniteFeed.mockReturnValue(
       feedState({ data: { pages: [makeFeedResponse([])], pageParams: [0] } })
     )
-    renderWithProviders(<FeedPage />, { initialEntries: ['/feed'] })
+    renderWithProviders(<FeedPage />, { initialEntries: ['/'] })
     expect(screen.getByText('No papers scored for this week yet')).toBeInTheDocument()
   })
 
@@ -65,9 +115,9 @@ describe('FeedPage', () => {
       feedState({ data: { pages: [makeFeedResponse([makeFeedItem()])], pageParams: [0] } })
     )
     renderWithProviders(<FeedPage />, {
-      initialEntries: ['/feed?week=2026-08-03&min_score=40&category=cs.LG'],
+      initialEntries: ['/?week=2026-08-03&min_score=40&category=cs.LG'],
     })
-    expect(screen.getByText('Week of Aug 3')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Week of Aug 3' })).toBeInTheDocument()
     expect(screen.getByText('1 paper')).toBeInTheDocument()
     expect(screen.getByText('Attention Is All You Need')).toBeInTheDocument()
     expect(mockUseInfiniteFeed).toHaveBeenCalledWith({
@@ -81,7 +131,7 @@ describe('FeedPage', () => {
     mockUseInfiniteFeed.mockReturnValue(
       feedState({ data: { pages: [makeFeedResponse([makeFeedItem()])], pageParams: [0] } })
     )
-    renderWithProviders(<FeedPage />, { initialEntries: ['/feed'] })
+    renderWithProviders(<FeedPage />, { initialEntries: ['/'] })
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(setMutateAsync).toHaveBeenCalledWith({
       arxivId: '2401.00001',
@@ -98,7 +148,7 @@ describe('FeedPage', () => {
     mockUseInfiniteFeed.mockReturnValue(
       feedState({ data: { pages: [makeFeedResponse([saved])], pageParams: [0] } })
     )
-    renderWithProviders(<FeedPage />, { initialEntries: ['/feed'] })
+    renderWithProviders(<FeedPage />, { initialEntries: ['/'] })
     fireEvent.click(screen.getByRole('button', { name: 'Saved' }))
     expect(clearMutateAsync).toHaveBeenCalledWith({ arxivId: '2401.00001' })
   })
@@ -112,7 +162,7 @@ describe('FeedPage', () => {
         fetchNextPage,
       })
     )
-    renderWithProviders(<FeedPage />, { initialEntries: ['/feed'] })
+    renderWithProviders(<FeedPage />, { initialEntries: ['/'] })
     fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
     expect(fetchNextPage).toHaveBeenCalled()
   })
@@ -140,7 +190,7 @@ describe('FeedPage', () => {
     renderWithProviders(
       <Routes>
         <Route
-          path="/feed"
+          path="/"
           element={
             <>
               <FeedPage />
@@ -149,7 +199,7 @@ describe('FeedPage', () => {
           }
         />
       </Routes>,
-      { initialEntries: ['/feed'] }
+      { initialEntries: ['/'] }
     )
     fireEvent.change(screen.getByLabelText('Digest week'), { target: { value: '2026-07-27' } })
     expect(screen.getByTestId('search').textContent).toBe('?week=2026-07-27')
@@ -181,7 +231,7 @@ describe('FeedPage', () => {
     mockUseInfiniteFeed.mockReturnValue(
       feedState({ data: { pages: [makeFeedResponse([makeFeedItem()])], pageParams: [0] } })
     )
-    renderWithProviders(<FeedPage />, { initialEntries: ['/feed'] })
+    renderWithProviders(<FeedPage />, { initialEntries: ['/'] })
     const options = screen.getAllByRole('option').map((o) => o.textContent)
     expect(options).toContain('stat.ML')
     expect(options).toContain('cs.LG')

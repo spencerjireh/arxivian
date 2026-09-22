@@ -73,7 +73,8 @@ export async function streamChat(
         } catch {
           // Keep original text
         }
-        if (response.status === 401) {
+        // Same contract as api/client.ts: a 401 forces sign-out only when a token was sent.
+        if (response.status === 401 && 'Authorization' in headers) {
           window.dispatchEvent(new CustomEvent('auth:signout'))
         }
         throw new StreamError(errorMessage, errorCode)

@@ -25,7 +25,7 @@ function renderPage() {
   return renderWithProviders(
     <Routes>
       <Route path="/onboarding" element={<OnboardingPage />} />
-      <Route path="/feed" element={<div>feed page</div>} />
+      <Route path="/" element={<div>feed page</div>} />
     </Routes>,
     { initialEntries: ['/onboarding'] }
   )

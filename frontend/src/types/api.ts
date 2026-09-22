@@ -179,6 +179,9 @@ export interface FeedPaper {
   pdf_url: string
 }
 
+export type ScoreDimension =
+  'method_clarity' | 'resource_feasibility' | 'data_availability' | 'demand'
+
 interface FeedScores {
   method_clarity: number | null
   resource_feasibility: number | null
@@ -187,24 +190,20 @@ interface FeedScores {
   composite: number
 }
 
-export interface FeedSignals {
-  pseudocode_present: boolean
-  public_datasets: boolean
-  single_gpu: boolean
-  code_released: boolean
-  compute_match: boolean | null
-}
-
-export type ScoreDimension =
-  'method_clarity' | 'resource_feasibility' | 'data_availability' | 'demand'
+/** The four derived sub-scores a card meter draws; null is "not available", never low. */
+export type DimensionScores = Pick<FeedScores, ScoreDimension>
 
 /** One card. The library can carry a paper without a current score, so the score-derived
  *  fields are nullable; the feed always fills them. */
 export interface FeedItem {
   paper: FeedPaper
   scores: FeedScores | null
-  verdict: string | null
-  signals: FeedSignals | null
+  /** "<Model family> for <task type>" built from the stored attributes. */
+  headline: string | null
+  /** Ordered truthy-only phrases (compute tier, data access, code, weights, pseudocode, hyperparameters). */
+  meta: string[]
+  /** null without a compute profile (or when anonymous). */
+  compute_match: boolean | null
   low_confidence: ScoreDimension[]
   keyword_match: boolean
   state: PaperState | null
@@ -282,13 +281,19 @@ export interface PaperAttributes {
   code_evidence: EvidenceSpan[]
 }
 
+/** FeedPaper plus the abstract: the detail header and the 202 body. */
+export interface PaperMetadata extends FeedPaper {
+  abstract: string
+}
+
 export interface PaperScoreDetail {
-  paper: FeedPaper
+  paper: PaperMetadata
   rubric_version: string
   scored_at: string
   scores: FeedScores
-  verdict: string
-  signals: FeedSignals
+  headline: string
+  meta: string[]
+  compute_match: boolean | null
   low_confidence: ScoreDimension[]
   state: PaperState | null
   attributes: PaperAttributes
@@ -298,8 +303,11 @@ export interface PaperScoreDetail {
 export interface PaperScorePending {
   status: 'pending'
   arxiv_id: string
+  paper: PaperMetadata
+  /** null for an anonymous reader: nothing was enqueued. */
   task_id: string | null
 }
 
 export type PaperScoreResult =
-  { status: 'ready'; detail: PaperScoreDetail } | { status: 'pending'; task_id: string | null }
+  | { status: 'ready'; detail: PaperScoreDetail }
+  | { status: 'pending'; task_id: string | null; paper: PaperMetadata }

@@ -210,6 +210,19 @@ class ArxivAPIError(ExternalServiceError):
         super().__init__("arXiv", message, error_code="ARXIV_API_ERROR", details=details)
 
 
+class PaperMetadataUnavailableError(ExternalServiceError):
+    """arXiv could not supply a paper's metadata in time for a read (503, retryable)."""
+
+    def __init__(self, arxiv_id: str):
+        super().__init__(
+            "arXiv",
+            f"arXiv metadata for {arxiv_id} is unavailable right now",
+            status_code=503,
+            error_code="ARXIV_UNAVAILABLE",
+            details={"arxiv_id": arxiv_id},
+        )
+
+
 class EmbeddingServiceError(ExternalServiceError):
     def __init__(
         self,

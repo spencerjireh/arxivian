@@ -1,12 +1,13 @@
 # Arxivian -- User Stories
 
 **Companion to:** `docs/product/feed-prd.md`
-**Last updated:** 2026-09-20 (chat-first epics removed; pivot epics not re-audited)
+**Last updated:** 2026-09-22 (PUBLIC epic added; ONBOARD-1 gate superseded)
 
 > **Status.** Planning record for the feed pivot. SCORE-1..5, FEED-DIGEST, ONBOARD,
-> LIFECYCLE and SCOPED-CHAT shipped in Phases 1-3 (SPE-269..299); SCORE-6 (code gap) is
-> v1.1. The chat-first beta epics (CHAT, CITE, FEED, OPS, PERF) were removed 2026-09-20
-> and are in git history. `AGENTS.md` is the description of the code as built.
+> LIFECYCLE and SCOPED-CHAT shipped in Phases 1-3 (SPE-269..299); PUBLIC (the public
+> feed, `feed-prd.md` 1.1-public) is in progress; SCORE-6 (code gap) is v1.1. The
+> chat-first beta epics (CHAT, CITE, FEED, OPS, PERF) were removed 2026-09-20 and are in
+> git history. `AGENTS.md` is the description of the code as built.
 
 Stories are grouped by epic. Each story uses MoSCoW priority (Must/Should/Could) and
 references the backend/frontend files that need changes.
@@ -59,7 +60,8 @@ design in `docs/design/scoring-pipeline.md`.
 - **ONBOARD-1 (Must):** One-time post-sign-in flow -- select arXiv categories, declare
   compute reality (laptop / single GPU / cloud budget), optional interest keywords; stored
   on the `preferences` JSONB column on the `users` model. AC: ~30s; shapes the first digest;
-  reuses the JSON path read by `scheduled_tasks.py::daily_ingest_task`.
+  reuses the JSON path read by `scheduled_tasks.py::daily_ingest_task`. *The forced gate is
+  superseded by PUBLIC-5; the form and its storage are unchanged.*
 
 ### Epic: LIFECYCLE -- Paper Lifecycle States
 
@@ -76,3 +78,54 @@ design in `docs/design/scoring-pipeline.md`.
   like," "What are the risky parts to reproduce"). Reuses the existing streaming + citation
   UI with a narrowed context and the `semantic_scholar` tool (the `github_search` tool joins
   in v1.1). AC: no global chat tab; conversation history list removed (data archived).
+
+### Epic: PUBLIC -- Public Feed and Presentation (`feed-prd.md` 1.1-public)
+
+The issue and paper detail are readable without an account; the account layer is
+personalization. Cards and detail stop exposing pipeline internals.
+
+- **PUBLIC-1 (Must):** Backend public reads. `GET /feed` and `GET /papers/{arxiv_id}/score`
+  accept an absent bearer token (`CurrentUserOptional`); a present-but-invalid token is
+  still 401. Anonymous callers get the global digest with default weights, no state and
+  no profile match. `FeedItem` and the detail response carry `headline` (attribute
+  template) and `meta` (ordered truthy phrases) instead of `verdict` and `signals`, plus a
+  top-level `compute_match`. An unscored paper answers 202 with the paper metadata
+  (`paper.abstract` included); an anonymous request never enqueues `score_paper_task`,
+  takes the lock or counts against a budget. A paper unknown to the index is fetched from
+  arXiv on read and stored as a metadata-only row that ingest later fills in place.
+  Versioned ids (`...v2`) resolve to the stored row. AC: anonymous 200/202 tests, invalid
+  token 401, unknown id 404, arXiv outage 503 with nothing enqueued; ingest fills a
+  `pdf_processed=False` row; no migration.
+- **PUBLIC-2 (Must):** Frontend shell and routes. The issue is `/` (`/feed` redirects with
+  its query string); the landing page moves to `/about`; one top nav for everyone (Feed,
+  About, Pricing; Library, Settings and the account menu when signed in; Sign in
+  otherwise); the sidebar, its store and the "Beta" tag are deleted; pages become
+  document-style columns. The auth session moves above the router so signed-in readers
+  get a token and `/users/me` on public routes and anonymous readers never call it; a
+  401 signs out only when the request carried a token. Sign-in and OAuth return to the
+  page the reader came from (`state.from`, validated), default `/`. AC: route table
+  tests; anonymous never fetches `/users/me`; return path round-trips through OAuth.
+- **PUBLIC-3 (Must):** Cards. Headline, meta line (joined with a separator; "Fits your
+  compute" appended when `compute_match`), a four-dimension meter built from the 0-100
+  sub-scores with a hollow "not available" segment for null, Save + Dismiss for signed-in
+  readers, a Save that opens sign-in for anonymous readers. Implementing and Shipped move
+  to detail and Library. Masthead on the issue; the dismissed toggle only when signed in.
+  AC: no composite number, band text or confidence icon on a card; meter segments expose
+  `role="meter"` values; anonymous cards show no Dismiss.
+- **PUBLIC-4 (Must):** Paper detail. Headline, meta and meter on top; four dimensions
+  open by default with a band word (Strong / Mixed / Weak; Pass / Fail), level label,
+  reason and evidence; a collapsed "Scoring details" section with distributions,
+  judgments with probabilities, confidence and rubric version. Anonymous readers get a
+  sign-in prompt in place of the chat panel, and on an unscored paper the metadata and
+  abstract with "Sign in to score this paper" (no polling). AC: `<details>` closed by
+  default; no `useChat` mount for anonymous readers; `usePaperScore` does not poll when
+  anonymous.
+- **PUBLIC-5 (Must):** Onboarding prompt. The gate is removed; a signed-in reader with
+  `onboarded === false` sees a dismissible prompt at the top of the issue linking to the
+  profile form; dismissal is remembered per browser. AC: prompt hidden after dismissal
+  and after the profile is saved; `/onboarding` still redirects an onboarded user to `/`.
+- **PUBLIC-6 (Should):** Docs. PRD 1.1-public, this file, the read-path paragraphs in
+  `scoring-pipeline.md`, README and the privacy policy's anonymous-visitor paragraph.
+- **PUBLIC-7 (Could, follow-ups):** written one-liner at score time; viewer-keyed feed
+  queries so anonymous first paint does not wait on Clerk; link previews for public pages;
+  new judged attributes for the headline.

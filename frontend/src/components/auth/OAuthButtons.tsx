@@ -1,4 +1,4 @@
-// Auth pages: Google OAuth button (Clerk authenticateWithRedirect), lands on /feed.
+// Auth pages: Google OAuth button (Clerk authenticateWithRedirect), lands on the return path.
 import { useSignIn } from '@clerk/clerk-react'
 import Button from '../ui/Button'
 
@@ -25,7 +25,12 @@ function GoogleIcon() {
   )
 }
 
-export default function OAuthButtons() {
+interface OAuthButtonsProps {
+  /** Same-origin path to land on after the OAuth round trip (lib/nav.ts::returnPathFrom). */
+  returnTo?: string
+}
+
+export default function OAuthButtons({ returnTo = '/' }: OAuthButtonsProps) {
   const { signIn, isLoaded } = useSignIn()
 
   const handleGoogle = async () => {
@@ -33,7 +38,7 @@ export default function OAuthButtons() {
     await signIn.authenticateWithRedirect({
       strategy: 'oauth_google',
       redirectUrl: '/sso-callback',
-      redirectUrlComplete: '/feed',
+      redirectUrlComplete: returnTo,
     })
   }
 

@@ -16,7 +16,7 @@ export default function PaperNotFound({ arxivId }: PaperNotFoundProps) {
       <p className="mt-1 text-sm text-stone-400">
         <span className="font-mono">{arxivId}</span> is not a valid arXiv identifier.
       </p>
-      <Link to="/feed" className="mt-4 text-sm text-stone-600 underline underline-offset-2">
+      <Link to="/" className="mt-4 text-sm text-stone-600 underline underline-offset-2">
         Back to feed
       </Link>
     </div>

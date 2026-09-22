@@ -5,20 +5,31 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.schemas.feed import FeedPaper, FeedScores, FeedSignals
-from src.schemas.papers import DimensionDetail, PaperAttributesDetail, PaperScoreDetailResponse
+from src.exceptions import InvalidTokenError, PaperMetadataUnavailableError, ResourceNotFoundError
+from src.schemas.feed import FeedScores
+from src.schemas.papers import (
+    DimensionDetail,
+    PaperAttributesDetail,
+    PaperMetadata,
+    PaperScoreDetailResponse,
+)
+
+
+def _meta():
+    return PaperMetadata(
+        arxiv_id="2301.00001",
+        title="T",
+        authors=["A"],
+        abstract="An abstract.",
+        categories=["cs.LG"],
+        published_date=datetime(2023, 1, 1, tzinfo=UTC),
+        pdf_url="https://arxiv.org/pdf/2301.00001.pdf",
+    )
 
 
 def _detail():
     return PaperScoreDetailResponse(
-        paper=FeedPaper(
-            arxiv_id="2301.00001",
-            title="T",
-            authors=["A"],
-            categories=["cs.LG"],
-            published_date=datetime(2023, 1, 1, tzinfo=UTC),
-            pdf_url="https://arxiv.org/pdf/2301.00001.pdf",
-        ),
+        paper=_meta(),
         rubric_version="v2",
         scored_at=datetime(2026, 8, 4, tzinfo=UTC),
         scores=FeedScores(
@@ -28,10 +39,9 @@ def _detail():
             demand=85,
             composite=81.5,
         ),
-        verdict="Transformer for machine translation; one consumer GPU; public data",
-        signals=FeedSignals(
-            pseudocode_present=True, public_datasets=True, single_gpu=True, code_released=False
-        ),
+        headline="Transformer for machine translation",
+        meta=["one consumer GPU", "public data"],
+        compute_match=None,
         low_confidence=["method_clarity"],
         state=None,
         attributes=PaperAttributesDetail(),
@@ -62,8 +72,62 @@ def _use_redis(mock_redis):
 
 @pytest.mark.api
 class TestGetPaperScore:
-    def test_requires_auth(self, unauthenticated_client):
-        assert unauthenticated_client.get("/api/v1/papers/2301.00001/score").status_code == 401
+    def test_anonymous_scored_paper_returns_detail(self, unauthenticated_client, mock_feed_service):
+        mock_feed_service.get_score_detail.return_value = _detail()
+        resp = unauthenticated_client.get("/api/v1/papers/2301.00001/score")
+        assert resp.status_code == 200
+        assert resp.json()["paper"]["abstract"] == "An abstract."
+        assert mock_feed_service.get_score_detail.await_args.args == (None, "2301.00001")
+
+    def test_anonymous_unscored_paper_is_202_without_enqueue(
+        self, unauthenticated_client, mock_feed_service, mock_task_exec_repo
+    ):
+        mock_feed_service.get_paper_metadata.return_value = _meta()
+        redis = AsyncMock()
+        _use_redis(redis)
+        with patch("src.routers.papers.score_paper_task") as task:
+            resp = unauthenticated_client.get("/api/v1/papers/2301.00001/score")
+        assert resp.status_code == 202
+        body = resp.json()
+        assert body["status"] == "pending" and body["task_id"] is None
+        assert body["paper"]["title"] == "T" and body["paper"]["abstract"] == "An abstract."
+        task.apply_async.assert_not_called()
+        redis.set.assert_not_awaited()
+        redis.incr.assert_not_awaited()
+        mock_task_exec_repo.create.assert_not_awaited()
+
+    def test_invalid_token_is_still_401(self, unauthenticated_client, mock_feed_service):
+        with patch("src.dependencies._sync_user", side_effect=InvalidTokenError("bad")):
+            resp = unauthenticated_client.get(
+                "/api/v1/papers/2301.00001/score", headers={"Authorization": "Bearer bad"}
+            )
+        assert resp.status_code == 401
+        mock_feed_service.get_score_detail.assert_not_awaited()
+
+    def test_unknown_id_is_404_without_enqueue(self, client, mock_feed_service):
+        mock_feed_service.get_paper_metadata.side_effect = ResourceNotFoundError(
+            "Paper", "2301.99999"
+        )
+        redis = AsyncMock()
+        _use_redis(redis)
+        with patch("src.routers.papers.score_paper_task") as task:
+            resp = client.get("/api/v1/papers/2301.99999/score")
+        assert resp.status_code == 404
+        task.apply_async.assert_not_called()
+        redis.set.assert_not_awaited()
+
+    def test_arxiv_outage_is_503_without_enqueue(self, client, mock_feed_service):
+        mock_feed_service.get_paper_metadata.side_effect = PaperMetadataUnavailableError(
+            "2301.00001"
+        )
+        redis = AsyncMock()
+        _use_redis(redis)
+        with patch("src.routers.papers.score_paper_task") as task:
+            resp = client.get("/api/v1/papers/2301.00001/score")
+        assert resp.status_code == 503
+        assert resp.json()["error"]["code"] == "ARXIV_UNAVAILABLE"
+        task.apply_async.assert_not_called()
+        redis.set.assert_not_awaited()
 
     def test_returns_detail(self, client, mock_feed_service):
         mock_feed_service.get_score_detail.return_value = _detail()
@@ -71,6 +135,8 @@ class TestGetPaperScore:
         assert resp.status_code == 200
         body = resp.json()
         assert body["rubric_version"] == "v2"
+        assert body["headline"] == "Transformer for machine translation"
+        assert body["meta"] == ["one consumer GPU", "public data"]
         assert body["dimensions"][0]["dimension"] == "method_clarity"
         assert body["dimensions"][0]["probabilities"] == {
             "0": 0.0,
@@ -92,6 +158,7 @@ class TestGetPaperScore:
         self, client, mock_feed_service, mock_task_exec_repo, mock_user
     ):
         mock_feed_service.get_score_detail.return_value = None
+        mock_feed_service.get_paper_metadata.return_value = _meta()
         redis = AsyncMock()
         redis.set.return_value = True
         redis.incr.side_effect = [1, 1]
@@ -101,6 +168,7 @@ class TestGetPaperScore:
         assert resp.status_code == 202
         body = resp.json()
         assert body["status"] == "pending" and body["arxiv_id"] == "2301.00001"
+        assert body["paper"]["title"] == "T"
         day = datetime.now(UTC).date().isoformat()
         incremented = [c.args[0] for c in redis.incr.await_args_list]
         assert incremented == [
@@ -127,6 +195,7 @@ class TestGetPaperScore:
         self, client, mock_feed_service, mock_task_exec_repo
     ):
         mock_feed_service.get_score_detail.return_value = None
+        mock_feed_service.get_paper_metadata.return_value = _meta()
         redis = AsyncMock()
         redis.set.return_value = None
         redis.get.return_value = b"ondemand-2301.00001-abcd1234"
@@ -150,6 +219,7 @@ class TestGetPaperScore:
         self, client, mock_feed_service, mock_task_exec_repo, counts, scope, current, limit
     ):
         mock_feed_service.get_score_detail.return_value = None
+        mock_feed_service.get_paper_metadata.return_value = _meta()
         redis = AsyncMock()
         redis.set.return_value = True
         redis.incr.side_effect = counts
@@ -165,6 +235,7 @@ class TestGetPaperScore:
         assert redis.decr.await_count == 2  # both counters undone
         redis.delete.assert_awaited_once_with("score:ondemand:2301.00001")
 
-    def test_accepts_versioned_ids(self, client, mock_feed_service):
+    def test_versioned_id_resolves_to_the_stored_row(self, client, mock_feed_service, mock_user):
         mock_feed_service.get_score_detail.return_value = _detail()
         assert client.get("/api/v1/papers/2301.00001v2/score").status_code == 200
+        mock_feed_service.get_score_detail.assert_awaited_once_with(mock_user, "2301.00001")

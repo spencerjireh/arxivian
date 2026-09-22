@@ -1,12 +1,26 @@
-// Read-side helpers for score presentation (mirrors backend `schemas/scoring_state.py` bands).
+// Read-side helpers for score presentation (labels, band words, plain-language facts).
 
-import type { ScoreDimension, ScoreBand } from '../types/api'
+import type { DimensionDetail, ScoreBand, ScoreDimension } from '../types/api'
 
-/** LOW [0,40) - MED [40,70) - HIGH [70,100] */
-export function bandFor(score: number): ScoreBand {
-  if (score < 40) return 'LOW'
-  if (score < 70) return 'MED'
-  return 'HIGH'
+const BAND_WORDS: Record<ScoreBand, string> = { LOW: 'Weak', MED: 'Mixed', HIGH: 'Strong' }
+
+/** The public word for a dimension's band; the data gate reads Pass / Fail. */
+export function bandWord(dimension: DimensionDetail): string {
+  if (dimension.dimension === 'data_availability') return dimension.level === 1 ? 'Pass' : 'Fail'
+  return BAND_WORDS[dimension.band]
+}
+
+/**
+ * Plain-language facts behind a dimension for the public row: every yes/no criterion that
+ * held, and the chosen option of a choice question. Probabilities stay in Scoring details.
+ */
+export function dimensionFacts(dimension: DimensionDetail): string[] {
+  const facts: string[] = []
+  for (const j of dimension.judgments) {
+    if (j.kind === 'noul' && j.answer === true) facts.push(judgmentLabel(j.key))
+    if (j.kind === 'choice') facts.push(formatAnswer(j.answer))
+  }
+  return facts
 }
 
 const LOW_CONFIDENCE_THRESHOLD = 0.5
@@ -15,10 +29,25 @@ export function isLowConfidence(confidence: number): boolean {
   return confidence < LOW_CONFIDENCE_THRESHOLD
 }
 
+export const DIMENSION_ORDER: ScoreDimension[] = [
+  'method_clarity',
+  'resource_feasibility',
+  'data_availability',
+  'demand',
+]
+
 export const DIMENSION_LABELS: Record<ScoreDimension, string> = {
   method_clarity: 'Method clarity',
   resource_feasibility: 'Resource feasibility',
   data_availability: 'Data availability',
+  demand: 'Demand',
+}
+
+/** Short labels under the card meter. */
+export const DIMENSION_SHORT_LABELS: Record<ScoreDimension, string> = {
+  method_clarity: 'Method',
+  resource_feasibility: 'Compute',
+  data_availability: 'Data',
   demand: 'Demand',
 }
 

@@ -8,6 +8,7 @@ import {
   SCORE_POLL_INTERVAL_MS,
   SCORE_POLL_TIMEOUT_MS,
 } from '../../../src/api/scores'
+import { makePaperMetadata } from '../../fixtures/feed'
 import { makePaperScoreDetail } from '../../fixtures/scores'
 import type { ReactNode } from 'react'
 
@@ -34,8 +35,14 @@ describe('fetchPaperScore', () => {
     const detail = makePaperScoreDetail()
     apiGet.mockResolvedValueOnce(detail)
     expect(await fetchPaperScore('2401.00001')).toEqual({ status: 'ready', detail })
-    apiGet.mockResolvedValueOnce({ status: 'pending', arxiv_id: '2401.00001', task_id: 't1' })
-    expect(await fetchPaperScore('2401.00001')).toEqual({ status: 'pending', task_id: 't1' })
+    const paper = makePaperMetadata()
+    apiGet.mockResolvedValueOnce({
+      status: 'pending',
+      arxiv_id: '2401.00001',
+      paper,
+      task_id: 't1',
+    })
+    expect(await fetchPaperScore('2401.00001')).toEqual({ status: 'pending', task_id: 't1', paper })
     expect(apiGet).toHaveBeenCalledWith('/papers/2401.00001/score')
   })
 })
@@ -76,6 +83,29 @@ describe('usePaperScore', () => {
         result.current.restartPolling()
       })
       await waitFor(() => expect(apiGet.mock.calls.length).toBeGreaterThan(callsAtTimeout))
+      expect(result.current.pollTimedOut).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not poll a pending answer when polling is off (anonymous reader)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      apiGet.mockResolvedValue({
+        status: 'pending',
+        arxiv_id: '2401.00001',
+        paper: makePaperMetadata(),
+        task_id: null,
+      })
+      const { result } = renderHook(() => usePaperScore('2401.00001', { poll: false }), {
+        wrapper: createWrapper(),
+      })
+      await waitFor(() => expect(result.current.data?.status).toBe('pending'))
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SCORE_POLL_INTERVAL_MS * 2)
+      })
+      expect(apiGet).toHaveBeenCalledTimes(1)
       expect(result.current.pollTimedOut).toBe(false)
     } finally {
       vi.useRealTimers()

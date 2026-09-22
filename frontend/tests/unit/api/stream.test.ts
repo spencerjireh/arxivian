@@ -1,4 +1,4 @@
-import { streamChat, StreamAbortError } from '../../../src/api/stream'
+import { streamChat, StreamAbortError, StreamError } from '../../../src/api/stream'
 import type { EventSourceMessage } from '@microsoft/fetch-event-source'
 import type { StreamCallbacks } from '../../../src/api/stream'
 import type { StreamRequest } from '../../../src/types/api'
@@ -15,9 +15,11 @@ vi.mock('@microsoft/fetch-event-source', () => ({
   fetchEventSource: vi.fn(),
 }))
 
+const authHeaders = vi.hoisted((): { current: Record<string, string> } => ({ current: {} }))
 vi.mock('../../../src/api/client', () => ({
   getApiBaseUrl: () => '/api',
-  getAuthHeaders: () => Promise.resolve({ 'Content-Type': 'application/json' }),
+  getAuthHeaders: () =>
+    Promise.resolve({ 'Content-Type': 'application/json', ...authHeaders.current }),
 }))
 
 // Helper to get the mock and set its implementation per test.
@@ -31,6 +33,44 @@ const baseRequest: StreamRequest = { query: 'test query', arxiv_id: '2301.00001'
 describe('streamChat', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    authHeaders.current = {}
+  })
+
+  async function open401(): Promise<StreamError> {
+    const fes = await getFESMock()
+    fes.mockImplementation(async (_url, config) => {
+      const { onopen } = config as FESConfig
+      const response = {
+        ok: false,
+        status: 401,
+        text: () =>
+          Promise.resolve(JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'nope' } })),
+      } as unknown as Response
+      await onopen?.(response)
+    })
+    try {
+      await streamChat(baseRequest, {})
+    } catch (error) {
+      return error as StreamError
+    }
+    throw new Error('expected streamChat to throw')
+  }
+
+  it('forces sign-out on a 401 only when the request carried a token', async () => {
+    const signout = vi.fn()
+    window.addEventListener('auth:signout', signout)
+    try {
+      const anonymous = await open401()
+      expect(anonymous.code).toBe('UNAUTHORIZED')
+      expect(signout).not.toHaveBeenCalled()
+
+      authHeaders.current = { Authorization: 'Bearer t' }
+      const signedIn = await open401()
+      expect(signedIn.code).toBe('UNAUTHORIZED')
+      expect(signout).toHaveBeenCalledTimes(1)
+    } finally {
+      window.removeEventListener('auth:signout', signout)
+    }
   })
 
   it('throws StreamAbortError when signal is already aborted', async () => {

@@ -19,16 +19,20 @@ export async function fetchPaperScore(arxivId: string): Promise<PaperScoreResult
     `/papers/${encodeURIComponent(arxivId)}/score`
   )
   if ('status' in data && data.status === 'pending') {
-    return { status: 'pending', task_id: data.task_id }
+    return { status: 'pending', task_id: data.task_id, paper: data.paper }
   }
   return { status: 'ready', detail: data as PaperScoreDetail }
 }
 
 /**
  * The score breakdown for one paper. While the backend answers 202 the query refetches
- * every 5 s, for up to 3 minutes; `restartPolling` resets that budget.
+ * every 5 s, for up to 3 minutes; `restartPolling` resets that budget. With `poll: false`
+ * (an anonymous reader, for whom nothing was enqueued) a 202 is final.
  */
-export function usePaperScore(arxivId: string | undefined) {
+export function usePaperScore(
+  arxivId: string | undefined,
+  { poll = true }: { poll?: boolean } = {}
+) {
   const pendingSince = useRef<number | null>(null)
   const [pollTimedOut, setPollTimedOut] = useState(false)
 
@@ -43,7 +47,7 @@ export function usePaperScore(arxivId: string | undefined) {
     refetchIntervalInBackground: false,
     refetchInterval: (q) => {
       const data = q.state.data
-      if (!data || data.status !== 'pending') {
+      if (!poll || !data || data.status !== 'pending') {
         pendingSince.current = null
         return false
       }

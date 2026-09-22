@@ -1,8 +1,10 @@
 import { screen, fireEvent } from '@testing-library/react'
 import { Route, Routes } from 'react-router-dom'
+import { mockAuth } from '../../mocks/clerk'
 import { renderWithProviders } from '../../helpers/renderWithProviders'
 import PaperDetailPage from '../../../src/pages/PaperDetailPage'
 import { ApiError } from '../../../src/api/client'
+import { makePaperMetadata } from '../../fixtures/feed'
 import { makePaperScoreDetail } from '../../fixtures/scores'
 
 vi.mock('@clerk/clerk-react', () => import('../../mocks/clerk'))
@@ -14,7 +16,7 @@ const clearMutateAsync = vi.fn().mockResolvedValue(undefined)
 const restartPolling = vi.fn()
 
 vi.mock('../../../src/api/scores', () => ({
-  usePaperScore: (id: string) => mockUsePaperScore(id),
+  usePaperScore: (id: string, options: unknown) => mockUsePaperScore(id, options),
 }))
 vi.mock('../../../src/api/paperStates', () => ({
   useSetPaperState: () => ({ mutateAsync: setMutateAsync }),
@@ -48,7 +50,10 @@ function renderPage(path = '/papers/2401.00001') {
   )
 }
 
+const pending = { status: 'pending', task_id: 't1', paper: makePaperMetadata() }
+
 beforeEach(() => {
+  mockAuth.isSignedIn = true
   setMutateAsync.mockClear()
   clearMutateAsync.mockClear()
   restartPolling.mockClear()
@@ -59,20 +64,49 @@ describe('PaperDetailPage', () => {
     mockUsePaperScore.mockReturnValue(scoreState({ isLoading: true }))
     renderPage()
     expect(document.querySelector('.animate-spin')).toBeInTheDocument()
-    expect(mockUsePaperScore).toHaveBeenCalledWith('2401.00001')
+    expect(mockUsePaperScore).toHaveBeenCalledWith('2401.00001', { poll: true })
   })
 
   it('shows the pending state and a retry after timeout', () => {
-    mockUsePaperScore.mockReturnValue(scoreState({ data: { status: 'pending', task_id: 't1' } }))
+    mockUsePaperScore.mockReturnValue(scoreState({ data: pending }))
     const { unmount } = renderPage()
     expect(screen.getByText(/Ingesting and scoring/)).toBeInTheDocument()
     unmount()
-    mockUsePaperScore.mockReturnValue(
-      scoreState({ data: { status: 'pending', task_id: 't1' }, pollTimedOut: true })
-    )
+    mockUsePaperScore.mockReturnValue(scoreState({ data: pending, pollTimedOut: true }))
     renderPage()
     fireEvent.click(screen.getByRole('button', { name: 'Check again' }))
     expect(restartPolling).toHaveBeenCalled()
+  })
+
+  it('shows an anonymous reader the metadata preview without polling', () => {
+    mockAuth.isSignedIn = false
+    mockUsePaperScore.mockReturnValue(scoreState({ data: { ...pending, task_id: null } }))
+    renderPage()
+    expect(mockUsePaperScore).toHaveBeenCalledWith('2401.00001', { poll: false })
+    expect(screen.getByRole('heading', { name: 'Attention Is All You Need' })).toBeInTheDocument()
+    expect(screen.getByText(/We propose a new simple network architecture/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sign in to score this paper' })).toHaveAttribute(
+      'href',
+      '/sign-in'
+    )
+    expect(screen.queryByText(/Ingesting and scoring/)).not.toBeInTheDocument()
+  })
+
+  it('gives an anonymous reader the evidence, a sign-in Save and a chat prompt', () => {
+    mockAuth.isSignedIn = false
+    mockUsePaperScore.mockReturnValue(
+      scoreState({ data: { status: 'ready', detail: makePaperScoreDetail() } })
+    )
+    renderPage()
+    expect(screen.getAllByText('Strong').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Algorithm 1/).length).toBeGreaterThan(0)
+    expect(screen.getByRole('link', { name: 'Save' })).toHaveAttribute('href', '/sign-in')
+    expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('scoped-chat')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sign in to chat' })).toHaveAttribute(
+      'href',
+      '/sign-in'
+    )
   })
 
   it('shows not found on 404', () => {
@@ -81,16 +115,19 @@ describe('PaperDetailPage', () => {
     expect(screen.getByText('Paper not found')).toBeInTheDocument()
   })
 
-  it('renders the header, chips and four dimension rows when ready', () => {
+  it('renders the header, summary, four open dimension rows and closed details when ready', () => {
     mockUsePaperScore.mockReturnValue(
       scoreState({ data: { status: 'ready', detail: makePaperScoreDetail() } })
     )
     renderPage()
     expect(screen.getByRole('heading', { name: 'Attention Is All You Need' })).toBeInTheDocument()
+    expect(screen.getByText('Transformer for machine translation')).toBeInTheDocument()
     expect(screen.getByText('machine translation')).toBeInTheDocument()
-    expect(screen.getByText('Method clarity')).toBeInTheDocument()
-    expect(screen.getByText('Demand')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Back to feed/ })).toHaveAttribute('href', '/feed')
+    expect(screen.getByRole('region', { name: 'Method clarity' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Demand' })).toBeInTheDocument()
+    expect(screen.getByText('Scoring details').closest('details')).not.toHaveAttribute('open')
+    expect(screen.getByRole('link', { name: /Back to feed/ })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('button', { name: 'Mark as Implementing' })).toBeInTheDocument()
   })
 
   it('save and dismiss mutate with the route arXiv id', () => {
@@ -108,7 +145,7 @@ describe('PaperDetailPage', () => {
   })
 
   it('mounts the scoped chat panel only when ready, with the session from the URL', () => {
-    mockUsePaperScore.mockReturnValue(scoreState({ data: { status: 'pending', task_id: 't1' } }))
+    mockUsePaperScore.mockReturnValue(scoreState({ data: pending }))
     const { unmount } = renderPage()
     expect(screen.queryByTestId('scoped-chat')).not.toBeInTheDocument()
     unmount()
