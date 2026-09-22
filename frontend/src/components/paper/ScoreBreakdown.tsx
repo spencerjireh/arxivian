@@ -1,45 +1,25 @@
-// Paper detail: per-dimension breakdown from GET /papers/{id}/score (backend schemas/papers.py).
-import ScoreBadge from '../feed/ScoreBadge'
-import VerdictLine from '../feed/VerdictLine'
-import SignalChips from '../feed/SignalChips'
+// Paper detail: the score as a reader sees it (GET /papers/{id}/score, backend schemas/papers.py).
+import AttributeChips from './AttributeChips'
 import DimensionRow from './DimensionRow'
 import EvidenceList from './EvidenceList'
-import { DIMENSION_LABELS } from '../../lib/scoring'
-import { formatDate } from '../../lib/formatting'
+import ScoreSummary from './ScoreSummary'
+import ScoringDetails from './ScoringDetails'
 import type { PaperScoreDetail } from '../../types/api'
 
 interface ScoreBreakdownProps {
   detail: PaperScoreDetail
 }
 
-/** Composite + verdict on top, then every dimension paired with its quoted evidence. */
+/** Headline, meta and meter on top; every dimension open with its band word and evidence;
+ *  the pipeline internals folded under Scoring details at the bottom. */
 export default function ScoreBreakdown({ detail }: ScoreBreakdownProps) {
-  const lowConfidence = detail.low_confidence.length > 0
   return (
     <section className="space-y-4" aria-label="Score breakdown">
-      <div className="flex items-start gap-4">
-        <ScoreBadge
-          score={detail.scores.composite}
-          size="lg"
-          lowConfidence={lowConfidence}
-          lowConfidenceTitle={
-            lowConfidence
-              ? `Low confidence: ${detail.low_confidence.map((d) => DIMENSION_LABELS[d]).join(', ')}`
-              : undefined
-          }
-        />
-        <div className="min-w-0 flex-1">
-          <VerdictLine verdict={detail.verdict} className="mb-2" />
-          <SignalChips signals={detail.signals} size="md" />
-        </div>
-      </div>
-      <p className="text-xs text-stone-400">
-        Rubric {detail.rubric_version} · scored {formatDate(detail.scored_at)} · scores are derived
-        from the level distributions below; open a dimension for its evidence.
-      </p>
+      <ScoreSummary detail={detail} />
+      <AttributeChips attributes={detail.attributes} />
       <div className="space-y-3">
-        {detail.dimensions.map((dimension, i) => (
-          <DimensionRow key={dimension.dimension} dimension={dimension} defaultOpen={i === 0} />
+        {detail.dimensions.map((dimension) => (
+          <DimensionRow key={dimension.dimension} dimension={dimension} />
         ))}
       </div>
       {detail.attributes.code_evidence.length > 0 && (
@@ -48,6 +28,7 @@ export default function ScoreBreakdown({ detail }: ScoreBreakdownProps) {
           <EvidenceList evidence={detail.attributes.code_evidence} />
         </div>
       )}
+      <ScoringDetails detail={detail} />
     </section>
   )
 }

@@ -48,6 +48,7 @@ describe('FeedFilterBar', () => {
         category={undefined}
         minScore={undefined}
         includeDismissed={false}
+        showDismissed
         onChange={onChange}
         {...props}
       />
@@ -65,6 +66,12 @@ describe('FeedFilterBar', () => {
     expect(onChange).toHaveBeenLastCalledWith({ minScore: undefined })
     fireEvent.click(screen.getByLabelText('Show dismissed'))
     expect(onChange).toHaveBeenLastCalledWith({ includeDismissed: true })
+  })
+
+  it('hides the dismissed toggle for an anonymous reader and ignores it in Clear filters', () => {
+    mountBar({ showDismissed: false, includeDismissed: true })
+    expect(screen.queryByLabelText('Show dismissed')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument()
   })
 
   it('shows Clear filters only when something is set and clears everything', () => {

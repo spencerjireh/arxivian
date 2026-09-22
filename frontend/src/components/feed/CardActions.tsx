@@ -1,4 +1,4 @@
-// Feed card: Save / Dismiss / Implementing (and optional Ship) buttons with optimistic state.
+// Feed card and paper header: Save / Dismiss (and optional Implementing / Ship) buttons with optimistic state.
 import { useState } from 'react'
 import { Bookmark, BookmarkCheck, ExternalLink, Hammer, Rocket, X } from 'lucide-react'
 import Button from '../ui/Button'
@@ -12,14 +12,15 @@ export interface CardActionsProps {
   state: PaperState | null
   onSave: () => void
   onDismiss: () => void
-  onImplementing: () => void
+  /** When set, the card offers "Mark as Implementing" (paper detail and Library; not the feed). */
+  onImplementing?: () => void
   /** When set, an implementing paper gets a "Mark as shipped" action that asks for the repo. */
   onShip?: (repoUrl: string) => void
   pending?: PendingAction
   size?: 'sm' | 'md'
 }
 
-/** Save / Dismiss / Mark as Implementing / Mark as shipped. Dismiss is one click, no confirmation. */
+/** Save / Dismiss, plus Mark as Implementing / Mark as shipped where offered. Dismiss is one click, no confirmation. */
 export default function CardActions({
   state,
   onSave,
@@ -85,16 +86,18 @@ export default function CardActions({
         >
           {isSaved ? 'Saved' : 'Save'}
         </Button>
-        <Button
-          variant={isImplementing ? 'secondary' : 'ghost'}
-          size={size}
-          onClick={onImplementing}
-          isLoading={pending === 'implementing'}
-          aria-pressed={isImplementing}
-          leftIcon={<Hammer className={iconClass} strokeWidth={1.5} />}
-        >
-          {isImplementing ? 'Implementing' : 'Mark as Implementing'}
-        </Button>
+        {onImplementing && (
+          <Button
+            variant={isImplementing ? 'secondary' : 'ghost'}
+            size={size}
+            onClick={onImplementing}
+            isLoading={pending === 'implementing'}
+            aria-pressed={isImplementing}
+            leftIcon={<Hammer className={iconClass} strokeWidth={1.5} />}
+          >
+            {isImplementing ? 'Implementing' : 'Mark as Implementing'}
+          </Button>
+        )}
         {isImplementing && onShip && (
           <Button
             variant="ghost"

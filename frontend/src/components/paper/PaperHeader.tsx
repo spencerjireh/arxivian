@@ -1,12 +1,14 @@
 // Paper detail: title, authors, date, categories, arXiv link and lifecycle actions.
 import { Link } from 'react-router-dom'
-import { ArrowLeft, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Bookmark, ExternalLink } from 'lucide-react'
 import CardActions, { type PendingAction } from '../feed/CardActions'
+import SignInLink from '../auth/SignInLink'
 import { formatDate } from '../../lib/formatting'
 import type { FeedPaper, PaperState } from '../../types/api'
 
 interface PaperHeaderProps {
   paper: FeedPaper
+  signedIn: boolean
   state: PaperState | null
   onSave: () => void
   onDismiss: () => void
@@ -17,6 +19,7 @@ interface PaperHeaderProps {
 
 export default function PaperHeader({
   paper,
+  signedIn,
   state,
   onSave,
   onDismiss,
@@ -63,15 +66,21 @@ export default function PaperHeader({
           PDF <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
         </a>
       </div>
-      <CardActions
-        state={state}
-        onSave={onSave}
-        onDismiss={onDismiss}
-        onImplementing={onImplementing}
-        onShip={onShip}
-        pending={pending}
-        size="md"
-      />
+      {signedIn ? (
+        <CardActions
+          state={state}
+          onSave={onSave}
+          onDismiss={onDismiss}
+          onImplementing={onImplementing}
+          onShip={onShip}
+          pending={pending}
+          size="md"
+        />
+      ) : (
+        <SignInLink variant="button" leftIcon={<Bookmark className="h-4 w-4" strokeWidth={1.5} />}>
+          Save
+        </SignInLink>
+      )}
     </header>
   )
 }
