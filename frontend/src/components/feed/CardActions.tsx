@@ -1,4 +1,4 @@
-// Feed card: Save / Dismiss / Implementing (and optional Ship) buttons with optimistic state.
+// Feed card and paper header: Save / Dismiss (and optional Implementing / Ship) buttons with optimistic state.
 import { useState } from 'react'
 import { Bookmark, BookmarkCheck, ExternalLink, Hammer, Rocket, X } from 'lucide-react'
 import Button from '../ui/Button'
@@ -12,14 +12,15 @@ export interface CardActionsProps {
   state: PaperState | null
   onSave: () => void
   onDismiss: () => void
-  onImplementing: () => void
+  /** When set, the card offers "Mark as Implementing" (paper detail and Library; not the feed). */
+  onImplementing?: () => void
   /** When set, an implementing paper gets a "Mark as shipped" action that asks for the repo. */
   onShip?: (repoUrl: string) => void
   pending?: PendingAction
   size?: 'sm' | 'md'
 }
 
-/** Save / Dismiss / Mark as Implementing / Mark as shipped. Dismiss is one click, no confirmation. */
+/** Save / Dismiss, plus Mark as Implementing / Mark as shipped where offered. Dismiss is one click, no confirmation. */
 export default function CardActions({
   state,
   onSave,
@@ -69,32 +70,42 @@ export default function CardActions({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-1.5">
-        <Button
-          variant={isSaved ? 'secondary' : 'ghost'}
-          size={size}
-          onClick={onSave}
-          isLoading={pending === 'saved' || (pending === 'clear' && isSaved)}
-          aria-pressed={isSaved}
-          leftIcon={
-            isSaved ? (
-              <BookmarkCheck className={iconClass} strokeWidth={1.5} />
-            ) : (
-              <Bookmark className={iconClass} strokeWidth={1.5} />
-            )
-          }
-        >
-          {isSaved ? 'Saved' : 'Save'}
-        </Button>
-        <Button
-          variant={isImplementing ? 'secondary' : 'ghost'}
-          size={size}
-          onClick={onImplementing}
-          isLoading={pending === 'implementing'}
-          aria-pressed={isImplementing}
-          leftIcon={<Hammer className={iconClass} strokeWidth={1.5} />}
-        >
-          {isImplementing ? 'Implementing' : 'Mark as Implementing'}
-        </Button>
+        {isImplementing && !onImplementing ? (
+          // The feed offers no Implementing action: show the state instead of an unpressed
+          // Save that would demote the paper on one click.
+          <Chip tone="info" size="md">
+            Implementing
+          </Chip>
+        ) : (
+          <Button
+            variant={isSaved ? 'secondary' : 'ghost'}
+            size={size}
+            onClick={onSave}
+            isLoading={pending === 'saved' || (pending === 'clear' && isSaved)}
+            aria-pressed={isSaved}
+            leftIcon={
+              isSaved ? (
+                <BookmarkCheck className={iconClass} strokeWidth={1.5} />
+              ) : (
+                <Bookmark className={iconClass} strokeWidth={1.5} />
+              )
+            }
+          >
+            {isSaved ? 'Saved' : 'Save'}
+          </Button>
+        )}
+        {onImplementing && (
+          <Button
+            variant={isImplementing ? 'secondary' : 'ghost'}
+            size={size}
+            onClick={onImplementing}
+            isLoading={pending === 'implementing'}
+            aria-pressed={isImplementing}
+            leftIcon={<Hammer className={iconClass} strokeWidth={1.5} />}
+          >
+            {isImplementing ? 'Implementing' : 'Mark as Implementing'}
+          </Button>
+        )}
         {isImplementing && onShip && (
           <Button
             variant="ghost"

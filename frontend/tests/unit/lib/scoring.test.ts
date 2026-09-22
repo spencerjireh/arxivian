@@ -1,13 +1,57 @@
-import { bandFor, isLowConfidence } from '../../../src/lib/scoring'
+import { bandWord, dimensionFacts, isLowConfidence } from '../../../src/lib/scoring'
+import { makeDimension } from '../../fixtures/scores'
 import { feedParamsFromSearch, formatWeek } from '../../../src/lib/feedParams'
 import { matchesNav, returnPathFrom } from '../../../src/lib/nav'
 
 describe('scoring helpers', () => {
-  it('bands at 40 and 70', () => {
-    expect(bandFor(39)).toBe('LOW')
-    expect(bandFor(40)).toBe('MED')
-    expect(bandFor(69)).toBe('MED')
-    expect(bandFor(70)).toBe('HIGH')
+  it('turns a band into a public word, and the data gate into Pass / Fail', () => {
+    expect(bandWord(makeDimension({ band: 'HIGH' }))).toBe('Strong')
+    expect(bandWord(makeDimension({ band: 'MED' }))).toBe('Mixed')
+    expect(bandWord(makeDimension({ band: 'LOW' }))).toBe('Weak')
+    expect(bandWord(makeDimension({ dimension: 'data_availability', level: 1 }))).toBe('Pass')
+    expect(bandWord(makeDimension({ dimension: 'data_availability', level: 0 }))).toBe('Fail')
+  })
+
+  it('lists the criteria that held and the chosen options as plain facts', () => {
+    const facts = dimensionFacts(
+      makeDimension({
+        judgments: [
+          {
+            key: 'algorithm_given',
+            kind: 'noul',
+            answer: true,
+            probabilities: {},
+            confidence: 0.9,
+            legend: null,
+          },
+          {
+            key: 'hyperparameters_stated',
+            kind: 'noul',
+            answer: false,
+            probabilities: {},
+            confidence: 0.8,
+            legend: null,
+          },
+          {
+            key: 'data_access',
+            kind: 'choice',
+            answer: 'public benchmark or standard dataset',
+            probabilities: {},
+            confidence: 0.7,
+            legend: null,
+          },
+          {
+            key: 'compute_tier',
+            kind: 'score',
+            answer: 3,
+            probabilities: {},
+            confidence: 0.6,
+            legend: null,
+          },
+        ],
+      })
+    )
+    expect(facts).toEqual(['Algorithm or equations given', 'public benchmark or standard dataset'])
   })
 
   it('low confidence below 0.5', () => {

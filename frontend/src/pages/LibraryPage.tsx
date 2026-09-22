@@ -127,6 +127,7 @@ export default function LibraryPage() {
                 </div>
                 <FeedList
                   items={library[g.key]}
+                  signedIn
                   onSave={onSave}
                   onDismiss={onDismiss}
                   onImplementing={onImplementing}

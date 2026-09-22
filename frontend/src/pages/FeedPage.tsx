@@ -1,11 +1,14 @@
-// /feed route: the weekly digest with filters, week selector and lifecycle actions.
+// / route (public): the weekly issue with the week selector, filters and, when signed in,
+// the lifecycle actions and the profile prompt.
 import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useAuth } from '@clerk/clerk-react'
 import { AlertCircle, Loader2, Newspaper } from 'lucide-react'
 import { useInfiniteFeed } from '../api/feed'
 import { useClearPaperState, useSetPaperState } from '../api/paperStates'
 import FeedList from '../components/feed/FeedList'
 import FeedFilterBar, { type FeedFilters } from '../components/feed/FeedFilterBar'
+import OnboardingPrompt from '../components/feed/OnboardingPrompt'
 import WeekSelector from '../components/feed/WeekSelector'
 import Button from '../components/ui/Button'
 import { getUserMessage } from '../lib/errors'
@@ -15,8 +18,15 @@ import type { PendingAction } from '../components/feed/CardActions'
 import type { AvailableWeek, FeedItem } from '../types/api'
 
 export default function FeedPage() {
+  const { isSignedIn } = useAuth()
+  const signedIn = Boolean(isSignedIn)
   const [search, setSearchParams] = useSearchParams()
-  const params = useMemo(() => feedParamsFromSearch(search), [search])
+  // Dismissals are per-user state: an anonymous reader's URL cannot ask for them.
+  const params = useMemo(() => {
+    const parsed = feedParamsFromSearch(search)
+    if (!signedIn) delete parsed.include_dismissed
+    return parsed
+  }, [search, signedIn])
   const profileCategories = useUserStore((s) => s.me?.preferences?.feed_profile?.categories)
 
   const {
@@ -111,16 +121,6 @@ export default function FeedPage() {
     [run, setState]
   )
 
-  const onImplementing = useCallback(
-    (arxivId: string) => {
-      const next = stateOf(arxivId)?.state === 'implementing' ? 'saved' : 'implementing'
-      run(arxivId, next, () =>
-        setState.mutateAsync({ arxivId, body: { state: next } }).catch(() => undefined)
-      )
-    },
-    [stateOf, run, setState]
-  )
-
   const pendingFor = useCallback(
     (arxivId: string): PendingAction => (pending?.arxivId === arxivId ? pending.action : null),
     [pending]
@@ -128,38 +128,43 @@ export default function FeedPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-10">
-      <div className="pb-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-2xl font-semibold text-stone-900">Feed</h1>
-          {first?.week_start && (
-            <span className="text-sm text-stone-500">Week of {formatWeek(first.week_start)}</span>
-          )}
+      <header className="border-b border-stone-300 pb-6">
+        <p className="font-display text-sm tracking-[0.2em] text-stone-500 uppercase">Arxivian</p>
+        <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <h1 className="font-display text-4xl font-semibold tracking-tight text-stone-900">
+            {first?.week_start ? `Week of ${formatWeek(first.week_start)}` : 'Weekly issue'}
+          </h1>
           {first && (
             <span className="font-mono text-sm text-stone-400">
               {total} paper{total !== 1 ? 's' : ''}
             </span>
           )}
-          {knownWeeks.length > 0 && (
-            <div className="ml-auto">
-              <WeekSelector
-                weeks={knownWeeks}
-                value={first?.week_start ?? params.week ?? knownWeeks[0].week_start}
-                onChange={selectWeek}
-              />
-            </div>
-          )}
         </div>
-      </div>
+        <p className="mt-2 max-w-xl text-sm text-stone-500">
+          New arXiv papers scored for how implementable they are: how clearly the method is
+          specified, what it takes to run, whether the data is public, and how much demand there is.
+        </p>
+      </header>
 
-      <div className="pb-4">
+      <div className="flex flex-wrap items-center gap-3 py-5">
+        {knownWeeks.length > 0 && (
+          <WeekSelector
+            weeks={knownWeeks}
+            value={first?.week_start ?? params.week ?? knownWeeks[0].week_start}
+            onChange={selectWeek}
+          />
+        )}
         <FeedFilterBar
           categories={categories}
           category={params.category}
           minScore={params.min_score}
           includeDismissed={Boolean(params.include_dismissed)}
+          showDismissed={signedIn}
           onChange={changeFilters}
         />
       </div>
+
+      <OnboardingPrompt />
 
       <div className={isPlaceholderData ? 'opacity-60' : undefined}>
         {isLoading ? (
@@ -191,9 +196,9 @@ export default function FeedPage() {
           <>
             <FeedList
               items={items}
+              signedIn={signedIn}
               onSave={onSave}
               onDismiss={onDismiss}
-              onImplementing={onImplementing}
               pendingFor={pendingFor}
             />
             {hasNextPage && (

@@ -1,15 +1,22 @@
-import type { FeedItem, FeedResponse, LibraryResponse } from '../../src/types/api'
+import type { FeedItem, FeedResponse, LibraryResponse, PaperMetadata } from '../../src/types/api'
+
+export function makePaperMetadata(overrides: Partial<PaperMetadata> = {}): PaperMetadata {
+  return {
+    arxiv_id: '2401.00001',
+    title: 'Attention Is All You Need',
+    authors: ['Vaswani', 'Shazeer', 'Parmar', 'Uszkoreit'],
+    abstract: 'We propose a new simple network architecture, the Transformer.',
+    categories: ['cs.CL', 'cs.AI'],
+    published_date: '2024-01-15T00:00:00Z',
+    pdf_url: 'https://arxiv.org/pdf/2401.00001',
+    ...overrides,
+  }
+}
 
 export function makeFeedItem(overrides: Partial<FeedItem> = {}): FeedItem {
+  const { arxiv_id, title, authors, categories, published_date, pdf_url } = makePaperMetadata()
   return {
-    paper: {
-      arxiv_id: '2401.00001',
-      title: 'Attention Is All You Need',
-      authors: ['Vaswani', 'Shazeer', 'Parmar', 'Uszkoreit'],
-      categories: ['cs.CL', 'cs.AI'],
-      published_date: '2024-01-15T00:00:00Z',
-      pdf_url: 'https://arxiv.org/pdf/2401.00001',
-    },
+    paper: { arxiv_id, title, authors, categories, published_date, pdf_url },
     scores: {
       method_clarity: 80,
       resource_feasibility: 50,
@@ -17,14 +24,9 @@ export function makeFeedItem(overrides: Partial<FeedItem> = {}): FeedItem {
       demand: 85,
       composite: 71,
     },
-    verdict: 'Transformer for machine translation; one datacenter GPU; public data',
-    signals: {
-      pseudocode_present: true,
-      public_datasets: true,
-      single_gpu: true,
-      code_released: false,
-      compute_match: null,
-    },
+    headline: 'Transformer for machine translation',
+    meta: ['one datacenter GPU', 'public data', 'pseudocode given'],
+    compute_match: null,
     low_confidence: [],
     keyword_match: false,
     state: null,

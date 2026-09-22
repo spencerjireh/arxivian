@@ -1,4 +1,4 @@
-import { makeFeedItem } from './feed'
+import { makeFeedItem, makePaperMetadata } from './feed'
 import type { DimensionDetail, PaperScoreDetail } from '../../src/types/api'
 
 export function makeDimension(overrides: Partial<DimensionDetail> = {}): DimensionDetail {
@@ -33,12 +33,13 @@ export function makeDimension(overrides: Partial<DimensionDetail> = {}): Dimensi
 export function makePaperScoreDetail(overrides: Partial<PaperScoreDetail> = {}): PaperScoreDetail {
   const item = makeFeedItem()
   return {
-    paper: item.paper,
+    paper: makePaperMetadata(),
     rubric_version: 'v2',
     scored_at: '2026-08-04T00:00:00Z',
     scores: item.scores!,
-    verdict: item.verdict!,
-    signals: item.signals!,
+    headline: item.headline!,
+    meta: item.meta,
+    compute_match: item.compute_match,
     low_confidence: [],
     state: null,
     attributes: {

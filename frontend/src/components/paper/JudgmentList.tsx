@@ -7,7 +7,15 @@ interface JudgmentListProps {
   judgments: Judgment[]
 }
 
-/** The atomic Jev answers behind a dimension, with their confidence. */
+function probabilitiesTitle(probabilities: Record<string, number>): string {
+  return Object.entries(probabilities)
+    .sort((a, b) => b[1] - a[1])
+    .map(([key, p]) => `${key} ${Math.round(p * 100)}%`)
+    .join(' · ')
+}
+
+/** The atomic Jev answers behind a dimension, with their confidence; the full probability
+ *  split is on the confidence cell's title. */
 export default function JudgmentList({ judgments }: JudgmentListProps) {
   if (judgments.length === 0) return null
   return (
@@ -16,7 +24,10 @@ export default function JudgmentList({ judgments }: JudgmentListProps) {
         <div key={j.key} className="contents">
           <dt className="text-stone-600">{judgmentLabel(j.key)}</dt>
           <dd className="text-right font-medium text-stone-900">{formatAnswer(j.answer)}</dd>
-          <dd className="inline-flex items-center justify-end gap-1 text-right font-mono text-xs text-stone-400">
+          <dd
+            className="inline-flex items-center justify-end gap-1 text-right font-mono text-xs text-stone-400"
+            title={probabilitiesTitle(j.probabilities)}
+          >
             {Math.round(j.confidence * 100)}%
             {isLowConfidence(j.confidence) && (
               <AlertCircle

@@ -172,6 +172,23 @@ otherwise), the page, `Footer`. There is no sidebar and no onboarding gate. Sign
 to `location.state.from` (`lib/nav.ts::returnPathFrom`, same-origin paths only) through
 `OAuthButtons`' `redirectUrlComplete`; every sign-in prompt is `components/auth/SignInLink.tsx`.
 
+Cards (`components/feed/FeedCard.tsx`) show the API's `headline` and `meta` phrases (plus a
+"Fits your compute" chip on `compute_match`) and a `DimensionMeter` over the four 0-100
+sub-scores (a null sub-score is a hollow "not available" segment); no composite number, band
+word or confidence icon on a card. Actions are Save and Dismiss; `CardActions` offers
+Implementing / Ship only where the handlers are passed (paper detail, Library). An anonymous
+reader gets a `SignInLink` Save, no dismissed toggle, and `include_dismissed` is dropped
+from the URL params. `components/feed/OnboardingPrompt.tsx` replaces the gate: it shows
+for `me.onboarded === false` until dismissed (local storage). Paper detail
+(`components/paper/ScoreBreakdown.tsx`) is `ScoreSummary` (headline, meta, meter) ->
+`AttributeChips` -> four always-open `DimensionRow`s (`lib/scoring.ts::bandWord` Strong /
+Mixed / Weak or Pass / Fail, the level label, `dimensionFacts`, the evidence) -> code
+mentions -> `ScoringDetails`, a native `<details>` closed by default that holds the rubric
+version, composite, confidence, `DistributionBar`s and `JudgmentList`s. Anonymous readers
+see `ChatSignInPrompt` instead of the chat panel, and on an unscored paper `PaperPreview`
+(the 202's `paper` metadata) with a sign-in CTA; `usePaperScore(id, { poll: false })` then
+treats the 202 as final.
+
 Server state is TanStack Query v5 (`src/api/*.ts`, key factories + hooks, optimistic
 lifecycle updates in `api/paperStates.ts`); UI state is Zustand (`src/stores/`). Chat exists
 only as `components/paper/ScopedChatPanel.tsx`: `useChat(sessionId, { arxivId })` posts

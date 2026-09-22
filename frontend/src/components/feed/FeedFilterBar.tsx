@@ -14,6 +14,8 @@ interface FeedFilterBarProps {
   category: string | undefined
   minScore: number | undefined
   includeDismissed: boolean
+  /** Dismissals are per-user state, so the toggle exists only for a signed-in reader. */
+  showDismissed: boolean
   onChange: (next: FeedFilters) => void
 }
 
@@ -29,9 +31,11 @@ export default function FeedFilterBar({
   category,
   minScore,
   includeDismissed,
+  showDismissed,
   onChange,
 }: FeedFilterBarProps) {
-  const hasFilters = Boolean(category) || minScore !== undefined || includeDismissed
+  const hasFilters =
+    Boolean(category) || minScore !== undefined || (showDismissed && includeDismissed)
   return (
     <div className="flex flex-wrap items-center gap-3">
       <select
@@ -69,15 +73,17 @@ export default function FeedFilterBar({
         ))}
       </div>
 
-      <label className="inline-flex items-center gap-2 text-sm text-stone-600">
-        <input
-          type="checkbox"
-          className="accent-stone-700"
-          checked={includeDismissed}
-          onChange={(e) => onChange({ includeDismissed: e.target.checked })}
-        />
-        Show dismissed
-      </label>
+      {showDismissed && (
+        <label className="inline-flex items-center gap-2 text-sm text-stone-600">
+          <input
+            type="checkbox"
+            className="accent-stone-700"
+            checked={includeDismissed}
+            onChange={(e) => onChange({ includeDismissed: e.target.checked })}
+          />
+          Show dismissed
+        </label>
+      )}
 
       {hasFilters && (
         <Button
