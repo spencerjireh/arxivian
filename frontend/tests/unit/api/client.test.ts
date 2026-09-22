@@ -1,4 +1,11 @@
-import { apiPut, apiPatch, apiDelete, ApiError } from '../../../src/api/client'
+import {
+  apiGet,
+  apiPut,
+  apiPatch,
+  apiDelete,
+  ApiError,
+  setAuthTokenGetter,
+} from '../../../src/api/client'
 
 function mockFetch(status: number, body: unknown = null) {
   const response = {
@@ -15,6 +22,7 @@ function mockFetch(status: number, body: unknown = null) {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  setAuthTokenGetter(() => Promise.resolve(null))
 })
 
 describe('api client verbs', () => {
@@ -51,5 +59,26 @@ describe('api client verbs', () => {
       message: 'Paper not found',
     })
     await expect(apiPut('/papers/x/state', { state: 'saved' })).rejects.toBeInstanceOf(ApiError)
+  })
+})
+
+describe('401 handling', () => {
+  it('does not force a sign-out when the request carried no token', async () => {
+    mockFetch(401, { detail: 'nope' })
+    const dispatch = vi.spyOn(window, 'dispatchEvent')
+    await expect(apiGet('/feed')).rejects.toMatchObject({ status: 401 })
+    expect(dispatch).not.toHaveBeenCalled()
+    dispatch.mockRestore()
+  })
+
+  it('forces a sign-out when an authenticated request gets a 401', async () => {
+    setAuthTokenGetter(() => Promise.resolve('tok'))
+    const fetchMock = mockFetch(401, { detail: 'expired' })
+    const dispatch = vi.spyOn(window, 'dispatchEvent')
+    await expect(apiGet('/users/me')).rejects.toMatchObject({ status: 401 })
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer tok')
+    expect(dispatch).toHaveBeenCalledTimes(1)
+    expect(dispatch.mock.calls[0][0].type).toBe('auth:signout')
+    dispatch.mockRestore()
   })
 })

@@ -127,8 +127,8 @@ export default function FeedPage() {
   )
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="px-6 pt-6 pb-4">
+    <div className="mx-auto w-full max-w-3xl px-6 py-10">
+      <div className="pb-4">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-2xl font-semibold text-stone-900">Feed</h1>
           {first?.week_start && (
@@ -151,7 +151,7 @@ export default function FeedPage() {
         </div>
       </div>
 
-      <div className="px-6 pb-4">
+      <div className="pb-4">
         <FeedFilterBar
           categories={categories}
           category={params.category}
@@ -161,7 +161,7 @@ export default function FeedPage() {
         />
       </div>
 
-      <div className={`flex-1 overflow-y-auto px-6 pb-6 ${isPlaceholderData ? 'opacity-60' : ''}`}>
+      <div className={isPlaceholderData ? 'opacity-60' : undefined}>
         {isLoading ? (
           <div className="flex items-center justify-center py-24">
             <Loader2 className="h-6 w-6 animate-spin text-stone-300" strokeWidth={1.5} />
@@ -197,7 +197,7 @@ export default function FeedPage() {
               pendingFor={pendingFor}
             />
             {hasNextPage && (
-              <div className="flex max-w-3xl justify-center pt-6">
+              <div className="flex justify-center pt-6">
                 <Button
                   variant="secondary"
                   size="md"

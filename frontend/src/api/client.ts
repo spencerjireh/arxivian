@@ -2,13 +2,13 @@
 
 const API_BASE_URL = '/api'
 
-// Token getter function - set by AuthTokenProvider
+// Token getter function - set by AuthSession
 type TokenGetter = () => Promise<string | null>
 let authTokenGetter: TokenGetter | null = null
 
 /**
  * Register the auth token getter function.
- * Called by AuthTokenProvider on mount.
+ * Called by AuthSession during render.
  */
 export function setAuthTokenGetter(getter: TokenGetter): void {
   authTokenGetter = getter
@@ -59,7 +59,12 @@ export function errorMessageFrom(parsed: unknown): string | undefined {
   return undefined
 }
 
-async function handleResponse<T>(response: Response): Promise<T> {
+/**
+ * `hadToken` says whether the request carried a bearer token. A 401 on an authenticated
+ * request means the session is dead and forces a sign-out; a 401 on an anonymous request
+ * is just an error (the public routes never 401 without a token).
+ */
+async function handleResponse<T>(response: Response, hadToken: boolean): Promise<T> {
   if (!response.ok) {
     const errorBody = await response.text()
     let message = errorBody
@@ -69,7 +74,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
     } catch {
       // Keep original text if not JSON
     }
-    if (response.status === 401) {
+    if (response.status === 401 && hadToken) {
       window.dispatchEvent(new CustomEvent('auth:signout'))
     }
     throw new ApiError(response.status, response.statusText, message)
@@ -86,7 +91,7 @@ export async function apiGet<T>(path: string): Promise<T> {
     method: 'GET',
     headers,
   })
-  return handleResponse<T>(response)
+  return handleResponse<T>(response, 'Authorization' in headers)
 }
 
 export async function apiPut<T>(path: string, body: unknown): Promise<T> {
@@ -96,7 +101,7 @@ export async function apiPut<T>(path: string, body: unknown): Promise<T> {
     headers,
     body: JSON.stringify(body),
   })
-  return handleResponse<T>(response)
+  return handleResponse<T>(response, 'Authorization' in headers)
 }
 
 export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
@@ -106,7 +111,7 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
     headers,
     body: JSON.stringify(body),
   })
-  return handleResponse<T>(response)
+  return handleResponse<T>(response, 'Authorization' in headers)
 }
 
 export async function apiDelete<T = void>(path: string): Promise<T> {
@@ -115,7 +120,7 @@ export async function apiDelete<T = void>(path: string): Promise<T> {
     method: 'DELETE',
     headers,
   })
-  return handleResponse<T>(response)
+  return handleResponse<T>(response, 'Authorization' in headers)
 }
 
 export function getApiBaseUrl(): string {

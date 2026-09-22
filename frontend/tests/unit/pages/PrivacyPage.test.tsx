@@ -3,8 +3,6 @@ import { renderWithProviders } from '../../helpers/renderWithProviders'
 import PrivacyPage from '../../../src/pages/PrivacyPage'
 
 vi.mock('@clerk/clerk-react', () => import('../../mocks/clerk'))
-vi.mock('../../../src/components/layout/PublicHeader', () => ({ default: () => <header /> }))
-vi.mock('../../../src/components/layout/Footer', () => ({ default: () => <footer /> }))
 
 describe('PrivacyPage', () => {
   it('renders the policy markdown with anchor ids the table of contents links to', () => {

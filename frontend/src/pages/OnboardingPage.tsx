@@ -1,4 +1,4 @@
-// /onboarding route: first-run feed profile form, outside the sidebar layout.
+// /onboarding route: the feed profile form, outside the app shell; reached from the feed prompt or Settings.
 import { Navigate, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useUpdateFeedProfile } from '../api/users'
@@ -12,7 +12,7 @@ export default function OnboardingPage() {
   const update = useUpdateFeedProfile()
 
   if (me?.onboarded) {
-    return <Navigate to="/feed" replace />
+    return <Navigate to="/" replace />
   }
 
   return (
@@ -35,7 +35,7 @@ export default function OnboardingPage() {
           submitLabel="Build my feed"
           onSubmit={(profile) =>
             update.mutate(profile, {
-              onSuccess: () => void navigate('/feed', { replace: true }),
+              onSuccess: () => void navigate('/', { replace: true }),
               onError: () => toast.error('Could not save your profile'),
             })
           }

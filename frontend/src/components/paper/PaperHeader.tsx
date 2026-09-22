@@ -28,7 +28,7 @@ export default function PaperHeader({
   return (
     <header className="space-y-3">
       <Link
-        to="/feed"
+        to="/"
         className="inline-flex items-center gap-1 text-sm text-stone-500 hover:text-stone-800"
       >
         <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />

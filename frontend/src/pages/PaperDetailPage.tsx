@@ -111,5 +111,5 @@ export default function PaperDetailPage() {
     )
   }
 
-  return <div className="flex-1 overflow-y-auto">{body}</div>
+  return <div className="w-full">{body}</div>
 }
