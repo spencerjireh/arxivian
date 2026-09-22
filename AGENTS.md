@@ -191,7 +191,11 @@ generated release notes (`release.yml`). Moving the stack between servers:
 
 - Maintenance curtain: backend `MAINTENANCE_MODE=true` -> 503 for all routes except health;
   frontend `VITE_MAINTENANCE_MODE=true` is a build arg (`frontend/Dockerfile`), so flipping
-  it means a rebuild.
+  it means a rebuild. The two flags are the rollback lever: set both in the Coolify env
+  (prod and preview rows) and redeploy, no code change. Relaunched 2026-09-21 curtained,
+  opened 2026-09-22.
+- Run a task by hand: `docker exec <celery-worker> uv run celery -A src.celery_app call
+  src.tasks.triage_tasks.triage_new_papers_task` (same for `digest_tasks.build_digest_task`).
 - Compose env wiring: only variables listed under a service's `environment:` reach that
   container. Settings are validated at import, so `celery-beat` carries `CLERK_DOMAIN` plus
   the schedule crons; feed knobs (`TRIAGE_*`, `ONDEMAND_SCORE_LOCK_SECONDS`) are on `app`
