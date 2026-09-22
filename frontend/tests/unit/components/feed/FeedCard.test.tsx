@@ -91,6 +91,14 @@ describe('FeedCard', () => {
     expect(screen.queryByRole('button', { name: 'Mark as Implementing' })).not.toBeInTheDocument()
   })
 
+  it('shows an implementing paper as a chip on the feed instead of an unpressed Save', () => {
+    const { onSave } = renderCard(makeFeedItem({ state: implementing }))
+    expect(screen.getByText('Implementing')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Save/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument()
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
   it('offers Implementing where the handler is given (detail and Library)', () => {
     const onImplementing = vi.fn()
     renderCard(makeFeedItem(), { onImplementing })

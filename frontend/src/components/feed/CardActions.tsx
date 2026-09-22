@@ -70,22 +70,30 @@ export default function CardActions({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-1.5">
-        <Button
-          variant={isSaved ? 'secondary' : 'ghost'}
-          size={size}
-          onClick={onSave}
-          isLoading={pending === 'saved' || (pending === 'clear' && isSaved)}
-          aria-pressed={isSaved}
-          leftIcon={
-            isSaved ? (
-              <BookmarkCheck className={iconClass} strokeWidth={1.5} />
-            ) : (
-              <Bookmark className={iconClass} strokeWidth={1.5} />
-            )
-          }
-        >
-          {isSaved ? 'Saved' : 'Save'}
-        </Button>
+        {isImplementing && !onImplementing ? (
+          // The feed offers no Implementing action: show the state instead of an unpressed
+          // Save that would demote the paper on one click.
+          <Chip tone="info" size="md">
+            Implementing
+          </Chip>
+        ) : (
+          <Button
+            variant={isSaved ? 'secondary' : 'ghost'}
+            size={size}
+            onClick={onSave}
+            isLoading={pending === 'saved' || (pending === 'clear' && isSaved)}
+            aria-pressed={isSaved}
+            leftIcon={
+              isSaved ? (
+                <BookmarkCheck className={iconClass} strokeWidth={1.5} />
+              ) : (
+                <Bookmark className={iconClass} strokeWidth={1.5} />
+              )
+            }
+          >
+            {isSaved ? 'Saved' : 'Save'}
+          </Button>
+        )}
         {onImplementing && (
           <Button
             variant={isImplementing ? 'secondary' : 'ghost'}
