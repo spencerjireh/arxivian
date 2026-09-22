@@ -52,8 +52,10 @@ from src.utils.logger import get_logger
 
 log = get_logger(__name__)
 
-# Bound on the arXiv metadata fetch inside a request; past it the read is a 503.
-_ARXIV_METADATA_TIMEOUT_SECONDS = 15.0
+# Bound on the arXiv metadata fetch inside a request; past it the read is a 503. The
+# client retries three times with backoff (2-10 s), and a cold arXiv answer takes ~5 s, so
+# anything tighter than 30 s turns an ordinary slow first read into a 503.
+_ARXIV_METADATA_TIMEOUT_SECONDS = 30.0
 
 
 class FeedService:
