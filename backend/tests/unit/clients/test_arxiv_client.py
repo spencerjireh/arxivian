@@ -202,3 +202,31 @@ class TestNonDateSearch:
 
         assert captured_search[0].sort_by == arxiv.SortCriterion.Relevance
         assert captured_search[0].max_results == 5
+
+
+class TestGetPaperById:
+    """The read-path single-id fetch: one id_list query, no pacing sleep."""
+
+    @pytest.mark.asyncio
+    async def test_returns_paper_without_sleeping(self):
+        client = ArxivClient(rate_limit_delay=3.0)
+        captured: list[arxiv.Search] = []
+
+        def capture(search: arxiv.Search):
+            captured.append(search)
+            return iter([_make_result("2602.99001", _utc(2026, 2, 8), "Found")])
+
+        with (
+            patch.object(client.client, "results", side_effect=capture),
+            patch("src.clients.arxiv_client.asyncio.sleep") as sleep,
+        ):
+            paper = await client.get_paper_by_id("2602.99001")
+
+        assert paper is not None and paper.arxiv_id == "2602.99001" and paper.title == "Found"
+        assert captured[0].id_list == ["2602.99001"] and captured[0].max_results == 1
+        sleep.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_unknown_id_is_none(self, client: ArxivClient):
+        with patch.object(client.client, "results", return_value=iter([])):
+            assert await client.get_paper_by_id("2602.00000") is None

@@ -196,6 +196,8 @@ def mock_feed_service():
     service = AsyncMock()
     service.get_feed = AsyncMock()
     service.get_library = AsyncMock()
+    service.get_score_detail = AsyncMock(return_value=None)
+    service.get_paper_metadata = AsyncMock()
     return service
 
 
@@ -257,13 +259,19 @@ def overrides(
 
 def _build_client(overrides: dict, mock_user=None):
     """TestClient with the shared overrides; with `mock_user`, auth is bypassed too."""
-    from src.dependencies import get_current_user_required, get_tier_policy, verify_api_key
+    from src.dependencies import (
+        get_current_user_optional,
+        get_current_user_required,
+        get_tier_policy,
+        verify_api_key,
+    )
     from src.main import app
     from src.tiers import get_policy
 
     app.dependency_overrides.update(overrides)
     if mock_user is not None:
         app.dependency_overrides[get_current_user_required] = lambda: mock_user
+        app.dependency_overrides[get_current_user_optional] = lambda: mock_user
         app.dependency_overrides[get_tier_policy] = lambda: get_policy(mock_user)
         app.dependency_overrides[verify_api_key] = lambda: None
 
@@ -281,7 +289,8 @@ def client(overrides, mock_user):
 
 @pytest.fixture
 def unauthenticated_client(overrides):
-    """Client with auth dependencies live, so tests can assert 401 behaviour."""
+    """Client with auth dependencies live: public routes see an anonymous caller, the rest
+    answer 401."""
     yield from _build_client(overrides)
 
 

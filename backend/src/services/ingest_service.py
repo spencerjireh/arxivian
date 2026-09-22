@@ -186,8 +186,10 @@ class IngestService:
         session = self.paper_repository.session
 
         # Quick check if paper already exists globally (read-only, outside transaction)
+        # A metadata-only row (pdf_processed=False, written by the public score endpoint)
+        # is not a skip: it is filled in place below, under the row lock.
         existing = await self.paper_repository.get_by_arxiv_id(arxiv_id)
-        if existing and not force_reprocess:
+        if existing and existing.pdf_processed and not force_reprocess:
             log.debug("paper skipped (exists)", arxiv_id=arxiv_id)
             return None
 
@@ -247,7 +249,7 @@ class IngestService:
                 return None
 
             # Double-check after acquiring lock (another request may have just finished)
-            if existing_locked and not force_reprocess:
+            if existing_locked and existing_locked.pdf_processed and not force_reprocess:
                 log.debug("paper skipped (exists after lock)", arxiv_id=arxiv_id)
                 return None
 
