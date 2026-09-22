@@ -25,6 +25,6 @@ export function returnPathFrom(state: unknown): string {
       path = loc.pathname + (typeof loc.search === 'string' ? loc.search : '')
     }
   }
-  if (!path || !path.startsWith('/') || path.startsWith('//')) return '/'
+  if (!path || !path.startsWith('/') || path.startsWith('//') || path.includes('\\')) return '/'
   return path
 }

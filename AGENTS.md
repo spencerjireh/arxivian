@@ -157,9 +157,11 @@ React 19 + TypeScript strict + Vite; Tailwind v4 (light-only warm stone theme, t
 `/settings` sit behind `ProtectedRoute`; `/onboarding`, `/sign-in`, `/sign-up` and
 `/sso-callback` render outside the shell. `components/auth/AuthSession.tsx` is the root
 layout route: it registers Clerk's token getter with `api/client.ts` (a null getter when
-signed out), waits for Clerk to load, fetches `/users/me` only for a signed-in visitor and
-handles the forced sign-out that `api/client.ts` raises on a 401 to a request that carried
-a token. `components/layout/Layout.tsx` is a document page (window scroll): `TopNav`
+signed out), waits for Clerk to load, fetches `/users/me` only for a signed-in visitor,
+clears the TanStack Query cache when a signed-in session ends (the public pages must not
+serve the previous user's state) and handles the forced sign-out that `api/client.ts` and
+`api/stream.ts` raise on a 401 to a request that carried a token.
+`components/layout/Layout.tsx` is a document page (window scroll): `TopNav`
 (Feed, About, Pricing; Library, Settings and `UserMenu` when signed in; `SignInLink`
 otherwise), the page, `Footer`. There is no sidebar and no onboarding gate. Sign-in returns
 to `location.state.from` (`lib/nav.ts::returnPathFrom`, same-origin paths only) through

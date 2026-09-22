@@ -62,6 +62,8 @@ describe('returnPathFrom', () => {
     expect(returnPathFrom({})).toBe('/')
     expect(returnPathFrom({ from: '//evil.example' })).toBe('/')
     expect(returnPathFrom({ from: 'https://evil.example/x' })).toBe('/')
+    expect(returnPathFrom({ from: '/\\evil.example' })).toBe('/')
+    expect(returnPathFrom({ from: '/papers\\..\\x' })).toBe('/')
     expect(returnPathFrom({ from: { pathname: 42 } })).toBe('/')
   })
 })

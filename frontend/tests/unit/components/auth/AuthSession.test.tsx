@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { mockAuth, mockClerk } from '../../../mocks/clerk'
 import AuthSession from '../../../../src/components/auth/AuthSession'
@@ -25,6 +26,7 @@ const me = {
 }
 
 function renderSession(path = '/') {
+  const queryClient = new QueryClient()
   const router = createMemoryRouter(
     [
       {
@@ -37,8 +39,12 @@ function renderSession(path = '/') {
     ],
     { initialEntries: [path] }
   )
-  render(<RouterProvider router={router} />)
-  return router
+  render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  )
+  return { router, queryClient }
 }
 
 beforeEach(() => {
@@ -81,11 +87,33 @@ describe('AuthSession', () => {
   it('signs out and goes to /sign-in on a forced auth:signout', async () => {
     mockAuth.isSignedIn = true
     useUserStore.setState({ me })
-    const view = renderSession()
+    const { router: view } = renderSession()
     await screen.findByText('public page')
     fireEvent(window, new CustomEvent('auth:signout'))
     await vi.waitFor(() => expect(mockClerk.signOut).toHaveBeenCalledTimes(1))
     await vi.waitFor(() => expect(view.state.location.pathname).toBe('/sign-in'))
     expect(useUserStore.getState().me).toBeNull()
+  })
+
+  it('drops every cached query when a signed-in session ends', async () => {
+    mockAuth.isSignedIn = true
+    const { router, queryClient } = renderSession()
+    await screen.findByText('public page')
+    queryClient.setQueryData(['feed', 'list', {}], { items: [{ state: 'saved' }] })
+    expect(queryClient.getQueryCache().getAll()).toHaveLength(1)
+
+    mockAuth.isSignedIn = false
+    // Clerk flips isSignedIn; the layout re-renders through a navigation to the same route.
+    await router.navigate('/')
+    await vi.waitFor(() => expect(queryClient.getQueryCache().getAll()).toHaveLength(0))
+    expect(useUserStore.getState().me).toBeNull()
+  })
+
+  it('keeps the cache for a visitor who was never signed in', async () => {
+    const { router, queryClient } = renderSession()
+    await screen.findByText('public page')
+    queryClient.setQueryData(['feed', 'list', {}], { items: [] })
+    await router.navigate('/')
+    expect(queryClient.getQueryCache().getAll()).toHaveLength(1)
   })
 })
