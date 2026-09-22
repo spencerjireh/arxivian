@@ -1,8 +1,8 @@
 import { screen, fireEvent } from '@testing-library/react'
 import { Route, Routes } from 'react-router-dom'
+import TopNav from '@/components/layout/TopNav'
 import { mockAuth, mockClerk } from '../../../mocks/clerk'
 import { renderWithProviders } from '../../../helpers/renderWithProviders'
-import TopNav from '../../../../src/components/layout/TopNav'
 
 vi.mock('@clerk/clerk-react', () => import('../../../mocks/clerk'))
 

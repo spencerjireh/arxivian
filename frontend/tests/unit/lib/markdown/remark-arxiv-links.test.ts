@@ -1,7 +1,7 @@
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import remarkStringify from 'remark-stringify'
-import { remarkArxivLinks } from '../../../../src/lib/markdown/remark-arxiv-links'
+import { remarkArxivLinks } from '@/lib/markdown/remark-arxiv-links'
 
 /** Run markdown through the plugin and return the result string. */
 async function process(md: string): Promise<string> {

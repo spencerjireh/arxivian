@@ -1,7 +1,7 @@
 // Zustand store for authenticated user tier and usage info
 
 import { create } from 'zustand'
-import { apiGet } from '../api/client'
+import { apiGet } from '../lib/api-client'
 import type { MeResponse } from '../types/api'
 
 export interface UserState {

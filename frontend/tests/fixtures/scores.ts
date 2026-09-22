@@ -1,5 +1,5 @@
 import { makeFeedItem, makePaperMetadata } from './feed'
-import type { DimensionDetail, PaperScoreDetail } from '../../src/types/api'
+import type { DimensionDetail, PaperScoreDetail } from '@/types/api'
 
 export function makeDimension(overrides: Partial<DimensionDetail> = {}): DimensionDetail {
   return {

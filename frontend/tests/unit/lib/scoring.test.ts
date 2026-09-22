@@ -1,7 +1,7 @@
-import { bandWord, dimensionFacts, isLowConfidence } from '../../../src/lib/scoring'
+import { bandWord, dimensionFacts, isLowConfidence } from '@/lib/scoring'
+import { feedParamsFromSearch, formatWeek } from '@/features/feed/lib/feedParams'
+import { matchesNav, returnPathFrom } from '@/lib/nav'
 import { makeDimension } from '../../fixtures/scores'
-import { feedParamsFromSearch, formatWeek } from '../../../src/lib/feedParams'
-import { matchesNav, returnPathFrom } from '../../../src/lib/nav'
 
 describe('scoring helpers', () => {
   it('turns a band into a public word, and the data gate into Pass / Fail', () => {

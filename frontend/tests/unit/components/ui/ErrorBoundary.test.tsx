@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import ErrorBoundary from '../../../../src/components/ui/ErrorBoundary'
+import ErrorBoundary from '@/components/ui/ErrorBoundary'
 
 function ThrowingChild({ shouldThrow }: { shouldThrow: boolean }) {
   if (shouldThrow) throw new Error('test error')

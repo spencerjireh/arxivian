@@ -34,6 +34,30 @@ export default defineConfig([
     },
     rules: {
       'import-x/no-cycle': 'error',
+      // Bulletproof React boundaries: shared -> features -> app. Features never import each
+      // other, except that feed renders paper's CardActions on its cards (feed -> paper only).
+      'import-x/no-restricted-paths': [
+        'error',
+        {
+          basePath: import.meta.dirname,
+          zones: [
+            {
+              target: './src/features/feed',
+              from: './src/features',
+              except: ['./feed', './paper'],
+            },
+            { target: './src/features/paper', from: './src/features', except: ['./paper'] },
+            { target: './src/features/profile', from: './src/features', except: ['./profile'] },
+            { target: './src/features/auth', from: './src/features', except: ['./auth'] },
+            { target: './src/features/landing', from: './src/features', except: ['./landing'] },
+            { target: './src/features', from: './src/app' },
+            {
+              target: ['./src/components', './src/lib', './src/stores', './src/types'],
+              from: ['./src/features', './src/app'],
+            },
+          ],
+        },
+      ],
       'import-x/no-named-as-default': 'off', // clsx and friends export the same name both ways
       'import-x/no-unresolved': 'off', // tsc owns module resolution (?raw imports etc.)
       'import-x/order': [

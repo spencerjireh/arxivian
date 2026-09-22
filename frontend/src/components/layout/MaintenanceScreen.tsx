@@ -1,5 +1,5 @@
 // Full-page maintenance curtain rendered when VITE_MAINTENANCE_MODE is true.
-import logoIcon from '../../assets/logo-icon.png'
+import logoIcon from '@/assets/logo-icon.png'
 
 /**
  * Full-screen curtain shown while the pivot is in progress. Rendered directly from main.tsx

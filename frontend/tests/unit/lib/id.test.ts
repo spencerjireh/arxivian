@@ -1,4 +1,4 @@
-import { generateId, generateMessageId } from '../../../src/lib/id'
+import { generateId, generateMessageId } from '@/lib/id'
 
 describe('generateId', () => {
   it('returns prefix-timestamp-random when prefix is given', () => {
