@@ -1,6 +1,6 @@
 // UI primitive: height-animated show/hide wrapper (framer-motion).
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { transitions } from '../../lib/animations'
+import { transitions } from '@/lib/animations'
 
 interface AnimatedCollapseProps {
   isOpen: boolean

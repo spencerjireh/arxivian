@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useUser, useClerk } from '@clerk/clerk-react'
 import clsx from 'clsx'
 import { ChevronDown, LogOut } from 'lucide-react'
-import { useUserStore } from '../../stores/userStore'
+import { useUserStore } from '@/stores/userStore'
 
 export default function UserMenu() {
   const navigate = useNavigate()

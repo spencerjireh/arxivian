@@ -1,4 +1,4 @@
-import { preprocessLatex } from '../../../../src/lib/markdown/preprocessors'
+import { preprocessLatex } from '@/lib/markdown/preprocessors'
 
 describe('preprocessLatex', () => {
   it('converts inline \\(...\\) to $...$', () => {

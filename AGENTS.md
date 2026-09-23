@@ -55,15 +55,14 @@ backend/
   src/utils/                   logger, pdf_parser, section_splitter
   alembic/versions/            NNN_slug.py, named by revision id
   tests/{unit,api,integration,evals}/   mirror the markers; evals/integration is the inteval suite
-frontend/
-  src/App.tsx                  the only router (AuthSession > Layout > lazy pages; ProtectedRoute on account pages)
-  src/main.tsx                 Clerk + QueryClient + ErrorBoundary; maintenance switch
-  src/api/                     TanStack Query, one module per backend domain, key factories + hooks
-  src/api/client.ts            fetch wrapper; API base is /api (nginx rewrites to /api/v1)
+frontend/                      see frontend/AGENTS.md for the full map and behavior
+  src/main.tsx                 entry: <AppProvider><AppRouter/>; maintenance switch
+  src/app/                     provider.tsx (Clerk + QueryClient), router.tsx, routes/ (one file per route)
+  src/features/                feed, paper (detail + chat), profile, auth, landing: each api/ components/ hooks/ lib/
+  src/components/              ui/ primitives, layout/ (TopNav, Layout, Footer)
+  src/lib/                     api-client.ts (API base /api, nginx rewrites to /api/v1), query-keys.ts, helpers
+  src/stores/                  Zustand (chat streaming, user)
   src/types/api.ts             hand-mirrored backend schemas; update with every schema change
-  src/components/<feature>/    feed, paper, chat, onboarding, settings, landing, layout (TopNav), auth, ui
-  src/pages/                   one file per route
-  src/stores/                  Zustand (chat streaming, user); src/hooks/; src/lib/
   src/content/privacy-policy.md   rendered at /privacy
   tests/unit/**                vitest + jsdom, mirrors src/
 docs/product/feed-prd.md       product-of-record; docs/design/ scoring pipeline + rubric; docs/ops/ runbooks
@@ -155,50 +154,9 @@ token from `backend/.env` itself. Prompts and paper text are sent by design.
 
 ## Frontend
 
-React 19 + TypeScript strict + Vite; Tailwind v4 (light-only warm stone theme, tokens in
-`src/index.css`); Clerk auth; React Router v7. The feed is public and lives at `/`
-(`/feed` and `/chat/*` redirect there, keeping the query string); `/papers/:arxivId`,
-`/about` (the marketing page), `/pricing` and `/privacy` are public too; `/library` and
-`/settings` sit behind `ProtectedRoute`; `/onboarding`, `/sign-in`, `/sign-up` and
-`/sso-callback` render outside the shell. `components/auth/AuthSession.tsx` is the root
-layout route: it registers Clerk's token getter with `api/client.ts` (a null getter when
-signed out), waits for Clerk to load, fetches `/users/me` only for a signed-in visitor,
-clears the TanStack Query cache when a signed-in session ends (the public pages must not
-serve the previous user's state) and handles the forced sign-out that `api/client.ts` and
-`api/stream.ts` raise on a 401 to a request that carried a token.
-`components/layout/Layout.tsx` is a document page (window scroll): `TopNav`
-(Feed, About, Pricing; Library, Settings and `UserMenu` when signed in; `SignInLink`
-otherwise), the page, `Footer`. There is no sidebar and no onboarding gate. Sign-in returns
-to `location.state.from` (`lib/nav.ts::returnPathFrom`, same-origin paths only) through
-`OAuthButtons`' `redirectUrlComplete`; every sign-in prompt is `components/auth/SignInLink.tsx`.
-
-Cards (`components/feed/FeedCard.tsx`) show the API's `headline` and `meta` phrases (plus a
-"Fits your compute" chip on `compute_match`) and a `DimensionMeter` over the four 0-100
-sub-scores (a null sub-score is a hollow "not available" segment); no composite number, band
-word or confidence icon on a card. Actions are Save and Dismiss; `CardActions` offers
-Implementing / Ship only where the handlers are passed (paper detail, Library). An anonymous
-reader gets a `SignInLink` Save, no dismissed toggle, and `include_dismissed` is dropped
-from the URL params. `components/feed/OnboardingPrompt.tsx` replaces the gate: it shows
-for `me.onboarded === false` until dismissed (local storage). Paper detail
-(`components/paper/ScoreBreakdown.tsx`) is `ScoreSummary` (headline, meta, meter) ->
-`AttributeChips` -> four always-open `DimensionRow`s (`lib/scoring.ts::bandWord` Strong /
-Mixed / Weak or Pass / Fail, the level label, `dimensionFacts`, the evidence) -> code
-mentions -> `ScoringDetails`, a native `<details>` closed by default that holds the rubric
-version, composite, confidence, `DistributionBar`s and `JudgmentList`s. Anonymous readers
-see `ChatSignInPrompt` instead of the chat panel, and on an unscored paper `PaperPreview`
-(the 202's `paper` metadata) with a sign-in CTA; `usePaperScore(id, { poll: false })` then
-treats the 202 as final.
-
-Server state is TanStack Query v5 (`src/api/*.ts`, key factories + hooks, optimistic
-lifecycle updates in `api/paperStates.ts`); UI state is Zustand (`src/stores/`). Chat exists
-only as `components/paper/ScopedChatPanel.tsx`: `useChat(sessionId, { arxivId })` posts
-`{query, arxiv_id, session_id}` over `@microsoft/fetch-event-source`, keeps a per-paper
-draft, and shows one status line; `useChatStore` allows one mounted chat surface, so the
-panel aborts on unmount; `?session=` selects a thread. One markdown renderer
-(`components/chat/MarkdownRenderer.tsx` lazily loads `MarkdownBody`: GFM, remark-math/KaTeX,
-arXiv links, Prism); the privacy page uses the same component map. `api/scores.ts` polls
-the 202 every 5 s for up to 3 min. Tiers on the client are `daily_chat_limit` /
-`chats_used_today` only.
+`frontend/AGENTS.md` (symlinked as `frontend/CLAUDE.md`) holds the frontend map, the
+Bulletproof React layout and its lint-enforced boundaries, and the as-built behavior of the
+feed, paper detail, chat and auth surfaces.
 
 ## Testing and CI
 
@@ -271,8 +229,8 @@ generated release notes (`release.yml`). Moving the stack between servers:
   exists-only skip there.
 - `tasks/__init__.py`, `models/__init__.py` and `routers/__init__.py` are load-bearing
   indexes; the other package inits are docstrings only.
-- If this file passes ~200 lines, move the Backend and Frontend sections into
-  `backend/AGENTS.md` and `frontend/AGENTS.md` and keep the root as map + links.
+- The Frontend section lives in `frontend/AGENTS.md`; move the Backend section into
+  `backend/AGENTS.md` when this file next grows, and keep the root as map + links.
 
 ## Docs index
 

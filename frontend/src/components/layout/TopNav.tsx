@@ -3,10 +3,10 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import clsx from 'clsx'
-import { matchesNav } from '../../lib/nav'
-import SignInLink from '../auth/SignInLink'
+import { matchesNav } from '@/lib/nav'
+import SignInLink from '@/components/ui/SignInLink'
+import logoIcon from '@/assets/logo-icon.png'
 import UserMenu from './UserMenu'
-import logoIcon from '../../assets/logo-icon.png'
 
 const publicItems = [
   { path: '/', label: 'Feed' },

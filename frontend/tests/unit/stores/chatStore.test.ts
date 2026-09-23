@@ -1,4 +1,4 @@
-import { useChatStore } from '../../../src/stores/chatStore'
+import { useChatStore } from '@/stores/chatStore'
 
 describe('chatStore', () => {
   beforeEach(() => {

@@ -1,16 +1,10 @@
-// Entry point: ClerkProvider, QueryClient, ErrorBoundary and <App/>; VITE_MAINTENANCE_MODE swaps in MaintenanceScreen.
+// Entry point: mounts <AppProvider><AppRouter/>; VITE_MAINTENANCE_MODE swaps in MaintenanceScreen.
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ClerkProvider } from '@clerk/clerk-react'
-import { toast } from 'sonner'
 import './index.css'
-import App from './App.tsx'
-import ErrorBoundary from './components/ui/ErrorBoundary.tsx'
-import PageErrorFallback from './components/ui/PageErrorFallback.tsx'
-import Toaster from './components/ui/Toaster.tsx'
+import AppProvider from './app/provider'
+import AppRouter from './app/router'
 import MaintenanceScreen from './components/layout/MaintenanceScreen'
-import { isAuthError, getUserMessage } from './lib/errors.ts'
 
 const root = createRoot(document.getElementById('root')!)
 
@@ -29,35 +23,11 @@ if (import.meta.env.VITE_MAINTENANCE_MODE === 'true') {
     throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY environment variable')
   }
 
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 1000 * 60, // 1 minute
-        retry: (count, error) => count < 1 && !isAuthError(error),
-      },
-      mutations: {
-        onError: (error) => {
-          // Auth errors trigger forced redirect via auth:signout event; skip toast
-          if (!isAuthError(error)) {
-            toast.error('Action failed', {
-              description: getUserMessage(error),
-            })
-          }
-        },
-      },
-    },
-  })
-
   root.render(
     <StrictMode>
-      <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
-        <QueryClientProvider client={queryClient}>
-          <ErrorBoundary fallback={(props) => <PageErrorFallback {...props} />}>
-            <App />
-          </ErrorBoundary>
-          <Toaster />
-        </QueryClientProvider>
-      </ClerkProvider>
+      <AppProvider clerkPublishableKey={CLERK_PUBLISHABLE_KEY}>
+        <AppRouter />
+      </AppProvider>
     </StrictMode>
   )
 }
