@@ -6,7 +6,7 @@ low-confidence marker. Everything here is pure -- no I/O -- so the routers and t
 task can reuse it. The headline and meta line are composed in code from the stored Jev
 judgments (task type, model family, compute tier, data access, code / weights released,
 pseudocode, hyperparameters); no LLM call is made at read time. See
-`docs/product/feed-prd.md` section 4 and `docs/design/scoring-rubric.md`.
+`ARX-53` section 4 and `ARX-56`.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ DIMENSION_ORDER: tuple[ScoreDimension, ...] = (
 )
 
 # A dimension whose argmax mass is below this is flagged on the card rather than hidden
-# (`docs/design/scoring-rubric.md`, Calibration).
+# (`ARX-56`, Calibration).
 LOW_CONFIDENCE_THRESHOLD = 0.5
 
 # compute_profile -> minimum resource_feasibility level (0 cluster .. 4 laptop) that fits.

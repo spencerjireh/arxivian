@@ -3,7 +3,7 @@
 `build_digest_task` writes a cached candidate ranking snapshot per week + category set
 (`models/digest.py`). Each entry is one paper's global sub-scores plus a provisional
 composite used only as the bake-time default order -- the per-user weighted composite and
-compute-profile match are applied at read time (ARX-10). See `docs/design/scoring-rubric.md`.
+compute-profile match are applied at read time (ARX-10). See `ARX-56`.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ class CompositeWeights(BaseModel):
 
     The data-availability gate is applied by selection (only PASS papers enter a digest),
     so it is a constant 1 and omitted from the formula. Per-user weights (ARX-9) reuse
-    this shape; the defaults are the proposed starting point in `docs/design/scoring-rubric.md`.
+    this shape; the defaults are the proposed starting point in `ARX-56`.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")

@@ -23,7 +23,7 @@ Arxivian scores new ML papers on method clarity, resource feasibility, data avai
 3. **Digest (weekly).** Scores are snapshotted into a ranked digest per category set.
 4. **Issue (read time, public).** Cards show a headline built from the stored attributes, a meta line (compute tier, data access, code and weights released, pseudocode, hyperparameters) and a four-dimension meter. Open a paper for each dimension's evidence, with the distributions and judgments behind a disclosure. Signed in: save and dismiss papers, track them in a library, get a fit marker for your compute profile, and chat with the paper.
 
-`docs/product/feed-prd.md` is the product-of-record; `docs/design/scoring-pipeline.md` and `docs/design/scoring-rubric.md` describe the pipeline and the rubric; `AGENTS.md` maps the code for people and coding agents (`CLAUDE.md` is a symlink to it); `CONTRIBUTING.md` covers branches, checks and releases; `docs/ops/coolify-migration.md` is the server-move runbook.
+Reference docs live in the [Plane project](https://plane.spencerjireh.com/workspace-1/projects/d8aa527c-3f59-4525-a9bc-ffafdf30b496) Docs module, not in this repo: `ARX-53` is the product-of-record, `ARX-55` and `ARX-56` describe the pipeline and the rubric, `ARX-57` is the server-move runbook. In the repo, `AGENTS.md` maps the code for people and coding agents (`CLAUDE.md` is a symlink to it) and `CONTRIBUTING.md` covers branches, checks and releases.
 
 ## Architecture
 
