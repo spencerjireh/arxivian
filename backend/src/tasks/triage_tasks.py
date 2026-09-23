@@ -10,7 +10,7 @@ inner `_run()` coroutine dispatched via `run_async`, deterministic task IDs, and
 enqueues. Reject audit is log-only (no triage table); survivors advance by `arxiv_id`, since
 Stage 2 ingests the full text and creates the paper row itself.
 
-See `docs/design/scoring-pipeline.md` -> "Stage 1 -- Cheap Triage".
+See `ARX-55` -> "Stage 1 -- Cheap Triage".
 """
 
 import asyncio

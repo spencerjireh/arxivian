@@ -6,8 +6,8 @@ rubric v2 the source of truth is `dimensions` (level distributions + atomic judg
 from TypeSafe Jev); the four `*_score` integers are DERIVED denormalizations kept for
 the digest query and ranking.
 `ScoreEvidence` holds the first-class quoted spans / external hits that justify each
-sub-score, powering the auditable UI breakdown. See `docs/design/scoring-pipeline.md` and
-`docs/design/scoring-rubric.md`.
+sub-score, powering the auditable UI breakdown. See `ARX-55` and
+`ARX-56`.
 """
 
 from __future__ import annotations

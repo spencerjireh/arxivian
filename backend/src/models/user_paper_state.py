@@ -3,7 +3,7 @@
 Tracks each user's relationship to a paper: saved / dismissed / implementing / shipped.
 One row per (user, paper), updated in place on state transitions. Dismissals with an
 optional reason double as labeled feedback for the scoring eval. See
-`docs/design/scoring-pipeline.md`.
+`ARX-55`.
 """
 
 from __future__ import annotations

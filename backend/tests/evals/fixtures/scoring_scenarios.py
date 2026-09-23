@@ -2,7 +2,7 @@
 
 Hand-labeled papers used to gate the scoring pipeline's accuracy (`@pytest.mark.eval`,
 wired in Phase 1 / ARX-8). Labels are coarse bands per the rubric
-(`docs/design/scoring-rubric.md`): method clarity / resource feasibility / demand are
+(`ARX-56`): method clarity / resource feasibility / demand are
 LOW / MED / HIGH; data availability is a PASS / FAIL gate; `implementable` is the binary the
 >=85% agreement target measures against, and must equal the rubric rule
 (`data_availability == PASS and method_clarity >= MED and resource_feasibility >= MED`).
