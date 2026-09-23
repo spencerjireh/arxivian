@@ -56,5 +56,5 @@ async def delete_paper_state(
 
 @router.get("/users/me/library", response_model=LibraryResponse)
 async def get_library(user: CurrentUserRequired, feed_service: FeedServiceDep) -> LibraryResponse:
-    """The caller's papers grouped by lifecycle state, as feed cards (SPE-296)."""
+    """The caller's papers grouped by lifecycle state, as feed cards (ARX-29)."""
     return await feed_service.get_library(user)

@@ -3,7 +3,7 @@
 Arxivian: a weekly feed of arXiv papers scored for implementability, with a chat scoped to
 each paper. FastAPI + React + PostgreSQL/pgvector + LangGraph + Celery. This file is the
 as-built map for people and coding agents; `CLAUDE.md` is a symlink to it. Design intent
-lives in `docs/`; process (branches, PRs, releases) in `CONTRIBUTING.md`. Update this file
+lives in Plane (the Docs module); process (branches, PRs, releases) in `CONTRIBUTING.md`. Update this file
 in the same PR as the code it describes. Prose is dry and factual; no emojis anywhere.
 
 ## Commands
@@ -70,7 +70,6 @@ frontend/                      see frontend/AGENTS.md for the full map and behav
   src/types/api.ts             named aliases over api.gen.ts plus client-only types
   src/content/privacy-policy.md   rendered at /privacy
   tests/unit/**                vitest + jsdom, mirrors src/
-docs/product/feed-prd.md       product-of-record; docs/design/ scoring pipeline + rubric; docs/ops/ runbooks
 ```
 
 Every frontend module starts with a one-line `//` header naming its responsibility and its
@@ -109,8 +108,8 @@ Score + 2 Nouls, data availability = 1 Choice regrouped into a PASS/FAIL gate; d
 Semantic Scholar citations (no LLM). Questions in `questions.py`, combine rules in
 `judgments.py`, stored shape in `state.py`: per-dimension level distribution + atomic
 judgments in `paper_scores.dimensions` (JSONB), the `*_score` integers are derived, product
-attributes in `paper_scores.attributes`. See `docs/design/scoring-pipeline.md` and
-`docs/design/scoring-rubric.md` (linked from the code; the rubric source of truth).
+attributes in `paper_scores.attributes`. See `ARX-55` and `ARX-56`
+in Plane (the rubric is the source of truth).
 
 **Feed read path** (`services/feed_service/`): `digest.py` (week key, composite weights,
 `compute_composite`) is written by the weekly `build_digest_task` and read by
@@ -185,7 +184,7 @@ Production is one Coolify docker-compose app deploying `docker-compose.coolify.y
 the `production` branch; Coolify does not track `main`. Promote with a `main -> production`
 PR merged with a merge commit; every push to `production` is tagged `vYYYY.MM.DD[.n]` with
 generated release notes (`release.yml`). Moving the stack between servers:
-`docs/ops/coolify-migration.md`.
+`ARX-57`.
 
 - Browser tracing: `VITE_LOGFIRE_TOKEN` (a restricted frontend application token from
   Logfire > Frontend > Applications) and `VITE_LOGFIRE_BASE_URL` are frontend build args next
@@ -219,7 +218,12 @@ generated release notes (`release.yml`). Moving the stack between servers:
   on unused files/exports/deps. Header comment on every module.
 - Docs: `AGENTS.md` is as-built and changes with the code; design docs carry a Status line
   and record intent; README is the public overview. No emojis in code, comments or docs.
-- PR titles are conventional commits with the Linear id last (`CONTRIBUTING.md`).
+- PR titles are conventional commits with the Plane id last (`CONTRIBUTING.md`).
+- Work is tracked in the Plane project **Arxivian**, key `ARX` (self-hosted,
+  workspace `workspace-1`). Reference docs live there too, in the Docs module.
+- A `SPE-N` id in git history (commit subjects, merged PR titles) is a pre-2026-09-23
+  Linear reference. Convert it: `SPE-265..277` -> `ARX-1..13` (minus 264);
+  `SPE-281..318` -> `ARX-14..51` (minus 267). `ARX-58` has the full table.
 
 ## Gotchas
 
@@ -243,8 +247,21 @@ generated release notes (`release.yml`). Moving the stack between servers:
 
 ## Docs index
 
-- `docs/product/feed-prd.md`: product-of-record for the feed. `docs/product/user-stories.md`: pivot epics.
-- `docs/design/scoring-pipeline.md`: two-stage pipeline and scoring graph. `docs/design/scoring-rubric.md`: rubric v2, linked from the code.
-- `docs/ops/coolify-migration.md`: moving the stack between Coolify servers.
-- `frontend/src/content/privacy-policy.md`: the privacy policy rendered at `/privacy`.
-- `README.md`, `CONTRIBUTING.md`, `SECURITY.md`.
+Reference docs are **not in this repo**. They live in the Plane project's Docs module
+([open it](https://plane.spencerjireh.com/workspace-1/projects/d8aa527c-3f59-4525-a9bc-ffafdf30b496)) as `[Doc]` work items; edit them there.
+
+| Id | Document |
+|---|---|
+| `ARX-53` | Feed PRD -- the product-of-record |
+| `ARX-54` | User stories -- pivot epics |
+| `ARX-55` | Scoring pipeline -- two-stage pipeline and scoring graph |
+| `ARX-56` | Scoring rubric v2 -- questions, combine rules, bands (cited from the code) |
+| `ARX-57` | Coolify migration runbook -- moving the stack between servers |
+| `ARX-58` | Linear to Plane migration -- the full SPE-N to ARX-N table |
+
+Still in the repo, because moving them breaks something: `README.md`, `CONTRIBUTING.md`,
+`SECURITY.md` (GitHub surfaces), this file and `frontend/AGENTS.md` (coding agents read them
+from the tree), `frontend/src/content/privacy-policy.md` (compiled into the frontend bundle
+and served at `/privacy`).
+
+`ARX-57` now lives on the same host it describes -- take a local copy before a server move.

@@ -8,7 +8,7 @@ v2 stores judgments natively: every dimension is a distribution over ordered lev
 (from TypeSafe Jev) plus the atomic judgments that produced it. The 0-100 integer used
 for ranking is *derived* (`DimensionScore.derived_score`) and recomputable; it is
 persisted only as a denormalization for the digest query. Demand is still a Semantic
-Scholar lookup, represented as a one-hot level. See `docs/design/scoring-rubric.md`.
+Scholar lookup, represented as a one-hot level. See `ARX-56`.
 """
 
 from typing import Any, Literal, TypedDict
@@ -16,7 +16,7 @@ from typing import Any, Literal, TypedDict
 from pydantic import BaseModel, ConfigDict, Field
 
 # Rubric revision these schemas encode. Bump when anchors/levels/combine rules change so
-# stored `paper_scores` rows remain interpretable. See `docs/design/scoring-rubric.md`.
+# stored `paper_scores` rows remain interpretable. See `ARX-56`.
 RUBRIC_VERSION = "v2"
 
 # Band boundaries used to bucket a derived 0-100 score into a coarse label for eval

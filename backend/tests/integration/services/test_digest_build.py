@@ -1,4 +1,4 @@
-"""Integration test: build_digest_for_week snapshots the right papers (SPE-271).
+"""Integration test: build_digest_for_week snapshots the right papers (ARX-7).
 
 Real test DB + real repositories. Proves the selection boundaries that live in SQL (data
 gate + week window) and in the task (category-set filter), the provisional-composite order,

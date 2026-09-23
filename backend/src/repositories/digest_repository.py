@@ -1,4 +1,4 @@
-"""Repository for the weekly digest snapshot (Stage 3, SPE-271).
+"""Repository for the weekly digest snapshot (Stage 3, ARX-7).
 
 One `digests` row per `(week_start, category_key)`. `upsert_digest` is idempotent so a
 re-run of `build_digest_task` for the same week refreshes the ranking in place.

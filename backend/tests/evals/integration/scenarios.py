@@ -27,7 +27,7 @@ _RETRIEVAL_SEED: list[str] = [
     "2010.11929",  # An Image is Worth 16x16 Words (ViT)
 ]
 
-# The scoring golden set (SPE-272): every labeled paper except the uningestable ones. The
+# The scoring golden set (ARX-8): every labeled paper except the uningestable ones. The
 # scoring eval scores whatever seeded successfully; a missing paper skips its scenario.
 _SCORING_SEED: list[str] = [s.arxiv_id for s in SCORING_SCENARIOS if s.arxiv_id not in UNINGESTABLE]
 

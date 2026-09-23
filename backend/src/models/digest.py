@@ -3,8 +3,8 @@
 A cached candidate ranking snapshot for a given week and category set -- global sub-scores,
 NOT a per-user order (the user-weighted composite and compute-profile match are applied at
 read time). Lets past weeks render without recomputation. The exact snapshot contents are
-finalized in the build_digest_task work (SPE-271); this table just needs to exist. See
-`docs/design/scoring-pipeline.md`.
+finalized in the build_digest_task work (ARX-7); this table just needs to exist. See
+`ARX-55`.
 """
 
 from __future__ import annotations

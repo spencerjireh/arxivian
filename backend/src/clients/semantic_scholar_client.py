@@ -1,7 +1,7 @@
 """Semantic Scholar client -- citation counts and velocity for the demand signal.
 
 Looks up a paper by arXiv ID and returns its citation metrics. Used by the Stage 2
-scoring graph's demand dimension (SPE-270) and by the scoped chat agent via
+scoring graph's demand dimension (ARX-6) and by the scoped chat agent via
 ``SemanticScholarTool``.
 
 Mirrors the tenacity ``Retry-After``-aware backoff pattern from
@@ -39,7 +39,7 @@ _tenacity_logger = logging.getLogger(f"{__name__}.retry")
 
 # Provisional demand-band thresholds in citations/month.
 # PROVISIONAL -- recalibrate against the real S2 velocity distribution in Phase 1
-# (scoring-rubric.md:116). SPE-270's demand node may override this mapping.
+# (scoring-rubric.md:116). ARX-6's demand node may override this mapping.
 DEMAND_BAND_HIGH_THRESHOLD = 3.0
 DEMAND_BAND_MED_THRESHOLD = 0.5
 

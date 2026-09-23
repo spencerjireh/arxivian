@@ -54,7 +54,7 @@ async def resolve_scoped_paper(
     conversation_repo: ConversationRepository,
     paper_repo: PaperRepository,
 ) -> ScopedPaper:
-    """Work out the paper scope for this stream (SPE-277).
+    """Work out the paper scope for this stream (ARX-13).
 
     A persisted scope (the conversation's `paper_id`) wins, so follow-ups stay narrowed to
     the paper the thread started on. A request that names a different paper than the

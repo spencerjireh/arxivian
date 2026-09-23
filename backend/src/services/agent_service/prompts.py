@@ -297,7 +297,7 @@ class PromptBuilder:
 
 
 def scoped_paper_note(arxiv_id: str, title: str) -> str:
-    """The routing note for a paper-scoped conversation (SPE-277)."""
+    """The routing note for a paper-scoped conversation (ARX-13)."""
     return (
         f"This conversation is scoped to paper {arxiv_id} ('{title}'). Route questions about "
         f"its content to retrieve_chunks, which only searches this paper."

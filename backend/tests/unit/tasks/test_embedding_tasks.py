@@ -1,4 +1,4 @@
-"""Tests for the one-off chunk re-embedding driver (SPE-307)."""
+"""Tests for the one-off chunk re-embedding driver (ARX-40)."""
 
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch

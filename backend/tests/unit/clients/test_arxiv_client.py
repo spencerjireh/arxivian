@@ -148,7 +148,7 @@ class TestDateFilteredSearchConfig:
     async def test_search_scan_limit_scales_with_request(
         self, client: ArxivClient, max_results: int, expected_scan: int
     ):
-        """The scan cap is 3x the request, never above _DATE_FILTER_SCAN_LIMIT (SPE-283)."""
+        """The scan cap is 3x the request, never above _DATE_FILTER_SCAN_LIMIT (ARX-16)."""
         captured_search: list[arxiv.Search] = []
 
         def capture_search(search: arxiv.Search):

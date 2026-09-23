@@ -6,7 +6,7 @@ persists `paper_scores` + `score_evidence`. The graph is compiled once per worke
 builds a fresh `ScoringContext` on its own async DB session (the FastAPI lifespan does not run
 in the Celery worker). Takes only `arxiv_id` -- Stage 2 ingests the full text itself.
 
-Retry policy (SPE-283 / SPE-292): no blanket autoretry. `ScoringError` (no usable full
+Retry policy (ARX-16 / ARX-25): no blanket autoretry. `ScoringError` (no usable full
 text -- the way an arXiv 429 or PDF failure during ingest surfaces) and TypeSafe
 connection errors autoretry with a long jittered backoff (120 s factor, 600 s cap) so a
 rate-limit cannot snowball across the survivor fan-out. A TypeSafe 429 retries after the
@@ -35,12 +35,12 @@ log = get_logger(__name__)
 
 
 def ondemand_lock_key(arxiv_id: str) -> str:
-    """Redis key that dedupes on-demand scoring requests for one paper (SPE-276)."""
+    """Redis key that dedupes on-demand scoring requests for one paper (ARX-12)."""
     return f"score:ondemand:{arxiv_id}"
 
 
 def ondemand_budget_keys(user_id: UUID | str, day: date) -> tuple[str, str]:
-    """Redis counters that bound on-demand scoring per UTC day (SPE-302): global, per user."""
+    """Redis counters that bound on-demand scoring per UTC day (ARX-35): global, per user."""
     stamp = day.isoformat()
     return f"score:ondemand:day:{stamp}", f"score:ondemand:user:{user_id}:{stamp}"
 

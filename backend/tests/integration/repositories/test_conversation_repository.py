@@ -518,7 +518,7 @@ class TestConversationRepositoryUserFiltering:
 
 
 class TestConversationPaperScope:
-    """SPE-277: the paper scope is set on creation only and filters listing."""
+    """ARX-13: the paper scope is set on creation only and filters listing."""
 
     @pytest.mark.asyncio
     async def test_save_turn_sets_scope_on_create_only(

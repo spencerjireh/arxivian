@@ -1,4 +1,4 @@
-"""Golden-set accuracy gate for the Stage 2 scoring graph (SPE-272, rubric v2 / SPE-293).
+"""Golden-set accuracy gate for the Stage 2 scoring graph (ARX-8, rubric v2 / ARX-26).
 
 Runs the real scoring graph on each seeded golden paper with real TypeSafe Jev judgments +
 real retrieval (Semantic Scholar is stubbed -- demand is provisional and NOT graded), then
@@ -8,7 +8,7 @@ agreeing vs disagreeing papers) is printed alongside.
 
 The HARD gate is the `implementable` binary, which is robust to adjacent-band noise (a MED
 vs HIGH flip does not change it, since both satisfy `>= MED`) -- see the band-sensitivity
-finding in `docs/design/scoring-rubric.md`. Per-dimension band agreement is reported but NOT
+finding in `ARX-56`. Per-dimension band agreement is reported but NOT
 enforced while the labels are first-pass (`reviewed=False`) and demand is provisional.
 
 `MIN_IMPLEMENTABLE_AGREEMENT` is a MEASURED baseline: pin it at/just below the first real

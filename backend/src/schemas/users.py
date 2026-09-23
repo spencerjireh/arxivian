@@ -22,7 +22,7 @@ class FeedProfile(ResponseModel):
 
     Kept in its own key so it never collides with the system user's `arxiv_searches`.
     `weights` is reserved for per-user composite weights and is not settable via the API in
-    v1 (SPE-273 sets categories / compute_profile / keywords).
+    v1 (ARX-9 sets categories / compute_profile / keywords).
     """
 
     model_config = ConfigDict(extra="ignore")

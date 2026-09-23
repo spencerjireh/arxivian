@@ -152,7 +152,7 @@ class UsageLimitExceededError(BaseAPIException):
 
 
 class ScoringLimitExceededError(BaseAPIException):
-    """Today's on-demand scoring budget is spent (SPE-302): per user or across all users."""
+    """Today's on-demand scoring budget is spent (ARX-35): per user or across all users."""
 
     def __init__(self, scope: str, current: int, limit: int):
         if scope == "user":

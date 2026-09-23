@@ -36,7 +36,7 @@ export function usePaperScore(
     queryFn: () => fetchPaperScore(arxivId!),
     enabled: !!arxivId,
     staleTime: 5 * 60_000,
-    // 404: no such paper; 429: today's on-demand scoring budget is spent (SPE-302).
+    // 404: no such paper; 429: today's on-demand scoring budget is spent (ARX-35).
     retry: (count, err) =>
       !(err instanceof ApiError && (err.status === 404 || err.status === 429)) && count < 1,
     refetchIntervalInBackground: false,
