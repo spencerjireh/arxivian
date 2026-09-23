@@ -16,6 +16,10 @@ updates:
       # litellm pins openai<3 (see #67); pyproject caps it, so majors would only ever fail.
       - dependency-name: openai
         update-types: ["version-update:semver-major"]
+      # Stable kombu pins redis<6.5; anything above only resolves via the
+      # kombu 5.7.0a1 pre-release (#78). pyproject caps it too.
+      - dependency-name: redis
+        versions: [">=6.5"]
     open-pull-requests-limit: 5
   - package-ecosystem: npm
     directory: /frontend
