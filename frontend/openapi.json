@@ -1,0 +1,3751 @@
+{
+  "components": {
+    "schemas": {
+      "AvailableWeek": {
+        "properties": {
+          "paper_count": {
+            "title": "Paper Count",
+            "type": "integer"
+          },
+          "week_start": {
+            "format": "date",
+            "title": "Week Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week_start",
+          "paper_count"
+        ],
+        "title": "AvailableWeek",
+        "type": "object"
+      },
+      "BulkIngestRequest": {
+        "description": "Request to bulk-ingest papers via ops API.",
+        "properties": {
+          "arxiv_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Specific arXiv IDs to ingest",
+            "title": "Arxiv Ids"
+          },
+          "categories": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "arXiv categories filter",
+            "title": "Categories"
+          },
+          "force_reprocess": {
+            "default": false,
+            "description": "Re-process existing papers",
+            "title": "Force Reprocess",
+            "type": "boolean"
+          },
+          "max_results": {
+            "default": 10,
+            "description": "Max papers for search query",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Max Results",
+            "type": "integer"
+          },
+          "search_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "arXiv search query",
+            "title": "Search Query"
+          }
+        },
+        "title": "BulkIngestRequest",
+        "type": "object"
+      },
+      "BulkIngestResponse": {
+        "description": "Response from bulk ingestion.",
+        "properties": {
+          "task_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Task Ids",
+            "type": "array"
+          },
+          "tasks_queued": {
+            "title": "Tasks Queued",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tasks_queued",
+          "task_ids"
+        ],
+        "title": "BulkIngestResponse",
+        "type": "object"
+      },
+      "CitationsEventData": {
+        "description": "Data for citation graph from explore_citations tool.",
+        "properties": {
+          "arxiv_id": {
+            "description": "arXiv ID of the explored paper",
+            "title": "Arxiv Id",
+            "type": "string"
+          },
+          "reference_count": {
+            "description": "Derived from references list length to prevent mismatches.",
+            "readOnly": true,
+            "title": "Reference Count",
+            "type": "integer"
+          },
+          "references": {
+            "description": "Reference titles/descriptions",
+            "items": {
+              "type": "string"
+            },
+            "title": "References",
+            "type": "array"
+          },
+          "title": {
+            "description": "Title of the explored paper",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "arxiv_id",
+          "title",
+          "references",
+          "reference_count"
+        ],
+        "title": "CitationsEventData",
+        "type": "object"
+      },
+      "CleanupResponse": {
+        "description": "Response from cleanup operation.",
+        "properties": {
+          "deleted_papers": {
+            "items": {
+              "$ref": "#/components/schemas/OrphanedPaper"
+            },
+            "title": "Deleted Papers",
+            "type": "array"
+          },
+          "orphaned_papers_found": {
+            "title": "Orphaned Papers Found",
+            "type": "integer"
+          },
+          "papers_deleted": {
+            "title": "Papers Deleted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "orphaned_papers_found",
+          "papers_deleted",
+          "deleted_papers"
+        ],
+        "title": "CleanupResponse",
+        "type": "object"
+      },
+      "ContentEventData": {
+        "description": "Data for content events with streaming tokens.",
+        "properties": {
+          "token": {
+            "description": "Generated token",
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "ContentEventData",
+        "type": "object"
+      },
+      "ConversationDetailResponse": {
+        "description": "Full conversation with all turns.",
+        "properties": {
+          "arxiv_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Paper this thread is scoped to, if any",
+            "title": "Arxiv Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationTurnResponse"
+            },
+            "title": "Turns",
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "title",
+          "created_at",
+          "updated_at",
+          "arxiv_id",
+          "turns"
+        ],
+        "title": "ConversationDetailResponse",
+        "type": "object"
+      },
+      "ConversationListItem": {
+        "description": "Summary item for conversation list.",
+        "properties": {
+          "arxiv_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Paper this thread is scoped to, if any",
+            "title": "Arxiv Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "last_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Preview of last user message",
+            "title": "Last Query"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "turn_count": {
+            "title": "Turn Count",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "title",
+          "turn_count",
+          "created_at",
+          "updated_at",
+          "last_query",
+          "arxiv_id"
+        ],
+        "title": "ConversationListItem",
+        "type": "object"
+      },
+      "ConversationListResponse": {
+        "description": "Paginated list of conversations.",
+        "properties": {
+          "conversations": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationListItem"
+            },
+            "title": "Conversations",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "offset",
+          "limit",
+          "conversations"
+        ],
+        "title": "ConversationListResponse",
+        "type": "object"
+      },
+      "ConversationTurnResponse": {
+        "description": "Response schema for a single conversation turn.",
+        "properties": {
+          "agent_response": {
+            "title": "Agent Response",
+            "type": "string"
+          },
+          "citations": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CitationsEventData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "guardrail_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guardrail Score"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "reasoning_steps": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Steps"
+          },
+          "retrieval_attempts": {
+            "default": 1,
+            "title": "Retrieval Attempts",
+            "type": "integer"
+          },
+          "rewritten_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rewritten Query"
+          },
+          "sources": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SourceInfo"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sources"
+          },
+          "turn_number": {
+            "title": "Turn Number",
+            "type": "integer"
+          },
+          "user_query": {
+            "title": "User Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "turn_number",
+          "user_query",
+          "agent_response",
+          "provider",
+          "model",
+          "guardrail_score",
+          "retrieval_attempts",
+          "rewritten_query",
+          "sources",
+          "reasoning_steps",
+          "citations",
+          "created_at"
+        ],
+        "title": "ConversationTurnResponse",
+        "type": "object"
+      },
+      "DeleteConversationResponse": {
+        "description": "Response after deleting a conversation.",
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "turns_deleted": {
+            "title": "Turns Deleted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id",
+          "turns_deleted"
+        ],
+        "title": "DeleteConversationResponse",
+        "type": "object"
+      },
+      "DeletePaperResponse": {
+        "description": "Response for delete paper endpoint.",
+        "properties": {
+          "arxiv_id": {
+            "title": "Arxiv Id",
+            "type": "string"
+          },
+          "chunks_deleted": {
+            "title": "Chunks Deleted",
+            "type": "integer"
+          },
+          "message": {
+            "default": "Paper and associated chunks deleted successfully",
+            "title": "Message",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "arxiv_id",
+          "title",
+          "chunks_deleted"
+        ],
+        "title": "DeletePaperResponse",
+        "type": "object"
+      },
+      "DimensionDetail": {
+        "description": "One rubric dimension for the breakdown: distribution, judgments, and its evidence.",
+        "properties": {
+          "band": {
+            "enum": [
+              "LOW",
+              "MED",
+              "HIGH"
+            ],
+            "title": "Band",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "dimension": {
+            "enum": [
+              "method_clarity",
+              "resource_feasibility",
+              "data_availability",
+              "demand"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceItem"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "expected": {
+            "title": "Expected",
+            "type": "number"
+          },
+          "judgments": {
+            "items": {
+              "$ref": "#/components/schemas/Judgment"
+            },
+            "title": "Judgments",
+            "type": "array"
+          },
+          "level": {
+            "title": "Level",
+            "type": "integer"
+          },
+          "max_level": {
+            "title": "Max Level",
+            "type": "integer"
+          },
+          "probabilities": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Probabilities",
+            "type": "object"
+          },
+          "reasoning": {
+            "title": "Reasoning",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dimension",
+          "band",
+          "score",
+          "level",
+          "max_level",
+          "expected",
+          "probabilities",
+          "confidence",
+          "judgments",
+          "evidence",
+          "reasoning"
+        ],
+        "title": "DimensionDetail",
+        "type": "object"
+      },
+      "DoneEventData": {
+        "description": "Sentinel: stream is complete.",
+        "properties": {},
+        "title": "DoneEventData",
+        "type": "object"
+      },
+      "ErrorDetail": {
+        "description": "Detailed error information.",
+        "properties": {
+          "code": {
+            "description": "Machine-readable error code",
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": true,
+            "description": "Additional error context",
+            "title": "Details",
+            "type": "object"
+          },
+          "message": {
+            "description": "Human-readable error message",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "details"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      },
+      "ErrorEventData": {
+        "description": "Data for error events.",
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error code if available",
+            "title": "Code"
+          },
+          "error": {
+            "description": "Error message",
+            "title": "Error",
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "code"
+        ],
+        "title": "ErrorEventData",
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "description": "Standard error response format.",
+        "example": {
+          "error": {
+            "code": "ARXIV_API_ERROR",
+            "details": {
+              "arxiv_id": "2301.12345",
+              "underlying_error": "HTTP 503"
+            },
+            "message": "Failed to fetch papers from arXiv"
+          },
+          "request_id": "req_abc123",
+          "timestamp": "2024-12-15T10:30:00Z"
+        },
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorDetail",
+            "description": "Error details"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Request ID for tracing",
+            "title": "Request Id"
+          },
+          "timestamp": {
+            "description": "Error timestamp",
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "request_id",
+          "timestamp"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "EvidenceItem": {
+        "description": "One quoted span from `score_evidence`.",
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "text",
+          "source"
+        ],
+        "title": "EvidenceItem",
+        "type": "object"
+      },
+      "FeedItem": {
+        "description": "One card. The feed only emits scored papers; the library also carries papers whose\nscore is missing (rubric bump, ops delete), so the score-derived fields are optional.",
+        "properties": {
+          "compute_match": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None when the caller has no compute profile (or is anonymous)",
+            "title": "Compute Match"
+          },
+          "headline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "'<Model family> for <task type>' from the stored attributes",
+            "title": "Headline"
+          },
+          "keyword_match": {
+            "default": false,
+            "title": "Keyword Match",
+            "type": "boolean"
+          },
+          "low_confidence": {
+            "description": "Dimensions whose confidence is below the threshold",
+            "items": {
+              "enum": [
+                "method_clarity",
+                "resource_feasibility",
+                "data_availability",
+                "demand"
+              ],
+              "type": "string"
+            },
+            "title": "Low Confidence",
+            "type": "array"
+          },
+          "meta": {
+            "description": "Ordered truthy-only phrases: compute tier, data access, code, weights, pseudocode, hyperparameters. Never a negative claim.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Meta",
+            "type": "array"
+          },
+          "paper": {
+            "$ref": "#/components/schemas/FeedPaper"
+          },
+          "scored_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scored At"
+          },
+          "scores": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeedScores"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserPaperStateResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "paper",
+          "scores",
+          "headline",
+          "meta",
+          "compute_match",
+          "low_confidence",
+          "keyword_match",
+          "state",
+          "scored_at"
+        ],
+        "title": "FeedItem",
+        "type": "object"
+      },
+      "FeedPaper": {
+        "description": "Paper identity as shown on a card.",
+        "properties": {
+          "arxiv_id": {
+            "title": "Arxiv Id",
+            "type": "string"
+          },
+          "authors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Authors",
+            "type": "array"
+          },
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "pdf_url": {
+            "title": "Pdf Url",
+            "type": "string"
+          },
+          "published_date": {
+            "format": "date-time",
+            "title": "Published Date",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "arxiv_id",
+          "title",
+          "authors",
+          "categories",
+          "published_date",
+          "pdf_url"
+        ],
+        "title": "FeedPaper",
+        "type": "object"
+      },
+      "FeedProfile": {
+        "description": "The onboarding profile stored under `users.preferences[\"feed_profile\"]`.\n\nKept in its own key so it never collides with the system user's `arxiv_searches`.\n`weights` is reserved for per-user composite weights and is not settable via the API in\nv1 (SPE-273 sets categories / compute_profile / keywords).",
+        "properties": {
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Categories",
+            "type": "array"
+          },
+          "compute_profile": {
+            "anyOf": [
+              {
+                "enum": [
+                  "laptop",
+                  "single_gpu",
+                  "cloud"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compute Profile"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Keywords",
+            "type": "array"
+          },
+          "weights": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Per-user composite weights; None means the defaults",
+            "title": "Weights"
+          }
+        },
+        "required": [
+          "categories",
+          "compute_profile",
+          "keywords",
+          "weights"
+        ],
+        "title": "FeedProfile",
+        "type": "object"
+      },
+      "FeedResponse": {
+        "description": "A page of the ranked feed for one digest week.",
+        "properties": {
+          "available_weeks": {
+            "items": {
+              "$ref": "#/components/schemas/AvailableWeek"
+            },
+            "title": "Available Weeks",
+            "type": "array"
+          },
+          "categories_available": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Categories Available",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FeedItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "week_start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None when no digest has been built yet",
+            "title": "Week Start"
+          }
+        },
+        "required": [
+          "week_start",
+          "available_weeks",
+          "categories_available",
+          "total",
+          "offset",
+          "limit",
+          "items"
+        ],
+        "title": "FeedResponse",
+        "type": "object"
+      },
+      "FeedScores": {
+        "description": "Derived per-dimension 0-100 sub-scores plus the read-time composite.",
+        "properties": {
+          "composite": {
+            "title": "Composite",
+            "type": "number"
+          },
+          "data_availability": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Availability"
+          },
+          "demand": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Demand"
+          },
+          "method_clarity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Method Clarity"
+          },
+          "resource_feasibility": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Feasibility"
+          }
+        },
+        "required": [
+          "method_clarity",
+          "resource_feasibility",
+          "data_availability",
+          "demand",
+          "composite"
+        ],
+        "title": "FeedScores",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "description": "Health check response.",
+        "properties": {
+          "services": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ServiceStatus"
+            },
+            "title": "Services",
+            "type": "object"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "version",
+          "services",
+          "timestamp"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "Judgment": {
+        "additionalProperties": false,
+        "description": "One atomic Jev answer (a Noul, Choice, or Score) as asked by a dimension node.\n\n`probabilities` keys are strings so the payload round-trips through JSONB unchanged\n(Noul: \"yes\"/\"no\"; Choice: option labels; Score: level numbers as strings).",
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "description": "Argmax answer (bool for Nouls, label for Choices, level for Scores)",
+            "title": "Answer"
+          },
+          "confidence": {
+            "description": "Concentration of the distribution (max probability)",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "key": {
+            "description": "Question key, e.g. 'algorithm_given'",
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "noul",
+              "choice",
+              "score"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "legend": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Score level descriptions, in level order",
+            "title": "Legend"
+          },
+          "probabilities": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Probabilities",
+            "type": "object"
+          }
+        },
+        "required": [
+          "key",
+          "kind",
+          "answer",
+          "probabilities",
+          "confidence",
+          "legend"
+        ],
+        "title": "Judgment",
+        "type": "object"
+      },
+      "LibraryResponse": {
+        "description": "The caller's papers grouped by lifecycle state, newest update first. Dismissed\npapers are feedback, not library entries, and are left out.",
+        "properties": {
+          "implementing": {
+            "items": {
+              "$ref": "#/components/schemas/FeedItem"
+            },
+            "title": "Implementing",
+            "type": "array"
+          },
+          "saved": {
+            "items": {
+              "$ref": "#/components/schemas/FeedItem"
+            },
+            "title": "Saved",
+            "type": "array"
+          },
+          "shipped": {
+            "items": {
+              "$ref": "#/components/schemas/FeedItem"
+            },
+            "title": "Shipped",
+            "type": "array"
+          }
+        },
+        "required": [
+          "saved",
+          "implementing",
+          "shipped"
+        ],
+        "title": "LibraryResponse",
+        "type": "object"
+      },
+      "MeResponse": {
+        "description": "Response for /users/me endpoint.",
+        "properties": {
+          "chats_used_today": {
+            "title": "Chats Used Today",
+            "type": "integer"
+          },
+          "daily_chat_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Chat Limit"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "onboarded": {
+            "default": false,
+            "title": "Onboarded",
+            "type": "boolean"
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/UserPreferences"
+          },
+          "tier": {
+            "$ref": "#/components/schemas/UserTier"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "first_name",
+          "last_name",
+          "tier",
+          "daily_chat_limit",
+          "chats_used_today",
+          "preferences",
+          "onboarded"
+        ],
+        "title": "MeResponse",
+        "type": "object"
+      },
+      "MetadataEventData": {
+        "description": "Data for metadata event with execution stats.",
+        "properties": {
+          "execution_time_ms": {
+            "title": "Execution Time Ms",
+            "type": "number"
+          },
+          "guardrail_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guardrail Score"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "retrieval_attempts": {
+            "title": "Retrieval Attempts",
+            "type": "integer"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "turn_number": {
+            "default": 0,
+            "title": "Turn Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query",
+          "execution_time_ms",
+          "retrieval_attempts",
+          "guardrail_score",
+          "session_id",
+          "turn_number"
+        ],
+        "title": "MetadataEventData",
+        "type": "object"
+      },
+      "OpsArxivSearchConfig": {
+        "description": "Configuration for a system-level arXiv search (ops only).",
+        "properties": {
+          "categories": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "arXiv categories to filter (e.g., cs.AI, cs.LG)",
+            "title": "Categories"
+          },
+          "enabled": {
+            "default": true,
+            "description": "Whether this search is active for scheduled runs",
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "max_results": {
+            "default": 10,
+            "description": "Maximum papers to fetch per run",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Max Results",
+            "type": "integer"
+          },
+          "name": {
+            "description": "Display name for this search",
+            "maxLength": 100,
+            "title": "Name",
+            "type": "string"
+          },
+          "query": {
+            "description": "arXiv search query",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "query"
+        ],
+        "title": "OpsArxivSearchConfig",
+        "type": "object"
+      },
+      "OrphanedPaper": {
+        "description": "Details of an orphaned paper.",
+        "properties": {
+          "arxiv_id": {
+            "title": "Arxiv Id",
+            "type": "string"
+          },
+          "paper_id": {
+            "title": "Paper Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "arxiv_id",
+          "title",
+          "paper_id"
+        ],
+        "title": "OrphanedPaper",
+        "type": "object"
+      },
+      "PaperAttributesDetail": {
+        "description": "Product attributes (chips) plus the code-mention spans behind `code_released`.",
+        "properties": {
+          "code_evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceItem"
+            },
+            "title": "Code Evidence",
+            "type": "array"
+          },
+          "code_released": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Judgment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model_family": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Judgment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "task_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Judgment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "code_released",
+          "task_type",
+          "model_family",
+          "code_evidence"
+        ],
+        "title": "PaperAttributesDetail",
+        "type": "object"
+      },
+      "PaperMetadata": {
+        "description": "FeedPaper plus the abstract: the detail header and the 202 body.",
+        "properties": {
+          "abstract": {
+            "title": "Abstract",
+            "type": "string"
+          },
+          "arxiv_id": {
+            "title": "Arxiv Id",
+            "type": "string"
+          },
+          "authors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Authors",
+            "type": "array"
+          },
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "pdf_url": {
+            "title": "Pdf Url",
+            "type": "string"
+          },
+          "published_date": {
+            "format": "date-time",
+            "title": "Published Date",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "arxiv_id",
+          "title",
+          "authors",
+          "categories",
+          "published_date",
+          "pdf_url",
+          "abstract"
+        ],
+        "title": "PaperMetadata",
+        "type": "object"
+      },
+      "PaperScoreDetailResponse": {
+        "description": "GET /papers/{arxiv_id}/score when the paper is scored.",
+        "properties": {
+          "attributes": {
+            "$ref": "#/components/schemas/PaperAttributesDetail"
+          },
+          "compute_match": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compute Match"
+          },
+          "dimensions": {
+            "items": {
+              "$ref": "#/components/schemas/DimensionDetail"
+            },
+            "title": "Dimensions",
+            "type": "array"
+          },
+          "headline": {
+            "title": "Headline",
+            "type": "string"
+          },
+          "low_confidence": {
+            "items": {
+              "enum": [
+                "method_clarity",
+                "resource_feasibility",
+                "data_availability",
+                "demand"
+              ],
+              "type": "string"
+            },
+            "title": "Low Confidence",
+            "type": "array"
+          },
+          "meta": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Meta",
+            "type": "array"
+          },
+          "paper": {
+            "$ref": "#/components/schemas/PaperMetadata"
+          },
+          "rubric_version": {
+            "title": "Rubric Version",
+            "type": "string"
+          },
+          "scored_at": {
+            "format": "date-time",
+            "title": "Scored At",
+            "type": "string"
+          },
+          "scores": {
+            "$ref": "#/components/schemas/FeedScores"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserPaperStateResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "paper",
+          "rubric_version",
+          "scored_at",
+          "scores",
+          "headline",
+          "meta",
+          "compute_match",
+          "low_confidence",
+          "state",
+          "attributes",
+          "dimensions"
+        ],
+        "title": "PaperScoreDetailResponse",
+        "type": "object"
+      },
+      "RevokeTaskResponse": {
+        "description": "Response when a task is revoked.",
+        "properties": {
+          "revoked": {
+            "description": "Whether the revoke was sent",
+            "title": "Revoked",
+            "type": "boolean"
+          },
+          "task_id": {
+            "description": "ID of the revoked task",
+            "title": "Task Id",
+            "type": "string"
+          },
+          "terminated": {
+            "description": "Whether termination was requested",
+            "title": "Terminated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "task_id",
+          "revoked",
+          "terminated"
+        ],
+        "title": "RevokeTaskResponse",
+        "type": "object"
+      },
+      "ScorePendingResponse": {
+        "description": "GET /papers/{arxiv_id}/score (202) while the paper is unscored.\n\nA signed-in caller has on-demand scoring running (`task_id`); an anonymous caller gets\nthe metadata only, with `task_id` None, since nothing is enqueued for them.",
+        "properties": {
+          "arxiv_id": {
+            "title": "Arxiv Id",
+            "type": "string"
+          },
+          "paper": {
+            "$ref": "#/components/schemas/PaperMetadata"
+          },
+          "status": {
+            "const": "pending",
+            "default": "pending",
+            "title": "Status",
+            "type": "string"
+          },
+          "task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None for anonymous callers: nothing was enqueued",
+            "title": "Task Id"
+          }
+        },
+        "required": [
+          "status",
+          "arxiv_id",
+          "paper",
+          "task_id"
+        ],
+        "title": "ScorePendingResponse",
+        "type": "object"
+      },
+      "ServiceStatus": {
+        "description": "Status of an individual service.",
+        "properties": {
+          "details": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Details",
+            "type": "object"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "healthy",
+              "unhealthy"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "message"
+        ],
+        "title": "ServiceStatus",
+        "type": "object"
+      },
+      "SourceInfo": {
+        "description": "A retrieved source paper, as sent in the SOURCES event.",
+        "properties": {
+          "arxiv_id": {
+            "title": "Arxiv Id",
+            "type": "string"
+          },
+          "authors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Authors",
+            "type": "array"
+          },
+          "pdf_url": {
+            "title": "Pdf Url",
+            "type": "string"
+          },
+          "published_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published Date"
+          },
+          "relevance_score": {
+            "title": "Relevance Score",
+            "type": "number"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "was_graded_relevant": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Was Graded Relevant"
+          }
+        },
+        "required": [
+          "arxiv_id",
+          "title",
+          "authors",
+          "pdf_url",
+          "relevance_score",
+          "published_date",
+          "was_graded_relevant"
+        ],
+        "title": "SourceInfo",
+        "type": "object"
+      },
+      "SourcesEventData": {
+        "description": "Data for sources event with retrieved documents.",
+        "properties": {
+          "sources": {
+            "description": "Retrieved document sources",
+            "items": {
+              "$ref": "#/components/schemas/SourceInfo"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sources"
+        ],
+        "title": "SourcesEventData",
+        "type": "object"
+      },
+      "StatusEventData": {
+        "description": "Data for status events indicating workflow progress.",
+        "properties": {
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional extra info (score, attempt number, etc.)",
+            "title": "Details"
+          },
+          "message": {
+            "description": "Human-readable status message",
+            "title": "Message",
+            "type": "string"
+          },
+          "step": {
+            "description": "Current workflow step name",
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "message",
+          "details"
+        ],
+        "title": "StatusEventData",
+        "type": "object"
+      },
+      "StreamEvent": {
+        "description": "SSE event wrapper with event type and data.",
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StatusEventData"
+              },
+              {
+                "$ref": "#/components/schemas/ContentEventData"
+              },
+              {
+                "$ref": "#/components/schemas/SourcesEventData"
+              },
+              {
+                "$ref": "#/components/schemas/MetadataEventData"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorEventData"
+              },
+              {
+                "$ref": "#/components/schemas/CitationsEventData"
+              },
+              {
+                "$ref": "#/components/schemas/DoneEventData"
+              }
+            ],
+            "title": "Data"
+          },
+          "event": {
+            "$ref": "#/components/schemas/StreamEventType"
+          }
+        },
+        "required": [
+          "event",
+          "data"
+        ],
+        "title": "StreamEvent",
+        "type": "object"
+      },
+      "StreamEventType": {
+        "description": "Types of SSE events emitted during streaming.",
+        "enum": [
+          "status",
+          "content",
+          "sources",
+          "metadata",
+          "error",
+          "done",
+          "citations"
+        ],
+        "title": "StreamEventType",
+        "type": "string"
+      },
+      "StreamRequest": {
+        "additionalProperties": false,
+        "description": "Request for one turn of a paper-scoped conversation.\n\nEvery conversation is scoped to one ingested paper (Phase 3). The scope is persisted on\nthe conversation, so a follow-up that names a different paper is a 409.",
+        "properties": {
+          "arxiv_id": {
+            "description": "The ingested paper this conversation is scoped to",
+            "title": "Arxiv Id",
+            "type": "string"
+          },
+          "query": {
+            "description": "Question to ask",
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Session UUID for conversation continuity",
+            "title": "Session Id"
+          }
+        },
+        "required": [
+          "query",
+          "arxiv_id"
+        ],
+        "title": "StreamRequest",
+        "type": "object"
+      },
+      "SystemSearchesResponse": {
+        "description": "Response containing system arXiv search configurations.",
+        "properties": {
+          "arxiv_searches": {
+            "description": "System arXiv search configurations",
+            "items": {
+              "$ref": "#/components/schemas/OpsArxivSearchConfig"
+            },
+            "title": "Arxiv Searches",
+            "type": "array"
+          }
+        },
+        "title": "SystemSearchesResponse",
+        "type": "object"
+      },
+      "TaskListItem": {
+        "description": "Single task in a task list response.",
+        "properties": {
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the task completed",
+            "title": "Completed At"
+          },
+          "created_at": {
+            "description": "When the task was created",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error message if task failed",
+            "title": "Error"
+          },
+          "status": {
+            "description": "Current task status",
+            "title": "Status",
+            "type": "string"
+          },
+          "task_id": {
+            "description": "Celery task ID",
+            "title": "Task Id",
+            "type": "string"
+          },
+          "task_type": {
+            "description": "Type of the task",
+            "title": "Task Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_id",
+          "task_type",
+          "status",
+          "created_at"
+        ],
+        "title": "TaskListItem",
+        "type": "object"
+      },
+      "TaskListResponse": {
+        "description": "Response for listing tasks.",
+        "properties": {
+          "limit": {
+            "description": "Page size",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "description": "Page offset",
+            "title": "Offset",
+            "type": "integer"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskListItem"
+            },
+            "title": "Tasks",
+            "type": "array"
+          },
+          "total": {
+            "description": "Total number of tasks",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tasks",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "TaskListResponse",
+        "type": "object"
+      },
+      "TaskStatusResponse": {
+        "description": "Response for task status queries.",
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the task was created",
+            "title": "Created At"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error message if task failed (only included on failure)",
+            "title": "Error"
+          },
+          "ready": {
+            "description": "Whether the task has completed (success or failure)",
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Task result if completed successfully (only included on success)",
+            "title": "Result"
+          },
+          "status": {
+            "description": "Current task status",
+            "enum": [
+              "queued",
+              "pending",
+              "started",
+              "success",
+              "failure",
+              "retry",
+              "revoked"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "task_id": {
+            "description": "Unique identifier for the task",
+            "title": "Task Id",
+            "type": "string"
+          },
+          "task_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Type of the task",
+            "title": "Task Type"
+          }
+        },
+        "required": [
+          "task_id",
+          "status",
+          "ready"
+        ],
+        "title": "TaskStatusResponse",
+        "type": "object"
+      },
+      "UpdatePreferencesRequest": {
+        "additionalProperties": false,
+        "description": "PATCH /users/me/preferences body: the onboarding profile (ONBOARD-1).",
+        "properties": {
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Categories",
+            "type": "array"
+          },
+          "compute_profile": {
+            "enum": [
+              "laptop",
+              "single_gpu",
+              "cloud"
+            ],
+            "title": "Compute Profile",
+            "type": "string"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Keywords",
+            "type": "array"
+          }
+        },
+        "required": [
+          "categories",
+          "compute_profile"
+        ],
+        "title": "UpdatePreferencesRequest",
+        "type": "object"
+      },
+      "UpdateSystemSearchesRequest": {
+        "description": "Request to update system arXiv searches.",
+        "properties": {
+          "arxiv_searches": {
+            "description": "Complete list of arXiv search configurations",
+            "items": {
+              "$ref": "#/components/schemas/OpsArxivSearchConfig"
+            },
+            "title": "Arxiv Searches",
+            "type": "array"
+          }
+        },
+        "required": [
+          "arxiv_searches"
+        ],
+        "title": "UpdateSystemSearchesRequest",
+        "type": "object"
+      },
+      "UpdateTierRequest": {
+        "description": "Request to update a user's tier.",
+        "properties": {
+          "tier": {
+            "title": "Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tier"
+        ],
+        "title": "UpdateTierRequest",
+        "type": "object"
+      },
+      "UpdateTierResponse": {
+        "description": "Response after tier update.",
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "tier"
+        ],
+        "title": "UpdateTierResponse",
+        "type": "object"
+      },
+      "UserPaperStateRequest": {
+        "additionalProperties": false,
+        "description": "PUT /papers/{arxiv_id}/state body.",
+        "properties": {
+          "dismissal_reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dismissal Reason"
+          },
+          "repo_url": {
+            "anyOf": [
+              {
+                "format": "uri",
+                "maxLength": 2083,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repo Url"
+          },
+          "state": {
+            "enum": [
+              "saved",
+              "dismissed",
+              "implementing",
+              "shipped"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "UserPaperStateRequest",
+        "type": "object"
+      },
+      "UserPaperStateResponse": {
+        "description": "A user's lifecycle state for one paper.",
+        "properties": {
+          "dismissal_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dismissal Reason"
+          },
+          "repo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repo Url"
+          },
+          "state": {
+            "enum": [
+              "saved",
+              "dismissed",
+              "implementing",
+              "shipped"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "repo_url",
+          "dismissal_reason",
+          "updated_at"
+        ],
+        "title": "UserPaperStateResponse",
+        "type": "object"
+      },
+      "UserPreferences": {
+        "description": "The user-facing slice of `users.preferences` (the system user's keys are omitted).",
+        "properties": {
+          "feed_profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeedProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "feed_profile"
+        ],
+        "title": "UserPreferences",
+        "type": "object"
+      },
+      "UserTier": {
+        "enum": [
+          "free",
+          "pro"
+        ],
+        "title": "UserTier",
+        "type": "string"
+      }
+    }
+  },
+  "info": {
+    "description": "Arxivian - academic research assistant powered by arXiv",
+    "title": "Arxivian API",
+    "version": "0.4.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/": {
+      "get": {
+        "description": "Root endpoint.",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Root"
+      }
+    },
+    "/api/v1/conversations": {
+      "get": {
+        "description": "List the caller's threads scoped to one paper, most recently updated first.\n\nEvery conversation is paper-scoped (Phase 3), so the paper is required.",
+        "operationId": "list_conversations_api_v1_conversations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Only threads scoped to this paper",
+            "in": "query",
+            "name": "arxiv_id",
+            "required": true,
+            "schema": {
+              "description": "Only threads scoped to this paper",
+              "title": "Arxiv Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "List Conversations",
+        "tags": [
+          "Conversations"
+        ]
+      }
+    },
+    "/api/v1/conversations/{session_id}": {
+      "delete": {
+        "description": "Delete a conversation and all its turns.\n\nThis performs a hard delete. Turns are automatically deleted via\nCASCADE foreign key constraint.\n\nArgs:\n    session_id: Session identifier for the conversation to delete\n    conversation_repo: Injected conversation repository\n    db: Database session\n    current_user: Authenticated user\n\nReturns:\n    DeleteConversationResponse with deletion summary\n\nRaises:\n    HTTPException: 404 if conversation not found or not owned by user",
+        "operationId": "delete_conversation_api_v1_conversations__session_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteConversationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Delete Conversation",
+        "tags": [
+          "Conversations"
+        ]
+      },
+      "get": {
+        "description": "Get a conversation with all its turns.\n\nArgs:\n    session_id: Session identifier for the conversation\n    conversation_repo: Injected conversation repository\n    current_user: Authenticated user\n\nReturns:\n    ConversationDetailResponse with full conversation details\n\nRaises:\n    HTTPException: 404 if conversation not found or not owned by user",
+        "operationId": "get_conversation_api_v1_conversations__session_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Get Conversation",
+        "tags": [
+          "Conversations"
+        ]
+      }
+    },
+    "/api/v1/feed": {
+      "get": {
+        "description": "One page of ranked paper cards for a digest week (default: the newest built week).\n\nPublic: an anonymous caller gets the global digest under the default weights with no\nlifecycle state and no compute-profile match.",
+        "operationId": "get_feed_api_v1_feed_get",
+        "parameters": [
+          {
+            "description": "Any date; snapped to the Monday of its week",
+            "in": "query",
+            "name": "week",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Any date; snapped to the Monday of its week",
+              "title": "Week"
+            }
+          },
+          {
+            "description": "Keep papers in any of these categories",
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Keep papers in any of these categories",
+              "title": "Category"
+            }
+          },
+          {
+            "description": "Minimum composite",
+            "in": "query",
+            "name": "min_score",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum composite",
+              "title": "Min Score"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_dismissed",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Dismissed",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Get Feed",
+        "tags": [
+          "Feed"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "description": "Comprehensive health check for all services.\n\nChecks:\n- Database connectivity and counts\n- LLM provider configuration\n- Embeddings API key presence (OpenAI through LiteLLM)\n\nReturns:\n    HealthResponse with status and service details",
+        "operationId": "health_check_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Health Check",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/ops/cleanup": {
+      "post": {
+        "description": "Clean up orphaned database records (processed papers with no chunks).",
+        "operationId": "cleanup_orphaned_records_api_v1_ops_cleanup_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CleanupResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Cleanup Orphaned Records",
+        "tags": [
+          "Ops",
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/ingest": {
+      "post": {
+        "description": "Queue bulk ingestion of papers via arXiv IDs and/or search query.",
+        "operationId": "bulk_ingest_api_v1_ops_ingest_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkIngestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkIngestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Bulk Ingest",
+        "tags": [
+          "Ops",
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/papers/{arxiv_id}": {
+      "delete": {
+        "description": "Delete a paper and its chunks. Protected by API key.",
+        "operationId": "delete_paper_api_v1_ops_papers__arxiv_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "arxiv_id",
+            "required": true,
+            "schema": {
+              "title": "Arxiv Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletePaperResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Delete Paper",
+        "tags": [
+          "Ops",
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/system/arxiv-searches": {
+      "get": {
+        "description": "Read current system user arXiv search configuration.",
+        "operationId": "get_system_searches_api_v1_ops_system_arxiv_searches_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemSearchesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Get System Searches",
+        "tags": [
+          "Ops",
+          "Ops"
+        ]
+      },
+      "put": {
+        "description": "Replace all system user arXiv searches. Idempotent PUT.",
+        "operationId": "update_system_searches_api_v1_ops_system_arxiv_searches_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSystemSearchesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemSearchesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Update System Searches",
+        "tags": [
+          "Ops",
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/tasks": {
+      "get": {
+        "description": "List all task executions (no user filter).",
+        "operationId": "list_tasks_api_v1_ops_tasks_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "List Tasks",
+        "tags": [
+          "Ops",
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/tasks/{task_id}": {
+      "delete": {
+        "description": "Revoke a pending or running task (no ownership check).",
+        "operationId": "revoke_task_api_v1_ops_tasks__task_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "title": "Task Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "terminate",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Terminate",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokeTaskResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Revoke Task",
+        "tags": [
+          "Ops",
+          "Ops"
+        ]
+      },
+      "get": {
+        "description": "Get task status by Celery task ID (no ownership check).",
+        "operationId": "get_task_status_api_v1_ops_tasks__task_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "title": "Task Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_result",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Result",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Get Task Status",
+        "tags": [
+          "Ops",
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/users/{user_id}/tier": {
+      "patch": {
+        "description": "Assign or change a user's tier. Protected by API key.",
+        "operationId": "update_user_tier_api_v1_ops_users__user_id__tier_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTierRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateTierResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Update User Tier",
+        "tags": [
+          "Ops",
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/papers/{arxiv_id}/score": {
+      "get": {
+        "description": "The score breakdown for a paper; 202 with its metadata while it is unscored.\n\nPublic. A signed-in caller opening an unscored paper enqueues `score_paper_task`\n(which ingests the full text itself) behind a Redis `SET NX` lock keyed on the arXiv\nid, so repeated polls share one task; the task releases the lock on completion and\nthe TTL is the backstop. An anonymous caller gets the metadata only: nothing is\nenqueued and no budget is spent. A paper unknown to the index is fetched from arXiv\n(404 when arXiv has no entry, 503 when arXiv is down) and stored as a metadata-only row.",
+        "operationId": "get_paper_score_api_v1_papers__arxiv_id__score_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "arxiv_id",
+            "required": true,
+            "schema": {
+              "title": "Arxiv Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaperScoreDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScorePendingResponse"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Get Paper Score",
+        "tags": [
+          "Papers"
+        ]
+      }
+    },
+    "/api/v1/papers/{arxiv_id}/state": {
+      "delete": {
+        "description": "Clear the caller's lifecycle state for a paper.",
+        "operationId": "delete_paper_state_api_v1_papers__arxiv_id__state_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "arxiv_id",
+            "required": true,
+            "schema": {
+              "title": "Arxiv Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Delete Paper State",
+        "tags": [
+          "Paper States"
+        ]
+      },
+      "put": {
+        "description": "Set the caller's lifecycle state for a paper (upsert; one row per user + paper).",
+        "operationId": "put_paper_state_api_v1_papers__arxiv_id__state_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "arxiv_id",
+            "required": true,
+            "schema": {
+              "title": "Arxiv Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserPaperStateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPaperStateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Put Paper State",
+        "tags": [
+          "Paper States"
+        ]
+      }
+    },
+    "/api/v1/stream": {
+      "post": {
+        "description": "Stream one turn of a paper-scoped conversation via Server-Sent Events.",
+        "operationId": "stream_api_v1_stream_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StreamRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamEvent",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Server-sent events"
+          },
+          "default": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Stream",
+        "tags": [
+          "Stream"
+        ]
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "description": "Get current user info including tier, limits, usage, and the feed profile.",
+        "operationId": "get_me_api_v1_users_me_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Get Me",
+        "tags": [
+          "Users",
+          "Users"
+        ]
+      }
+    },
+    "/api/v1/users/me/library": {
+      "get": {
+        "description": "The caller's papers grouped by lifecycle state, as feed cards (SPE-296).",
+        "operationId": "get_library_api_v1_users_me_library_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Get Library",
+        "tags": [
+          "Paper States"
+        ]
+      }
+    },
+    "/api/v1/users/me/preferences": {
+      "patch": {
+        "description": "Set the onboarding profile (categories, compute profile, keywords).\n\nWritten under `preferences[\"feed_profile\"]`; other keys in the JSONB (for example the\nsystem user's `arxiv_searches`) are preserved.",
+        "operationId": "update_preferences_api_v1_users_me_preferences_patch",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePreferencesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Update Preferences",
+        "tags": [
+          "Users",
+          "Users"
+        ]
+      }
+    },
+    "/api/v1/webhooks/clerk": {
+      "post": {
+        "description": "Handle Clerk webhook events (user.updated, user.deleted).\n\nAuthenticates via Svix signature verification, not Clerk JWT.",
+        "operationId": "clerk_webhook_api_v1_webhooks_clerk_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Clerk Webhook Api V1 Webhooks Clerk Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error envelope"
+          }
+        },
+        "summary": "Clerk Webhook",
+        "tags": [
+          "Webhooks",
+          "Webhooks"
+        ]
+      }
+    }
+  }
+}

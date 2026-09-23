@@ -4,8 +4,10 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
+from src.schemas.base import ResponseModel
 
-class SourceInfo(BaseModel):
+
+class SourceInfo(ResponseModel):
     """A retrieved source paper, as sent in the SOURCES event."""
 
     arxiv_id: str
@@ -46,7 +48,7 @@ class StreamEventType(StrEnum):
     CITATIONS = "citations"  # Citation graph from explore_citations tool
 
 
-class StatusEventData(BaseModel):
+class StatusEventData(ResponseModel):
     """Data for status events indicating workflow progress."""
 
     step: str = Field(..., description="Current workflow step name")
@@ -56,19 +58,19 @@ class StatusEventData(BaseModel):
     )
 
 
-class ContentEventData(BaseModel):
+class ContentEventData(ResponseModel):
     """Data for content events with streaming tokens."""
 
     token: str = Field(..., description="Generated token")
 
 
-class SourcesEventData(BaseModel):
+class SourcesEventData(ResponseModel):
     """Data for sources event with retrieved documents."""
 
     sources: list[SourceInfo] = Field(..., description="Retrieved document sources")
 
 
-class MetadataEventData(BaseModel):
+class MetadataEventData(ResponseModel):
     """Data for metadata event with execution stats."""
 
     query: str
@@ -79,14 +81,14 @@ class MetadataEventData(BaseModel):
     turn_number: int = 0
 
 
-class ErrorEventData(BaseModel):
+class ErrorEventData(ResponseModel):
     """Data for error events."""
 
     error: str = Field(..., description="Error message")
     code: str | None = Field(default=None, description="Error code if available")
 
 
-class CitationsEventData(BaseModel):
+class CitationsEventData(ResponseModel):
     """Data for citation graph from explore_citations tool."""
 
     arxiv_id: str = Field(..., description="arXiv ID of the explored paper")
@@ -100,11 +102,11 @@ class CitationsEventData(BaseModel):
         return len(self.references)
 
 
-class DoneEventData(BaseModel):
+class DoneEventData(ResponseModel):
     """Sentinel: stream is complete."""
 
 
-class StreamEvent(BaseModel):
+class StreamEvent(ResponseModel):
     """SSE event wrapper with event type and data."""
 
     event: StreamEventType

@@ -27,6 +27,9 @@ EvidenceKind = Literal["pseudocode", "compute", "dataset", "citation", "code"]
 
 JudgmentKind = Literal["noul", "choice", "score"]
 
+# The four rubric dimensions, in the order the breakdown shows them.
+ScoreDimension = Literal["method_clarity", "resource_feasibility", "data_availability", "demand"]
+
 # Demand: Semantic Scholar velocity band -> level, and level -> derived 0-100 value.
 DEMAND_LEVELS: dict[str, int] = {"LOW": 0, "MED": 1, "HIGH": 2}
 DEMAND_LEVEL_TO_SCORE: dict[int, int] = {0: 20, 1: 55, 2: 85}
@@ -80,7 +83,7 @@ class Judgment(BaseModel):
     (Noul: "yes"/"no"; Choice: option labels; Score: level numbers as strings).
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", json_schema_serialization_defaults_required=True)
 
     key: str = Field(..., description="Question key, e.g. 'algorithm_given'")
     kind: JudgmentKind

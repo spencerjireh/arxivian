@@ -5,14 +5,15 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
+from src.schemas.base import ResponseModel
 from src.schemas.feed import FeedPaper, FeedScores
 from src.schemas.paper_states import UserPaperStateResponse
-from src.services.scoring_service.state import Judgment
+from src.services.scoring_service.state import Judgment, ScoreDimension
 
 
-class EvidenceItem(BaseModel):
+class EvidenceItem(ResponseModel):
     """One quoted span from `score_evidence`."""
 
     model_config = ConfigDict(from_attributes=True)
@@ -22,10 +23,10 @@ class EvidenceItem(BaseModel):
     source: str | None = None
 
 
-class DimensionDetail(BaseModel):
+class DimensionDetail(ResponseModel):
     """One rubric dimension for the breakdown: distribution, judgments, and its evidence."""
 
-    dimension: str
+    dimension: ScoreDimension
     band: Literal["LOW", "MED", "HIGH"]
     score: int
     level: int
@@ -38,7 +39,7 @@ class DimensionDetail(BaseModel):
     reasoning: str
 
 
-class PaperAttributesDetail(BaseModel):
+class PaperAttributesDetail(ResponseModel):
     """Product attributes (chips) plus the code-mention spans behind `code_released`."""
 
     code_released: Judgment | None = None
@@ -53,7 +54,7 @@ class PaperMetadata(FeedPaper):
     abstract: str
 
 
-class PaperScoreDetailResponse(BaseModel):
+class PaperScoreDetailResponse(ResponseModel):
     """GET /papers/{arxiv_id}/score when the paper is scored."""
 
     paper: PaperMetadata
@@ -63,13 +64,13 @@ class PaperScoreDetailResponse(BaseModel):
     headline: str
     meta: list[str]
     compute_match: bool | None
-    low_confidence: list[str]
+    low_confidence: list[ScoreDimension]
     state: UserPaperStateResponse | None
     attributes: PaperAttributesDetail
     dimensions: list[DimensionDetail]
 
 
-class ScorePendingResponse(BaseModel):
+class ScorePendingResponse(ResponseModel):
     """GET /papers/{arxiv_id}/score (202) while the paper is unscored.
 
     A signed-in caller has on-demand scoring running (`task_id`); an anonymous caller gets

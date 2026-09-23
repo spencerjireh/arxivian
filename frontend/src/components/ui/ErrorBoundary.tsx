@@ -1,5 +1,6 @@
 // UI primitive: React error boundary that renders a fallback component with reset.
 import { Component, type ReactNode } from 'react'
+import { reportError } from '../../lib/observability'
 
 export interface FallbackProps {
   error: Error
@@ -29,7 +30,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
-    console.error('ErrorBoundary caught:', error, info.componentStack)
+    reportError(error, { componentStack: info.componentStack })
   }
 
   componentDidUpdate(prevProps: ErrorBoundaryProps): void {

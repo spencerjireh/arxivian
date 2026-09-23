@@ -1,4 +1,4 @@
-import type { FeedItem, FeedResponse, LibraryResponse, PaperMetadata } from '../../src/types/api'
+import type { FeedItem, FeedResponse, LibraryResponse, PaperMetadata } from '@/types/api'
 
 export function makePaperMetadata(overrides: Partial<PaperMetadata> = {}): PaperMetadata {
   return {

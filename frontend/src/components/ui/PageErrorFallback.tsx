@@ -1,6 +1,6 @@
 // UI primitive: full-page fallback used by ErrorBoundary and RouteErrorPage.
 import { AlertTriangle } from 'lucide-react'
-import { getUserMessage } from '../../lib/errors'
+import { getUserMessage } from '@/lib/errors'
 import Button from './Button'
 import type { FallbackProps } from './ErrorBoundary'
 

@@ -2,3 +2,5 @@ dist
 coverage
 node_modules
 package-lock.json
+# Written by the backend export (Python json.dumps layout), not by Prettier.
+openapi.json

@@ -23,12 +23,18 @@ from src.exceptions import BaseAPIException, PaperNotIngestedError, ScopeMismatc
 from src.factories import get_agent_service
 from src.repositories.conversation_repository import ConversationRepository
 from src.repositories.paper_repository import PaperRepository
-from src.schemas.stream import ErrorEventData, StreamRequest
+from src.schemas.stream import ErrorEventData, StreamEvent, StreamRequest
 from src.services.agent_service.context import ScopedPaper
 from src.utils.logger import get_logger
 
 router = APIRouter()
 log = get_logger(__name__)
+
+
+class EventStreamResponse(StreamingResponse):
+    """StreamingResponse whose media type puts the 200 under text/event-stream in OpenAPI."""
+
+    media_type = "text/event-stream"
 
 
 def _format_sse_error(error: str, code: str) -> str:
@@ -66,7 +72,13 @@ async def resolve_scoped_paper(
     return ScopedPaper(paper_id=str(paper.id), arxiv_id=paper.arxiv_id, title=paper.title)
 
 
-@router.post("/stream")
+@router.post(
+    "/stream",
+    response_class=EventStreamResponse,
+    # Registers StreamEvent and its data members in the document; the frontend's generated
+    # types come from there. Each SSE `data` line is one StreamEvent.data member.
+    responses={200: {"model": StreamEvent, "description": "Server-sent events"}},
+)
 async def stream(
     request: StreamRequest,
     db: DbSession,
@@ -142,9 +154,8 @@ async def stream(
                 yield _format_sse_error("An unexpected error occurred", "INTERNAL_ERROR")
             yield "event: done\ndata: {}\n\n"
 
-    return StreamingResponse(
+    return EventStreamResponse(
         event_generator(),
-        media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",

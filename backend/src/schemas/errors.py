@@ -3,10 +3,12 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, Field
+
+from src.schemas.base import ResponseModel
 
 
-class ErrorDetail(BaseModel):
+class ErrorDetail(ResponseModel):
     """Detailed error information."""
 
     code: str = Field(..., description="Machine-readable error code")
@@ -14,7 +16,7 @@ class ErrorDetail(BaseModel):
     details: dict[str, Any] = Field(default_factory=dict, description="Additional error context")
 
 
-class ErrorResponse(BaseModel):
+class ErrorResponse(ResponseModel):
     """Standard error response format."""
 
     error: ErrorDetail = Field(..., description="Error details")
@@ -23,8 +25,8 @@ class ErrorResponse(BaseModel):
         default_factory=lambda: datetime.now(UTC), description="Error timestamp"
     )
 
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "error": {
                     "code": "ARXIV_API_ERROR",
@@ -35,4 +37,4 @@ class ErrorResponse(BaseModel):
                 "timestamp": "2024-12-15T10:30:00Z",
             }
         }
-    }
+    )

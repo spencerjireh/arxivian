@@ -9,12 +9,14 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
+from src.schemas.base import ResponseModel
 from src.schemas.paper_states import UserPaperStateResponse
+from src.services.scoring_service.state import ScoreDimension
 
 
-class FeedPaper(BaseModel):
+class FeedPaper(ResponseModel):
     """Paper identity as shown on a card."""
 
     model_config = ConfigDict(from_attributes=True)
@@ -27,7 +29,7 @@ class FeedPaper(BaseModel):
     pdf_url: str
 
 
-class FeedScores(BaseModel):
+class FeedScores(ResponseModel):
     """Derived per-dimension 0-100 sub-scores plus the read-time composite."""
 
     method_clarity: int | None
@@ -37,7 +39,7 @@ class FeedScores(BaseModel):
     composite: float
 
 
-class FeedItem(BaseModel):
+class FeedItem(ResponseModel):
     """One card. The feed only emits scored papers; the library also carries papers whose
     score is missing (rubric bump, ops delete), so the score-derived fields are optional."""
 
@@ -54,7 +56,7 @@ class FeedItem(BaseModel):
     compute_match: bool | None = Field(
         default=None, description="None when the caller has no compute profile (or is anonymous)"
     )
-    low_confidence: list[str] = Field(
+    low_confidence: list[ScoreDimension] = Field(
         default_factory=list, description="Dimensions whose confidence is below the threshold"
     )
     keyword_match: bool = False
@@ -62,12 +64,12 @@ class FeedItem(BaseModel):
     scored_at: datetime | None = None
 
 
-class AvailableWeek(BaseModel):
+class AvailableWeek(ResponseModel):
     week_start: date
     paper_count: int
 
 
-class FeedResponse(BaseModel):
+class FeedResponse(ResponseModel):
     """A page of the ranked feed for one digest week."""
 
     week_start: date | None = Field(
@@ -81,7 +83,7 @@ class FeedResponse(BaseModel):
     items: list[FeedItem]
 
 
-class LibraryResponse(BaseModel):
+class LibraryResponse(ResponseModel):
     """The caller's papers grouped by lifecycle state, newest update first. Dismissed
     papers are feedback, not library entries, and are left out."""
 

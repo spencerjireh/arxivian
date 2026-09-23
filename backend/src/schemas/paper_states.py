@@ -7,10 +7,12 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
+from src.schemas.base import ResponseModel
+
 PaperState = Literal["saved", "dismissed", "implementing", "shipped"]
 
 
-class UserPaperStateResponse(BaseModel):
+class UserPaperStateResponse(ResponseModel):
     """A user's lifecycle state for one paper."""
 
     model_config = ConfigDict(from_attributes=True)
