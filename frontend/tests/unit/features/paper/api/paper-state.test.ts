@@ -13,7 +13,9 @@ vi.mock('@/lib/api-client', () => ({
   apiPut: (...args: unknown[]) => apiPut(...args),
   apiDelete: (...args: unknown[]) => apiDelete(...args),
 }))
-vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }))
+vi.mock('@/lib/notifications', () => ({
+  notify: { success: vi.fn(), error: vi.fn(), undoable: vi.fn() },
+}))
 
 type FeedData = InfiniteData<FeedResponse>
 

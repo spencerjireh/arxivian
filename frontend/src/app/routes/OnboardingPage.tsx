@@ -1,13 +1,13 @@
 // /onboarding route: the feed profile form, outside the app shell; reached from the feed prompt or Settings.
 import { Navigate, useNavigate } from 'react-router-dom'
-import { toast } from 'sonner'
+import logoIcon from '@/assets/logo-icon.png'
 import { useUpdateFeedProfile } from '@/features/profile/api/update-feed-profile'
 import FeedProfileForm from '@/features/profile/components/FeedProfileForm'
-import { useUserStore } from '@/stores/userStore'
-import logoIcon from '@/assets/logo-icon.png'
+import { useSession } from '@/lib/auth'
+import { notify } from '@/lib/notifications'
 
 export default function OnboardingPage() {
-  const me = useUserStore((s) => s.me)
+  const { me } = useSession()
   const navigate = useNavigate()
   const update = useUpdateFeedProfile()
 
@@ -36,7 +36,7 @@ export default function OnboardingPage() {
           onSubmit={(profile) =>
             update.mutate(profile, {
               onSuccess: () => void navigate('/', { replace: true }),
-              onError: () => toast.error('Could not save your profile'),
+              onError: () => notify.error('Could not save your profile'),
             })
           }
         />

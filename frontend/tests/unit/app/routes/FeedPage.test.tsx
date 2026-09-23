@@ -1,26 +1,21 @@
 import { screen, fireEvent, within } from '@testing-library/react'
 import { Route, Routes, useLocation } from 'react-router-dom'
 import FeedPage from '@/app/routes/FeedPage'
-import { useUserStore } from '@/stores/userStore'
 import { ONBOARDING_PROMPT_KEY } from '@/features/feed/components/OnboardingPrompt'
-import { mockAuth } from '../../../mocks/clerk'
-import { renderWithProviders } from '../../../helpers/renderWithProviders'
 import { makeFeedItem, makeFeedResponse } from '../../../fixtures/feed'
+import { renderWithProviders } from '../../../helpers/renderWithProviders'
+import { lifecycle, resetLifecycle, usePaperLifecycle } from '../../../mocks/lifecycle'
+import { makeMe, mockSession, resetSession } from '../../../mocks/auth'
 
-vi.mock('@clerk/clerk-react', () => import('../../../mocks/clerk'))
+vi.mock('@/lib/auth', () => import('../../../mocks/auth'))
 vi.mock('framer-motion', () => import('../../../mocks/framer-motion'))
 
 const mockUseInfiniteFeed = vi.fn()
-const setMutateAsync = vi.fn().mockResolvedValue({})
-const clearMutateAsync = vi.fn().mockResolvedValue(undefined)
-
 vi.mock('@/features/feed/api/get-feed', () => ({
   useInfiniteFeed: (params: unknown) => mockUseInfiniteFeed(params),
 }))
-vi.mock('@/features/paper/api/paper-state', () => ({
-  useSetPaperState: () => ({ mutateAsync: setMutateAsync }),
-  useClearPaperState: () => ({ mutateAsync: clearMutateAsync }),
-}))
+
+vi.mock('@/features/paper/hooks/usePaperLifecycle', () => import('../../../mocks/lifecycle'))
 
 function feedState(overrides: Record<string, unknown>) {
   return {
@@ -35,14 +30,17 @@ function feedState(overrides: Record<string, unknown>) {
   }
 }
 
+function onePage(...items: ReturnType<typeof makeFeedItem>[]) {
+  return feedState({ data: { pages: [makeFeedResponse(items)], pageParams: [0] } })
+}
+
 beforeEach(() => {
-  mockAuth.isSignedIn = true
-  setMutateAsync.mockClear()
-  clearMutateAsync.mockClear()
+  resetSession()
+  mockSession.isSignedIn = true
+  resetLifecycle()
 })
 
 afterEach(() => {
-  useUserStore.setState({ me: null })
   localStorage.removeItem(ONBOARDING_PROMPT_KEY)
 })
 
@@ -56,34 +54,20 @@ describe('FeedPage', () => {
   })
 
   it('reads as one issue to an anonymous reader: no dismissed toggle, Save goes to sign-in', () => {
-    mockAuth.isSignedIn = false
-    mockUseInfiniteFeed.mockReturnValue(
-      feedState({ data: { pages: [makeFeedResponse([makeFeedItem()])], pageParams: [0] } })
-    )
+    mockSession.isSignedIn = false
+    mockUseInfiniteFeed.mockReturnValue(onePage(makeFeedItem()))
     renderWithProviders(<FeedPage />, { initialEntries: ['/?dismissed=1&min_score=40'] })
     expect(screen.getByRole('heading', { level: 1, name: 'Week of Aug 3' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Show dismissed')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Save' })).toHaveAttribute('href', '/sign-in')
     expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument()
     expect(mockUseInfiniteFeed).toHaveBeenLastCalledWith({ min_score: 40 })
+    expect(usePaperLifecycle).not.toHaveBeenCalled()
   })
 
   it('prompts a signed-in reader without a profile until dismissed', () => {
-    useUserStore.setState({
-      me: {
-        id: 'u',
-        email: null,
-        first_name: null,
-        last_name: null,
-        tier: 'free',
-        daily_chat_limit: null,
-        chats_used_today: 0,
-        onboarded: false,
-      },
-    })
-    mockUseInfiniteFeed.mockReturnValue(
-      feedState({ data: { pages: [makeFeedResponse([makeFeedItem()])], pageParams: [0] } })
-    )
+    mockSession.me = makeMe({ onboarded: false })
+    mockUseInfiniteFeed.mockReturnValue(onePage(makeFeedItem()))
     renderWithProviders(<FeedPage />, { initialEntries: ['/'] })
     const prompt = screen.getByRole('complementary', { name: 'Set up your feed' })
     expect(within(prompt).getByRole('link', { name: 'Set up' })).toHaveAttribute(
@@ -103,17 +87,13 @@ describe('FeedPage', () => {
   })
 
   it('shows the empty state', () => {
-    mockUseInfiniteFeed.mockReturnValue(
-      feedState({ data: { pages: [makeFeedResponse([])], pageParams: [0] } })
-    )
+    mockUseInfiniteFeed.mockReturnValue(onePage())
     renderWithProviders(<FeedPage />, { initialEntries: ['/'] })
     expect(screen.getByText('No papers scored for this week yet')).toBeInTheDocument()
   })
 
   it('renders cards, the week label and passes URL params to the hook', () => {
-    mockUseInfiniteFeed.mockReturnValue(
-      feedState({ data: { pages: [makeFeedResponse([makeFeedItem()])], pageParams: [0] } })
-    )
+    mockUseInfiniteFeed.mockReturnValue(onePage(makeFeedItem()))
     renderWithProviders(<FeedPage />, {
       initialEntries: ['/?week=2026-08-03&min_score=40&category=cs.LG'],
     })
@@ -127,30 +107,15 @@ describe('FeedPage', () => {
     })
   })
 
-  it('dismiss and save call the mutation with the arXiv id', () => {
-    mockUseInfiniteFeed.mockReturnValue(
-      feedState({ data: { pages: [makeFeedResponse([makeFeedItem()])], pageParams: [0] } })
-    )
+  it('gives each card its own lifecycle with Save and Dismiss only', () => {
+    mockUseInfiniteFeed.mockReturnValue(onePage(makeFeedItem()))
     renderWithProviders(<FeedPage />, { initialEntries: ['/'] })
+    expect(usePaperLifecycle).toHaveBeenCalledWith('2401.00001', null)
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
-    expect(setMutateAsync).toHaveBeenCalledWith({
-      arxivId: '2401.00001',
-      body: { state: 'dismissed' },
-    })
+    expect(lifecycle.dismiss).toHaveBeenCalledTimes(1)
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(setMutateAsync).toHaveBeenCalledWith({ arxivId: '2401.00001', body: { state: 'saved' } })
-  })
-
-  it('save on a saved paper clears the state', () => {
-    const saved = makeFeedItem({
-      state: { state: 'saved', repo_url: null, dismissal_reason: null, updated_at: 'x' },
-    })
-    mockUseInfiniteFeed.mockReturnValue(
-      feedState({ data: { pages: [makeFeedResponse([saved])], pageParams: [0] } })
-    )
-    renderWithProviders(<FeedPage />, { initialEntries: ['/'] })
-    fireEvent.click(screen.getByRole('button', { name: 'Saved' }))
-    expect(clearMutateAsync).toHaveBeenCalledWith({ arxivId: '2401.00001' })
+    expect(lifecycle.save).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('button', { name: 'Mark as Implementing' })).not.toBeInTheDocument()
   })
 
   it('load more fetches the next page', () => {
@@ -214,27 +179,15 @@ describe('FeedPage', () => {
   })
 
   it('merges profile categories into the category options', () => {
-    useUserStore.setState({
-      me: {
-        id: 'u',
-        email: null,
-        first_name: null,
-        last_name: null,
-        tier: 'free',
-        daily_chat_limit: null,
-        chats_used_today: 0,
-        preferences: {
-          feed_profile: { categories: ['stat.ML'], compute_profile: 'laptop', keywords: [] },
-        },
+    mockSession.me = makeMe({
+      preferences: {
+        feed_profile: { categories: ['stat.ML'], compute_profile: 'laptop', keywords: [] },
       },
     })
-    mockUseInfiniteFeed.mockReturnValue(
-      feedState({ data: { pages: [makeFeedResponse([makeFeedItem()])], pageParams: [0] } })
-    )
+    mockUseInfiniteFeed.mockReturnValue(onePage(makeFeedItem()))
     renderWithProviders(<FeedPage />, { initialEntries: ['/'] })
     const options = screen.getAllByRole('option').map((o) => o.textContent)
     expect(options).toContain('stat.ML')
     expect(options).toContain('cs.LG')
-    useUserStore.setState({ me: null })
   })
 })

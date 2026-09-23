@@ -1,14 +1,15 @@
-// useChat: one paper-scoped conversation over POST /stream (SSE), writing turns into chatStore and the message cache.
+// useChat: one paper-scoped conversation over POST /stream (SSE), writing turns into the message
+// cache and the in-flight flag / status line into chatStore.
 import { useCallback, useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { meKeys } from '@/lib/auth'
+import { generateMessageId } from '@/lib/id'
+import { notify } from '@/lib/notifications'
 import { conversationKeys } from '@/lib/query-keys'
 import { useChatStore } from '@/stores/chatStore'
-import { useUserStore } from '@/stores/userStore'
-import { generateMessageId } from '@/lib/id'
 import { streamChat, StreamAbortError, StreamError } from '../api/stream-chat'
-import { useMessageCache, chatKeys } from './useMessageCache'
 import { getErrorTreatment } from '../lib/errorMapping'
+import { useMessageCache, chatKeys } from './useMessageCache'
 import type { StreamCallbacks } from '../api/stream-chat'
 import type {
   Message,
@@ -43,15 +44,13 @@ export function useChat(sessionId: string | null, options: UseChatOptions) {
   })
   const scope = options.arxivId
 
-  const { messages, setMessages, loadFromHistory, clearMessages } = useMessageCache(
+  const { messages, isLoadingHistory, setMessages, clearMessages } = useMessageCache(
     sessionId,
     scope
   )
 
   const setStreaming = useChatStore((s) => s.setStreaming)
-  const appendStreamingContent = useChatStore((s) => s.appendStreamingContent)
   const setStatus = useChatStore((s) => s.setStatus)
-  const setSources = useChatStore((s) => s.setSources)
   const resetStreamingState = useChatStore((s) => s.resetStreamingState)
 
   const addStreamingPlaceholder = useCallback(() => {
@@ -99,7 +98,8 @@ export function useChat(sessionId: string | null, options: UseChatOptions) {
       }
 
       if (metadata.session_id && sessionId === null) {
-        // First turn of a draft: move the messages under the new session id.
+        // First turn of a draft: move the messages under the new session id. The cache write
+        // must land before onSessionCreated so the remounted query never fetches.
         const draftKey = chatKeys.messages(null, scope)
         const draft = queryClient.getQueryData<Message[]>(draftKey) ?? []
         queryClient.setQueryData(
@@ -133,7 +133,7 @@ export function useChat(sessionId: string | null, options: UseChatOptions) {
         }
       }
       if (treatment.display === 'toast') {
-        toast.error(treatment.title, { description: treatment.body ?? message })
+        notify.error(treatment.title, treatment.body ?? message)
       }
       resetStreamingState()
       setStreaming(false)
@@ -163,12 +163,10 @@ export function useChat(sessionId: string | null, options: UseChatOptions) {
         onStatus: (data) => setStatus(data.message),
         onContent: (data) => {
           acc.content += data.token
-          appendStreamingContent(data.token)
           patch({ content: acc.content })
         },
         onSources: (data) => {
           acc.sources = data.sources
-          setSources(data.sources)
           patch({ sources: data.sources })
         },
         onCitations: (data) => {
@@ -206,18 +204,18 @@ export function useChat(sessionId: string | null, options: UseChatOptions) {
         handleStreamError(code, message)
       } finally {
         abortControllerRef.current = null
-        void useUserStore.getState().fetchMe()
+        // The turn counted against today's quota; refresh chats_used_today.
+        void queryClient.invalidateQueries({ queryKey: meKeys.me() })
       }
     },
     [
       sessionId,
+      queryClient,
       addStreamingPlaceholder,
       updateStreamingMessage,
       resetStreamingState,
       setStreaming,
       setStatus,
-      appendStreamingContent,
-      setSources,
       finalizeAssistantMessage,
       handleStreamError,
     ]
@@ -252,5 +250,5 @@ export function useChat(sessionId: string | null, options: UseChatOptions) {
     abortControllerRef.current = null
   }, [])
 
-  return { messages, sendMessage, cancelStream, retryMessage, loadFromHistory, clearMessages }
+  return { messages, isLoadingHistory, sendMessage, cancelStream, retryMessage, clearMessages }
 }

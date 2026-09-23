@@ -61,7 +61,7 @@ export default defineConfig([
       'import-x/no-named-as-default': 'off', // clsx and friends export the same name both ways
       'import-x/no-unresolved': 'off', // tsc owns module resolution (?raw imports etc.)
       'import-x/order': [
-        'warn',
+        'error',
         {
           groups: ['builtin', 'external', 'internal', ['parent', 'sibling', 'index'], 'type'],
           'newlines-between': 'never',

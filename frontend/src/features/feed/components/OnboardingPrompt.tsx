@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SlidersHorizontal, X } from 'lucide-react'
 import Button from '@/components/ui/Button'
-import { useUserStore } from '@/stores/userStore'
+import { useSession } from '@/lib/auth'
 
 export const ONBOARDING_PROMPT_KEY = 'arxivian:onboarding-prompt-dismissed'
 
@@ -17,7 +17,7 @@ function readDismissed(): boolean {
 
 /** `me` is only ever loaded for a signed-in reader, so `onboarded === false` is the whole gate. */
 export default function OnboardingPrompt() {
-  const onboarded = useUserStore((s) => s.me?.onboarded)
+  const onboarded = useSession().me?.onboarded
   const [dismissed, setDismissed] = useState(readDismissed)
 
   if (onboarded !== false || dismissed) return null

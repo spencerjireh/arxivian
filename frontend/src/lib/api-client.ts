@@ -1,28 +1,25 @@
-// Base fetch wrapper for API calls
+// Base fetch wrapper for API calls: one request() behind the four verbs, the Clerk token getter
+// and the 401 handler that AuthSession registers.
 
 const API_BASE_URL = '/api'
 
-// Token getter function - set by AuthSession
 type TokenGetter = () => Promise<string | null>
 let authTokenGetter: TokenGetter | null = null
+let unauthorizedHandler: (() => void) | null = null
 
-/**
- * Register the auth token getter function.
- * Called by AuthSession during render.
- */
+/** Register the auth token getter. Called by AuthSession during render. */
 export function setAuthTokenGetter(getter: TokenGetter): void {
   authTokenGetter = getter
 }
 
-/**
- * Get the current auth token.
- * Returns null if no token getter is registered or no token is available.
- */
-async function getAuthToken(): Promise<string | null> {
-  if (!authTokenGetter) {
-    return null
-  }
-  return authTokenGetter()
+/** Register what happens when a request that carried a token gets a 401 (the session is dead). */
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler
+}
+
+/** Fire the registered 401 handler; the SSE client calls this on its own 401. */
+export function reportUnauthorized(): void {
+  unauthorizedHandler?.()
 }
 
 export class ApiError extends Error {
@@ -38,15 +35,11 @@ export class ApiError extends Error {
 }
 
 export async function getAuthHeaders(): Promise<Record<string, string>> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  }
-
-  const token = await getAuthToken()
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const token = authTokenGetter ? await authTokenGetter() : null
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
   }
-
   return headers
 }
 
@@ -75,7 +68,7 @@ async function handleResponse<T>(response: Response, hadToken: boolean): Promise
       // Keep original text if not JSON
     }
     if (response.status === 401 && hadToken) {
-      window.dispatchEvent(new CustomEvent('auth:signout'))
+      reportUnauthorized()
     }
     throw new ApiError(response.status, response.statusText, message)
   }
@@ -85,43 +78,20 @@ async function handleResponse<T>(response: Response, hadToken: boolean): Promise
   return response.json() as Promise<T>
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers = await getAuthHeaders()
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: 'GET',
+    method,
     headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
   })
   return handleResponse<T>(response, 'Authorization' in headers)
 }
 
-export async function apiPut<T>(path: string, body: unknown): Promise<T> {
-  const headers = await getAuthHeaders()
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(body),
-  })
-  return handleResponse<T>(response, 'Authorization' in headers)
-}
-
-export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
-  const headers = await getAuthHeaders()
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: 'PATCH',
-    headers,
-    body: JSON.stringify(body),
-  })
-  return handleResponse<T>(response, 'Authorization' in headers)
-}
-
-export async function apiDelete<T = void>(path: string): Promise<T> {
-  const headers = await getAuthHeaders()
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: 'DELETE',
-    headers,
-  })
-  return handleResponse<T>(response, 'Authorization' in headers)
-}
+export const apiGet = <T>(path: string) => request<T>('GET', path)
+export const apiPut = <T>(path: string, body: unknown) => request<T>('PUT', path, body)
+export const apiPatch = <T>(path: string, body: unknown) => request<T>('PATCH', path, body)
+export const apiDelete = <T = void>(path: string) => request<T>('DELETE', path)
 
 export function getApiBaseUrl(): string {
   return API_BASE_URL

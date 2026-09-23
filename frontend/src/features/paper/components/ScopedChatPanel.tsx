@@ -1,10 +1,11 @@
 // The only chat surface: a thread scoped to one paper (useChat + ?session= selection).
 import { useEffect } from 'react'
 import { MessageSquare, Plus } from 'lucide-react'
-import { useChatStore } from '@/stores/chatStore'
-import { selectClass } from '@/lib/formClasses'
 import Button from '@/components/ui/Button'
-import { useConversation, usePaperConversations } from '../api/get-conversation'
+import Spinner from '@/components/ui/Spinner'
+import { selectClass } from '@/lib/formClasses'
+import { useChatStore } from '@/stores/chatStore'
+import { usePaperConversations } from '../api/get-conversation'
 import { useChat } from '../hooks/useChat'
 import { SCOPED_PROMPTS } from '../lib/scopedPrompts'
 import ChatInput from './chat/ChatInput'
@@ -29,17 +30,10 @@ export default function ScopedChatPanel({
   sessionId,
   onSessionChange,
 }: ScopedChatPanelProps) {
-  const { messages, sendMessage, cancelStream, retryMessage, loadFromHistory, clearMessages } =
+  const { messages, isLoadingHistory, sendMessage, cancelStream, retryMessage, clearMessages } =
     useChat(sessionId, { arxivId, onSessionCreated: onSessionChange })
   const isStreaming = useChatStore((s) => s.isStreaming)
   const { data: threads } = usePaperConversations(arxivId)
-  const { data: conversation } = useConversation(sessionId ?? undefined)
-
-  useEffect(() => {
-    if (!conversation?.turns?.length) return
-    if (messages.length === 0) loadFromHistory(conversation.turns)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversation?.turns, loadFromHistory])
 
   useEffect(() => () => cancelStream(), [cancelStream])
 
@@ -86,7 +80,9 @@ export default function ScopedChatPanel({
         )}
       </header>
 
-      {messages.length === 0 ? (
+      {isLoadingHistory ? (
+        <Spinner className="flex-1" />
+      ) : messages.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4">
           <p className="text-center text-sm text-stone-500">
             Answers cite only this paper. Start with a seeded prompt or ask your own.
@@ -94,7 +90,7 @@ export default function ScopedChatPanel({
           <SuggestionChips suggestions={SCOPED_PROMPTS} columns={1} onSelect={sendMessage} />
         </div>
       ) : (
-        <ChatMessages messages={messages} onRetry={retryMessage} compact />
+        <ChatMessages messages={messages} onRetry={retryMessage} />
       )}
 
       <div className="border-t border-stone-100 px-3 pt-2 pb-3">

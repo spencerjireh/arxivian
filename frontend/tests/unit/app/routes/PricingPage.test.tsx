@@ -1,16 +1,14 @@
 import { screen } from '@testing-library/react'
-import { useUserStore } from '@/stores/userStore'
 import PricingPage from '@/app/routes/PricingPage'
-import { mockAuth } from '../../../mocks/clerk'
 import { renderWithProviders } from '../../../helpers/renderWithProviders'
+import { makeMe, mockSession, resetSession } from '../../../mocks/auth'
 
-vi.mock('@clerk/clerk-react', () => import('../../../mocks/clerk'))
+vi.mock('@/lib/auth', () => import('../../../mocks/auth'))
 vi.mock('framer-motion', () => import('../../../mocks/framer-motion'))
 
 describe('PricingPage', () => {
   beforeEach(() => {
-    mockAuth.isSignedIn = false
-    useUserStore.setState({ me: null })
+    resetSession()
   })
 
   it('renders heading and both tier cards', () => {
@@ -28,18 +26,8 @@ describe('PricingPage', () => {
   })
 
   it('shows Current plan on Free card when authenticated as free-tier user', () => {
-    mockAuth.isSignedIn = true
-    useUserStore.setState({
-      me: {
-        id: 'u1',
-        email: 'test@example.com',
-        first_name: 'Test',
-        last_name: 'User',
-        tier: 'free',
-        daily_chat_limit: 20,
-        chats_used_today: 0,
-      },
-    })
+    mockSession.isSignedIn = true
+    mockSession.me = makeMe({ tier: 'free' })
 
     renderWithProviders(<PricingPage />)
 

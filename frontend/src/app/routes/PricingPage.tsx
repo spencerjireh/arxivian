@@ -1,10 +1,9 @@
 // /pricing route: static tier comparison.
 import { Link } from 'react-router-dom'
-import { useAuth } from '@clerk/clerk-react'
 import clsx from 'clsx'
 import { Check, Mail } from 'lucide-react'
-import { useUserStore } from '@/stores/userStore'
 import { useInView } from '@/features/landing/hooks/useInView'
+import { useSession } from '@/lib/auth'
 import Button from '@/components/ui/Button'
 
 const tiers = [
@@ -37,8 +36,7 @@ const comparisonRows = [
 ] as const
 
 export default function PricingPage() {
-  const { isSignedIn } = useAuth()
-  const me = useUserStore((state) => state.me)
+  const { isSignedIn, me } = useSession()
   const [comparisonRef, comparisonInView] = useInView<HTMLDivElement>({
     once: true,
     margin: '-40px',

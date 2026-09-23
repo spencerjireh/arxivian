@@ -15,6 +15,7 @@ vi.mock('@/features/auth/components/ProtectedRoute', () => ({
 vi.mock('@/lib/api-client', () => ({
   apiGet: vi.fn().mockResolvedValue({}),
   setAuthTokenGetter: vi.fn(),
+  setUnauthorizedHandler: vi.fn(),
 }))
 
 // Mock lazy-loaded pages with lightweight stubs so the route tests

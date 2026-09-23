@@ -16,10 +16,12 @@ vi.mock('@microsoft/fetch-event-source', () => ({
 }))
 
 const authHeaders = vi.hoisted((): { current: Record<string, string> } => ({ current: {} }))
+const reportUnauthorized = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/api-client', () => ({
   getApiBaseUrl: () => '/api',
   getAuthHeaders: () =>
     Promise.resolve({ 'Content-Type': 'application/json', ...authHeaders.current }),
+  reportUnauthorized,
 }))
 
 // Helper to get the mock and set its implementation per test.
@@ -57,20 +59,14 @@ describe('streamChat', () => {
   }
 
   it('forces sign-out on a 401 only when the request carried a token', async () => {
-    const signout = vi.fn()
-    window.addEventListener('auth:signout', signout)
-    try {
-      const anonymous = await open401()
-      expect(anonymous.code).toBe('UNAUTHORIZED')
-      expect(signout).not.toHaveBeenCalled()
+    const anonymous = await open401()
+    expect(anonymous.code).toBe('UNAUTHORIZED')
+    expect(reportUnauthorized).not.toHaveBeenCalled()
 
-      authHeaders.current = { Authorization: 'Bearer t' }
-      const signedIn = await open401()
-      expect(signedIn.code).toBe('UNAUTHORIZED')
-      expect(signout).toHaveBeenCalledTimes(1)
-    } finally {
-      window.removeEventListener('auth:signout', signout)
-    }
+    authHeaders.current = { Authorization: 'Bearer t' }
+    const signedIn = await open401()
+    expect(signedIn.code).toBe('UNAUTHORIZED')
+    expect(reportUnauthorized).toHaveBeenCalledTimes(1)
   })
 
   it('throws StreamAbortError when signal is already aborted', async () => {
@@ -183,7 +179,7 @@ describe('streamChat', () => {
     expect(callbacks.onCitations).toHaveBeenCalledWith(
       expect.objectContaining({ arxiv_id: '1234' })
     )
-    expect(callbacks.onDone).toHaveBeenCalled()
+    expect(callbacks.onDone).toHaveBeenCalledTimes(1)
   })
 
   it('skips empty events gracefully', async () => {

@@ -3,30 +3,16 @@ import { Link } from 'react-router-dom'
 import { ArrowLeft, Bookmark, ExternalLink } from 'lucide-react'
 import SignInLink from '@/components/ui/SignInLink'
 import { formatDate } from '@/lib/formatting'
-import CardActions, { type PendingAction } from './CardActions'
+import CardActions from './CardActions'
 import type { FeedPaper, PaperState } from '@/types/api'
 
 interface PaperHeaderProps {
   paper: FeedPaper
   signedIn: boolean
   state: PaperState | null
-  onSave: () => void
-  onDismiss: () => void
-  onImplementing: () => void
-  onShip: (repoUrl: string) => void
-  pending?: PendingAction
 }
 
-export default function PaperHeader({
-  paper,
-  signedIn,
-  state,
-  onSave,
-  onDismiss,
-  onImplementing,
-  onShip,
-  pending = null,
-}: PaperHeaderProps) {
+export default function PaperHeader({ paper, signedIn, state }: PaperHeaderProps) {
   const absUrl = `https://arxiv.org/abs/${paper.arxiv_id}`
   return (
     <header className="space-y-3">
@@ -67,15 +53,7 @@ export default function PaperHeader({
         </a>
       </div>
       {signedIn ? (
-        <CardActions
-          state={state}
-          onSave={onSave}
-          onDismiss={onDismiss}
-          onImplementing={onImplementing}
-          onShip={onShip}
-          pending={pending}
-          size="md"
-        />
+        <CardActions arxivId={paper.arxiv_id} state={state} offerImplementing size="md" />
       ) : (
         <SignInLink variant="button" leftIcon={<Bookmark className="h-4 w-4" strokeWidth={1.5} />}>
           Save

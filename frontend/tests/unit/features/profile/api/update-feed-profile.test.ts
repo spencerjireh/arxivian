@@ -2,8 +2,8 @@ import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
 import { useUpdateFeedProfile } from '@/features/profile/api/update-feed-profile'
+import { meKeys } from '@/lib/auth'
 import { feedKeys } from '@/lib/query-keys'
-import { useUserStore } from '@/stores/userStore'
 import type { ReactNode } from 'react'
 
 const apiPatch = vi.fn()
@@ -27,7 +27,7 @@ const me = {
 }
 
 describe('useUpdateFeedProfile', () => {
-  it('patches, updates the user store as onboarded, and invalidates the feed', async () => {
+  it('patches, writes me into the cache as onboarded, and invalidates the feed', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries')
     const wrapper = ({ children }: { children: ReactNode }) =>
@@ -48,8 +48,9 @@ describe('useUpdateFeedProfile', () => {
       compute_profile: 'laptop',
       keywords: [],
     })
-    await waitFor(() => expect(useUserStore.getState().me?.onboarded).toBe(true))
+    await waitFor(() =>
+      expect(queryClient.getQueryData(meKeys.me())).toEqual({ ...me, onboarded: true })
+    )
     expect(invalidate).toHaveBeenCalledWith({ queryKey: feedKeys.lists() })
-    useUserStore.setState({ me: null })
   })
 })

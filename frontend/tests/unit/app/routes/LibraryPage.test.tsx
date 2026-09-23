@@ -1,23 +1,18 @@
 import { screen, fireEvent, within } from '@testing-library/react'
 import LibraryPage from '@/app/routes/LibraryPage'
-import { renderWithProviders } from '../../../helpers/renderWithProviders'
 import { makeFeedItem, makeLibraryResponse } from '../../../fixtures/feed'
+import { renderWithProviders } from '../../../helpers/renderWithProviders'
+import { lifecycle, resetLifecycle, usePaperLifecycle } from '../../../mocks/lifecycle'
 import type { FeedItem, PaperLifecycleState } from '@/types/api'
 
-vi.mock('@clerk/clerk-react', () => import('../../../mocks/clerk'))
 vi.mock('framer-motion', () => import('../../../mocks/framer-motion'))
 
 const mockUseLibrary = vi.fn()
-const setMutateAsync = vi.fn().mockResolvedValue({})
-const clearMutateAsync = vi.fn().mockResolvedValue(undefined)
-
 vi.mock('@/features/paper/api/get-library', () => ({
   useLibrary: () => mockUseLibrary(),
 }))
-vi.mock('@/features/paper/api/paper-state', () => ({
-  useSetPaperState: () => ({ mutateAsync: setMutateAsync }),
-  useClearPaperState: () => ({ mutateAsync: clearMutateAsync }),
-}))
+
+vi.mock('@/features/paper/hooks/usePaperLifecycle', () => import('../../../mocks/lifecycle'))
 
 function item(arxivId: string, title: string, state: PaperLifecycleState): FeedItem {
   return makeFeedItem({
@@ -36,8 +31,7 @@ function ready(overrides = {}) {
 }
 
 beforeEach(() => {
-  setMutateAsync.mockClear()
-  clearMutateAsync.mockClear()
+  resetLifecycle()
 })
 
 describe('LibraryPage', () => {
@@ -90,35 +84,34 @@ describe('LibraryPage', () => {
     )
   })
 
-  it('marks an implementing paper as shipped with the entered repo url', () => {
+  it('offers Implementing and Ship on every card and ships with the entered repo url', () => {
     mockUseLibrary.mockReturnValue(
       ready({ implementing: [item('a', 'Building it', 'implementing')] })
     )
     renderWithProviders(<LibraryPage />)
+    expect(usePaperLifecycle).toHaveBeenCalledWith(
+      'a',
+      expect.objectContaining({ state: 'implementing' })
+    )
+    expect(screen.getByRole('button', { name: 'Implementing' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Mark as shipped' }))
     fireEvent.change(screen.getByLabelText('Repository URL'), {
       target: { value: 'https://github.com/me/repo' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
-
-    expect(setMutateAsync).toHaveBeenCalledWith({
-      arxivId: 'a',
-      body: { state: 'shipped', repo_url: 'https://github.com/me/repo' },
-    })
+    expect(lifecycle.ship).toHaveBeenCalledWith('https://github.com/me/repo')
   })
 
-  it('toggles saved off with the clear mutation and dismisses in one click', () => {
+  it('save and dismiss go to the card lifecycle', () => {
     mockUseLibrary.mockReturnValue(ready({ saved: [item('a', 'Saved one', 'saved')] }))
     renderWithProviders(<LibraryPage />)
-
     fireEvent.click(screen.getByRole('button', { name: 'Saved' }))
-    expect(clearMutateAsync).toHaveBeenCalledWith({ arxivId: 'a' })
-
+    expect(lifecycle.save).toHaveBeenCalledTimes(1)
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
-    expect(setMutateAsync).toHaveBeenCalledWith({
-      arxivId: 'a',
-      body: { state: 'dismissed', repo_url: undefined },
-    })
+    expect(lifecycle.dismiss).toHaveBeenCalledTimes(1)
   })
 })

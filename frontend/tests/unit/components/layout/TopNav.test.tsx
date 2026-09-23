@@ -1,10 +1,10 @@
 import { screen, fireEvent } from '@testing-library/react'
 import { Route, Routes } from 'react-router-dom'
 import TopNav from '@/components/layout/TopNav'
-import { mockAuth, mockClerk } from '../../../mocks/clerk'
 import { renderWithProviders } from '../../../helpers/renderWithProviders'
+import { mockSession, resetSession } from '../../../mocks/auth'
 
-vi.mock('@clerk/clerk-react', () => import('../../../mocks/clerk'))
+vi.mock('@/lib/auth', () => import('../../../mocks/auth'))
 
 function renderNav(path = '/') {
   return renderWithProviders(
@@ -16,8 +16,7 @@ function renderNav(path = '/') {
 }
 
 beforeEach(() => {
-  mockAuth.isSignedIn = false
-  mockClerk.signOut.mockClear()
+  resetSession()
 })
 
 describe('TopNav', () => {
@@ -36,7 +35,7 @@ describe('TopNav', () => {
   })
 
   it('adds Library, Settings and the account menu when signed in', async () => {
-    mockAuth.isSignedIn = true
+    mockSession.isSignedIn = true
     renderNav('/settings')
     expect(screen.getByRole('link', { name: 'Library' })).toHaveAttribute('href', '/library')
     expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('aria-current', 'page')
@@ -45,6 +44,6 @@ describe('TopNav', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
     expect(screen.getByText('Test User')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('menuitem', { name: /Sign out/ }))
-    await vi.waitFor(() => expect(mockClerk.signOut).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(mockSession.signOut).toHaveBeenCalledTimes(1))
   })
 })

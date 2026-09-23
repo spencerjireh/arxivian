@@ -1,10 +1,10 @@
 // Feed card: one ranked paper from GET /feed (backend schemas/feed.py::FeedItem).
 import { Link } from 'react-router-dom'
 import { Bookmark, ExternalLink, Zap } from 'lucide-react'
-import DimensionMeter from '@/components/ui/DimensionMeter'
-import CardActions, { type PendingAction } from '@/features/paper/components/CardActions'
-import SignInLink from '@/components/ui/SignInLink'
 import Chip from '@/components/ui/Chip'
+import DimensionMeter from '@/components/ui/DimensionMeter'
+import SignInLink from '@/components/ui/SignInLink'
+import CardActions from '@/features/paper/components/CardActions'
 import { formatAuthors, formatDate } from '@/lib/formatting'
 import type { FeedItem } from '@/types/api'
 
@@ -12,25 +12,14 @@ export interface FeedCardProps {
   item: FeedItem
   /** Anonymous readers get a Save that opens sign-in instead of the lifecycle actions. */
   signedIn: boolean
-  onSave: (arxivId: string) => void
-  onDismiss: (arxivId: string) => void
-  onImplementing?: (arxivId: string) => void
-  onShip?: (arxivId: string, repoUrl: string) => void
-  pendingAction?: PendingAction
+  /** Library cards offer Mark as Implementing / Mark as shipped; feed cards do not. */
+  offerImplementing?: boolean
 }
 
 /** One ranked paper: headline, meta line and the dimension meter answer "why should I care?"
  *  from the card alone. A card without a current score (library only) shows the paper and
  *  its actions. */
-export default function FeedCard({
-  item,
-  signedIn,
-  onSave,
-  onDismiss,
-  onImplementing,
-  onShip,
-  pendingAction = null,
-}: FeedCardProps) {
+export default function FeedCard({ item, signedIn, offerImplementing = false }: FeedCardProps) {
   const { paper, scores, headline, meta, compute_match, state } = item
   const id = paper.arxiv_id
 
@@ -82,14 +71,7 @@ export default function FeedCard({
 
       <div className="mt-4 flex items-center justify-between border-t border-stone-100 pt-3">
         {signedIn ? (
-          <CardActions
-            state={state}
-            onSave={() => onSave(id)}
-            onDismiss={() => onDismiss(id)}
-            onImplementing={onImplementing && (() => onImplementing(id))}
-            onShip={onShip && ((repoUrl) => onShip(id, repoUrl))}
-            pending={pendingAction}
-          />
+          <CardActions arxivId={id} state={state} offerImplementing={offerImplementing} />
         ) : (
           <SignInLink
             variant="button"

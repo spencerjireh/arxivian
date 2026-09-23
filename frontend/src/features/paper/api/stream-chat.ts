@@ -1,7 +1,12 @@
 // SSE stream handler using fetchEventSource
 
 import { fetchEventSource } from '@microsoft/fetch-event-source'
-import { errorMessageFrom, getApiBaseUrl, getAuthHeaders } from '@/lib/api-client'
+import {
+  errorMessageFrom,
+  getApiBaseUrl,
+  getAuthHeaders,
+  reportUnauthorized,
+} from '@/lib/api-client'
 import type {
   StreamRequest,
   StreamEventType,
@@ -75,7 +80,7 @@ export async function streamChat(
         }
         // Same contract as lib/api-client.ts: a 401 forces sign-out only when a token was sent.
         if (response.status === 401 && 'Authorization' in headers) {
-          window.dispatchEvent(new CustomEvent('auth:signout'))
+          reportUnauthorized()
         }
         throw new StreamError(errorMessage, errorCode)
       }
@@ -122,10 +127,6 @@ export async function streamChat(
     onerror: (err) => {
       const message = err instanceof Error && err.message ? err.message : 'Stream connection error'
       throw new StreamError(message, 'CONNECTION_ERROR')
-    },
-
-    onclose: () => {
-      callbacks.onDone?.()
     },
   })
 

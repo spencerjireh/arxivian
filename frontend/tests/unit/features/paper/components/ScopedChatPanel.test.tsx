@@ -8,6 +8,7 @@ const sendMessage = vi.fn()
 const cancelStream = vi.fn()
 const clearMessages = vi.fn()
 let messages: unknown[] = []
+let isLoadingHistory = false
 const useChatMock = vi.fn()
 
 vi.mock('@/features/paper/hooks/useChat', () => ({
@@ -15,10 +16,10 @@ vi.mock('@/features/paper/hooks/useChat', () => ({
     useChatMock(...args)
     return {
       messages,
+      isLoadingHistory,
       sendMessage,
       cancelStream,
       retryMessage: vi.fn(),
-      loadFromHistory: vi.fn(),
       clearMessages,
     }
   },
@@ -40,11 +41,11 @@ vi.mock('@/features/paper/api/get-conversation', () => ({
       ],
     },
   }),
-  useConversation: () => ({ data: undefined }),
 }))
 
 beforeEach(() => {
   messages = []
+  isLoadingHistory = false
   sendMessage.mockClear()
   cancelStream.mockClear()
   useChatMock.mockClear()
@@ -87,6 +88,22 @@ describe('ScopedChatPanel', () => {
     expect(clearMessages).toHaveBeenCalled()
     unmount()
     expect(cancelStream).toHaveBeenCalled()
+  })
+
+  it('shows a spinner and no prompts while a thread loads', () => {
+    isLoadingHistory = true
+    renderWithProviders(
+      <ScopedChatPanel
+        arxivId="2401.00001"
+        paperTitle="T"
+        sessionId="s1"
+        onSessionChange={vi.fn()}
+      />
+    )
+    expect(document.querySelector('.animate-spin')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Explain the core method/ })
+    ).not.toBeInTheDocument()
   })
 
   it('renders messages instead of prompts when the thread has content', () => {
