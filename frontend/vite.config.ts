@@ -26,6 +26,14 @@ export default defineConfig({
             return 'clerk'
           }
           if (
+            id.includes('@pydantic/') ||
+            id.includes('@opentelemetry/') ||
+            id.includes('/logfire/') ||
+            id.includes('web-vitals')
+          ) {
+            return 'telemetry'
+          }
+          if (
             id.includes('katex') ||
             id.includes('remark-math') ||
             id.includes('rehype-katex') ||

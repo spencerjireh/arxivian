@@ -187,6 +187,10 @@ PR merged with a merge commit; every push to `production` is tagged `vYYYY.MM.DD
 generated release notes (`release.yml`). Moving the stack between servers:
 `docs/ops/coolify-migration.md`.
 
+- Browser tracing: `VITE_LOGFIRE_TOKEN` (a restricted frontend application token from
+  Logfire > Frontend > Applications) and `VITE_LOGFIRE_BASE_URL` are frontend build args next
+  to `VITE_MAINTENANCE_MODE`; empty (the default) loads no SDK. Set both on the Coolify
+  prod row and redeploy to turn it on. See `frontend/AGENTS.md`.
 - Maintenance curtain: backend `MAINTENANCE_MODE=true` -> 503 for all routes except health;
   frontend `VITE_MAINTENANCE_MODE=true` is a build arg (`frontend/Dockerfile`), so flipping
   it means a rebuild. The two flags are the rollback lever: set both in the Coolify env
