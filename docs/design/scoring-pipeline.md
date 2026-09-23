@@ -5,7 +5,7 @@ arXiv submissions and produces an evidence-backed implementability score per pap
 doc is the implementation blueprint; it is grounded in the existing
 `services/agent_service/` scaffolding so the new graph reads as native to the codebase.
 
-**Status:** Shipped (Stage 1 triage, the Stage 2 scoring graph, `build_digest_task`, the feed read path, on-demand scoring, the golden-set scoring eval). As of 2026-09-19 (SPE-286, rubric **v2**) Stage 2 judgments come from **TypeSafe Jev** instead of gpt-5-nano: each judged dimension is a set of atomic typed questions combined in code, and the stored score is a distribution over levels plus the atomic judgments (migration `020`). Nano remains only in Stage 1 triage. See `docs/design/scoring-rubric.md` for the v2 rubric.
+**Status:** Shipped (Stage 1 triage, the Stage 2 scoring graph, `build_digest_task`, the feed read path, on-demand scoring, the golden-set scoring eval). As of 2026-09-19 (ARX-19, rubric **v2**) Stage 2 judgments come from **TypeSafe Jev** instead of gpt-5-nano: each judged dimension is a set of atomic typed questions combined in code, and the stored score is a distribution over levels plus the atomic judgments (migration `020`). Nano remains only in Stage 1 triage. See `docs/design/scoring-rubric.md` for the v2 rubric.
 **Author:** Spencer Jireh
 **Date:** July 2026
 **Related:** `docs/product/feed-prd.md` (product), `docs/design/scoring-rubric.md` (the v2
@@ -31,7 +31,7 @@ comes from this pipeline. The design goals, in priority order:
 data availability, demand) with **zero GitHub dependency**. The **code-gap** dimension --
 highest-weighted but also least reliable (unproven recall, aggressive rate limits, stale in
 the weekly cache) -- is **deferred to v1.1**, where it debuts as an unweighted evidence chip
-and is promoted to a weighted signal only after the code-gap spike (SPE-297 removed the script; seed in `tests/evals/fixtures`) proves
+and is promoted to a weighted signal only after the code-gap spike (ARX-30 removed the script; seed in `tests/evals/fixtures`) proves
 recall. See the deferral decision below.
 
 ### Decisions resolved during design review
@@ -56,7 +56,7 @@ recall. See the deferral decision below.
   and drops `score_code_gap`, `github_client.py`, and `GithubSearchTool` from v1 scope. Code
   gap returns in **v1.1**, first as an *unweighted* "possible existing implementations, as
   of `<date>`" evidence chip, then promoted to a weighted ranking signal only once the spike
-  (Phase 4; the throwaway script was removed in SPE-297) and real usage prove recall clears
+  (Phase 4; the throwaway script was removed in ARX-30) and real usage prove recall clears
   the bar. This also means
   v1 has **zero GitHub dependency** and only one soft external API (Semantic Scholar). Do
   not ship any "no existing code" claim in the product until code gap is actually weighted.
@@ -291,7 +291,7 @@ dimension) and is gated behind the spike.
   a Redis slot gate (`SEMANTIC_SCHOLAR_MIN_INTERVAL_MS`) spaces requests across all
   workers so the shared ~1 req/s pool is never burst, a lookup that still 429s soft-fails
   to NULL (the composite renormalizes over the present sub-scores), and the nightly
-  `backfill_demand_task` retries NULL rows (SPE-284). Weekly volume (~100 lookups, cached
+  `backfill_demand_task` retries NULL rows (ARX-17). Weekly volume (~100 lookups, cached
   7 days) is about 1% of the keyless budget, so no API key is requested.
 - `clients/github_client.py` (**v1.1**) -- GitHub code/repo search for arXiv ID, title
   variants, and author repos. Returns hits (repo, stars, last commit, README snippet).
@@ -301,7 +301,7 @@ dimension) and is gated behind the spike.
   runs for Celery/RedBeat/rate limiting, so the infrastructure exists; there is just no
   client-side caching pattern in the repo to copy). GitHub code search is aggressively
   rate-limited; caching and backoff are load-bearing, not optional. Efficacy is gated by
-  the code-gap spike (SPE-297 removed the script; seed in `tests/evals/fixtures`) before this client is built.
+  the code-gap spike (ARX-30 removed the script; seed in `tests/evals/fixtures`) before this client is built.
 
 ### Tools (BaseTool wrappers)
 
@@ -338,12 +338,12 @@ Onboarding profile (categories, compute profile, interest keywords) extends the 
 `preferences["arxiv_searches"]` blob `scheduled_tasks.py::daily_ingest_task` reads. It is a
 column, not a `user_preferences` table; no new table is needed for the profile.
 
-**Read path (Phase 2, SPE-274; public since the PUBLIC epic):** `services/feed_service/`
+**Read path (Phase 2, ARX-10; public since the PUBLIC epic):** `services/feed_service/`
 (`service.py`, `derive.py`, `digest.py`) + `schemas/feed.py`. The digest row is only the
 candidate set; every card is rebuilt from the live `papers` / `paper_scores` /
 `user_paper_states` rows (three `IN` batch loads per page; the states load is skipped for
 an anonymous caller). Read-time personalization when signed in: per-user composite weights
-(`compute_composite`, NULL sub-scores renormalize -- SPE-284), compute-profile match
+(`compute_composite`, NULL sub-scores renormalize -- ARX-17), compute-profile match
 (`laptop` needs feasibility level >= 3, `single_gpu` >= 2, `cloud` >= 1), keyword
 tie-break. The card text is built in code, no LLM at read time: the **headline** is
 "<model family> for <task type>" over the stored attributes (fallbacks "Method for
@@ -356,7 +356,7 @@ stated" (`hyperparameters_stated`). Absent or false judgments are omitted, never
 is a hollow segment. Dimensions with confidence < 0.5 are listed on the card payload and
 shown only under the detail page's "Scoring details".
 
-**Paper detail (SPE-276):** `GET /papers/{arxiv_id}/score` returns every dimension's level
+**Paper detail (ARX-12):** `GET /papers/{arxiv_id}/score` returns every dimension's level
 distribution, atomic judgments and its `score_evidence` spans (the canonical display source;
 `dimensions[*].evidence` is a subset). The UI shows band, level, reason and evidence open
 and folds the distributions, judgments and confidence under a collapsed section; the
@@ -409,7 +409,7 @@ Two bets are unproven and cheap to test before any schema is committed:
 
 - **Code-gap recall (highest-weighted, highest-risk).** Whether GitHub search can actually
   find a paper's known implementation is an efficacy question, not a coding question. A
-  throwaway spike (git history: `spikes/github-code-gap/`, removed 2026-09-20 in SPE-297)
+  throwaway spike (git history: `spikes/github-code-gap/`, removed 2026-09-20 in ARX-30)
   ran several GitHub Search API query strategies over ~20 papers with known repos and
   reported recall@k per strategy plus observed rate-limit behavior. Decision rule: if
   combined recall@10 on papers-with-known-code is materially below the bar (~0.8), the
@@ -452,7 +452,7 @@ Two bets are unproven and cheap to test before any schema is committed:
 |---|---|
 | Scoring cost | Stage 1 cheap-model filter; only survivors incur full-text cost; digests cached weekly. |
 | False authority | Evidence-first records, golden-set eval gate, dismissal feedback as training signal. **Chief mitigation for the riskiest signal: code gap is deferred out of v1 and debuts unweighted in v1.1.** |
-| GitHub search recall (v1.1) | Gated by the code-gap spike (SPE-297 removed the script; seed in `tests/evals/fixtures`) before build; search arXiv IDs + title variants + author repos; surface the raw results in evidence so misses are visible. |
+| GitHub search recall (v1.1) | Gated by the code-gap spike (ARX-30 removed the script; seed in `tests/evals/fixtures`) before build; search arXiv IDs + title variants + author repos; surface the raw results in evidence so misses are visible. |
 | S2 rate limits (v1); GitHub rate limits (v1.1, the real bottleneck) | Net-new Redis cache + backoff from day one (reuse the `embeddings_client.py` backoff pattern; add the cache, which does not yet exist in any client). |
 | Code-gap staleness (v1.1) | "As of `<date>`" stamp + re-score/decay policy; unweighted chip first. |
 | Judgment quality | Typed Jev judgments with calibrated confidence; golden-set gate plus a calibration report; low-confidence marker in the product rather than a hidden number. |

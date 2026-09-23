@@ -1,4 +1,4 @@
-"""Pure read-side derivations over a stored `PaperScore` row (Phase 2, SPE-274).
+"""Pure read-side derivations over a stored `PaperScore` row (Phase 2, ARX-10).
 
 The feed and the paper-detail endpoint share one vocabulary: the derived 0-100 sub-scores,
 a read-time composite, the card headline and meta line, the compute-profile match, and a

@@ -1,4 +1,4 @@
-"""Drop chat-first leftovers: agent_executions, HITL and ingest-quota columns (SPE-298).
+"""Drop chat-first leftovers: agent_executions, HITL and ingest-quota columns (ARX-31).
 
 Revision ID: 022_drop_chat_first_leftovers
 Revises: 021_add_conversation_paper_id

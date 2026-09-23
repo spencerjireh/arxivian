@@ -1,4 +1,4 @@
-"""Tests for the nightly demand backfill (SPE-284)."""
+"""Tests for the nightly demand backfill (ARX-17)."""
 
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch

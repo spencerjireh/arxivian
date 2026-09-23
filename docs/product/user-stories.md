@@ -4,7 +4,7 @@
 **Last updated:** 2026-09-22 (PUBLIC epic added; ONBOARD-1 gate superseded)
 
 > **Status.** Planning record for the feed pivot. SCORE-1..5, FEED-DIGEST, ONBOARD,
-> LIFECYCLE and SCOPED-CHAT shipped in Phases 1-3 (SPE-269..299); PUBLIC (the public
+> LIFECYCLE and SCOPED-CHAT shipped in Phases 1-3 (ARX-5..ARX-32); PUBLIC (the public
 > feed, `feed-prd.md` 1.1-public) is in progress; SCORE-6 (code gap) is v1.1. The
 > chat-first beta epics (CHAT, CITE, FEED, OPS, PERF) were removed 2026-09-20 and are in
 > git history. `AGENTS.md` is the description of the code as built.
@@ -42,7 +42,7 @@ design in `docs/design/scoring-pipeline.md`.
   calibration report; re-run before any rubric change ships.
 - **SCORE-6 (v1.1):** Code-gap dimension -- `github_client` (backoff-aware + Redis cache) +
   `GithubSearchTool` + `score_code_gap` node, gated on the Phase 4 code-gap recall
-  spike (script removed in SPE-297; seed in `backend/tests/evals/fixtures`). AC: searches arXiv ID + title variants + author repos; raw hits surfaced as
+  spike (script removed in ARX-30; seed in `backend/tests/evals/fixtures`). AC: searches arXiv ID + title variants + author repos; raw hits surfaced as
   evidence with an "as of `<date>`" stamp; ships unweighted first, then promoted to the
   highest-weighted signal; add code-gap agreement to the eval gate.
 
@@ -69,7 +69,7 @@ design in `docs/design/scoring-pipeline.md`.
   `user_paper_states` (repo URL on shipped; dismissal reason optional). AC: dismissals
   double as labeled feedback.
 - **LIFECYCLE-2 (Must):** Library grouped by state; shipped items show the linked repo.
-  (Shipped in SPE-296: `GET /users/me/library`, `frontend/src/pages/LibraryPage.tsx`.)
+  (Shipped in ARX-29: `GET /users/me/library`, `frontend/src/pages/LibraryPage.tsx`.)
 
 ### Epic: SCOPED-CHAT -- Per-Paper Chat Panel
 

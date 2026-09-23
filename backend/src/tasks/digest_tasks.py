@@ -1,8 +1,8 @@
-"""Stage 3 driver: build the weekly digest snapshot (SPE-271).
+"""Stage 3 driver: build the weekly digest snapshot (ARX-7).
 
 Snapshots this ISO week's gate-passing scored papers into a cached `digests` ranking so past
 weeks render without recomputation. The per-user weighted composite + compute-profile match
-are applied at read time (SPE-274), not here -- the baked order is a provisional default only.
+are applied at read time (ARX-10), not here -- the baked order is a provisional default only.
 Scheduled after `weekly-triage` so scored papers exist. Follows the `daily_ingest_task` /
 `triage_new_papers_task` driver shape (no bind/retry; owns its commit).
 """

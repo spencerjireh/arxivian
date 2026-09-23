@@ -26,7 +26,7 @@ class Conversation(Base):
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), index=True
     )
-    # Paper-scoped chat (SPE-277): set on creation from a paper detail page, never changed.
+    # Paper-scoped chat (ARX-13): set on creation from a paper detail page, never changed.
     paper_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("papers.id", ondelete="SET NULL"), index=True
     )

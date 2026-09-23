@@ -1,4 +1,4 @@
-"""FeedService: read the cached digest and enrich it into ranked cards (SPE-274).
+"""FeedService: read the cached digest and enrich it into ranked cards (ARX-10).
 
 The digest row is only the candidate set and a bake-time default order. Everything the
 card shows comes from the live `papers` + `paper_scores` rows (so a re-score is reflected
@@ -258,7 +258,7 @@ class FeedService:
         return items
 
     async def get_library(self, user: User) -> LibraryResponse:
-        """The caller's saved / implementing / shipped papers as cards (SPE-296). A paper
+        """The caller's saved / implementing / shipped papers as cards (ARX-29). A paper
         without a current score still appears, with the score-derived fields empty."""
         rows = await self.state_repo.list_for_user(user.id)
         scores = await self.scoring_repo.get_by_paper_ids(

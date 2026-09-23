@@ -192,7 +192,7 @@ class ScoringRepository:
     ) -> list[tuple[PaperScore, Paper]]:
         """Gate-passing scores created in `[start, end)`, joined to their paper.
 
-        Candidate set for a weekly digest snapshot (SPE-271): only rows under `rubric_version`
+        Candidate set for a weekly digest snapshot (ARX-7): only rows under `rubric_version`
         that pass the data-availability gate (`data_availability_score == 100`). Category
         filtering is left to the caller (bounded weekly volume). Ordered by creation time; the
         digest task re-orders by provisional composite.

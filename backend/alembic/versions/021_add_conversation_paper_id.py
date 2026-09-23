@@ -1,4 +1,4 @@
-"""Add conversations.paper_id for paper-scoped chat (SPE-277).
+"""Add conversations.paper_id for paper-scoped chat (ARX-13).
 
 Revision ID: 021_add_conversation_paper_id
 Revises: 020_add_score_dimensions

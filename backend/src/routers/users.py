@@ -1,4 +1,4 @@
-"""Users router -- /me (tier + usage) and the onboarding profile (SPE-273)."""
+"""Users router -- /me (tier + usage) and the onboarding profile (ARX-9)."""
 
 from fastapi import APIRouter
 

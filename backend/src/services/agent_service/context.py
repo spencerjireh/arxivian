@@ -78,7 +78,7 @@ class ConversationFormatter:
 
 @dataclass(frozen=True)
 class ScopedPaper:
-    """The one paper a conversation is narrowed to (paper-scoped chat, SPE-277)."""
+    """The one paper a conversation is narrowed to (paper-scoped chat, ARX-13)."""
 
     paper_id: str
     arxiv_id: str

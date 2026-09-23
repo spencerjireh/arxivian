@@ -9,7 +9,7 @@ to be labeled against. The questions live in code at
 bump `RUBRIC_VERSION` (`backend/src/services/scoring_service/state.py`) when they change.
 
 **`rubric_version = "v2"`** (2026-09-19). v1 rows in `paper_scores` stay readable but no
-longer feed the digest. Judge instructions sharpened 2026-09-19 (SPE-295, no version bump:
+longer feed the digest. Judge instructions sharpened 2026-09-19 (ARX-28, no version bump:
 levels and combine rules unchanged) -- see the notes under resource feasibility and data
 availability.
 
@@ -107,7 +107,7 @@ State: `abstract`, `experiments`, `compute_spans` (retrieved chunks).
 | 3 | one 3090/4090-class consumer GPU, or a few cloud GPU-hours |
 | 4 | laptop, CPU, or free-tier notebook GPU within hours |
 
-Instruction notes (SPE-295): the tier is judged at the smallest scale that still demonstrates
+Instruction notes (ARX-28): the tier is judged at the smallest scale that still demonstrates
 the claim, so a cheap technique stays feasible even when the headline run used a cluster; but
 when the trained model **is** the claim (a pretraining recipe, a foundation model, a
 from-scratch generative model) the training cost counts, and fine-tuning released weights does
@@ -167,7 +167,7 @@ Provisional band mapping (to be recalibrated against the real S2 velocity distri
 
 Evidence (`kind="citation"`): citation count + velocity from the S2 lookup. A soft-failed
 lookup (no key, 429) persists NULL; the composite excludes it and renormalizes the remaining
-weights (SPE-284), so a failed lookup does not read as low demand.
+weights (ARX-17), so a failed lookup does not read as low demand.
 
 ## Product attributes (not ranking signals)
 

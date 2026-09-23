@@ -222,11 +222,11 @@ Additive and reversible (system is in production):
 1. **Pipeline in the dark (v1).** Ship the 4-dimension scoring pipeline + tables; runs on
    schedule, no UI. Validate against golden set; tune weights.
 2. **Feed alongside chat (v1).** Feed, cards, paper detail, onboarding as new routes; chat
-   remains default. *Shipped 2026-09-19 (SPE-273..277; PRs #18-#22).*
+   remains default. *Shipped 2026-09-19 (ARX-9..ARX-13; PRs #18-#22).*
 3. **Flip and remove (v1).** Feed becomes default home; global chat tab + conversation
-   history removed. *Shipped 2026-09-20 (SPE-298, SPE-299, SPE-296). Relaunched to
+   history removed. *Shipped 2026-09-20 (ARX-31, ARX-32, ARX-29). Relaunched to
    production 2026-09-21 behind the maintenance curtain; the first weekly cycle came out
-   empty (SPE-306), the fix shipped 2026-09-22, the 2026-09-21 digest was rebuilt by hand
+   empty (ARX-39), the fix shipped 2026-09-22, the 2026-09-21 digest was rebuilt by hand
    (268 papers) and the curtain came down the same day.*
 4. **Code gap (v1.1).** Once the spike clears the recall bar, ship `github_client` + the
    `score_code_gap` node; surface an unweighted "possible existing implementations" chip,
