@@ -1,4 +1,4 @@
-"""Nightly demand backfill (SPE-284).
+"""Nightly demand backfill (ARX-17).
 
 The demand dimension is a Semantic Scholar lookup that soft-fails to NULL when the
 keyless pool rate-limits us. The composite already renormalizes over present sub-scores,

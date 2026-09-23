@@ -1,4 +1,4 @@
-"""Repository for per-user paper lifecycle state (LIFECYCLE-1, SPE-274).
+"""Repository for per-user paper lifecycle state (LIFECYCLE-1, ARX-10).
 
 One `user_paper_states` row per `(user, paper)`; `upsert` updates it in place so a state
 transition never creates a second row. Flushes only -- the request session owns commit.

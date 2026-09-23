@@ -1,4 +1,4 @@
-// Library REST API + TanStack Query hook (Phase 3, SPE-296)
+// Library REST API + TanStack Query hook (Phase 3, ARX-29)
 
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '@/lib/api-client'

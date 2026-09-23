@@ -107,7 +107,7 @@ async def _enqueue_ondemand(
 async def _reserve_ondemand_slot(
     redis: Redis, user_id: uuid.UUID, settings: Settings, lock_key: str
 ) -> None:
-    """Count one on-demand score against today's global and per-user budgets (SPE-302).
+    """Count one on-demand score against today's global and per-user budgets (ARX-35).
 
     Runs only when this request is about to enqueue a new task, never for a poll that
     found the per-paper lock held. Past either budget it undoes the counts, releases the

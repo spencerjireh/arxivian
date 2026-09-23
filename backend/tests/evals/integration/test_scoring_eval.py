@@ -1,4 +1,4 @@
-"""Golden-set accuracy gate for the Stage 2 scoring graph (SPE-272, rubric v2 / SPE-293).
+"""Golden-set accuracy gate for the Stage 2 scoring graph (ARX-8, rubric v2 / ARX-26).
 
 Runs the real scoring graph on each seeded golden paper with real TypeSafe Jev judgments +
 real retrieval (Semantic Scholar is stubbed -- demand is provisional and NOT graded), then

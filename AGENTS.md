@@ -219,7 +219,10 @@ generated release notes (`release.yml`). Moving the stack between servers:
   on unused files/exports/deps. Header comment on every module.
 - Docs: `AGENTS.md` is as-built and changes with the code; design docs carry a Status line
   and record intent; README is the public overview. No emojis in code, comments or docs.
-- PR titles are conventional commits with the Linear id last (`CONTRIBUTING.md`).
+- PR titles are conventional commits with the Plane id last (`CONTRIBUTING.md`).
+- Work is tracked in the Plane project **Arxivian**, key `ARX` (self-hosted,
+  workspace `workspace-1`). A `SPE-N` id in git history is a pre-2026-09-23 Linear
+  reference; resolve it via `docs/linear-to-plane-migration-2026-09-23.md`.
 
 ## Gotchas
 
@@ -246,5 +249,6 @@ generated release notes (`release.yml`). Moving the stack between servers:
 - `docs/product/feed-prd.md`: product-of-record for the feed. `docs/product/user-stories.md`: pivot epics.
 - `docs/design/scoring-pipeline.md`: two-stage pipeline and scoring graph. `docs/design/scoring-rubric.md`: rubric v2, linked from the code.
 - `docs/ops/coolify-migration.md`: moving the stack between Coolify servers.
+- `docs/linear-to-plane-migration-2026-09-23.md`: SPE-N -> ARX-N mapping (the tracker moved from Linear to Plane; git history still carries SPE ids).
 - `frontend/src/content/privacy-policy.md`: the privacy policy rendered at `/privacy`.
 - `README.md`, `CONTRIBUTING.md`, `SECURITY.md`.

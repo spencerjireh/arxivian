@@ -1,4 +1,4 @@
-// Feed REST API + TanStack Query hooks (Phase 2, SPE-274)
+// Feed REST API + TanStack Query hooks (Phase 2, ARX-10)
 
 import { useInfiniteQuery, keepPreviousData } from '@tanstack/react-query'
 import { apiGet } from '@/lib/api-client'

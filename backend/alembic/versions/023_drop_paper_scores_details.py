@@ -1,4 +1,4 @@
-"""Drop paper_scores.details (SPE-304).
+"""Drop paper_scores.details (ARX-37).
 
 Revision ID: 023_drop_paper_scores_details
 Revises: 022_drop_chat_first_leftovers

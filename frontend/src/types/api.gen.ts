@@ -391,7 +391,7 @@ export interface paths {
     }
     /**
      * Get Library
-     * @description The caller's papers grouped by lifecycle state, as feed cards (SPE-296).
+     * @description The caller's papers grouped by lifecycle state, as feed cards (ARX-29).
      */
     get: operations['get_library_api_v1_users_me_library_get']
     put?: never
@@ -875,7 +875,7 @@ export interface components {
      *
      *     Kept in its own key so it never collides with the system user's `arxiv_searches`.
      *     `weights` is reserved for per-user composite weights and is not settable via the API in
-     *     v1 (SPE-273 sets categories / compute_profile / keywords).
+     *     v1 (ARX-9 sets categories / compute_profile / keywords).
      */
     FeedProfile: {
       /** Categories */

@@ -224,6 +224,6 @@ jobs:
           TITLE: ${{ github.event.pull_request.title }}
         run: |
           if ! printf '%s' "$TITLE" | grep -Eq '^(feat|fix|docs|test|chore|refactor|perf|ci|build)(\([a-z0-9-]+\))?: .+$'; then
-            echo "::error::PR title must match type(scope): summary, e.g. 'feat(feed): add week selector (SPE-275)'; Dependabot uses build(deps)"
+            echo "::error::PR title must match type(scope): summary, e.g. 'feat(feed): add week selector (ARX-11)'; Dependabot uses build(deps)"
             exit 1
           fi

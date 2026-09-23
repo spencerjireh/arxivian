@@ -12,10 +12,10 @@ same bar. `AGENTS.md` maps the code; this file covers process only.
 
 ## Branches and pull requests
 
-- Branch from `main` as `<type>/<slug>`, e.g. `feat/spe-296-library`.
+- Branch from `main` as `<type>/<slug>`, e.g. `feat/arx-29-library`.
 - Squash-merge only. The PR title becomes the commit subject and must match
   `^(feat|fix|docs|test|chore|refactor|perf|ci|build)(\([a-z0-9-]+\))?: .+$`;
-  put the Linear id at the end: `feat(feed): add week selector (SPE-275)`.
+  put the Plane id at the end: `feat(feed): add week selector (ARX-11)`.
 - Required checks on `main`: Backend lint, Backend unit + api, Backend integration,
   Frontend lint, Frontend tests, Docker images + coolify compose, PR title. The branch
   must be up to date with `main`, so rebase (or press Update branch) after each merge lands.

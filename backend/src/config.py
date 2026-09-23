@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     semantic_scholar_api_key: str = ""
     semantic_scholar_cache_ttl_seconds: int = 604800  # 7 days
     # Keyless Semantic Scholar shares a ~1 req/s pool; this gate spaces our calls across
-    # every worker (Redis slot) so concurrent scoring tasks cannot burst into 429s (SPE-284).
+    # every worker (Redis slot) so concurrent scoring tasks cannot burst into 429s (ARX-17).
     semantic_scholar_min_interval_ms: int = 1500
     # Nightly backfill of demand for scores whose S2 lookup soft-failed to NULL.
     demand_backfill_schedule_cron: str = "0 4 * * *"  # Daily at 4am UTC
@@ -43,10 +43,10 @@ class Settings(BaseSettings):
     typesafe_model: str = "jev-1.13.0"
     typesafe_timeout_seconds: int = 60
 
-    # On-demand scoring (paper detail, SPE-276): Redis lock TTL that dedupes repeated
+    # On-demand scoring (paper detail, ARX-12): Redis lock TTL that dedupes repeated
     # GET /papers/{id}/score polls into one score_paper_task per paper.
     ondemand_score_lock_seconds: int = 1800
-    # Daily budget for on-demand scoring (SPE-302). Scoring is a shared cost, so the caps
+    # Daily budget for on-demand scoring (ARX-35). Scoring is a shared cost, so the caps
     # are a global count across all users plus a flat per-user count, both per UTC day.
     ondemand_score_daily_budget: int = 30
     ondemand_score_daily_per_user: int = 10
@@ -112,7 +112,7 @@ class Settings(BaseSettings):
     triage_lookback_days: int = 7
     triage_max_per_category: int = 100
     # Pause between per-category arXiv crawls so the weekly triage does not trip arXiv's
-    # rate limit (SPE-283). The arxiv.Client keeps its own per-page delay on top.
+    # rate limit (ARX-16). The arxiv.Client keeps its own per-page delay on top.
     arxiv_crawl_pause_seconds: int = 3
 
     # Stage 3 digest -- weekly cached ranking snapshot. Runs after triage+scoring settle.

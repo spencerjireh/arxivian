@@ -1,4 +1,4 @@
-"""One-off re-embedding of every chunk (SPE-307).
+"""One-off re-embedding of every chunk (ARX-40).
 
 Vectors from different embedding models are not comparable, so a model change (Jina v3
 -> OpenAI text-embedding-3-small, 2026-09-22) has to rewrite `chunks.embedding` for every

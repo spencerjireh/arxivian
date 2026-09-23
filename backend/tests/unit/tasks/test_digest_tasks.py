@@ -1,4 +1,4 @@
-"""Unit tests for the Stage 3 digest builder (SPE-271).
+"""Unit tests for the Stage 3 digest builder (ARX-7).
 
 Exercises the category filter, provisional-composite ordering, and upsert shape with the DB
 layer mocked. `list_scores_for_digest` already applies the gate + week filter at the SQL
@@ -101,7 +101,7 @@ class TestHelpers:
         assert compute_provisional_composite(80, 60, None) == 70.0
         assert compute_provisional_composite(80, 80, None) == 80.0
         assert compute_provisional_composite(None, None, None) == 0.0
-        # all present: plain weighted sum, unchanged from SPE-271
+        # all present: plain weighted sum, unchanged from ARX-7
         assert compute_provisional_composite(80, 80, 85) == 81.5
 
     def test_composite_custom_weights(self):
