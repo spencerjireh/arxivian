@@ -5,12 +5,10 @@ import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '@/lib/api-client'
 import { conversationKeys } from '@/lib/query-keys'
 import type {
-  CitationsEventData,
   ConversationDetailResponse,
   ConversationListResponse,
   ConversationTurn,
   Message,
-  SourceInfo,
 } from '@/types/api'
 
 const PAGE_SIZE = 30
@@ -38,15 +36,16 @@ export function turnsToMessages(turns: ConversationTurn[]): Message[] {
       id: `assistant-${turn.turn_number}`,
       role: 'assistant',
       content: turn.agent_response,
-      sources: (turn.sources as SourceInfo[] | null) ?? undefined,
+      sources: turn.sources ?? undefined,
       metadata: {
         query: turn.user_query,
         execution_time_ms: 0,
         retrieval_attempts: turn.retrieval_attempts,
-        guardrail_score: turn.guardrail_score ?? undefined,
+        guardrail_score: turn.guardrail_score,
+        session_id: null,
         turn_number: turn.turn_number,
       },
-      citations: (turn.citations as CitationsEventData | null) ?? undefined,
+      citations: turn.citations ?? undefined,
       createdAt: new Date(turn.created_at),
     },
   ])

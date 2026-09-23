@@ -12,8 +12,6 @@ from src.database import AsyncSessionLocal, engine, init_db
 # Import middleware
 from src.middleware import logging_middleware, maintenance_middleware, register_exception_handlers
 from src.observability import configure_tracing, flush
-
-# Import routers
 from src.routers import (
     conversations,
     feed,
@@ -25,6 +23,9 @@ from src.routers import (
     users,
     webhooks,
 )
+
+# Import routers
+from src.schemas.errors import ErrorResponse
 from src.services.agent_service.graph_builder import build_graph
 from src.utils.logger import configure_logging, get_logger
 
@@ -84,6 +85,8 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url="/docs" if settings.debug else None,
     redoc_url="/redoc" if settings.debug else None,
+    # Every route can answer with the error envelope from middleware/error_handler.py.
+    responses={"default": {"model": ErrorResponse, "description": "Error envelope"}},
 )
 
 # Tracing: one span per request (health excluded) and per SQL statement

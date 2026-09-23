@@ -17,6 +17,8 @@ export function makeMe(overrides: Partial<MeResponse> = {}): MeResponse {
     tier: 'free',
     daily_chat_limit: 10,
     chats_used_today: 0,
+    preferences: { feed_profile: null },
+    onboarded: false,
     ...overrides,
   }
 }

@@ -8,13 +8,16 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
+from src.schemas.base import ResponseModel
+from src.tiers import UserTier
+
 if TYPE_CHECKING:
     from src.models.user import User
 
 ComputeProfile = Literal["laptop", "single_gpu", "cloud"]
 
 
-class FeedProfile(BaseModel):
+class FeedProfile(ResponseModel):
     """The onboarding profile stored under `users.preferences["feed_profile"]`.
 
     Kept in its own key so it never collides with the system user's `arxiv_searches`.
@@ -45,7 +48,7 @@ class FeedProfile(BaseModel):
         return bool(self.categories) and self.compute_profile is not None
 
 
-class UserPreferences(BaseModel):
+class UserPreferences(ResponseModel):
     """The user-facing slice of `users.preferences` (the system user's keys are omitted)."""
 
     feed_profile: FeedProfile | None = None
@@ -84,14 +87,14 @@ class UpdatePreferencesRequest(BaseModel):
         return list(dict.fromkeys(cleaned))
 
 
-class MeResponse(BaseModel):
+class MeResponse(ResponseModel):
     """Response for /users/me endpoint."""
 
     id: UUID
     email: str | None = None
     first_name: str | None = None
     last_name: str | None = None
-    tier: str
+    tier: UserTier
     daily_chat_limit: int | None = None  # None = unlimited
     chats_used_today: int
     preferences: UserPreferences = Field(default_factory=UserPreferences)
