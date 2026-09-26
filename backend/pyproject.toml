@@ -41,13 +41,18 @@ dependencies = [
     # Observability (Logfire over OpenTelemetry; see src/observability.py)
     "logfire[celery,fastapi,httpx,litellm,sqlalchemy]>=5.1.0",
     "openinference-instrumentation-langchain>=0.1.76",
+    # Direct: observability.current_trace_id reads the active span id for every log line.
+    "opentelemetry-api>=1.44.0",
     # Authentication
     "pyjwt[crypto]>=2.8.0",
     "svix>=1.21.0",
     # Task Queue
     "celery[redis]>=5.4.0",
     "celery-redbeat>=2.2.0",
-    "redis>=5.0.0",
+    # Capped at <6.5: stable kombu (5.6.2) pins redis<6.5, so redis 7/8 only resolve
+    # by pulling kombu 5.7.0a1 -- a pre-release of Celery's transport (see #78).
+    # Lift once a stable kombu accepts redis>=6.5.
+    "redis>=5.0.0,<6.5",
 ]
 
 # PEP 735 groups. `dev` is uv's default group (`uv sync` installs it; the production

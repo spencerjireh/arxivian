@@ -208,8 +208,8 @@ jobs:
           build-args: |
             VITE_CLERK_PUBLISHABLE_KEY=pk_test_x
             VITE_MAINTENANCE_MODE=false
-            VITE_LOGFIRE_TOKEN=
-            VITE_LOGFIRE_BASE_URL=
+            VITE_FARO_URL=
+            VITE_FARO_API_KEY=
           cache-from: type=gha,scope=frontend
           cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=min,scope=frontend' || '' }}
 

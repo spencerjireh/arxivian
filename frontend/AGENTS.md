@@ -31,7 +31,7 @@ src/components/layout/       Layout, TopNav, UserMenu, Footer, MaintenanceScreen
 src/lib/api-client.ts        fetch wrapper (one request() behind the four verbs); API base is /api (nginx rewrites to /api/v1)
 src/lib/auth.ts              the Clerk wrapper: useSession() (isSignedIn, me, user, signOut) and the me query (GET /users/me)
 src/lib/notifications.ts     the sonner wrapper (notify.success/error/undoable); tests mock this, never sonner
-src/lib/observability.ts     the Logfire browser SDK wrapper (twin of backend/src/observability.py): configure, route/user context, reportError
+src/lib/observability.ts     the Grafana Faro wrapper (twin of backend/src/observability.py): configure, view/user context, reportError
 src/lib/query-keys.ts        every TanStack Query key factory (feed, library, scores, conversations); shared so features can invalidate each other
 src/lib/                     errors, formatting, formClasses, id, nav, animations, markdown/ (component map, plugins), markdownHeadings
 src/stores/                  Zustand: chatStore (isStreaming + the status line of the one mounted chat)
@@ -112,18 +112,37 @@ remark-math/KaTeX, arXiv links, Prism); the privacy page uses the same component
 `lib/markdown/`. `features/paper/api/get-paper-score.ts` polls the 202 every 5 s for up to
 3 min. Tiers on the client are `daily_chat_limit` / `chats_used_today` only.
 
-## Tracing
+## Browser telemetry
 
-`lib/observability.ts` is the only module that touches `@pydantic/logfire-browser`. With
-`VITE_LOGFIRE_TOKEN` and `VITE_LOGFIRE_BASE_URL` set (build args in production, `.env` in
-dev) `main.tsx` loads the SDK lazily (its own `telemetry` chunk) and `configureFrontend`
-auto-instruments fetch, document load, user interaction and Web Vitals; every export is a
-no-op when either is empty (dev default, CI, tests). `app/router.tsx::ObservabilityContext`
-stamps the matched route template and the API's opaque user id on spans (never a name or
-email); `ui/ErrorBoundary` reports caught render errors through `reportError`. Same-origin
-`/api` requests carry `traceparent`, so browser spans join the FastAPI request spans in the
-same Logfire project. The token is a restricted frontend application token, safe to bake
-into the bundle.
+`lib/observability.ts` is the only module that touches `@grafana/faro-web-sdk`. With
+`VITE_FARO_URL` set (the full `/collect` URL of our own Alloy `faro.receiver`; a build arg in
+production, `.env` in dev) `main.tsx` loads the SDK lazily into its own `telemetry` chunk;
+every export is a no-op when it is empty (dev default, CI, tests).
+`app/router.tsx::ObservabilityContext` pushes the matched route template as the Faro view and
+the API's opaque user id as the Faro user (never a name or email); `ui/ErrorBoundary` reports
+caught render errors through `reportError`.
+
+Deliberately narrow, and each limit is load-bearing:
+
+- **Two instrumentations only**, `ErrorsInstrumentation` and `WebVitalsInstrumentation`, passed
+  explicitly. `getWebInstrumentations()` would also add console, user-action, performance,
+  navigation, CSP and session capture.
+- **No tracing.** `@grafana/faro-web-tracing` is not installed, so nothing sends `traceparent`
+  and browser signals do not join the FastAPI traces. Wiring that up is a later follow-up.
+- **`sessionTracking: { enabled: false }`**, not merely non-persistent: Faro's default volatile
+  session manager still writes a `com.grafana.faro.session` id to `sessionStorage`, and
+  `persistent` only chooses which storage. Nothing is stored on the visitor's device, which is
+  what `src/content/privacy-policy.md` states.
+- **`beforeSend` strips the query string** from the page meta, because Faro captures
+  `location.href` and a paper URL carries `?session=<conversation id>`.
+- **Context replays on load.** Faro's API is push-based where the previous SDK pulled through
+  callbacks, so `setObservabilityContext` stores the value and the config is built inside the
+  dynamic-import callback; a route change during the import is not lost.
+
+`VITE_FARO_API_KEY` is public by construction: it ships in the bundle and is visible in
+devtools, so it is a filter against undirected scanning, not a secret. The receiver's CORS
+allow-list and rate limiter are the real protection. Source maps are off, so stack traces are
+minified.
 
 ## Testing
 

@@ -154,7 +154,14 @@ runs at API import and per worker process; it instruments LiteLLM, httpx, LangGr
 (OpenInference), FastAPI, SQLAlchemy and Celery, and `utils/logger.py` ships structlog lines
 to the active span. Empty `LOGFIRE_TOKEN` (dev, CI) exports nothing; the SDK reads the
 token from `backend/.env` itself. Prompts and paper text are sent by design.
-`AgentService.ask_stream` wraps a turn in a `chat.turn` span.
+`AgentService.ask_stream` wraps a turn in a `chat.turn` span. Every log line carries
+`trace_id` when a span is active (`observability.current_trace_id` via
+`utils/logger.py::add_trace_id`); that is what makes Grafana's Tempo -> Loki jump work, since
+`filterByTraceID` is a substring match on the raw console line. Celery task lines have no
+`request_id`, so the trace id is their only correlation key. Setting
+`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` + `OTEL_EXPORTER_OTLP_HEADERS` makes the OTel SDK inside
+logfire add a second span exporter, after scrubbing, so the same spans also reach the
+self-hosted collector; traces only, and no code change is involved.
 
 ## Frontend
 
@@ -186,10 +193,16 @@ PR merged with a merge commit; every push to `production` is tagged `vYYYY.MM.DD
 generated release notes (`release.yml`). Moving the stack between servers:
 `ARX-57`.
 
-- Browser tracing: `VITE_LOGFIRE_TOKEN` (a restricted frontend application token from
-  Logfire > Frontend > Applications) and `VITE_LOGFIRE_BASE_URL` are frontend build args next
-  to `VITE_MAINTENANCE_MODE`; empty (the default) loads no SDK. Set both on the Coolify
-  prod row and redeploy to turn it on. See `frontend/AGENTS.md`.
+- Self-hosted traces: `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` (the full `/v1/traces` path) and
+  `OTEL_EXPORTER_OTLP_HEADERS` (`Authorization=Bearer <token>`) on the prod `app` and
+  `celery-worker` rows only. `celery-beat` is deliberately excluded: `configure_tracing()` runs
+  at the API import and on `worker_process_init`, neither of which beat reaches, so the vars
+  would be inert there. Logfire keeps exporting in parallel.
+- Browser telemetry: `VITE_FARO_URL` (the full `/collect` URL of the self-hosted Alloy
+  `faro.receiver`) and `VITE_FARO_API_KEY` are frontend build args next to
+  `VITE_MAINTENANCE_MODE`; empty (the default) loads no SDK. Set both on the Coolify prod row
+  and redeploy to turn it on. Errors and Web Vitals only, no browser tracing. See
+  `frontend/AGENTS.md`.
 - Maintenance curtain: backend `MAINTENANCE_MODE=true` -> 503 for all routes except health;
   frontend `VITE_MAINTENANCE_MODE=true` is a build arg (`frontend/Dockerfile`), so flipping
   it means a rebuild. The two flags are the rollback lever: set both in the Coolify env
@@ -232,7 +245,8 @@ generated release notes (`release.yml`). Moving the stack between servers:
 - Host-port overrides (`BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`, `REDIS_PORT`,
   `FLOWER_PORT`, `TEST_DB_PORT`) are compose interpolation from the shell, not `backend/.env`.
 - A real `LOGFIRE_TOKEN` in `backend/.env` turns on live instrumentation for local pytest
-  too; run `LOGFIRE_TOKEN="" uv run pytest ...` on the host.
+  too; run `LOGFIRE_TOKEN="" uv run pytest ...` on the host. The same goes for
+  `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` -- clear both.
 - `VITE_*` values are baked at build time in production.
 - `POST /stream` rejects unknown fields; the chat store allows one mounted panel at a time.
 - Scoring needs `TYPESAFE_API_KEY`, but the client is built only inside the task, so the API
