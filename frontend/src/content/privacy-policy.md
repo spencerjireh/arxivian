@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Effective September 20, 2026**
+**Effective September 26, 2026**
 
 This Privacy Notice for Arxivian ("we," "us," or "our"), describes how and why we might access, collect, store, use, and/or share ("process") your personal information when you use our services ("Services"), including when you:
 
@@ -56,7 +56,7 @@ _In Short: We collect personal information that you provide to us._
 
 We collect personal information that you voluntarily provide to us when you register on the Services, express an interest in obtaining information about us or our products and Services, when you participate in activities on the Services, or otherwise when you contact us.
 
-**Reading without an account.** The weekly feed and paper pages are public. When you read them without signing in we do not collect personal information; our servers keep short-lived request logs (request id, IP address, path, timestamp) to operate and secure the service, and the same request traces reach our observability provider (Pydantic Logfire, see [when and with whom we share your personal information](#4-when-and-with-whom-do-we-share-your-information)). No analytics or tracking is attached to anonymous reading.
+**Reading without an account.** The weekly feed and paper pages are public. When you read them without signing in we do not collect personal information; our servers keep short-lived request logs (request id, IP address, path, timestamp) to operate and secure the service, and the same request traces reach our observability provider (Pydantic Logfire, see [when and with whom we share your personal information](#4-when-and-with-whom-do-we-share-your-information)) and our own self-hosted monitoring. Your browser also reports page-load timings and JavaScript errors to our own servers, carrying the page path, your browser and your operating system. No identifier is stored on your device for this, it is not shared with any third party, and no advertising, analytics or cross-site tracking is attached to anonymous reading.
 
 **Personal Information Provided by You.** The personal information that we collect depends on the context of your interactions with us and the Services, the choices you make, and the products and features you use. The personal information we collect may include the following:
 
@@ -93,6 +93,7 @@ We process your personal information for a variety of reasons, depending on how 
 - **To protect our Services.** We may process your information as part of our efforts to keep our Services safe and secure, including fraud monitoring and prevention.
 - **To identify usage trends.** We may process information about how you use our Services to better understand how they are being used so we can improve them.
 - **To improve response quality.** We use an observability service (Pydantic Logfire) to monitor and improve the quality of AI-generated responses. Traces include your chat messages and the paper text sent to the language model; they are used only for debugging and quality review.
+- **To fix errors and keep pages fast.** When a page fails or loads slowly, your browser reports the error or the performance measurement to our own servers, together with the page path, your browser, your operating system, and your account id if you are signed in. It is held on our own infrastructure, is not shared with a third party, and is not used for advertising or profiling.
 - **To save or protect an individual's vital interest.** We may process your information when necessary to save or protect an individual's vital interest, such as to prevent harm.
 
 We do not sell your personal data. We do not use your data for advertising.
@@ -143,7 +144,7 @@ The third parties we may share personal information with are as follows:
 - **OpenAI** -- language model inference, called through the LiteLLM library. Your chat messages about a paper, the relevant passages of that paper, and (for the weekly triage) paper titles and abstracts are sent to OpenAI's API. Subject to [OpenAI's Privacy Policy](https://openai.com/policies/privacy-policy).
 - **TypeSafe** -- the judgment model (Jev) that scores papers on method clarity, resource feasibility and data availability. Only paper text is sent; no account data. Subject to TypeSafe's privacy policy.
 - **Semantic Scholar** (Allen Institute for AI) -- citation counts for scored papers. Only arXiv identifiers are sent. Subject to the [AI2 Privacy Policy](https://allenai.org/privacy-policy).
-- **Pydantic Logfire** -- application and LLM observability. Request traces, including chat messages and paper text sent to the language model, are stored with Logfire for debugging and quality review. Subject to [Pydantic's Privacy Policy](https://pydantic.dev/legal/privacy).
+- **Pydantic Logfire** -- application and LLM observability for our backend services. Request traces, including chat messages and paper text sent to the language model, are stored with Logfire for debugging and quality review. Subject to [Pydantic's Privacy Policy](https://pydantic.dev/legal/privacy). Error and performance reports from your browser do not go to Logfire; they go to monitoring we run ourselves.
 - **arXiv** -- paper metadata and content retrieval. We access publicly available papers through arXiv's API.
 
 We also may need to share your personal information in the following situations:
@@ -155,6 +156,8 @@ We also may need to share your personal information in the following situations:
 _In Short: We use cookies set by Clerk for authentication and browser local storage for your preferences. We do not use tracking or analytics cookies._
 
 Arxivian uses cookies set by Clerk for authentication sessions. We also use browser local storage to persist interface preferences such as a dismissed setup prompt and unsent chat drafts. We do not use tracking cookies, third-party analytics cookies, or advertising cookies.
+
+Our error and performance monitoring stores no identifier in your browser and issues no session or visitor id, so it cannot follow you between visits or across sites.
 
 We do not permit third parties or service providers to use online tracking technologies on our Services for analytics or advertising purposes.
 

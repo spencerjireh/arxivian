@@ -24,7 +24,7 @@ if (import.meta.env.VITE_MAINTENANCE_MODE === 'true') {
     throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY environment variable')
   }
 
-  // No-op without VITE_LOGFIRE_TOKEN; loads the SDK lazily so the bundle stays unchanged.
+  // No-op without VITE_FARO_URL; loads the SDK lazily so the default chunk stays unchanged.
   void configureObservability()
 
   root.render(
