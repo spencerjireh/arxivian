@@ -4,7 +4,8 @@
 # Two services are publicly routed via Coolify's Traefik proxy:
 #   - frontend (main domain)    -> nginx serving SPA + reverse proxy to app
 #   - flower (subdomain)        -> Celery monitoring dashboard
-# Tracing goes to Pydantic Logfire (SaaS) when LOGFIRE_TOKEN is set.
+# Tracing goes to Pydantic Logfire (SaaS) when LOGFIRE_TOKEN is set, and additionally to the
+# self-hosted collector when OTEL_EXPORTER_OTLP_TRACES_ENDPOINT is set.
 #
 # Post-deploy: assign domains in Coolify UI, fill env vars, enable TLS.
 
@@ -76,6 +77,13 @@ services:
       # Tracing (Logfire; empty token = nothing exported)
       LOGFIRE_TOKEN: ${LOGFIRE_TOKEN:-}
       LOGFIRE_ENVIRONMENT: production
+      # Second copy of every span to the self-hosted collector. Read by the OTel SDK inside
+      # logfire, so src/observability.py needs no change. TRACES ONLY: the bare
+      # OTEL_EXPORTER_OTLP_ENDPOINT would also switch on metrics and logs export, which
+      # cAdvisor and Alloy already cover. Must carry the full /v1/traces path. Empty = off.
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-}
+      # Comma-separated key=value, e.g. Authorization=Bearer <token>. No comma in the token.
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
 
       # App
       DEBUG: ${DEBUG:-false}
@@ -143,6 +151,10 @@ services:
       CLERK_DOMAIN: ${CLERK_DOMAIN:?Set CLERK_DOMAIN}
       LOGFIRE_TOKEN: ${LOGFIRE_TOKEN:-}
       LOGFIRE_ENVIRONMENT: production
+      # Second span exporter, as on app above. Worker log lines carry no request_id, so the
+      # trace id is their only correlation key.
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
       DEBUG: ${DEBUG:-false}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       CHUNK_SIZE_WORDS: ${CHUNK_SIZE_WORDS:-600}
@@ -182,6 +194,9 @@ services:
       CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/1
       # Settings are validated at import (celery_app.py); CLERK_DOMAIN is the one field
       # without a default, so beat needs it too or it exits before scheduling anything.
+      # No tracing vars: configure_tracing() runs only at the API import (src/main.py) and on
+      # worker_process_init (tasks/signals.py), neither of which beat reaches, so no exporter
+      # would ever be built here.
       CLERK_DOMAIN: ${CLERK_DOMAIN:?Set CLERK_DOMAIN}
       INGEST_SCHEDULE_CRON: ${INGEST_SCHEDULE_CRON:-0 2 * * *}
       CLEANUP_SCHEDULE_CRON: ${CLEANUP_SCHEDULE_CRON:-0 3 * * *}
