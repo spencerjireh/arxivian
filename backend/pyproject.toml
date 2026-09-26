@@ -41,6 +41,8 @@ dependencies = [
     # Observability (Logfire over OpenTelemetry; see src/observability.py)
     "logfire[celery,fastapi,httpx,litellm,sqlalchemy]>=5.1.0",
     "openinference-instrumentation-langchain>=0.1.76",
+    # Direct: observability.current_trace_id reads the active span id for every log line.
+    "opentelemetry-api>=1.44.0",
     # Authentication
     "pyjwt[crypto]>=2.8.0",
     "svix>=1.21.0",

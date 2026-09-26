@@ -8,6 +8,8 @@ import logfire
 import structlog
 from structlog.types import EventDict, Processor, WrappedLogger
 
+from src.observability import current_trace_id
+
 # Context variable for request-scoped data
 request_id_ctx: ContextVar[str | None] = ContextVar("request_id", default=None)
 
@@ -18,6 +20,17 @@ def add_request_id(_logger: WrappedLogger, _method_name: str, event_dict: EventD
     """Inject request_id from context into log event."""
     if req_id := request_id_ctx.get():
         event_dict["request_id"] = req_id
+    return event_dict
+
+
+def add_trace_id(_logger: WrappedLogger, _method_name: str, event_dict: EventDict) -> EventDict:
+    """Inject the active OTel trace id so Grafana can jump from a Tempo span to these lines.
+
+    Absent outside a span (celery-beat, pytest, module import). Celery task lines have no
+    request_id at all, so this is their only correlation key.
+    """
+    if trace_id := current_trace_id():
+        event_dict["trace_id"] = trace_id
     return event_dict
 
 
@@ -41,6 +54,9 @@ def configure_logging(log_level: str = "INFO", debug: bool = False) -> None:
         add_request_id,
         # Ships each line to Logfire attached to the active span (no-op without a token).
         logfire.StructlogProcessor(),
+        # After the Logfire processor: Logfire already knows the trace, so the id is only
+        # needed on the console line that Alloy tails into Loki.
+        add_trace_id,
     ]
 
     # Dev: colored key-value output

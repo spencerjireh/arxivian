@@ -3,9 +3,10 @@
 import logfire
 import pytest
 import structlog
+from opentelemetry.sdk.trace import TracerProvider
 
 from src import observability
-from src.utils.logger import configure_logging
+from src.utils.logger import add_trace_id, configure_logging
 
 
 @pytest.mark.unit
@@ -36,3 +37,32 @@ class TestConfigureTracing:
         configure_logging("INFO")
         processors = structlog.get_config()["processors"]
         assert any(isinstance(p, logfire.StructlogProcessor) for p in processors)
+
+    def test_structlog_chain_includes_trace_id_processor(self):
+        configure_logging("INFO")
+        assert add_trace_id in structlog.get_config()["processors"]
+
+
+@pytest.mark.unit
+class TestTraceId:
+    """The Tempo -> Loki jump is a substring match on the raw line, so the id must be in it."""
+
+    def test_none_outside_a_span(self):
+        assert observability.current_trace_id() is None
+
+    def test_thirty_two_hex_chars_inside_a_span(self):
+        # A provider of its own: the result must not depend on configure_tracing having run.
+        with TracerProvider().get_tracer("test").start_as_current_span("t"):
+            trace_id = observability.current_trace_id()
+        assert trace_id is not None
+        assert len(trace_id) == 32
+        int(trace_id, 16)  # hex, unprefixed
+
+    def test_processor_omits_the_key_outside_a_span(self):
+        assert add_trace_id(None, "info", {}) == {}
+
+    def test_processor_adds_the_key_inside_a_span(self):
+        with TracerProvider().get_tracer("test").start_as_current_span("t"):
+            event = add_trace_id(None, "info", {"event": "hello"})
+        assert event["event"] == "hello"
+        assert len(event["trace_id"]) == 32
