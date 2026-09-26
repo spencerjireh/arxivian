@@ -43,7 +43,7 @@ Reference docs live in the [Plane project](https://plane.spencerjireh.com/worksp
 | **Embeddings** | OpenAI text-embedding-3-small via LiteLLM (1024d) |
 | **Auth** | Clerk (JWT + Google OAuth); the feed and paper detail are public, the account layer is tiered |
 | **Async** | Celery 5 + Redis (broker), RedBeat (scheduler), Flower (monitoring) |
-| **Observability** | Pydantic Logfire (OpenTelemetry; FastAPI, SQL, LangGraph, LiteLLM, Celery), structlog with request ID correlation |
+| **Observability** | Backend: Pydantic Logfire (OpenTelemetry; FastAPI, SQL, LangGraph, LiteLLM, Celery) plus a second OTLP export to a self-hosted Tempo; frontend: self-hosted Grafana Faro (errors, Web Vitals); structlog with request-id and trace-id correlation |
 | **Infra** | Docker Compose (dev/test/prod/eval profiles), Alembic migrations, Coolify |
 | **CI** | GitHub Actions -- lint, unit/api + integration (pgvector service), coverage gates, image builds, PR-title check |
 
@@ -105,7 +105,7 @@ just --list                       # All recipes, grouped
 
 **Communal knowledge base.** Ingested papers are shared across users; scoring a paper once serves everyone.
 
-**OpenTelemetry for tracing.** Instrumentation is vendor-neutral (FastAPI, SQLAlchemy, httpx, Celery, LiteLLM, LangGraph via OpenInference); Logfire is the exporter today and swappable by env.
+**OpenTelemetry for tracing.** Instrumentation is vendor-neutral (FastAPI, SQLAlchemy, httpx, Celery, LiteLLM, LangGraph via OpenInference); Logfire is one exporter and a self-hosted collector is a second, both chosen by env alone. Browser errors and Web Vitals go to a self-hosted Grafana Faro receiver.
 
 ## Testing
 

@@ -198,9 +198,10 @@ generated release notes (`release.yml`). Moving the stack between servers:
   `celery-worker` rows only. `celery-beat` is deliberately excluded: `configure_tracing()` runs
   at the API import and on `worker_process_init`, neither of which beat reaches, so the vars
   would be inert there. Logfire keeps exporting in parallel.
-- Browser telemetry: `VITE_FARO_URL` (the self-hosted Alloy `faro.receiver`, full `/collect`
-  path) and `VITE_FARO_API_KEY` are frontend build args next to `VITE_MAINTENANCE_MODE`; empty
-  (the default) loads no SDK. Set both on the Coolify prod row and redeploy. See
+- Browser telemetry: `VITE_FARO_URL` (the full `/collect` URL of the self-hosted Alloy
+  `faro.receiver`) and `VITE_FARO_API_KEY` are frontend build args next to
+  `VITE_MAINTENANCE_MODE`; empty (the default) loads no SDK. Set both on the Coolify prod row
+  and redeploy to turn it on. Errors and Web Vitals only, no browser tracing. See
   `frontend/AGENTS.md`.
 - Maintenance curtain: backend `MAINTENANCE_MODE=true` -> 503 for all routes except health;
   frontend `VITE_MAINTENANCE_MODE=true` is a build arg (`frontend/Dockerfile`), so flipping

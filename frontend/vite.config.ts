@@ -26,10 +26,10 @@ export default defineConfig({
             return 'clerk'
           }
           if (
-            id.includes('@pydantic/') ||
+            id.includes('@grafana/') ||
             id.includes('@opentelemetry/') ||
-            id.includes('/logfire/') ||
-            id.includes('web-vitals')
+            id.includes('web-vitals') ||
+            id.includes('ua-parser-js')
           ) {
             return 'telemetry'
           }
