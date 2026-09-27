@@ -78,6 +78,10 @@ async def backfill_demand(
                 for e in evidence
             ],
         )
+        # Commit per row, not once at the end. Keyless Semantic Scholar backs off 4/4/8/16s on
+        # 429, so a full batch cannot finish inside celery_task_timeout (a hard task_time_limit,
+        # i.e. SIGKILL) -- a single trailing commit would lose every row it had filled.
+        await session.commit()
         filled += 1
 
     return {"candidates": len(rows), "filled": filled, "failed": failed}
@@ -96,7 +100,6 @@ def backfill_demand_task() -> dict[str, Any]:
                 get_semantic_scholar_client(),
                 batch_size=settings.demand_backfill_batch_size,
             )
-            await session.commit()
         return {"status": "completed", **result}
 
     result = run_async(_run())
