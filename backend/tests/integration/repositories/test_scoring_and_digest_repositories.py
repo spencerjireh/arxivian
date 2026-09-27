@@ -6,6 +6,7 @@ import uuid
 from datetime import date
 
 import pytest
+from sqlalchemy import inspect
 
 from src.repositories.digest_repository import DigestRepository
 from src.repositories.paper_repository import PaperRepository
@@ -109,12 +110,19 @@ async def test_list_missing_demand_and_set_demand(db_session, sample_paper_data)
     )
     await _scored(db_session, sample_paper_data, "d-full")
 
+    # Production (demand_tasks.backfill_demand) hands the instance list_missing_demand returned
+    # straight to set_demand, so that query has to eager-load `evidence` itself: set_demand
+    # appends to the collection, and a lazy load there is a MissingGreenlet under asyncpg
+    # (ARX-63). Expunge first or the identity map still holds the instance upsert_score created
+    # above, with its collection already populated, which hides the defect entirely.
+    await db_session.flush()
+    db_session.expunge_all()
+
     missing = await repo.list_missing_demand(rubric_version=RUBRIC_VERSION, limit=10)
     assert [p.arxiv_id for _, p in missing] == ["d-null"]
 
     score, _ = missing[0]
-    score = await repo.get_by_paper_id(score.paper_id, RUBRIC_VERSION, with_evidence=True)
-    assert score is not None
+    assert "evidence" not in inspect(score).unloaded
     await repo.set_demand(
         score,
         demand_score=55,

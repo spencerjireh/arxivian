@@ -151,6 +151,10 @@ class ScoringRepository:
             )
             .order_by(PaperScore.updated_at)
             .limit(limit)
+            # set_demand appends to score.evidence, and the caller hands it the instance this
+            # method returns. A lazy load there is a MissingGreenlet under asyncpg (ARX-63), so
+            # the collection has to be loaded before the instance leaves this method.
+            .options(selectinload(PaperScore.evidence))
         )
         rows = (await self.session.execute(stmt)).all()
         return [(row[0], row[1]) for row in rows]
