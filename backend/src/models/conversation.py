@@ -22,7 +22,10 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    session_id: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    # unique=True alone maps to the UNIQUE constraint the database actually has,
+    # conversations_session_id_key. Adding index=True would instead ask SQLAlchemy for a
+    # unique index named ix_conversations_session_id, which has never existed (ARX-65).
+    session_id: Mapped[str] = mapped_column(String(255), unique=True)
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), index=True
     )

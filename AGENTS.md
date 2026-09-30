@@ -95,8 +95,11 @@ structured-output models in `state.py`; three tools in `tools/` (retrieve_chunks
 session_id?}` and nothing else (`extra="forbid"`), streams SSE events (`schemas/stream.py`),
 and persists the scope on `conversations.paper_id`, which wins on follow-ups
 (`routers/stream.py::resolve_scoped_paper`; 409 `PAPER_NOT_INGESTED` / `SCOPE_MISMATCH`).
-`GET /conversations?arxiv_id=` lists a paper's threads; another user's session id is a
-403. There is no HITL ingest, no corpus search, no resume, no server-side cancel.
+`GET /conversations?arxiv_id=` lists a paper's threads; on the read routes another user's
+session id is a 404 (`ResourceNotFoundError`), while reusing one on `POST /stream` is a 403
+`FORBIDDEN` raised by `ConversationRepository.save_turn` before the insert and delivered as
+an SSE `error` event, since the response is already 200. There is no HITL ingest, no corpus
+search, no resume, no server-side cancel.
 
 **Scoring pipeline** (`services/scoring_service/`, rubric v2): Stage 1 triage
 (`triage.py`, batched abstracts on the default LLM, weekly `triage_tasks.py`) feeds Stage
