@@ -12,7 +12,12 @@ dependencies = [
     "pydantic>=2.9.2",
     "pydantic-settings>=2.6.0",
     # Database
-    "sqlalchemy>=2.0.35",
+    # The [asyncio] extra is what pulls in greenlet. SQLAlchemy 2.0 installed it anyway;
+    # 2.1 does not, and every src/ import of sqlalchemy.ext.asyncio needs it.
+    # Capped below 2.1 until opentelemetry-instrumentation-sqlalchemy supports it: it declares
+    # sqlalchemy<2.1.0, so on 2.1 it refuses to instrument and every DB span disappears from
+    # Logfire and Tempo. See ARX-64.
+    "sqlalchemy[asyncio]>=2.0.35,<2.1",
     "asyncpg>=0.29.0",
     "alembic>=1.13.3",
     "pgvector>=0.3.4",
@@ -64,8 +69,8 @@ dev = [
     "pytest-cov>=6.0.0",
     # Exact pins: CI, the pre-commit hook and `just lint` all run the locked binary, and
     # ruff/ty change diagnostics between releases. Dependabot bumps these.
-    "ruff==0.16.8",
-    "ty==0.0.82",
+    "ruff==0.16.9",
+    "ty==0.0.84",
     "vulture>=2.14",
 ]
 eval = [
