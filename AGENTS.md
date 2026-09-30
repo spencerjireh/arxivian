@@ -245,6 +245,14 @@ generated release notes (`release.yml`). Moving the stack between servers:
 
 - The test DB keeps `alembic_version` after `just test` drops the tables: `DROP TABLE
   alembic_version` before an `alembic upgrade head` there.
+- A revision id must be **32 characters or fewer**: `alembic_version.version_num` is
+  `varchar(32)`, and a longer one fails every migration run with
+  `StringDataRightTruncationError` at the point it writes the new version, not at import.
+- `just ci` reads `node_modules` from the `frontend` and `frontend-test-runner` images, so after
+  a `package.json` change rebuild both (`docker compose --profile dev build frontend`,
+  `docker compose --profile test build frontend-test-runner`). Stale ones fail as eslint
+  `no-unsafe-*` on an "error type" and a vite import-analysis error, which read like real code
+  defects rather than a missing package.
 - Host-port overrides (`BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`, `REDIS_PORT`,
   `FLOWER_PORT`, `TEST_DB_PORT`) are compose interpolation from the shell, not `backend/.env`.
 - A real `LOGFIRE_TOKEN` in `backend/.env` turns on live instrumentation for local pytest
