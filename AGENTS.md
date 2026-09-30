@@ -95,8 +95,11 @@ structured-output models in `state.py`; three tools in `tools/` (retrieve_chunks
 session_id?}` and nothing else (`extra="forbid"`), streams SSE events (`schemas/stream.py`),
 and persists the scope on `conversations.paper_id`, which wins on follow-ups
 (`routers/stream.py::resolve_scoped_paper`; 409 `PAPER_NOT_INGESTED` / `SCOPE_MISMATCH`).
-`GET /conversations?arxiv_id=` lists a paper's threads; another user's session id is a
-403. There is no HITL ingest, no corpus search, no resume, no server-side cancel.
+`GET /conversations?arxiv_id=` lists a paper's threads; on the read routes another user's
+session id is a 404 (`ResourceNotFoundError`), while reusing one on `POST /stream` is a 403
+`FORBIDDEN` raised by `ConversationRepository.save_turn` before the insert and delivered as
+an SSE `error` event, since the response is already 200. There is no HITL ingest, no corpus
+search, no resume, no server-side cancel.
 
 **Scoring pipeline** (`services/scoring_service/`, rubric v2): Stage 1 triage
 (`triage.py`, batched abstracts on the default LLM, weekly `triage_tasks.py`) feeds Stage
@@ -242,6 +245,14 @@ generated release notes (`release.yml`). Moving the stack between servers:
 
 - The test DB keeps `alembic_version` after `just test` drops the tables: `DROP TABLE
   alembic_version` before an `alembic upgrade head` there.
+- A revision id must be **32 characters or fewer**: `alembic_version.version_num` is
+  `varchar(32)`, and a longer one fails every migration run with
+  `StringDataRightTruncationError` at the point it writes the new version, not at import.
+- `just ci` reads `node_modules` from the `frontend` and `frontend-test-runner` images, so after
+  a `package.json` change rebuild both (`docker compose --profile dev build frontend`,
+  `docker compose --profile test build frontend-test-runner`). Stale ones fail as eslint
+  `no-unsafe-*` on an "error type" and a vite import-analysis error, which read like real code
+  defects rather than a missing package.
 - Host-port overrides (`BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`, `REDIS_PORT`,
   `FLOWER_PORT`, `TEST_DB_PORT`) are compose interpolation from the shell, not `backend/.env`.
 - A real `LOGFIRE_TOKEN` in `backend/.env` turns on live instrumentation for local pytest
