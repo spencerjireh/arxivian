@@ -17,7 +17,7 @@ dependencies = [
     # Capped below 2.1 until opentelemetry-instrumentation-sqlalchemy supports it: it declares
     # sqlalchemy<2.1.0, so on 2.1 it refuses to instrument and every DB span disappears from
     # Logfire and Tempo. See ARX-64.
-    "sqlalchemy[asyncio]>=2.0.35,<2.1",
+    "sqlalchemy[asyncio]>=2.0.35,<2.2",
     "asyncpg>=0.29.0",
     "alembic>=1.13.3",
     "pgvector>=0.3.4",
