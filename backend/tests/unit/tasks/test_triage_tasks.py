@@ -1,9 +1,11 @@
 """Unit tests for Stage 1 triage and the Stage 2 driver task."""
 
+import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
+from celery.exceptions import SoftTimeLimitExceeded
 
 from src.services.scoring_service.triage import TriageBatchResult, TriageResult
 
@@ -36,6 +38,8 @@ def triage_settings():
         triage_lookback_days=7,
         triage_max_per_category=100,
         arxiv_crawl_pause_seconds=0,
+        triage_batch_concurrency=4,
+        triage_max_survivors=150,
     )
 
 
@@ -131,13 +135,11 @@ class TestTriageNewPapersTask:
         assert generate.call_count == 2
         assert result["survivors"] == 25
 
-    def test_global_dedup_across_categories(self):
-        settings = SimpleNamespace(
-            triage_categories=["cs.LG", "cs.CV"],
-            triage_lookback_days=7,
-            triage_max_per_category=100,
-            arxiv_crawl_pause_seconds=0,
-        )
+    def test_global_dedup_across_categories(self, triage_settings):
+        # Override on the fixture rather than rebuilding the namespace, so a new triage
+        # setting does not break this test the way it used to.
+        triage_settings.triage_categories = ["cs.LG", "cs.CV"]
+        settings = triage_settings
         # 2401.001 is cross-listed in both categories.
         crawl = {
             "cs.LG": [_paper("2401.001"), _paper("2401.002")],
@@ -184,6 +186,112 @@ class TestTriageNewPapersTask:
         assert result["rejected"] == 0
         assert result["crawled"] == 2
         apply_async.assert_not_called()
+
+
+class TestTriageConcurrency:
+    """Stage 1 batches run in parallel under a semaphore (ARX-67)."""
+
+    def test_batches_overlap_but_stay_within_the_concurrency_cap(self, triage_settings):
+        # 10 batches of 20, concurrency 4: the classification phase has to overlap, since
+        # sequential batches are exactly what pushed the task past the hard time limit.
+        triage_settings.triage_batch_concurrency = 4
+        papers = [_paper(f"2401.{i:03d}") for i in range(200)]
+
+        in_flight = 0
+        peak = 0
+
+        async def _generate(messages, response_format):
+            nonlocal in_flight, peak
+            in_flight += 1
+            peak = max(peak, in_flight)
+            await asyncio.sleep(0)  # yield, so overlapping calls are observable
+            in_flight -= 1
+            return TriageBatchResult(results=[])
+
+        from src.tasks.triage_tasks import triage_new_papers_task
+
+        async def _search(query, categories, max_results, start_date, end_date):
+            return papers
+
+        mock_arxiv = Mock()
+        mock_arxiv.search_papers = AsyncMock(side_effect=_search)
+        mock_llm = Mock()
+        mock_llm.generate_structured = AsyncMock(side_effect=_generate)
+
+        with (
+            patch("src.tasks.triage_tasks.get_arxiv_client", return_value=mock_arxiv),
+            patch("src.tasks.triage_tasks.get_llm_client", return_value=mock_llm),
+            patch("src.tasks.triage_tasks.get_settings", return_value=triage_settings),
+            patch("src.tasks.triage_tasks.score_paper_task"),
+        ):
+            triage_new_papers_task()
+
+        assert mock_llm.generate_structured.await_count == 10
+        assert peak > 1, "batches ran sequentially; the timeout fix is not in effect"
+        assert peak <= 4, f"concurrency cap exceeded: peak {peak}"
+
+    def test_soft_time_limit_still_enqueues_the_completed_batches(self, triage_settings):
+        """A slow run is degraded, not wasted -- the ARX-63 lesson applied to triage."""
+        triage_settings.triage_batch_concurrency = 1
+        papers = [_paper(f"2401.{i:03d}") for i in range(40)]
+
+        first = TriageBatchResult(results=[_verdict(f"2401.{i:03d}", True) for i in range(20)])
+        result, apply_async, _ = _run_triage(
+            {"cs.LG": papers}, [first, SoftTimeLimitExceeded()], triage_settings
+        )
+
+        assert result["timed_out"] is True
+        # The 20 papers classified before the limit are still enqueued, not discarded.
+        assert result["survivors"] == 20
+        assert apply_async.call_count == 20
+
+
+class TestTriageSurvivorCap:
+    """The fan-out is bounded, best-first (ARX-67)."""
+
+    def test_cap_keeps_the_highest_rough_implementability(self, triage_settings):
+        triage_settings.triage_max_survivors = 2
+        papers = [_paper("2401.001"), _paper("2401.002"), _paper("2401.003")]
+        batch = TriageBatchResult(
+            results=[
+                TriageResult(
+                    arxiv_id="2401.001",
+                    paper_class="method",
+                    rough_implementability=40,
+                    keep=True,
+                    reasoning="mid",
+                ),
+                TriageResult(
+                    arxiv_id="2401.002",
+                    paper_class="method",
+                    rough_implementability=90,
+                    keep=True,
+                    reasoning="best",
+                ),
+                TriageResult(
+                    arxiv_id="2401.003",
+                    paper_class="method",
+                    rough_implementability=70,
+                    keep=True,
+                    reasoning="good",
+                ),
+            ]
+        )
+        result, apply_async, _ = _run_triage({"cs.LG": papers}, [batch], triage_settings)
+
+        assert result["survivors"] == 2
+        assert result["capped"] == 1
+        enqueued = [c.kwargs["kwargs"]["arxiv_id"] for c in apply_async.call_args_list]
+        # Best first, and the weakest keep is the one dropped -- not an arbitrary one.
+        assert enqueued == ["2401.002", "2401.003"]
+
+    def test_no_cap_reported_when_under_the_limit(self, triage_settings):
+        papers = [_paper("2401.001")]
+        batch = TriageBatchResult(results=[_verdict("2401.001", True)])
+        result, _, _ = _run_triage({"cs.LG": papers}, [batch], triage_settings)
+
+        assert result["capped"] == 0
+        assert result["timed_out"] is False
 
 
 class TestScorePaperTask:

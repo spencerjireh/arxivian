@@ -69,7 +69,10 @@ celery_app.conf.beat_schedule = {
         "task": "src.tasks.triage_tasks.triage_new_papers_task",
         "schedule": crontab(**parse_cron(settings.triage_schedule_cron)),
     },
-    "weekly-digest": {
+    # Nightly, not weekly: the build only ranks scores created inside the current ISO week
+    # and the feed reads nothing but digest.ranking, so a weekly build hid everything Stage 2
+    # finished after it (ARX-67). The upsert makes re-running it safe.
+    "daily-digest": {
         "task": "src.tasks.digest_tasks.build_digest_task",
         "schedule": crontab(**parse_cron(settings.digest_schedule_cron)),
     },
