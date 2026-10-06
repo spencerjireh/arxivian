@@ -140,7 +140,9 @@ The onboarding profile lives in `users.preferences["feed_profile"]` (`schemas/us
 **Celery** (`tasks/`): Redis broker, RedBeat scheduler, Flower on 5555. `ingest_tasks`,
 `cleanup_tasks`, `scheduled_tasks` (nightly ingest; a no-op until the system user's
 `arxiv_searches` is set, and unrelated to the feed since triage crawls arXiv itself),
-`triage_tasks` (weekly Stage 1),
+`triage_tasks` (weekly Stage 1; `TRIAGE_MAX_PER_CATEGORY` is deliberately wide enough to
+reach the start of the lookback window -- check `stop_reason=window_start` on the `arxiv date
+scan` line, since anything else means the crawl only sampled the newest slice, ARX-70),
 `score_tasks` (Stage 2; retries only on no-full-text / TypeSafe transient errors, honors
 `retry_after`), `digest_tasks` (**nightly**: it only ranks scores created inside the current
 ISO week and the feed reads nothing but `digest.ranking`, so a weekly build hid everything
