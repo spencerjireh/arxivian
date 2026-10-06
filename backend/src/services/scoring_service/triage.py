@@ -2,8 +2,10 @@
 
 Stage 1 crawls new arXiv submissions (title + abstract only, no PDF) and runs a single
 coarse keep/drop classification over a batch of abstracts on the cheap default model.
-Survivors are enqueued into Stage 2 deep scoring; the bulk (~70-80%) is dropped before any
-full-text cost is incurred. See `ARX-55` -> "Stage 1 -- Cheap Triage".
+Survivors are enqueued into Stage 2 deep scoring. The prompt below biases toward keeping, so
+only the obvious non-artifacts are dropped -- ~7% in the first production run, not the
+~70-80% this docstring claimed until ARX-70. `triage_max_survivors` is what bounds Stage 2
+volume. See `ARX-55` -> "Stage 1 -- Cheap Triage".
 
 The schema is deliberately lighter than the Stage 2 `DimensionScore` in `state.py`: one
 verdict per paper, no evidence spans. The prompt is NOT one of the Stage 2 rubric

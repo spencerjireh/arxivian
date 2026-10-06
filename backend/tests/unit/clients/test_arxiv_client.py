@@ -137,6 +137,75 @@ class TestDateFilteredSearchEarlyTermination:
         assert results == []
 
 
+class TestDateScanCoverage:
+    """`stop_reason` says whether a crawl surveyed the window or only sampled it (ARX-70)."""
+
+    @staticmethod
+    def _scan_log(mock_log) -> dict:
+        calls = [
+            c for c in mock_log.info.call_args_list if c.args and c.args[0] == "arxiv date scan"
+        ]
+        assert len(calls) == 1, f"expected one coverage line, got {len(calls)}"
+        return calls[0].kwargs
+
+    @pytest.mark.asyncio
+    async def test_window_start_means_the_whole_window_was_seen(self, client: ArxivClient):
+        with (
+            patch("src.clients.arxiv_client.log") as mock_log,
+            patch.object(client.client, "results", return_value=iter(_PAPERS)),
+        ):
+            await client.search_papers(
+                query="q", max_results=10, start_date="2026-02-13", end_date="2026-02-15"
+            )
+
+        fields = self._scan_log(mock_log)
+        assert fields["stop_reason"] == "window_start"
+        assert fields["scanned"] == 4  # Feb 16, 15, 14, then Feb 10 ends it
+        assert fields["matched"] == 2
+
+    @pytest.mark.asyncio
+    async def test_max_results_means_in_window_papers_were_missed(self, client: ArxivClient):
+        all_in_range = [
+            _make_result(f"2602.1000{i}", _utc(2026, 2, 15 - i), f"Paper {i}") for i in range(5)
+        ]
+        with (
+            patch("src.clients.arxiv_client.log") as mock_log,
+            patch.object(client.client, "results", return_value=iter(all_in_range)),
+        ):
+            await client.search_papers(
+                query="q", max_results=2, start_date="2026-02-01", end_date="2026-02-28"
+            )
+
+        fields = self._scan_log(mock_log)
+        assert fields["stop_reason"] == "max_results"
+        assert fields["matched"] == 2
+
+    @pytest.mark.asyncio
+    async def test_scan_exhausted_when_the_feed_runs_out_inside_the_window(
+        self, client: ArxivClient
+    ):
+        """No break fires: the iterator simply ends while still inside the window.
+
+        `scanned` versus `scan_cap` is what separates the two readings of this -- short of
+        the cap means arXiv had nothing more, at the cap means we were truncated.
+        """
+        in_range = [
+            _make_result(f"2602.2000{i}", _utc(2026, 2, 15 - i), f"Paper {i}") for i in range(3)
+        ]
+        with (
+            patch("src.clients.arxiv_client.log") as mock_log,
+            patch.object(client.client, "results", return_value=iter(in_range)),
+        ):
+            await client.search_papers(
+                query="q", max_results=50, start_date="2026-02-01", end_date="2026-02-28"
+            )
+
+        fields = self._scan_log(mock_log)
+        assert fields["stop_reason"] == "scan_exhausted"
+        assert fields["scanned"] == 3
+        assert fields["scanned"] < fields["scan_cap"]
+
+
 class TestDateFilteredSearchConfig:
     """Verify the search is configured correctly for date-filtered queries."""
 

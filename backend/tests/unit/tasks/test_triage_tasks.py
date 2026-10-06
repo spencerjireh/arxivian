@@ -1,6 +1,7 @@
 """Unit tests for Stage 1 triage and the Stage 2 driver task."""
 
 import asyncio
+import re
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
@@ -206,7 +207,11 @@ class TestTriageConcurrency:
             peak = max(peak, in_flight)
             await asyncio.sleep(0)  # yield, so overlapping calls are observable
             in_flight -= 1
-            return TriageBatchResult(results=[])
+            # Echo a verdict per id in the prompt, as a real response would. Returning an
+            # empty list here would leave every paper without a verdict and trigger the
+            # ARX-70 re-batch, doubling the call count this test asserts on.
+            ids = re.findall(r"arxiv_id: (\S+)", messages[1]["content"])
+            return TriageBatchResult(results=[_verdict(i, True) for i in ids])
 
         from src.tasks.triage_tasks import triage_new_papers_task
 
@@ -244,6 +249,64 @@ class TestTriageConcurrency:
         # The 20 papers classified before the limit are still enqueued, not discarded.
         assert result["survivors"] == 20
         assert apply_async.call_count == 20
+
+
+class TestTriageMissingVerdicts:
+    """A verdict the model omits gets one more pass, not a silent drop (ARX-70)."""
+
+    def test_missing_ids_are_reclassified_once_and_enqueued(self, triage_settings):
+        papers = [_paper("2401.001"), _paper("2401.002")]
+        # First pass answers for one paper only; the re-batch supplies the other.
+        first = TriageBatchResult(results=[_verdict("2401.001", True)])
+        second = TriageBatchResult(results=[_verdict("2401.002", True)])
+        result, apply_async, generate = _run_triage(
+            {"cs.LG": papers}, [first, second], triage_settings
+        )
+
+        assert generate.await_count == 2, "expected exactly one re-batch"
+        assert result["no_verdict"] == 0
+        assert result["survivors"] == 2
+        assert {c.kwargs["kwargs"]["arxiv_id"] for c in apply_async.call_args_list} == {
+            "2401.001",
+            "2401.002",
+        }
+
+    def test_still_missing_after_the_retry_is_dropped_and_reported(self, triage_settings):
+        papers = [_paper("2401.001"), _paper("2401.002")]
+        answered = TriageBatchResult(results=[_verdict("2401.001", True)])
+        # The re-batch answers for nobody, so 2401.002 is dropped -- but counted.
+        result, apply_async, generate = _run_triage(
+            {"cs.LG": papers}, [answered, TriageBatchResult(results=[])], triage_settings
+        )
+
+        assert generate.await_count == 2
+        assert result["no_verdict"] == 1
+        assert result["survivors"] == 1
+        assert apply_async.call_count == 1
+
+    def test_no_second_call_when_every_paper_got_a_verdict(self, triage_settings):
+        """Guards against burning an extra LLM request on every healthy weekly run."""
+        papers = [_paper("2401.001")]
+        batch = TriageBatchResult(results=[_verdict("2401.001", True)])
+        result, _, generate = _run_triage({"cs.LG": papers}, [batch], triage_settings)
+
+        assert generate.await_count == 1
+        assert result["no_verdict"] == 0
+
+    def test_soft_timeout_skips_the_retry(self, triage_settings):
+        """More calls after the soft limit would reach the hard limit -- the ARX-67 failure."""
+        triage_settings.triage_batch_concurrency = 1
+        papers = [_paper(f"2401.{i:03d}") for i in range(40)]
+        first = TriageBatchResult(results=[_verdict(f"2401.{i:03d}", True) for i in range(20)])
+        result, _, generate = _run_triage(
+            {"cs.LG": papers}, [first, SoftTimeLimitExceeded()], triage_settings
+        )
+
+        assert result["timed_out"] is True
+        # Two calls: the batch that succeeded and the one that raised. No third.
+        assert generate.await_count == 2
+        assert result["no_verdict"] == 20
+        assert result["survivors"] == 20
 
 
 class TestTriageSurvivorCap:
