@@ -110,7 +110,14 @@ class Settings(BaseSettings):
     triage_schedule_cron: str = "0 6 * * 1"  # Weekly Monday 6am UTC
     triage_categories: list[str] = ["cs.LG", "cs.CL", "cs.CV", "cs.AI"]
     triage_lookback_days: int = 7
-    triage_max_per_category: int = 100
+    # Raised from 100 after ARX-70's coverage line showed every category stopping at
+    # `max_results` with the window unexhausted: the crawl was seeing roughly the newest
+    # quarter of the week, so the survivor cap was picking the best 150 of the newest 366
+    # rather than of the week. Looking wider is nearly free -- Stage 1 is gpt-5-nano at
+    # $0.05/M in, and `triage_max_survivors` still holds Stage 2 (and Semantic Scholar)
+    # volume flat. Watch `stop_reason` in the `arxiv date scan` line: anything other than
+    # `window_start` means this is still too low.
+    triage_max_per_category: int = 500
     # Pause between per-category arXiv crawls so the weekly triage does not trip arXiv's
     # rate limit (ARX-16). The arxiv.Client keeps its own per-page delay on top.
     arxiv_crawl_pause_seconds: int = 3
@@ -126,7 +133,7 @@ class Settings(BaseSettings):
     # Triage's own limit, overriding celery_task_timeout for this one task. The soft limit
     # fires first and is caught, so a slow run still enqueues the verdicts it already has
     # instead of losing all of them to the hard kill.
-    triage_task_timeout: int = 1800
+    triage_task_timeout: int = 3000
 
     # Stage 3 digest -- cached ranking snapshot for the current ISO week, rebuilt nightly.
     # Weekly was wrong: build_digest_task only ranks scores created inside the week, the feed

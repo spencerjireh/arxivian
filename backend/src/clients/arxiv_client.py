@@ -22,10 +22,11 @@ from src.utils.logger import get_logger
 log = get_logger(__name__)
 _tenacity_logger = logging.getLogger(__name__)
 
-# Safety cap on total papers scanned during date-filtered searches.
-# The client lazily iterates results sorted by date and stops early once past
-# the target window, so this limit is rarely reached.
-_DATE_FILTER_SCAN_LIMIT = 500
+# Safety cap on total papers scanned during date-filtered searches. The window itself is
+# the intended stop (see `window_start` in `_execute_date_filtered_search_sync`); this only
+# bounds a runaway. Raised from 500 with ARX-70's wider triage crawl, so that the cap on
+# results, not the scan budget, is what a caller tunes.
+_DATE_FILTER_SCAN_LIMIT = 1500
 
 
 class ArxivPaper:
