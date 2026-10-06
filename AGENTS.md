@@ -253,6 +253,11 @@ generated release notes (`release.yml`). Moving the stack between servers:
 
 - The test DB keeps `alembic_version` after `just test` drops the tables: `DROP TABLE
   alembic_version` before an `alembic upgrade head` there.
+- **`run_async` has its own timeout, and it wins.** It bounds every task at
+  `CELERY_TASK_TIMEOUT` unless the caller passes `timeout=`, so raising a task's Celery
+  `soft_time_limit` alone does nothing -- the future times out first and the task's own limit
+  never applies (ARX-72, which killed the weekly triage at 600s against a 3000s soft limit).
+  Raise both, and keep `run_async`'s value between the soft and hard Celery limits.
 - `CELERY_TASK_TIMEOUT` is a **hard** limit: the worker takes SIGKILL, so anything not yet
   committed or enqueued is lost. Two tasks have hit this (ARX-63 demand backfill, ARX-67
   triage). A long task must either commit per row or set its own `soft_time_limit` and catch

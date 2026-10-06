@@ -255,7 +255,9 @@ def triage_new_papers_task() -> dict[str, Any]:
             "enqueued": enqueued,
         }
 
-    result = run_async(_run())
+    # +30s so the Celery soft limit (which the task catches, preserving partial work) always
+    # fires before this backstop. Ordering: soft _TRIAGE_TIMEOUT -> this -> hard +60.
+    result = run_async(_run(), timeout=_TRIAGE_TIMEOUT + 30)
     log.info(
         "triage_completed",
         crawled=result["crawled"],
