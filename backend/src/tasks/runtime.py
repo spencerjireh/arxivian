@@ -58,16 +58,27 @@ def stop_worker_loop() -> None:
     _worker_loop_thread = None
 
 
-def run_async(coro: Coroutine[Any, Any, T]) -> T:
+def run_async(coro: Coroutine[Any, Any, T], timeout: float | None = None) -> T:
     """Run a coroutine from a sync Celery task and return its result.
 
-    Uses the persistent worker loop when one exists (bounded by
-    `Settings.celery_task_timeout`); otherwise runs it on a temporary loop.
+    Uses the persistent worker loop when one exists; otherwise runs it on a temporary loop.
+
+    `timeout` defaults to `Settings.celery_task_timeout`. A task that raises its own Celery
+    `soft_time_limit` above that default MUST pass a matching value here, or this bound
+    fires first and the task's own limit never applies -- which is what killed the weekly
+    triage at 600s despite a 3000s soft limit (ARX-72).
     """
     loop = get_worker_loop()
     if loop is not None:
         future = asyncio.run_coroutine_threadsafe(coro, loop)
-        return future.result(timeout=get_settings().celery_task_timeout)
+        try:
+            return future.result(timeout=timeout or get_settings().celery_task_timeout)
+        except TimeoutError:
+            # future.result() timing out does NOT stop the coroutine -- it keeps running on
+            # the shared worker loop, burning API calls and still writing, long after the
+            # task is marked failed. Cancel it so a failed task means stopped work.
+            future.cancel()
+            raise
 
     tmp_loop = asyncio.new_event_loop()
     asyncio.set_event_loop(tmp_loop)

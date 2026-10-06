@@ -1,6 +1,9 @@
 """Unit tests for the worker event-loop runtime."""
 
 import asyncio
+import time
+
+import pytest
 
 import src.tasks.runtime as runtime
 
@@ -82,5 +85,49 @@ class TestRunAsync:
 
         try:
             assert runtime.run_async(which_loop()) is runtime._worker_loop
+        finally:
+            runtime.stop_worker_loop()
+
+    def test_explicit_timeout_overrides_the_celery_default(self):
+        """A task whose own limit exceeds celery_task_timeout must be able to say so.
+
+        Without this, run_async bounded every task at celery_task_timeout no matter what
+        soft_time_limit the task declared, which killed the weekly triage at 600s against
+        its own 3000s limit (ARX-72).
+        """
+        _reset()
+        runtime.start_worker_loop()
+
+        async def slow() -> str:
+            await asyncio.sleep(0.3)
+            return "finished"
+
+        try:
+            # celery_task_timeout is 600 in tests, so the default would not catch this;
+            # a short explicit timeout proves the argument is what bounds the call.
+            with pytest.raises(TimeoutError):
+                runtime.run_async(slow(), timeout=0.05)
+            # And a generous one lets the same coroutine through.
+            assert runtime.run_async(slow(), timeout=5) == "finished"
+        finally:
+            runtime.stop_worker_loop()
+
+    def test_timeout_cancels_the_coroutine_instead_of_orphaning_it(self):
+        """A failed task must mean stopped work, not work that keeps running unobserved."""
+        _reset()
+        runtime.start_worker_loop()
+        ran_to_completion = False
+
+        async def long() -> None:
+            nonlocal ran_to_completion
+            await asyncio.sleep(0.5)
+            ran_to_completion = True
+
+        try:
+            with pytest.raises(TimeoutError):
+                runtime.run_async(long(), timeout=0.05)
+            # Give the loop more than the coroutine's own duration; it must stay cancelled.
+            time.sleep(0.8)
+            assert ran_to_completion is False
         finally:
             runtime.stop_worker_loop()
