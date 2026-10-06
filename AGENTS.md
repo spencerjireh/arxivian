@@ -102,7 +102,8 @@ an SSE `error` event, since the response is already 200. There is no HITL ingest
 search, no resume, no server-side cancel.
 
 **Scoring pipeline** (`services/scoring_service/`, rubric v2): Stage 1 triage
-(`triage.py`, batched abstracts on the default LLM, weekly `triage_tasks.py`) feeds Stage
+(`triage.py`, batched abstracts on the default LLM run concurrently under
+`TRIAGE_BATCH_CONCURRENCY`, weekly `triage_tasks.py`) feeds Stage
 2, a fixed fan-out/fan-in LangGraph DAG (fetch_and_extract -> four dimension nodes ->
 compose_and_persist) driven by `score_tasks.py`. Judgments come from TypeSafe Jev
 (`clients/typesafe_client.py`; typed answers with calibrated probabilities): method
@@ -115,7 +116,7 @@ attributes in `paper_scores.attributes`. See `ARX-55` and `ARX-56`
 in Plane (the rubric is the source of truth).
 
 **Feed read path** (`services/feed_service/`): `digest.py` (week key, composite weights,
-`compute_composite`) is written by the weekly `build_digest_task` and read by
+`compute_composite`) is written by the nightly `build_digest_task` and read by
 `FeedService`; `derive.py` turns a `PaperScore` row into card fields in pure code (read-time
 composite with NULL renormalization, compute-profile match, `headline` "<family> for
 <task>" and the truthy-only `meta` phrases from the Jev judgments, low-confidence marker);
@@ -137,9 +138,14 @@ The onboarding profile lives in `users.preferences["feed_profile"]` (`schemas/us
 `weights` are reserved, not settable.
 
 **Celery** (`tasks/`): Redis broker, RedBeat scheduler, Flower on 5555. `ingest_tasks`,
-`cleanup_tasks`, `scheduled_tasks` (nightly ingest), `triage_tasks` (weekly Stage 1),
+`cleanup_tasks`, `scheduled_tasks` (nightly ingest; a no-op until the system user's
+`arxiv_searches` is set, and unrelated to the feed since triage crawls arXiv itself),
+`triage_tasks` (weekly Stage 1),
 `score_tasks` (Stage 2; retries only on no-full-text / TypeSafe transient errors, honors
-`retry_after`), `digest_tasks` (weekly), `demand_tasks` (nightly backfill of NULL demand),
+`retry_after`), `digest_tasks` (**nightly**: it only ranks scores created inside the current
+ISO week and the feed reads nothing but `digest.ranking`, so a weekly build hid everything
+Stage 2 finished after it -- ARX-67; the upsert makes re-running it safe),
+`demand_tasks` (nightly backfill of NULL demand),
 `embedding_tasks` (`reembed_chunks_task`, run by hand after an embedding-model change;
 keyset cursor, re-enqueues itself under the task time limit).
 `runtime.py` owns the per-process event loop and `run_async`; `signals.py` starts it,
@@ -245,6 +251,11 @@ generated release notes (`release.yml`). Moving the stack between servers:
 
 - The test DB keeps `alembic_version` after `just test` drops the tables: `DROP TABLE
   alembic_version` before an `alembic upgrade head` there.
+- `CELERY_TASK_TIMEOUT` is a **hard** limit: the worker takes SIGKILL, so anything not yet
+  committed or enqueued is lost. Two tasks have hit this (ARX-63 demand backfill, ARX-67
+  triage). A long task must either commit per row or set its own `soft_time_limit` and catch
+  `SoftTimeLimitExceeded` to persist what it has. Judging progress by a falling row count is
+  not evidence of persistence -- grep the worker log for `Hard time limit`.
 - A revision id must be **32 characters or fewer**: `alembic_version.version_num` is
   `varchar(32)`, and a longer one fails every migration run with
   `StringDataRightTruncationError` at the point it writes the new version, not at import.

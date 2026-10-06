@@ -114,9 +114,26 @@ class Settings(BaseSettings):
     # Pause between per-category arXiv crawls so the weekly triage does not trip arXiv's
     # rate limit (ARX-16). The arxiv.Client keeps its own per-page delay on top.
     arxiv_crawl_pause_seconds: int = 3
+    # Stage 1 classification calls run concurrently, not one after another. Sequential
+    # batches put 4x100 candidates at ~33s per batch past celery_task_timeout, and the
+    # SIGKILL discarded the whole run (ARX-67). Keep this modest: the cap exists to stay
+    # inside the default model's rate limit, not to go as wide as possible.
+    triage_batch_concurrency: int = 4
+    # Ceiling on Stage 2 enqueues per run, highest rough_implementability first. Bounds
+    # queue depth at --concurrency=2 so a keep-everything prompt regression cannot flood
+    # the worker for hours; it is not a spend control (a full run is cents).
+    triage_max_survivors: int = 150
+    # Triage's own limit, overriding celery_task_timeout for this one task. The soft limit
+    # fires first and is caught, so a slow run still enqueues the verdicts it already has
+    # instead of losing all of them to the hard kill.
+    triage_task_timeout: int = 1800
 
-    # Stage 3 digest -- weekly cached ranking snapshot. Runs after triage+scoring settle.
-    digest_schedule_cron: str = "0 8 * * 1"  # Weekly Monday 8am UTC (2h after triage)
+    # Stage 3 digest -- cached ranking snapshot for the current ISO week, rebuilt nightly.
+    # Weekly was wrong: build_digest_task only ranks scores created inside the week, the feed
+    # reads nothing but digest.ranking, and Stage 2 takes far longer than the 2h that used to
+    # separate it from triage -- so anything scored later stayed invisible until the next
+    # Monday (ARX-67). The build is an idempotent upsert, so re-running it nightly is safe.
+    digest_schedule_cron: str = "0 8 * * *"  # Daily at 8am UTC
 
 
 @lru_cache(maxsize=1)
