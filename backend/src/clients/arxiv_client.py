@@ -119,16 +119,26 @@ class ArxivClient:
     ) -> list[ArxivPaper]:
         """Lazily iterate date-sorted results, stopping once past the date window.
 
-        Uses three stop conditions:
-        1. Collected ``max_results`` matching papers.
-        2. Current paper's date is before ``start_dt`` (early termination --
-           results are sorted descending).
-        3. ``search.max_results`` acts as a library-level scan cap.
+        Uses three stop conditions, logged as ``stop_reason`` so crawl coverage is
+        measurable (ARX-70):
+        1. ``max_results`` -- collected enough matching papers, but we were still inside
+           the window, so more in-window papers exist that we never saw.
+        2. ``window_start`` -- current paper's date is before ``start_dt`` (early
+           termination; results are sorted descending). The only outcome that proves the
+           whole window was scanned.
+        3. ``scan_exhausted`` -- ``search.max_results`` library-level scan cap ran out
+           before reaching the window start; also a partial view, of unknown extent.
 
         No tenacity decorator -- ``arxiv.Client`` has built-in per-page retries.
         """
         matched: list[ArxivPaper] = []
+        scanned = 0
+        # Which of the three exits fires is the whole coverage question (ARX-70), so it is
+        # recorded rather than inferred. Defaults to the exhausted-iterator case, which is
+        # the one with no explicit break.
+        stop_reason = "scan_exhausted"
         for result in self.client.results(search):
+            scanned += 1
             paper = ArxivPaper(result)
             # Early termination: if the paper is older than the start date,
             # all subsequent papers will be older too (descending sort).
@@ -142,6 +152,7 @@ class ArxivClient:
                     paper_date=str(paper.published_date.date()),
                     start_date=str(start_dt.date()),
                 )
+                stop_reason = "window_start"
                 break
             if self._paper_in_date_range(paper, start_dt, end_dt):
                 matched.append(paper)
@@ -151,7 +162,20 @@ class ArxivClient:
                     title=paper.title[:60],
                 )
                 if len(matched) >= max_results:
+                    stop_reason = "max_results"
                     break
+        # `window_start` is the only outcome that proves the whole window was seen. For
+        # `scan_exhausted`, compare `scanned` with `scan_cap`: short of it means arXiv had
+        # nothing more, at it means we were truncated. `scanned` doubles as the cost signal,
+        # since arxiv.Client pages at 100 with a 3s delay between pages.
+        log.info(
+            "arxiv date scan",
+            scanned=scanned,
+            matched=len(matched),
+            max_results=max_results,
+            scan_cap=search.max_results,
+            stop_reason=stop_reason,
+        )
         return matched
 
     async def _execute_date_filtered_search(

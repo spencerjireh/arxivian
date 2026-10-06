@@ -3,7 +3,12 @@
 Weekly Beat-triggered batch task. Crawls new arXiv submissions for the configured
 categories (title + abstract only, NO PDF), runs a single coarse keep/drop classification
 over batched abstracts on the cheap default model, and enqueues one Stage 2
-`score_paper_task` per survivor. The bulk (~70-80%) is dropped before any full-text cost.
+`score_paper_task` per survivor.
+
+The prompt is recall-biased on purpose, so triage drops only the obvious non-artifacts --
+surveys, position papers, theory, benchmarks -- observed at **~7%**, not the ~70-80% this
+docstring claimed until ARX-70. What actually bounds Stage 2 volume, and therefore the feed,
+is `triage_max_survivors`.
 
 Mirrors `scheduled_tasks.py::daily_ingest_task`: a fan-out driver (no bind/retry) with an
 inner `_run()` coroutine dispatched via `run_async`, deterministic task IDs, and staggered
@@ -163,10 +168,30 @@ def triage_new_papers_task() -> dict[str, Any]:
             )
             timed_out = True
 
+        # The model sometimes omits ids from a batch response: 20 of 366 in the first
+        # production run. Dropping those silently contradicts the prompt's own economics
+        # ("a false keep is far cheaper than a false drop"), so give them one more pass
+        # (ARX-70). Skipped after a soft timeout -- more calls then would reach the hard
+        # limit and lose the whole run, which is the ARX-67 failure.
+        missing = [c for c in candidates.values() if c["arxiv_id"] not in verdicts]
+        if missing and not timed_out:
+            try:
+                await asyncio.gather(
+                    *(classify(batch) for batch in _chunked(missing, TRIAGE_BATCH_SIZE))
+                )
+            except SoftTimeLimitExceeded:
+                log.error("triage_soft_time_limit", phase="reclassify", verdicts=len(verdicts))
+                timed_out = True
+            recovered = sum(1 for c in missing if c["arxiv_id"] in verdicts)
+            log.info("triage_reclassified", missing=len(missing), recovered=recovered)
+
+        no_verdict = sum(1 for c in candidates.values() if c["arxiv_id"] not in verdicts)
+
         log.info(
             "triage_classified",
             batches=len(batches),
             verdicts=len(verdicts),
+            no_verdict=no_verdict,
             concurrency=settings.triage_batch_concurrency,
             timed_out=timed_out,
         )
@@ -225,6 +250,7 @@ def triage_new_papers_task() -> dict[str, Any]:
             "survivors": len(enqueued),
             "rejected": rejected,
             "capped": capped,
+            "no_verdict": no_verdict,
             "timed_out": timed_out,
             "enqueued": enqueued,
         }
@@ -236,6 +262,7 @@ def triage_new_papers_task() -> dict[str, Any]:
         survivors=result["survivors"],
         rejected=result["rejected"],
         capped=result["capped"],
+        no_verdict=result["no_verdict"],
         timed_out=result["timed_out"],
     )
     return result
