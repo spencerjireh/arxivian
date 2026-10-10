@@ -80,7 +80,7 @@ class TestGetPaperScore:
         assert mock_feed_service.get_score_detail.await_args.args == (None, "2301.00001")
 
     def test_anonymous_unscored_paper_is_202_without_enqueue(
-        self, unauthenticated_client, mock_feed_service, mock_task_exec_repo
+        self, unauthenticated_client, mock_feed_service
     ):
         mock_feed_service.get_paper_metadata.return_value = _meta()
         redis = AsyncMock()
@@ -94,7 +94,6 @@ class TestGetPaperScore:
         task.apply_async.assert_not_called()
         redis.set.assert_not_awaited()
         redis.incr.assert_not_awaited()
-        mock_task_exec_repo.create.assert_not_awaited()
 
     def test_invalid_token_is_still_401(self, unauthenticated_client, mock_feed_service):
         with patch("src.dependencies._sync_user", side_effect=InvalidTokenError("bad")):
@@ -154,9 +153,7 @@ class TestGetPaperScore:
         task.apply_async.assert_not_called()
         mock_feed_service.get_score_detail.assert_not_awaited()
 
-    def test_enqueues_when_lock_acquired(
-        self, client, mock_feed_service, mock_task_exec_repo, mock_user
-    ):
+    def test_enqueues_when_lock_acquired(self, client, mock_feed_service, mock_user):
         mock_feed_service.get_score_detail.return_value = None
         mock_feed_service.get_paper_metadata.return_value = _meta()
         redis = AsyncMock()
@@ -184,16 +181,8 @@ class TestGetPaperScore:
         task.apply_async.assert_called_once_with(
             kwargs={"arxiv_id": "2301.00001"}, task_id=body["task_id"]
         )
-        mock_task_exec_repo.create.assert_awaited_once_with(
-            celery_task_id=body["task_id"],
-            user_id=mock_user.id,
-            task_type="score",
-            parameters={"arxiv_id": "2301.00001", "on_demand": True},
-        )
 
-    def test_returns_held_task_when_lock_taken(
-        self, client, mock_feed_service, mock_task_exec_repo
-    ):
+    def test_returns_held_task_when_lock_taken(self, client, mock_feed_service):
         mock_feed_service.get_score_detail.return_value = None
         mock_feed_service.get_paper_metadata.return_value = _meta()
         redis = AsyncMock()
@@ -205,7 +194,6 @@ class TestGetPaperScore:
         assert resp.status_code == 202
         assert resp.json()["task_id"] == "ondemand-2301.00001-abcd1234"
         task.apply_async.assert_not_called()
-        mock_task_exec_repo.create.assert_not_awaited()
         redis.incr.assert_not_awaited()  # a poll never counts against the budgets
 
     @pytest.mark.parametrize(
@@ -216,7 +204,7 @@ class TestGetPaperScore:
         ],
     )
     def test_budget_spent_is_429_and_releases_the_lock(
-        self, client, mock_feed_service, mock_task_exec_repo, counts, scope, current, limit
+        self, client, mock_feed_service, counts, scope, current, limit
     ):
         mock_feed_service.get_score_detail.return_value = None
         mock_feed_service.get_paper_metadata.return_value = _meta()
@@ -231,7 +219,6 @@ class TestGetPaperScore:
         assert error["code"] == "SCORING_LIMIT_EXCEEDED"
         assert error["details"] == {"scope": scope, "current": current, "limit": limit}
         task.apply_async.assert_not_called()
-        mock_task_exec_repo.create.assert_not_awaited()
         assert redis.decr.await_count == 2  # both counters undone
         redis.delete.assert_awaited_once_with("score:ondemand:2301.00001")
 

@@ -12,7 +12,6 @@ from src.database import AsyncSessionLocal
 from src.exceptions import ValidationError
 from src.models.conversation import Conversation
 from src.models.paper import Paper
-from src.models.task_execution import TaskExecution
 from src.models.usage_counter import UsageCounter
 from src.repositories.user_repository import UserRepository
 from src.utils.logger import get_logger
@@ -117,7 +116,6 @@ async def _handle_user_deleted(clerk_id: str) -> None:
         user_id = user.id
 
         # Delete records with non-nullable user_id FKs first
-        await session.execute(delete(TaskExecution).where(TaskExecution.user_id == user_id))
         await session.execute(delete(UsageCounter).where(UsageCounter.user_id == user_id))
 
         # Delete conversations (turns auto-cascade via relationship)
