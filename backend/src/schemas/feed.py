@@ -35,7 +35,6 @@ class FeedScores(ResponseModel):
     method_clarity: int | None
     resource_feasibility: int | None
     data_availability: int | None
-    demand: int | None
     composite: float
 
 

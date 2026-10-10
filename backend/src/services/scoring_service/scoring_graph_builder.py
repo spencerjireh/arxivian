@@ -1,6 +1,6 @@
 """Builder for the Stage 2 scoring graph: a fixed fan-out/fan-in DAG.
 
-START -> fetch_and_extract -> [4 parallel dimension nodes] -> compose_and_persist -> END.
+START -> fetch_and_extract -> [3 parallel dimension nodes] -> compose_and_persist -> END.
 Mirrors `agent_service/graph_builder.py`, but with only plain edges (no router). Each
 dimension node writes a DISTINCT state key, so the parallel superstep needs no reducers. No
 checkpointer: the graph has no HITL interrupts or resume.
@@ -16,7 +16,6 @@ from src.services.scoring_service.nodes import (
     compose_and_persist_node,
     fetch_and_extract_node,
     score_data_availability_node,
-    score_demand_node,
     score_method_clarity_node,
     score_resource_feasibility_node,
 )
@@ -27,7 +26,6 @@ _DIMENSION_NODES = {
     "score_method_clarity": score_method_clarity_node,
     "score_resource_feasibility": score_resource_feasibility_node,
     "score_data_availability": score_data_availability_node,
-    "score_demand": score_demand_node,
 }
 
 

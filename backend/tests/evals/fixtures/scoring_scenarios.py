@@ -1,8 +1,8 @@
 """Golden-set scenarios for the scoring rubric (v2 labels).
 
-Hand-labeled papers used to gate the scoring pipeline's accuracy (`@pytest.mark.eval`,
+Hand-labeled papers used to gate the scoring pipeline's accuracy (`@pytest.mark.inteval`,
 wired in Phase 1 / ARX-8). Labels are coarse bands per the rubric
-(`ARX-56`): method clarity / resource feasibility / demand are
+(`ARX-56`): method clarity and resource feasibility are
 LOW / MED / HIGH; data availability is a PASS / FAIL gate; `implementable` is the binary the
 >=85% agreement target measures against, and must equal the rubric rule
 (`data_availability == PASS and method_clarity >= MED and resource_feasibility >= MED`).
@@ -31,8 +31,6 @@ Coverage notes:
 - `resource_feasibility` scores the cost to reproduce the CORE (headline) result for an
   individual, not the cost to run a released checkpoint. That is why several famous papers are
   LOW (and thus not `implementable`): the science is real, but reproducing it solo is not.
-- `demand` labels are PROVISIONAL -- real demand is Semantic Scholar citation velocity, which
-  lands in Phase 1. Do not measure demand agreement until then.
 - KNOWN GAP: method-clarity LOW is underrepresented (influential papers tend to specify their
   method; GPT-4 is the marquee vague-method case). Extend with vaguer papers over time.
 """
@@ -54,7 +52,6 @@ class ScoringScenario:
     method_clarity: Band
     resource_feasibility: Band
     data_availability: Gate
-    demand: Band  # provisional until Semantic Scholar lands (Phase 1)
     implementable: bool
     reasoning: str
     compute_note: str = ""
@@ -71,7 +68,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="HIGH",
         data_availability="PASS",
-        demand="HIGH",
         implementable=True,
         reasoning="Explicit low-rank update equations and rank/alpha hyperparameters; the whole point is cheap adaptation on a single GPU.",
         compute_note="Adapter fine-tuning; single consumer GPU.",
@@ -85,7 +81,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="MED",
         data_availability="PASS",
-        demand="HIGH",
         implementable=True,
         reasoning="Selective SSM and the hardware-aware scan are specified with algorithms; small/medium models are reproducible on a single high-end GPU.",
         compute_note="Models up to ~2.8B; small variants single-GPU, full suite modest multi-GPU.",
@@ -99,7 +94,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="HIGH",
         data_availability="PASS",
-        demand="HIGH",
         implementable=True,
         reasoning="IO-aware tiling algorithm given in detail; it is a kernel that runs and benchmarks on a single GPU (CUDA effort is high but that is not a clarity or compute gate).",
         compute_note="Single GPU; benchmarking, not large-scale training.",
@@ -113,7 +107,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="LOW",
         data_availability="PASS",
-        demand="HIGH",
         implementable=False,
         reasoning="Architecture (ViT-H encoder + prompt encoder + mask decoder) is clear, but training the model is cluster-scale, so an individual cannot reproduce the core result.",
         compute_note="Trained on 256 A100 GPUs over the SA-1B pipeline.",
@@ -127,7 +120,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="LOW",
         data_availability="PASS",
-        demand="HIGH",
         implementable=False,
         reasoning="Architecture fully specified, but the headline result depends on very large-scale pretraining; solo reproduction of the SOTA is out of reach.",
         compute_note="Large-scale pretraining on TPUv3 pods (JFT-300M for the strongest results).",
@@ -141,7 +133,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="MED",
         resource_feasibility="MED",
         data_availability="PASS",
-        demand="HIGH",
         implementable=True,
         reasoning="Method is described but leans on assembling DPR + BART components; fine-tuning is achievable on a single high-end GPU.",
         compute_note="Fine-tune BART-large + a DPR retriever; single high-end GPU.",
@@ -155,7 +146,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="LOW",
         data_availability="PASS",
-        demand="HIGH",
         implementable=False,
         reasoning="MLM/NSP objectives and architecture are fully specified, but reproducing pretraining (the paper's result) is cluster-scale; only downstream fine-tuning is cheap.",
         compute_note="BERT-large pretrained on 16 TPUs for ~4 days.",
@@ -169,7 +159,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="MED",
         data_availability="PASS",
-        demand="HIGH",
         implementable=True,
         reasoning="The architecture is specified in full detail; the base model is reproducible on modest multi-GPU hardware over time.",
         compute_note="Base model ~12h on 8 P100s; big model ~3.5 days on 8 GPUs.",
@@ -183,7 +172,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="LOW",
         data_availability="PASS",
-        demand="HIGH",
         implementable=False,
         reasoning="Architecture and training recipe are clear and the data is deliberately all-public, but pretraining even the 7B model is far beyond an individual's compute.",
         compute_note="Trained on 2048 A100 GPUs; smallest model still hundreds of GPU-days.",
@@ -197,7 +185,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="LOW",
         data_availability="PASS",
-        demand="HIGH",
         implementable=False,
         reasoning="LDM architecture (VAE + UNet + cross-attention) is detailed, but training from scratch is hundreds of GPU-days; only inference/fine-tuning is cheap.",
         compute_note="Training on the order of hundreds of A100-days.",
@@ -211,7 +198,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="MED",
         data_availability="PASS",
-        demand="HIGH",
         implementable=True,
         reasoning="Residual block and full architecture are specified; ResNet-50 on ImageNet is reproducible on a single high-end GPU over time (CIFAR variants are trivial).",
         compute_note="ImageNet training on a few GPUs; CIFAR variants single-GPU.",
@@ -225,7 +211,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="HIGH",
         data_availability="PASS",
-        demand="HIGH",
         implementable=True,
         reasoning="The optimizer is given as explicit pseudocode; demonstrating it needs only toy-scale training.",
         compute_note="Optimizer; negligible compute (MNIST/CIFAR toys).",
@@ -239,7 +224,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="MED",
         resource_feasibility="MED",
         data_availability="PASS",
-        demand="HIGH",
         implementable=True,
         reasoning="The prompting technique is clearly described but is not a formal algorithm; reproducing it needs access to a capable LLM (affordable via API), not training.",
         compute_note="Inference-only against a large LLM (e.g. via API); no training.",
@@ -253,7 +237,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="LOW",
         data_availability="PASS",
-        demand="HIGH",
         implementable=False,
         reasoning="Pretraining + RLHF pipeline is well documented, but the compute is cluster-scale and the preference data is not fully released.",
         compute_note="Pretraining on thousands of A100s; RLHF adds further cost.",
@@ -267,7 +250,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="LOW",
         data_availability="FAIL",
-        demand="HIGH",
         implementable=False,
         reasoning="Contrastive method is clear, but the 400M image-text training set (WIT) was never released and training is large-scale -- both gates fail.",
         compute_note="Hundreds of GPUs; large contrastive pretraining.",
@@ -281,7 +263,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="HIGH",
         data_availability="PASS",
-        demand="HIGH",
         implementable=True,
         reasoning="Clipped-surrogate objective and update loop are explicit; RL benchmarks run on a single GPU or even CPU.",
         compute_note="MuJoCo / Atari; single GPU or CPU.",
@@ -295,7 +276,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="MED",
         data_availability="PASS",
-        demand="HIGH",
         implementable=True,
         reasoning="Training and sampling algorithms are given explicitly; CIFAR-scale DDPM is reproducible on a single high-end GPU.",
         compute_note="CIFAR-10 / LSUN; single high-end GPU (days) for CIFAR.",
@@ -309,7 +289,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="LOW",
         resource_feasibility="LOW",
         data_availability="FAIL",
-        demand="HIGH",
         implementable=False,
         reasoning="The report deliberately withholds architecture, data, and training details; nothing is reproducible.",
         compute_note="Undisclosed; frontier-scale.",
@@ -323,7 +302,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="HIGH",
         data_availability="PASS",
-        demand="MED",
         implementable=True,
         reasoning="GIN architecture and the expressiveness theory are precise; small GNNs on standard graph datasets train on a single GPU or CPU.",
         compute_note="Small GNNs; single GPU / CPU.",
@@ -337,7 +315,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="MED",
         resource_feasibility="LOW",
         data_availability="FAIL",
-        demand="HIGH",
         implementable=False,
         reasoning="Architecture is transformer-standard but many system details are Pathways-specific; compute is extreme and the corpus is proprietary.",
         compute_note="6144 TPU v4 chips.",
@@ -352,7 +329,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="MED",
         resource_feasibility="LOW",
         data_availability="PASS",
-        demand="HIGH",
         implementable=False,
         reasoning="Architecture is GPT-2-style and described, but 175B-parameter training is far beyond individual compute.",
         compute_note="Thousands of GPU-hours; 175B parameters.",
@@ -366,7 +342,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="HIGH",
         data_availability="PASS",
-        demand="HIGH",
         implementable=True,
         reasoning="Skip-gram and CBOW are described clearly and famously train on a single machine, even CPU.",
         compute_note="Single machine / CPU.",
@@ -380,7 +355,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="MED",
         resource_feasibility="HIGH",
         data_availability="PASS",
-        demand="HIGH",
         implementable=True,
         reasoning="The minimax objective and training loop are given as an explicit algorithm, but the architecture is only sketched (rectifier/sigmoid generator, maxout discriminator) and hyperparameters are absent except k=1; 2 of 4 criteria. MNIST/CIFAR GANs train on a single GPU.",
         compute_note="MNIST / CIFAR; single GPU.",
@@ -394,7 +368,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="MED",
         data_availability="PASS",
-        demand="HIGH",
         implementable=True,
         reasoning="The normalization algorithm is explicit; the technique is testable on small nets, and the ImageNet demonstration is reproducible on a few GPUs.",
         compute_note="Technique trivial on small nets; ImageNet demo on a few GPUs.",
@@ -408,7 +381,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="MED",
         resource_feasibility="LOW",
         data_availability="FAIL",
-        demand="HIGH",
         implementable=False,
         reasoning="The scaling analysis is clear, but validating it required many large training runs and the MassiveText corpus is proprietary.",
         compute_note="Many large LM training runs (up to 70B).",
@@ -422,7 +394,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="MED",
         resource_feasibility="LOW",
         data_availability="PASS",
-        demand="HIGH",
         implementable=False,
         reasoning="The empirical laws are clearly stated, but reproducing the study means a sweep of large-model training runs that an individual cannot afford.",
         compute_note="Sweep of many large-model training runs.",
@@ -436,7 +407,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="HIGH",
         data_availability="PASS",
-        demand="HIGH",
         implementable=True,
         reasoning="The encoder-decoder architecture is fully specified; the segmentation task trains on a single GPU.",
         compute_note="Single GPU.",
@@ -450,7 +420,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="HIGH",
         resource_feasibility="MED",
         data_availability="PASS",
-        demand="HIGH",
         implementable=True,
         reasoning="The single-shot detection architecture and loss are specified; training on Pascal VOC is feasible on a single high-end GPU.",
         compute_note="Pascal VOC; single high-end GPU.",
@@ -464,7 +433,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="MED",
         resource_feasibility="LOW",
         data_availability="FAIL",
-        demand="HIGH",
         implementable=False,
         reasoning="The architecture is a standard encoder-decoder, but the 680k-hour training set is proprietary web-scraped audio and training is large-scale.",
         compute_note="Large-scale training over 680k hours of audio.",
@@ -478,7 +446,6 @@ SCORING_SCENARIOS: list[ScoringScenario] = [
         method_clarity="MED",
         resource_feasibility="HIGH",
         data_availability="PASS",
-        demand="HIGH",
         implementable=True,
         reasoning="The soft-target distillation idea and temperature are described clearly enough to reproduce; distilling small models is cheap.",
         compute_note="Distillation on small models; single GPU.",

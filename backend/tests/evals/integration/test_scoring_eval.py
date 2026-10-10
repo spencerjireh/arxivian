@@ -1,15 +1,14 @@
 """Golden-set accuracy gate for the Stage 2 scoring graph (ARX-8, rubric v2 / ARX-26).
 
-Runs the real scoring graph on each seeded golden paper with real TypeSafe Jev judgments +
-real retrieval (Semantic Scholar is stubbed -- demand is provisional and NOT graded), then
-measures agreement against the hand labels in `tests/evals/fixtures/scoring_scenarios.py`.
+Runs the real scoring graph on each seeded golden paper with real TypeSafe Jev judgments and
+real retrieval, then measures agreement against the hand labels in `tests/evals/fixtures/scoring_scenarios.py`.
 Bands come from each dimension's DERIVED 0-100 score; a calibration report (confidence on
 agreeing vs disagreeing papers) is printed alongside.
 
 The HARD gate is the `implementable` binary, which is robust to adjacent-band noise (a MED
 vs HIGH flip does not change it, since both satisfy `>= MED`) -- see the band-sensitivity
 finding in `ARX-56`. Per-dimension band agreement is reported but NOT
-enforced while the labels are first-pass (`reviewed=False`) and demand is provisional.
+enforced while the labels are first-pass (`reviewed=False`).
 
 `MIN_IMPLEMENTABLE_AGREEMENT` is a MEASURED baseline: pin it at/just below the first real
 run's observed agreement, not a guess. Run:
@@ -23,11 +22,9 @@ Requires `TYPESAFE_API_KEY`; `EVAL_TYPESAFE_MODEL` overrides the configured Jev 
 from __future__ import annotations
 
 import os
-from unittest.mock import AsyncMock
 
 import pytest
 
-from src.clients.semantic_scholar_client import CitationMetrics
 from src.config import get_settings
 from src.factories import get_ingest_service, get_search_service, get_typesafe_client
 from src.repositories.paper_repository import PaperRepository
@@ -51,21 +48,10 @@ _BAND_RANK: dict[Band, int] = {"LOW": 0, "MED": 1, "HIGH": 2}
 _MED_RANK = _BAND_RANK["MED"]
 
 
-def _stub_semantic_scholar() -> AsyncMock:
-    """Stub the S2 client. Demand is not graded, so return a fixed 'not found' metric --
-    keeps the run hermetic and off the (rate-limited, flaky) real API."""
-    stub = AsyncMock()
-    stub.get_citation_metrics = AsyncMock(
-        side_effect=lambda arxiv_id: CitationMetrics(arxiv_id=arxiv_id, found=False)
-    )
-    return stub
-
-
 def _build_scoring_context(session, model: str) -> ScoringContext:
-    """A production-shaped ScoringContext with real Jev + real services, S2 stubbed."""
+    """A production-shaped ScoringContext with real Jev + real services."""
     return ScoringContext(
         typesafe_client=get_typesafe_client(model=model),
-        semantic_scholar_client=_stub_semantic_scholar(),
         ingest_service=get_ingest_service(session),
         search_service=get_search_service(session),
         paper_repository=PaperRepository(session),

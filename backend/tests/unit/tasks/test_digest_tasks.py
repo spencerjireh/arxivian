@@ -97,15 +97,15 @@ class TestHelpers:
         assert _category_key(["cs.LG", "cs.AI", "cs.CV"]) == "cs.AI,cs.CV,cs.LG"
 
     def test_composite_renormalizes_over_present_scores(self):
-        # demand NULL: (0.35*80 + 0.35*60) / 0.70 = 70.0, not 0.35*80 + 0.35*60 = 49.0
-        assert compute_provisional_composite(80, 60, None) == 70.0
-        assert compute_provisional_composite(80, 80, None) == 80.0
-        assert compute_provisional_composite(None, None, None) == 0.0
-        # all present: plain weighted sum, unchanged from ARX-7
-        assert compute_provisional_composite(80, 80, 85) == 81.5
+        # feasibility NULL: 0.5*80 / 0.5 = 80.0, not 0.5*80 = 40.0
+        assert compute_provisional_composite(80, None) == 80.0
+        assert compute_provisional_composite(None, 60) == 60.0
+        assert compute_provisional_composite(None, None) == 0.0
+        # both present: plain weighted mean
+        assert compute_provisional_composite(80, 60) == 70.0
 
     def test_composite_custom_weights(self):
-        weights = CompositeWeights(method_clarity=0.5, resource_feasibility=0.5, demand=0.0)
-        assert compute_composite(80, 60, 85, weights=weights) == 70.0
-        assert compute_composite(80, None, None, weights=weights) == 80.0
-        assert compute_composite(None, None, 85, weights=weights) == 0.0
+        weights = CompositeWeights(method_clarity=0.75, resource_feasibility=0.25)
+        assert compute_composite(80, 60, weights=weights) == 75.0
+        assert compute_composite(80, None, weights=weights) == 80.0
+        assert compute_composite(None, None, weights=weights) == 0.0

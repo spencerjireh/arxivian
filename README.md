@@ -4,7 +4,7 @@
 
 **A weekly feed of arXiv papers you could actually implement.**
 
-Arxivian scores new ML papers on method clarity, resource feasibility, data availability and demand and publishes them as a public weekly issue. An account adds saving, a library, ranking for your compute budget and interests, and a chat with each paper's full text.
+Arxivian scores new ML papers on method clarity, resource feasibility and data availability and publishes them as a public weekly issue. An account adds saving, a library, ranking for your compute budget and interests, and a chat with each paper's full text.
 
 [![CI](https://github.com/spencerjireh/arxivian/actions/workflows/ci.yml/badge.svg)](https://github.com/spencerjireh/arxivian/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)
@@ -19,7 +19,7 @@ Arxivian scores new ML papers on method clarity, resource feasibility, data avai
 ## How It Works
 
 1. **Triage (weekly, cheap).** New papers in your categories are fetched from arXiv and filtered by a small LLM pass.
-2. **Score (per paper).** The full text is ingested and judged by TypeSafe Jev on four dimensions: method clarity, resource feasibility (compute tier), data availability (a PASS/FAIL gate) and demand (Semantic Scholar citations). Every judgment carries quoted evidence and a calibrated confidence.
+2. **Score (per paper).** The full text is ingested and judged by TypeSafe Jev on three dimensions: method clarity, resource feasibility (compute tier) and data availability (a PASS/FAIL gate). Every judgment carries quoted evidence and a calibrated confidence.
 3. **Digest (weekly).** Scores are snapshotted into a ranked digest per category set.
 4. **Issue (read time, public).** Cards show a headline built from the stored attributes, a meta line (compute tier, data access, code and weights released, pseudocode, hyperparameters) and a four-dimension meter. Open a paper for each dimension's evidence, with the distributions and judgments behind a disclosure. Signed in: save and dismiss papers, track them in a library, get a fit marker for your compute profile, and chat with the paper.
 

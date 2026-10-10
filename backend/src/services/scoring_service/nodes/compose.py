@@ -26,7 +26,6 @@ _DIMENSION_COLUMNS: dict[str, str] = {
     "method_clarity": "method_clarity_score",
     "resource_feasibility": "resource_feasibility_score",
     "data_availability": "data_availability_score",
-    "demand": "demand_score",
 }
 _USAGE_KEYS = ("method_clarity_usage", "resource_feasibility_usage", "data_availability_usage")
 
@@ -38,7 +37,6 @@ async def compose_and_persist_node(state: PaperScoreState, config: RunnableConfi
         "method_clarity": state.get("method_clarity_result"),
         "resource_feasibility": state.get("resource_feasibility_result"),
         "data_availability": state.get("data_availability_result"),
-        "demand": state.get("demand_result"),
     }
 
     scores: dict[str, int | None] = {}

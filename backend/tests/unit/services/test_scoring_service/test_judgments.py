@@ -8,14 +8,12 @@ from src.services.scoring_service.judgments import (
     combine_data_availability,
     combine_method_clarity,
     combine_resource_feasibility,
-    demand_from_band,
     noul_judgment,
     poisson_binomial,
     score_judgment,
 )
 from src.services.scoring_service.questions import GATE_PASS_OPTIONS, METHOD_CLARITY_CRITERIA
 from src.services.scoring_service.state import (
-    DEMAND_BAND_TO_SCORE,
     DimensionScore,
     score_to_band,
 )
@@ -136,23 +134,20 @@ class TestCombineDataAvailability:
         assert dim.confidence == pytest.approx(0.55)
 
 
-class TestDemand:
-    @pytest.mark.parametrize("band", ["LOW", "MED", "HIGH"])
-    def test_one_hot(self, band):
-        dim = demand_from_band(band, [], "r")
-        assert dim.derived_score() == DEMAND_BAND_TO_SCORE[band]
-        assert sum(dim.probabilities.values()) == 1.0
-        assert dim.confidence == 1.0
-
-
 class TestDimensionScoreJsonb:
     def test_round_trip_coerces_string_keys(self):
-        dim = demand_from_band("HIGH", [], "r")
+        # A one-hot distribution with string-coerced keys; any dimension round-trips.
+        access = ChoiceResult(
+            choice="public benchmark or standard dataset",
+            probabilities={"public benchmark or standard dataset": 1.0},
+            confidence=1.0,
+        )
+        dim = combine_data_availability(access, GATE_PASS_OPTIONS, [])
         payload = dim.model_dump(mode="json")
-        assert list(payload["probabilities"]) == ["0", "1", "2"]
+        assert list(payload["probabilities"]) == ["0", "1"]
         back = DimensionScore.from_jsonb(payload)
         assert back == dim
-        assert back.probabilities[2] == 1.0
+        assert back.probabilities[1] == 1.0
 
     def test_bands(self):
         assert score_to_band(39) == "LOW"

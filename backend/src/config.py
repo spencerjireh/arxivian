@@ -24,17 +24,13 @@ class Settings(BaseSettings):
     # Provider API Keys
     openai_api_key: str = ""
 
-    # Semantic Scholar (demand signal -- citation velocity)
-    # Key is optional: the keyless public pool works, just with tighter rate limits
-    # (the client's backoff path handles 429s either way).
+    # Semantic Scholar -- citation metrics for the paper-scoped chat tool. Not a scoring
+    # dimension since ARX-73. Key is optional: the keyless public pool works, just with
+    # tighter rate limits (the client's backoff path handles 429s either way).
     semantic_scholar_api_key: str = ""
     semantic_scholar_cache_ttl_seconds: int = 604800  # 7 days
-    # Keyless Semantic Scholar shares a ~1 req/s pool; this gate spaces our calls across
-    # every worker (Redis slot) so concurrent scoring tasks cannot burst into 429s (ARX-17).
+    # The keyless pool is ~1 req/s shared; this Redis slot spaces calls across every worker.
     semantic_scholar_min_interval_ms: int = 1500
-    # Nightly backfill of demand for scores whose S2 lookup soft-failed to NULL.
-    demand_backfill_schedule_cron: str = "0 4 * * *"  # Daily at 4am UTC
-    demand_backfill_batch_size: int = 200
 
     # TypeSafe Jev -- the Stage 2 scoring judgment engine (method clarity, resource
     # feasibility, data availability, product attributes). Key is required for scoring;

@@ -7,8 +7,7 @@ descriptions that double as documentation for the JSONB payloads.
 v2 stores judgments natively: every dimension is a distribution over ordered levels
 (from TypeSafe Jev) plus the atomic judgments that produced it. The 0-100 integer used
 for ranking is *derived* (`DimensionScore.derived_score`) and recomputable; it is
-persisted only as a denormalization for the digest query. Demand is still a Semantic
-Scholar lookup, represented as a one-hot level. See `ARX-56`.
+persisted only as a denormalization for the digest query. See `ARX-56`.
 """
 
 from typing import Any, Literal, TypedDict
@@ -27,22 +26,16 @@ EvidenceKind = Literal["pseudocode", "compute", "dataset", "citation", "code"]
 
 JudgmentKind = Literal["noul", "choice", "score"]
 
-# The four rubric dimensions, in the order the breakdown shows them.
-ScoreDimension = Literal["method_clarity", "resource_feasibility", "data_availability", "demand"]
-
-# Demand: Semantic Scholar velocity band -> level, and level -> derived 0-100 value.
-DEMAND_LEVELS: dict[str, int] = {"LOW": 0, "MED": 1, "HIGH": 2}
-DEMAND_LEVEL_TO_SCORE: dict[int, int] = {0: 20, 1: 55, 2: 85}
-DEMAND_BAND_TO_SCORE: dict[str, int] = {
-    band: DEMAND_LEVEL_TO_SCORE[lvl] for band, lvl in DEMAND_LEVELS.items()
-}
+# The three rubric dimensions, in the order the breakdown shows them. Demand was removed in
+# ARX-73: citation velocity cannot exist for a feed of papers published in the last week, so
+# it scored ~20/100 for everyone while carrying 0.30 of the composite.
+ScoreDimension = Literal["method_clarity", "resource_feasibility", "data_availability"]
 
 # Max level per dimension (levels are 0..max_level inclusive).
 DIMENSION_MAX_LEVEL: dict[str, int] = {
     "method_clarity": 4,  # 0..4 clarity criteria satisfied
     "resource_feasibility": 4,  # compute tier 0 (cluster) .. 4 (laptop)
     "data_availability": 1,  # 0 FAIL, 1 PASS
-    "demand": 2,  # LOW / MED / HIGH
 }
 
 
@@ -129,12 +122,10 @@ class DimensionScore(BaseModel):
 
         Per dimension: method_clarity / resource_feasibility normalize the expected level;
         data_availability is binary on the argmax (so the digest gate filter `== 100`
-        stays exact); demand maps its level to the fixed band values.
+        stays exact).
         """
         if self.dimension == "data_availability":
             return 100 if self.level == 1 else 0
-        if self.dimension == "demand":
-            return DEMAND_LEVEL_TO_SCORE[self.level]
         return round(self.expected / self.max_level * 100)
 
     def band(self) -> Band:
@@ -188,7 +179,6 @@ class PaperScoreState(TypedDict):
     method_clarity_result: DimensionScore | None
     resource_feasibility_result: DimensionScore | None
     data_availability_result: DimensionScore | None
-    demand_result: DimensionScore | None
     # v1.1 adds code_gap_result here together with the github_search node.
 
     # Product attributes ride on the method_clarity request (same state).

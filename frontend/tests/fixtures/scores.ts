@@ -90,16 +90,6 @@ export function makePaperScoreDetail(overrides: Partial<PaperScoreDetail> = {}):
         confidence: 0.95,
         evidence: [],
       }),
-      makeDimension({
-        dimension: 'demand',
-        band: 'HIGH',
-        score: 85,
-        level: 2,
-        max_level: 2,
-        probabilities: { '0': 0, '1': 0, '2': 1 },
-        confidence: 1,
-        evidence: [],
-      }),
     ],
     ...overrides,
   }

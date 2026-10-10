@@ -68,11 +68,11 @@ describe('ScoringDetails', () => {
     expect(screen.getByText(/composite 71 of 100/)).toBeInTheDocument()
     expect(screen.getByText(/Low confidence on Method clarity/)).toBeInTheDocument()
     expect(screen.getByText('80/100')).toBeInTheDocument()
-    expect(screen.getAllByText(/% conf\./)).toHaveLength(4)
-    expect(screen.getAllByRole('img')).toHaveLength(4)
-    expect(screen.getAllByText('Algorithm or equations given')).toHaveLength(4)
-    expect(screen.getAllByTitle('yes 90% · no 10%')).toHaveLength(4)
-    expect(screen.getAllByText('3 of 4 criteria satisfied')).toHaveLength(4)
+    expect(screen.getAllByText(/% conf\./)).toHaveLength(3)
+    expect(screen.getAllByRole('img')).toHaveLength(3)
+    expect(screen.getAllByText('Algorithm or equations given')).toHaveLength(3)
+    expect(screen.getAllByTitle('yes 90% · no 10%')).toHaveLength(3)
+    expect(screen.getAllByText('3 of 4 criteria satisfied')).toHaveLength(3)
   })
 })
 
@@ -132,7 +132,6 @@ describe('ScoreBreakdown', () => {
       'Method clarity',
       'Resource feasibility',
       'Data availability',
-      'Demand',
     ])
     expect(screen.getByText('Code released by the authors')).toBeInTheDocument()
     expect(screen.getByText(/tensor2tensor/)).toBeInTheDocument()

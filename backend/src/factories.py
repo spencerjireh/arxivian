@@ -160,7 +160,6 @@ def get_scoring_context(db_session: AsyncSession) -> ScoringContext:
     """A ScoringContext for one Stage 2 scoring run (all judgments via TypeSafe Jev)."""
     return ScoringContext(
         typesafe_client=get_typesafe_client(),
-        semantic_scholar_client=get_semantic_scholar_client(),
         ingest_service=get_ingest_service(db_session),
         search_service=get_search_service(db_session),
         paper_repository=PaperRepository(db_session),

@@ -11,7 +11,6 @@ from collections.abc import Sequence
 
 from src.clients.typesafe_client import ChoiceResult, ScoreResult
 from src.services.scoring_service.state import (
-    DEMAND_LEVELS,
     DIMENSION_MAX_LEVEL,
     DimensionScore,
     EvidenceSpan,
@@ -162,24 +161,4 @@ def combine_data_availability(
             f"{'PASS' if level == 1 else 'FAIL'}: data access judged '{access.choice}' "
             f"(P(pass) {_pct(p_pass)})"
         ),
-    )
-
-
-# --- Demand: Semantic Scholar band as a one-hot level --------------------------------
-
-
-def demand_from_band(band: str, evidence: list[EvidenceSpan], reasoning: str) -> DimensionScore:
-    level = DEMAND_LEVELS[band]
-    max_level = DIMENSION_MAX_LEVEL["demand"]
-    dist = {lvl: 1.0 if lvl == level else 0.0 for lvl in range(max_level + 1)}
-    return DimensionScore(
-        dimension="demand",
-        level=level,
-        max_level=max_level,
-        expected=float(level),
-        probabilities=dist,
-        confidence=1.0,
-        judgments=[],
-        evidence=evidence,
-        reasoning=reasoning,
     )

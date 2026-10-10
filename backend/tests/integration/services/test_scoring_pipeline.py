@@ -12,7 +12,6 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from sqlalchemy import select
 
-from src.clients.semantic_scholar_client import CitationMetrics
 from src.clients.typesafe_client import ChoiceResult, ScoreResult, SystemOneResult
 from src.models.paper_score import PaperScore, ScoreEvidence
 from src.repositories.paper_repository import PaperRepository
@@ -76,20 +75,8 @@ def _context(db_session, paper) -> ScoringContext:
     typesafe_client = Mock()
     typesafe_client.ask = AsyncMock(side_effect=_fake_ask)
 
-    s2_client = Mock()
-    s2_client.get_citation_metrics = AsyncMock(
-        return_value=CitationMetrics(
-            arxiv_id=paper.arxiv_id,
-            found=True,
-            citation_count=500,
-            citations_per_month=12.0,
-            demand_band="HIGH",
-        )
-    )
-
     return ScoringContext(
         typesafe_client=typesafe_client,
-        semantic_scholar_client=s2_client,
         ingest_service=ingest_service,
         search_service=search_service,
         paper_repository=PaperRepository(db_session),
@@ -114,7 +101,6 @@ async def test_scoring_graph_persists_scores_and_evidence(db_session, sample_pro
     assert score.method_clarity_score == 80  # 4 x P(yes)=0.8 -> expected 3.2
     assert score.resource_feasibility_score == 80  # compute tier expected 3.2
     assert score.data_availability_score == 100  # public data -> gate PASS
-    assert score.demand_score == 85  # HIGH band
     assert score.model == "jev-1.13.0"
     assert score.input_tokens == 1500  # 3 Jev requests x 500
 
@@ -138,7 +124,6 @@ async def test_scoring_graph_persists_scores_and_evidence(db_session, sample_pro
         .all()
     )
     kinds = {e.kind for e in evidence}
-    assert "citation" in kinds  # demand evidence
     assert "dataset" in kinds  # data-availability evidence
 
 
