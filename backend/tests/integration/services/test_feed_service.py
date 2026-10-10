@@ -59,7 +59,7 @@ async def _scored(db_session, sample_paper_data, arxiv_id, *, scores, feas_level
     paper = await PaperRepository(db_session).create(
         {**sample_paper_data, "arxiv_id": arxiv_id, "categories": categories, "pdf_processed": True}
     )
-    method, feasibility, data, demand = scores
+    method, feasibility, data = scores
     await ScoringRepository(db_session).upsert_score(
         paper_id=str(paper.id),
         rubric_version=RUBRIC_VERSION,
@@ -67,7 +67,6 @@ async def _scored(db_session, sample_paper_data, arxiv_id, *, scores, feas_level
             "method_clarity_score": method,
             "resource_feasibility_score": feasibility,
             "data_availability_score": data,
-            "demand_score": demand,
         },
         dimensions={
             "method_clarity": _dim("method_clarity", 3, 4, [_noul("algorithm_given", 0.9)]),
@@ -99,7 +98,7 @@ async def test_feed_end_to_end(db_session, sample_paper_data, created_user):
         db_session,
         sample_paper_data,
         "f-top",
-        scores=(90, 90, 100, 85),
+        scores=(90, 90, 100),
         feas_level=1,
         categories=["cs.LG"],
     )
@@ -107,7 +106,7 @@ async def test_feed_end_to_end(db_session, sample_paper_data, created_user):
         db_session,
         sample_paper_data,
         "f-fits",
-        scores=(60, 75, 100, 55),
+        scores=(60, 75, 100),
         feas_level=3,
         categories=["cs.CV"],
     )
@@ -132,7 +131,7 @@ async def test_feed_end_to_end(db_session, sample_paper_data, created_user):
     assert first.headline == "Convolutional network for image classification"
     assert first.meta == ["multi-GPU node", "public data", "code released", "pseudocode given"]
     assert first.compute_match is None
-    assert first.scores.composite == 88.5
+    assert first.scores.composite == 90.0  # 0.5*90 + 0.5*90
 
     # anonymous: same cards, default order, no state
     anon = await service.get_feed(None)
@@ -169,7 +168,7 @@ async def test_score_detail_partitions_evidence(db_session, sample_paper_data, c
         db_session,
         sample_paper_data,
         "f-detail",
-        scores=(80, 50, 100, 55),
+        scores=(80, 50, 100),
         feas_level=2,
         categories=["cs.LG"],
     )
@@ -180,7 +179,6 @@ async def test_score_detail_partitions_evidence(db_session, sample_paper_data, c
             "method_clarity_score": 80,
             "resource_feasibility_score": 50,
             "data_availability_score": 100,
-            "demand_score": 55,
         },
         dimensions={
             "method_clarity": _dim("method_clarity", 3, 4, [_noul("algorithm_given", 0.9)]),

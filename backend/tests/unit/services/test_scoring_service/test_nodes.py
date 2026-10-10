@@ -4,16 +4,12 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from src.clients.semantic_scholar_client import CitationMetrics
 from src.clients.typesafe_client import ChoiceResult, ScoreResult, SystemOneResult
 from src.exceptions import ScoringError, TypeSafeConnectionError, TypeSafeRateLimitError
 from src.services.scoring_service import questions as q
-from src.services.scoring_service.judgments import demand_from_band
 from src.services.scoring_service.nodes.compose import compose_and_persist_node
 from src.services.scoring_service.nodes.dimensions import (
-    DEMAND_BAND_TO_SCORE,
     score_data_availability_node,
-    score_demand_node,
     score_method_clarity_node,
     score_resource_feasibility_node,
 )
@@ -157,37 +153,6 @@ class TestDataAvailabilityNode:
         result = await score_data_availability_node(_base_state(), make_config)
         assert result["data_availability_result"] is None
         assert result["data_availability_usage"] is None
-
-
-# --- demand node ------------------------------------------------------------------------
-
-
-class TestDemandNode:
-    @pytest.mark.parametrize(("band", "expected"), [("HIGH", 85), ("MED", 55), ("LOW", 20)])
-    @pytest.mark.asyncio
-    async def test_band_to_score(self, context, make_config, band, expected):
-        context.semantic_scholar_client.get_citation_metrics.return_value = CitationMetrics(
-            arxiv_id="2106.09685",
-            found=True,
-            citation_count=100,
-            citations_per_month=4.0,
-            demand_band=band,
-        )
-        result = await score_demand_node(_base_state(), make_config)
-        dim = result["demand_result"]
-        assert dim.derived_score() == expected
-        assert dim.confidence == 1.0
-        assert dim.evidence[0].kind == "citation"
-        assert DEMAND_BAND_TO_SCORE[band] == expected
-
-    @pytest.mark.asyncio
-    async def test_soft_fail_on_s2_error(self, context, make_config):
-        context.semantic_scholar_client.get_citation_metrics.side_effect = RuntimeError("s2 down")
-        result = await score_demand_node(_base_state(), make_config)
-        assert result["demand_result"] is None
-
-
-# --- Jev judged nodes -------------------------------------------------------------------
 
 
 class TestMethodClarityNode:
@@ -387,7 +352,6 @@ class TestComposeNode:
                 0.95,
                 evidence=[EvidenceSpan(text="GLUE", kind="dataset")],
             ),
-            demand_result=demand_from_band("MED", [], "steady"),
             attributes_result=None,
             method_clarity_usage={"model": "jev-1.13.0", "input_tokens": 1200},
             resource_feasibility_usage=None,
@@ -403,9 +367,8 @@ class TestComposeNode:
         assert kwargs["scores"]["method_clarity_score"] == 80
         assert kwargs["scores"]["resource_feasibility_score"] is None
         assert kwargs["scores"]["data_availability_score"] == 100
-        assert kwargs["scores"]["demand_score"] == 55
         # JSONB-ready payload: int keys serialized as strings, failed dimension absent
-        assert set(kwargs["dimensions"]) == {"method_clarity", "data_availability", "demand"}
+        assert set(kwargs["dimensions"]) == {"method_clarity", "data_availability"}
         assert "0" in kwargs["dimensions"]["method_clarity"]["probabilities"]
         assert DimensionScore.from_jsonb(kwargs["dimensions"]["method_clarity"]) == method_dim
         assert kwargs["model"] == "jev-1.13.0"
@@ -423,7 +386,6 @@ class TestComposeNode:
             method_clarity_result=node_out["method_clarity_result"],
             resource_feasibility_result=None,
             data_availability_result=None,
-            demand_result=None,
             attributes_result=node_out["attributes_result"],
             method_clarity_usage=node_out["method_clarity_usage"],
             resource_feasibility_usage=None,

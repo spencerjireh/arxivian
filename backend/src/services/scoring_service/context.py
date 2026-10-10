@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from src.clients.semantic_scholar_client import SemanticScholarClient
 from src.clients.typesafe_client import TypeSafeClient
 from src.repositories.paper_repository import PaperRepository
 from src.repositories.scoring_repository import ScoringRepository
@@ -27,7 +26,6 @@ class ScoringContext:
         self,
         *,
         typesafe_client: TypeSafeClient,
-        semantic_scholar_client: SemanticScholarClient,
         ingest_service: IngestService,
         search_service: SearchService,
         paper_repository: PaperRepository,
@@ -36,7 +34,6 @@ class ScoringContext:
         rubric_version: str,
     ):
         self.typesafe_client = typesafe_client
-        self.semantic_scholar_client = semantic_scholar_client
         self.ingest_service = ingest_service
         self.search_service = search_service
         self.paper_repository = paper_repository

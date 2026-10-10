@@ -1,4 +1,4 @@
-// Feed card and detail: four-segment meter over the derived sub-scores (backend FeedScores).
+// Feed card and detail: three-segment meter over the derived sub-scores (backend FeedScores).
 import clsx from 'clsx'
 import { DIMENSION_LABELS, DIMENSION_ORDER, DIMENSION_SHORT_LABELS } from '@/lib/scoring'
 import type { DimensionScores } from '@/types/api'
@@ -17,7 +17,7 @@ interface DimensionMeterProps {
 export default function DimensionMeter({ scores, size = 'sm', className }: DimensionMeterProps) {
   const labels = size === 'sm' ? DIMENSION_SHORT_LABELS : DIMENSION_LABELS
   return (
-    <ul aria-label="Implementability meter" className={clsx('grid grid-cols-4 gap-2', className)}>
+    <ul aria-label="Implementability meter" className={clsx('grid grid-cols-3 gap-2', className)}>
       {DIMENSION_ORDER.map((dimension) => {
         const value = scores[dimension]
         const label = labels[dimension]

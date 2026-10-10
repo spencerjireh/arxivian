@@ -86,7 +86,6 @@ async def _run(arxiv_id: str) -> dict[str, Any]:
             "method_clarity": _scored("method_clarity_result"),
             "resource_feasibility": _scored("resource_feasibility_result"),
             "data_availability": _scored("data_availability_result"),
-            "demand": _scored("demand_result"),
         },
     }
 

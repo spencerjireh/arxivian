@@ -19,11 +19,6 @@ const ROWS = [
     level: 'PASS',
     evidence: 'We evaluate on WikiText-103 and PG-19.',
   },
-  {
-    dimension: 'Demand',
-    level: 'Rising',
-    evidence: '41 citations in 3 months (Semantic Scholar).',
-  },
 ]
 
 export default function Credibility() {
@@ -48,9 +43,9 @@ export default function Credibility() {
           transition={transitions.base}
           className="font-display mb-2 text-2xl tracking-tight text-stone-900 sm:text-3xl"
         >
-          Four dimensions:{' '}
+          Three dimensions:{' '}
           <span className="text-stone-500">
-            method clarity, resource feasibility, data availability, demand
+            method clarity, resource feasibility, data availability
           </span>
         </motion.p>
 

@@ -120,7 +120,6 @@ describe('PaperDetailPage', () => {
     expect(screen.getByText('Transformer for machine translation')).toBeInTheDocument()
     expect(screen.getByText('machine translation')).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Method clarity' })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Demand' })).toBeInTheDocument()
     expect(screen.getByText('Scoring details').closest('details')).not.toHaveAttribute('open')
     expect(screen.getByRole('link', { name: /Back to feed/ })).toHaveAttribute('href', '/')
     expect(screen.getByRole('button', { name: 'Mark as Implementing' })).toBeInTheDocument()

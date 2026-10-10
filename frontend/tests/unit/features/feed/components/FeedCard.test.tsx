@@ -51,7 +51,6 @@ describe('FeedCard', () => {
       ['method_clarity', '80'],
       ['resource_feasibility', '50'],
       ['data_availability', '100'],
-      ['demand', '85'],
     ])
     expect(screen.queryByText('71')).not.toBeInTheDocument()
     expect(screen.queryByText(/HIGH|Strong/)).not.toBeInTheDocument()
@@ -59,10 +58,10 @@ describe('FeedCard', () => {
   })
 
   it('renders a hollow "not available" segment for a null sub-score, never a low fill', () => {
-    renderCard(makeFeedItem({ scores: { ...makeFeedItem().scores!, demand: null } }))
+    renderCard(makeFeedItem({ scores: { ...makeFeedItem().scores!, resource_feasibility: null } }))
     const meter = screen.getByRole('list', { name: 'Implementability meter' })
-    expect(within(meter).getAllByRole('meter')).toHaveLength(3)
-    const hollow = within(meter).getByRole('img', { name: 'Demand not available' })
+    expect(within(meter).getAllByRole('meter')).toHaveLength(2)
+    const hollow = within(meter).getByRole('img', { name: 'Compute not available' })
     expect(hollow).toHaveAttribute('data-value', 'null')
   })
 

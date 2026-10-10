@@ -1,7 +1,5 @@
 """Tests for ops router."""
 
-import uuid
-from datetime import UTC, datetime
 from unittest.mock import Mock, patch
 
 import pytest
@@ -121,12 +119,6 @@ class TestBulkIngestEndpoint:
     """Tests for POST /api/v1/ops/ingest endpoint."""
 
     @pytest.fixture(autouse=True)
-    def _mock_system_user(self):
-        """Mock get_system_user_id for ingest tests."""
-        with patch("src.routers.ops.get_system_user_id", return_value=uuid.uuid4()):
-            yield
-
-    @pytest.fixture(autouse=True)
     def _mock_celery_task(self):
         """Mock the Celery ingest task."""
         with patch("src.routers.ops.ingest_papers_task") as mock_task:
@@ -136,7 +128,7 @@ class TestBulkIngestEndpoint:
             self.mock_task = mock_task
             yield
 
-    def test_ingest_by_arxiv_ids(self, client, mock_task_exec_repo):
+    def test_ingest_by_arxiv_ids(self, client):
         """Test ingestion by providing specific arXiv IDs."""
         response = client.post(
             "/api/v1/ops/ingest",
@@ -147,7 +139,6 @@ class TestBulkIngestEndpoint:
         data = response.json()
         assert data["tasks_queued"] == 1
         assert len(data["task_ids"]) == 1
-        mock_task_exec_repo.create.assert_called_once()
         # Verify delay() was called with a query built from the arxiv IDs
         self.mock_task.delay.assert_called_once()
         call_kwargs = self.mock_task.delay.call_args.kwargs
@@ -155,7 +146,7 @@ class TestBulkIngestEndpoint:
         assert "id:2301.00002" in call_kwargs["query"]
         assert call_kwargs["max_results"] == 2
 
-    def test_ingest_by_search_query(self, client, mock_task_exec_repo):
+    def test_ingest_by_search_query(self, client):
         """Test ingestion by providing a search query."""
         response = client.post(
             "/api/v1/ops/ingest",
@@ -172,7 +163,7 @@ class TestBulkIngestEndpoint:
         assert call_kwargs["query"] == "transformer attention mechanism"
         assert call_kwargs["max_results"] == 5
 
-    def test_ingest_both(self, client, mock_task_exec_repo):
+    def test_ingest_both(self, client):
         """Test ingestion with both arXiv IDs and search query queues two tasks."""
         # Need unique task IDs for each call
         self.mock_task.delay.side_effect = [
@@ -192,7 +183,6 @@ class TestBulkIngestEndpoint:
         data = response.json()
         assert data["tasks_queued"] == 2
         assert len(data["task_ids"]) == 2
-        assert mock_task_exec_repo.create.call_count == 2
 
     def test_ingest_no_input(self, client):
         """Test that providing neither arxiv_ids nor search_query returns 422."""
@@ -216,64 +206,8 @@ class TestBulkIngestEndpoint:
 class TestOpsTaskEndpoints:
     """Tests for ops task management endpoints."""
 
-    def test_list_tasks(self, client, mock_task_exec_repo):
-        """Test listing all tasks returns paginated results."""
-        task = Mock()
-        task.celery_task_id = "test-task-123"
-        task.task_type = "ingest"
-        task.status = "queued"
-        task.error_message = None
-        task.created_at = datetime.now(UTC)
-        task.completed_at = None
-        mock_task_exec_repo.list_all.return_value = ([task], 1)
-
-        response = client.get("/api/v1/ops/tasks")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["total"] == 1
-        assert len(data["tasks"]) == 1
-        assert data["tasks"][0]["task_id"] == "test-task-123"
-
-    def test_get_task_status(self, client, mock_task_exec_repo):
-        """Test getting task status merges DB and Celery state."""
-        task = Mock()
-        task.celery_task_id = "test-task-123"
-        task.task_type = "ingest"
-        task.status = "queued"
-        task.error_message = None
-        task.created_at = datetime.now(UTC)
-        mock_task_exec_repo.get_by_celery_task_id.return_value = task
-
-        with patch("src.routers.ops.AsyncResult") as mock_async_result:
-            mock_result = Mock()
-            mock_result.status = "PENDING"
-            mock_result.ready.return_value = False
-            mock_result.failed.return_value = False
-            mock_async_result.return_value = mock_result
-
-            response = client.get("/api/v1/ops/tasks/test-task-123")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["task_id"] == "test-task-123"
-        assert data["status"] == "pending"
-        assert data["ready"] is False
-
-    def test_get_task_not_found(self, client, mock_task_exec_repo):
-        """Test getting nonexistent task returns 404."""
-        mock_task_exec_repo.get_by_celery_task_id.return_value = None
-
-        response = client.get("/api/v1/ops/tasks/nonexistent-task")
-
-        assert response.status_code == 404
-
-    def test_revoke_task(self, client, mock_task_exec_repo):
-        """Test revoking a task."""
-        task = Mock()
-        task.celery_task_id = "test-task-123"
-        mock_task_exec_repo.get_by_celery_task_id.return_value = task
-
+    def test_revoke_task(self, client):
+        """Revoking goes straight to Celery; there is no row to look up (ARX-74)."""
         with patch("src.routers.ops.celery_app") as mock_celery:
             response = client.delete("/api/v1/ops/tasks/test-task-123")
 
@@ -282,14 +216,6 @@ class TestOpsTaskEndpoints:
         assert data["task_id"] == "test-task-123"
         assert data["revoked"] is True
         mock_celery.control.revoke.assert_called_once_with("test-task-123", terminate=False)
-
-    def test_revoke_task_not_found(self, client, mock_task_exec_repo):
-        """Test revoking nonexistent task returns 404."""
-        mock_task_exec_repo.get_by_celery_task_id.return_value = None
-
-        response = client.delete("/api/v1/ops/tasks/nonexistent-task")
-
-        assert response.status_code == 404
 
 
 class TestGetSystemSearches:

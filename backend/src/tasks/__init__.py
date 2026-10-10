@@ -2,7 +2,6 @@
 
 from src.tasks import (
     cleanup_tasks,
-    demand_tasks,
     digest_tasks,
     embedding_tasks,
     ingest_tasks,
@@ -14,7 +13,6 @@ from src.tasks import (
 
 __all__ = [
     "cleanup_tasks",
-    "demand_tasks",
     "digest_tasks",
     "embedding_tasks",
     "ingest_tasks",

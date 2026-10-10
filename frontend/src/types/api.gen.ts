@@ -227,26 +227,6 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/api/v1/ops/tasks': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * List Tasks
-     * @description List all task executions (no user filter).
-     */
-    get: operations['list_tasks_api_v1_ops_tasks_get']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
   '/api/v1/ops/tasks/{task_id}': {
     parameters: {
       query?: never
@@ -254,16 +234,16 @@ export interface paths {
       path?: never
       cookie?: never
     }
-    /**
-     * Get Task Status
-     * @description Get task status by Celery task ID (no ownership check).
-     */
-    get: operations['get_task_status_api_v1_ops_tasks__task_id__get']
+    get?: never
     put?: never
     post?: never
     /**
      * Revoke Task
-     * @description Revoke a pending or running task (no ownership check).
+     * @description Revoke a pending or running task by Celery id.
+     *
+     *     Takes no existence check: `task_executions` was dropped in ARX-74, and it never held a
+     *     row for a scheduled task anyway, so gating on it would have 404'd exactly the stuck
+     *     weekly jobs this endpoint exists to kill. Celery ignores an unknown id.
      */
     delete: operations['revoke_task_api_v1_ops_tasks__task_id__delete']
     options?: never
@@ -704,7 +684,7 @@ export interface components {
        * Dimension
        * @enum {string}
        */
-      dimension: 'method_clarity' | 'resource_feasibility' | 'data_availability' | 'demand'
+      dimension: 'method_clarity' | 'resource_feasibility' | 'data_availability'
       /** Evidence */
       evidence: components['schemas']['EvidenceItem'][]
       /** Expected */
@@ -836,7 +816,7 @@ export interface components {
        * Low Confidence
        * @description Dimensions whose confidence is below the threshold
        */
-      low_confidence: ('method_clarity' | 'resource_feasibility' | 'data_availability' | 'demand')[]
+      low_confidence: ('method_clarity' | 'resource_feasibility' | 'data_availability')[]
       /**
        * Meta
        * @description Ordered truthy-only phrases: compute tier, data access, code, weights, pseudocode, hyperparameters. Never a negative claim.
@@ -924,8 +904,6 @@ export interface components {
       composite: number
       /** Data Availability */
       data_availability: number | null
-      /** Demand */
-      demand: number | null
       /** Method Clarity */
       method_clarity: number | null
       /** Resource Feasibility */
@@ -1142,7 +1120,7 @@ export interface components {
       /** Headline */
       headline: string
       /** Low Confidence */
-      low_confidence: ('method_clarity' | 'resource_feasibility' | 'data_availability' | 'demand')[]
+      low_confidence: ('method_clarity' | 'resource_feasibility' | 'data_availability')[]
       /** Meta */
       meta: string[]
       paper: components['schemas']['PaperMetadata']
@@ -1330,110 +1308,6 @@ export interface components {
        * @description System arXiv search configurations
        */
       arxiv_searches?: components['schemas']['OpsArxivSearchConfig'][]
-    }
-    /**
-     * TaskListItem
-     * @description Single task in a task list response.
-     */
-    TaskListItem: {
-      /**
-       * Completed At
-       * @description When the task completed
-       */
-      completed_at?: string | null
-      /**
-       * Created At
-       * Format: date-time
-       * @description When the task was created
-       */
-      created_at: string
-      /**
-       * Error
-       * @description Error message if task failed
-       */
-      error?: string | null
-      /**
-       * Status
-       * @description Current task status
-       */
-      status: string
-      /**
-       * Task Id
-       * @description Celery task ID
-       */
-      task_id: string
-      /**
-       * Task Type
-       * @description Type of the task
-       */
-      task_type: string
-    }
-    /**
-     * TaskListResponse
-     * @description Response for listing tasks.
-     */
-    TaskListResponse: {
-      /**
-       * Limit
-       * @description Page size
-       */
-      limit: number
-      /**
-       * Offset
-       * @description Page offset
-       */
-      offset: number
-      /** Tasks */
-      tasks: components['schemas']['TaskListItem'][]
-      /**
-       * Total
-       * @description Total number of tasks
-       */
-      total: number
-    }
-    /**
-     * TaskStatusResponse
-     * @description Response for task status queries.
-     */
-    TaskStatusResponse: {
-      /**
-       * Created At
-       * @description When the task was created
-       */
-      created_at?: string | null
-      /**
-       * Error
-       * @description Error message if task failed (only included on failure)
-       */
-      error?: string | null
-      /**
-       * Ready
-       * @description Whether the task has completed (success or failure)
-       */
-      ready: boolean
-      /**
-       * Result
-       * @description Task result if completed successfully (only included on success)
-       */
-      result?: {
-        [key: string]: unknown
-      } | null
-      /**
-       * Status
-       * @description Current task status
-       * @enum {string}
-       */
-      status: 'queued' | 'pending' | 'started' | 'success' | 'failure' | 'retry' | 'revoked'
-      /**
-       * Task Id
-       * @description Unique identifier for the task
-       */
-      task_id: string
-      /**
-       * Task Type
-       * @description Type of the task
-       */
-      task_type?: string | null
     }
     /**
      * UpdatePreferencesRequest
@@ -1893,75 +1767,6 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['SystemSearchesResponse']
-        }
-      }
-      /** @description Error envelope */
-      default: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['ErrorResponse']
-        }
-      }
-    }
-  }
-  list_tasks_api_v1_ops_tasks_get: {
-    parameters: {
-      query?: {
-        limit?: number
-        offset?: number
-      }
-      header?: {
-        'x-api-key'?: string | null
-      }
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['TaskListResponse']
-        }
-      }
-      /** @description Error envelope */
-      default: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['ErrorResponse']
-        }
-      }
-    }
-  }
-  get_task_status_api_v1_ops_tasks__task_id__get: {
-    parameters: {
-      query?: {
-        include_result?: boolean
-      }
-      header?: {
-        'x-api-key'?: string | null
-      }
-      path: {
-        task_id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['TaskStatusResponse']
         }
       }
       /** @description Error envelope */

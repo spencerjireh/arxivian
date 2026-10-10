@@ -5,7 +5,6 @@ from src.models.conversation import Conversation, ConversationTurn
 from src.models.digest import Digest
 from src.models.paper import Paper
 from src.models.paper_score import PaperScore, ScoreEvidence
-from src.models.task_execution import TaskExecution
 from src.models.usage_counter import UsageCounter
 from src.models.user import User
 from src.models.user_paper_state import UserPaperState
@@ -18,7 +17,6 @@ __all__ = [
     "Paper",
     "PaperScore",
     "ScoreEvidence",
-    "TaskExecution",
     "UsageCounter",
     "User",
     "UserPaperState",

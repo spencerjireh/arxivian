@@ -33,14 +33,12 @@ export const DIMENSION_ORDER: ScoreDimension[] = [
   'method_clarity',
   'resource_feasibility',
   'data_availability',
-  'demand',
 ]
 
 export const DIMENSION_LABELS: Record<ScoreDimension, string> = {
   method_clarity: 'Method clarity',
   resource_feasibility: 'Resource feasibility',
   data_availability: 'Data availability',
-  demand: 'Demand',
 }
 
 /** Short labels under the card meter. */
@@ -48,7 +46,6 @@ export const DIMENSION_SHORT_LABELS: Record<ScoreDimension, string> = {
   method_clarity: 'Method',
   resource_feasibility: 'Compute',
   data_availability: 'Data',
-  demand: 'Demand',
 }
 
 /** Human labels per level, in level order (0..max_level). */
@@ -62,7 +59,6 @@ export const LEVEL_LABELS: Record<ScoreDimension, string[]> = {
     'Laptop / CPU',
   ],
   data_availability: ['Fail', 'Pass'],
-  demand: ['Low', 'Medium', 'High'],
 }
 
 export const EVIDENCE_KIND_LABELS: Record<string, string> = {

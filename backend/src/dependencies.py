@@ -26,7 +26,6 @@ from src.models.user import User
 from src.repositories.chunk_repository import ChunkRepository
 from src.repositories.conversation_repository import ConversationRepository
 from src.repositories.paper_repository import PaperRepository
-from src.repositories.task_execution_repository import TaskExecutionRepository
 from src.repositories.usage_counter_repository import UsageCounterRepository
 from src.repositories.user_paper_state_repository import UserPaperStateRepository
 from src.repositories.user_repository import UserRepository
@@ -98,14 +97,6 @@ UserRepoDep = Annotated[UserRepository, Depends(get_user_repository)]
 # ============================================================================
 # Task Execution Repository
 # ============================================================================
-
-
-def get_task_execution_repository(db: DbSession) -> TaskExecutionRepository:
-    """Get TaskExecutionRepository with database session."""
-    return TaskExecutionRepository(db)
-
-
-TaskExecRepoDep = Annotated[TaskExecutionRepository, Depends(get_task_execution_repository)]
 
 
 # ============================================================================

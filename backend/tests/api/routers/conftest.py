@@ -152,16 +152,6 @@ def mock_user():
 
 
 @pytest.fixture
-def mock_task_exec_repo():
-    """Create a mock TaskExecutionRepository."""
-    repo = AsyncMock()
-    repo.create = AsyncMock()
-    repo.get_by_celery_task_id = AsyncMock(return_value=None)
-    repo.update_status = AsyncMock()
-    return repo
-
-
-@pytest.fixture
 def mock_user_repo():
     """Create a mock UserRepository."""
     repo = AsyncMock()
@@ -209,7 +199,6 @@ def overrides(
     mock_conversation_repo,
     mock_embeddings_client,
     mock_settings,
-    mock_task_exec_repo,
     mock_user_repo,
     mock_state_repo,
     mock_feed_service,
@@ -229,7 +218,6 @@ def overrides(
         get_feed_service_dep,
         get_paper_repository,
         get_redis,
-        get_task_execution_repository,
         get_usage_counter_repository,
         get_user_paper_state_repository,
         get_user_repository,
@@ -246,7 +234,6 @@ def overrides(
         get_conversation_repository: lambda: mock_conversation_repo,
         get_embeddings_client: lambda: mock_embeddings_client,
         get_settings: lambda: mock_settings,
-        get_task_execution_repository: lambda: mock_task_exec_repo,
         get_user_repository: lambda: mock_user_repo,
         get_user_paper_state_repository: lambda: mock_state_repo,
         get_feed_service_dep: lambda: mock_feed_service,
@@ -295,24 +282,6 @@ def unauthenticated_client(overrides):
 
 
 # Sample data fixtures
-
-
-@pytest.fixture
-def sample_task_execution():
-    """Factory fixture for creating mock TaskExecution objects."""
-
-    def _make(task_id="test-task-123", status="queued", error_message=None, completed_at=None):
-        task_exec = Mock()
-        task_exec.celery_task_id = task_id
-        task_exec.user_id = uuid.uuid4()
-        task_exec.task_type = "ingest"
-        task_exec.status = status
-        task_exec.error_message = error_message
-        task_exec.created_at = datetime.now(UTC)
-        task_exec.completed_at = completed_at
-        return task_exec
-
-    return _make
 
 
 @pytest.fixture

@@ -108,8 +108,11 @@ search, no resume, no server-side cancel.
 compose_and_persist) driven by `score_tasks.py`. Judgments come from TypeSafe Jev
 (`clients/typesafe_client.py`; typed answers with calibrated probabilities): method
 clarity = 4 Nouls combined by a Poisson-binomial, resource feasibility = 1 compute-tier
-Score + 2 Nouls, data availability = 1 Choice regrouped into a PASS/FAIL gate; demand =
-Semantic Scholar citations (no LLM). Questions in `questions.py`, combine rules in
+Score + 2 Nouls, data availability = 1 Choice regrouped into a PASS/FAIL gate. Demand was
+removed in ARX-73: citation velocity cannot exist for papers published in the last week, so
+it scored ~20/100 for everyone while carrying 0.30 of the composite, and because the
+composite renormalizes over present sub-scores a failed Semantic Scholar lookup outranked a
+successful one. Questions in `questions.py`, combine rules in
 `judgments.py`, stored shape in `state.py`: per-dimension level distribution + atomic
 judgments in `paper_scores.dimensions` (JSONB), the `*_score` integers are derived, product
 attributes in `paper_scores.attributes`. See `ARX-55` and `ARX-56`
@@ -147,15 +150,17 @@ scan` line, since anything else means the crawl only sampled the newest slice, A
 `retry_after`), `digest_tasks` (**nightly**: it only ranks scores created inside the current
 ISO week and the feed reads nothing but `digest.ranking`, so a weekly build hid everything
 Stage 2 finished after it -- ARX-67; the upsert makes re-running it safe),
-`demand_tasks` (nightly backfill of NULL demand),
 `embedding_tasks` (`reembed_chunks_task`, run by hand after an embedding-model change;
 keyset cursor, re-enqueues itself under the task time limit).
-`runtime.py` owns the per-process event loop and `run_async`; `signals.py` starts it,
-configures tracing and tracks `task_executions` status. `tasks/__init__.py` imports every
+`runtime.py` owns the per-process event loop and `run_async`; `signals.py` starts it and
+configures tracing. It tracked `task_executions` status until ARX-74, when that table was
+dropped: the handlers only issued UPDATEs and no-op'd silently, and nothing ever inserted a
+row for a scheduled task, so the table was permanently empty. Task outcomes live in Loki.
+`tasks/__init__.py` imports every
 task module so `autodiscover_tasks` registers them; keep it that way.
 
 **Database**: PostgreSQL 16 + pgvector. Tables: papers, chunks, conversations,
-conversation_turns, users, task_executions, usage_counters, paper_scores, score_evidence,
+conversation_turns, users, usage_counters, paper_scores, score_evidence,
 user_paper_states, digests. Migrations in `backend/alembic/versions/`, files named by
 revision id; add one with `uv run alembic revision --rev-id 023_slug -m "..."`. Hybrid
 search is pgvector HNSW + tsvector fused by RRF (`repositories/search_repository.py`).
@@ -226,8 +231,9 @@ generated release notes (`release.yml`). Moving the stack between servers:
   the schedule crons; feed knobs (`TRIAGE_*`, `ONDEMAND_SCORE_LOCK_SECONDS`) are on `app`
   and `celery-worker`, the `ONDEMAND_SCORE_DAILY_*` budgets on `app` only.
   `TYPESAFE_API_KEY` is required for `backend` and `worker`.
-- Semantic Scholar runs keyless: a Redis slot (`SEMANTIC_SCHOLAR_MIN_INTERVAL_MS`) spaces
-  requests across workers; a 429 soft-fails to NULL demand and the nightly backfill retries.
+- Semantic Scholar runs keyless and is now only the paper-scoped chat tool (ARX-73): a Redis
+  slot (`SEMANTIC_SCHOLAR_MIN_INTERVAL_MS`) spaces requests across workers. Note the gate is
+  fixed and never consults the API key, so setting one alone would not raise throughput.
 - Stale Coolify keys (`ALLOWED_LLM_MODELS`, `NVIDIA_NIM_*`, `REDIS_CHECKPOINT_URL`,
   `MAX_RETRIEVAL_ATTEMPTS`) are ignored.
 - External API base is `/api` (frontend nginx rewrites to `/api/v1`); public health path
@@ -259,7 +265,7 @@ generated release notes (`release.yml`). Moving the stack between servers:
   never applies (ARX-72, which killed the weekly triage at 600s against a 3000s soft limit).
   Raise both, and keep `run_async`'s value between the soft and hard Celery limits.
 - `CELERY_TASK_TIMEOUT` is a **hard** limit: the worker takes SIGKILL, so anything not yet
-  committed or enqueued is lost. Two tasks have hit this (ARX-63 demand backfill, ARX-67
+  committed or enqueued is lost. Two tasks hit this (the ARX-63 demand backfill, since removed, and ARX-67
   triage). A long task must either commit per row or set its own `soft_time_limit` and catch
   `SoftTimeLimitExceeded` to persist what it has. Judging progress by a falling row count is
   not evidence of persistence -- grep the worker log for `Hard time limit`.

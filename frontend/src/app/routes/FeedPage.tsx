@@ -102,7 +102,7 @@ export default function FeedPage() {
         </div>
         <p className="mt-2 max-w-xl text-sm text-stone-500">
           New arXiv papers scored for how implementable they are: how clearly the method is
-          specified, what it takes to run, whether the data is public, and how much demand there is.
+          specified, what it takes to run, and whether the data is public.
         </p>
       </header>
 

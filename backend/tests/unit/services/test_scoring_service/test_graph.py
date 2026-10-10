@@ -6,7 +6,6 @@ _DIMENSIONS = {
     "score_method_clarity",
     "score_resource_feasibility",
     "score_data_availability",
-    "score_demand",
 }
 
 

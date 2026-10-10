@@ -50,9 +50,9 @@ export default function Hero() {
             transition={transitions.slow}
             className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-stone-500 sm:text-xl"
           >
-            Every week, new arXiv papers are scored on method clarity, resource feasibility, data
-            availability and demand, ranked for your compute budget, and shown with the evidence
-            behind each score.
+            Every week, new arXiv papers are scored on method clarity, resource feasibility and data
+            availability, ranked for your compute budget, and shown with the evidence behind each
+            score.
           </motion.p>
 
           <motion.div

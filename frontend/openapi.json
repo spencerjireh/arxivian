@@ -523,8 +523,7 @@
             "enum": [
               "method_clarity",
               "resource_feasibility",
-              "data_availability",
-              "demand"
+              "data_availability"
             ],
             "title": "Dimension",
             "type": "string"
@@ -764,8 +763,7 @@
               "enum": [
                 "method_clarity",
                 "resource_feasibility",
-                "data_availability",
-                "demand"
+                "data_availability"
               ],
               "type": "string"
             },
@@ -1016,17 +1014,6 @@
             ],
             "title": "Data Availability"
           },
-          "demand": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Demand"
-          },
           "method_clarity": {
             "anyOf": [
               {
@@ -1054,7 +1041,6 @@
           "method_clarity",
           "resource_feasibility",
           "data_availability",
-          "demand",
           "composite"
         ],
         "title": "FeedScores",
@@ -1550,8 +1536,7 @@
               "enum": [
                 "method_clarity",
                 "resource_feasibility",
-                "data_availability",
-                "demand"
+                "data_availability"
               ],
               "type": "string"
             },
@@ -1917,186 +1902,6 @@
           }
         },
         "title": "SystemSearchesResponse",
-        "type": "object"
-      },
-      "TaskListItem": {
-        "description": "Single task in a task list response.",
-        "properties": {
-          "completed_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "When the task completed",
-            "title": "Completed At"
-          },
-          "created_at": {
-            "description": "When the task was created",
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Error message if task failed",
-            "title": "Error"
-          },
-          "status": {
-            "description": "Current task status",
-            "title": "Status",
-            "type": "string"
-          },
-          "task_id": {
-            "description": "Celery task ID",
-            "title": "Task Id",
-            "type": "string"
-          },
-          "task_type": {
-            "description": "Type of the task",
-            "title": "Task Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "task_id",
-          "task_type",
-          "status",
-          "created_at"
-        ],
-        "title": "TaskListItem",
-        "type": "object"
-      },
-      "TaskListResponse": {
-        "description": "Response for listing tasks.",
-        "properties": {
-          "limit": {
-            "description": "Page size",
-            "title": "Limit",
-            "type": "integer"
-          },
-          "offset": {
-            "description": "Page offset",
-            "title": "Offset",
-            "type": "integer"
-          },
-          "tasks": {
-            "items": {
-              "$ref": "#/components/schemas/TaskListItem"
-            },
-            "title": "Tasks",
-            "type": "array"
-          },
-          "total": {
-            "description": "Total number of tasks",
-            "title": "Total",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "tasks",
-          "total",
-          "limit",
-          "offset"
-        ],
-        "title": "TaskListResponse",
-        "type": "object"
-      },
-      "TaskStatusResponse": {
-        "description": "Response for task status queries.",
-        "properties": {
-          "created_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "When the task was created",
-            "title": "Created At"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Error message if task failed (only included on failure)",
-            "title": "Error"
-          },
-          "ready": {
-            "description": "Whether the task has completed (success or failure)",
-            "title": "Ready",
-            "type": "boolean"
-          },
-          "result": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Task result if completed successfully (only included on success)",
-            "title": "Result"
-          },
-          "status": {
-            "description": "Current task status",
-            "enum": [
-              "queued",
-              "pending",
-              "started",
-              "success",
-              "failure",
-              "retry",
-              "revoked"
-            ],
-            "title": "Status",
-            "type": "string"
-          },
-          "task_id": {
-            "description": "Unique identifier for the task",
-            "title": "Task Id",
-            "type": "string"
-          },
-          "task_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Type of the task",
-            "title": "Task Type"
-          }
-        },
-        "required": [
-          "task_id",
-          "status",
-          "ready"
-        ],
-        "title": "TaskStatusResponse",
         "type": "object"
       },
       "UpdatePreferencesRequest": {
@@ -3018,83 +2823,9 @@
         ]
       }
     },
-    "/api/v1/ops/tasks": {
-      "get": {
-        "description": "List all task executions (no user filter).",
-        "operationId": "list_tasks_api_v1_ops_tasks_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 20,
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "offset",
-            "required": false,
-            "schema": {
-              "default": 0,
-              "minimum": 0,
-              "title": "Offset",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "header",
-            "name": "x-api-key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TaskListResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Error envelope"
-          }
-        },
-        "summary": "List Tasks",
-        "tags": [
-          "Ops",
-          "Ops"
-        ]
-      }
-    },
     "/api/v1/ops/tasks/{task_id}": {
       "delete": {
-        "description": "Revoke a pending or running task (no ownership check).",
+        "description": "Revoke a pending or running task by Celery id.\n\nTakes no existence check: `task_executions` was dropped in ARX-74, and it never held a\nrow for a scheduled task anyway, so gating on it would have 404'd exactly the stuck\nweekly jobs this endpoint exists to kill. Celery ignores an unknown id.",
         "operationId": "revoke_task_api_v1_ops_tasks__task_id__delete",
         "parameters": [
           {
@@ -3156,74 +2887,6 @@
           }
         },
         "summary": "Revoke Task",
-        "tags": [
-          "Ops",
-          "Ops"
-        ]
-      },
-      "get": {
-        "description": "Get task status by Celery task ID (no ownership check).",
-        "operationId": "get_task_status_api_v1_ops_tasks__task_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "task_id",
-            "required": true,
-            "schema": {
-              "title": "Task Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "include_result",
-            "required": false,
-            "schema": {
-              "default": false,
-              "title": "Include Result",
-              "type": "boolean"
-            }
-          },
-          {
-            "in": "header",
-            "name": "x-api-key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TaskStatusResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Error envelope"
-          }
-        },
-        "summary": "Get Task Status",
         "tags": [
           "Ops",
           "Ops"
