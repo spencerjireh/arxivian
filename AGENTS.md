@@ -152,12 +152,15 @@ ISO week and the feed reads nothing but `digest.ranking`, so a weekly build hid 
 Stage 2 finished after it -- ARX-67; the upsert makes re-running it safe),
 `embedding_tasks` (`reembed_chunks_task`, run by hand after an embedding-model change;
 keyset cursor, re-enqueues itself under the task time limit).
-`runtime.py` owns the per-process event loop and `run_async`; `signals.py` starts it,
-configures tracing and tracks `task_executions` status. `tasks/__init__.py` imports every
+`runtime.py` owns the per-process event loop and `run_async`; `signals.py` starts it and
+configures tracing. It tracked `task_executions` status until ARX-74, when that table was
+dropped: the handlers only issued UPDATEs and no-op'd silently, and nothing ever inserted a
+row for a scheduled task, so the table was permanently empty. Task outcomes live in Loki.
+`tasks/__init__.py` imports every
 task module so `autodiscover_tasks` registers them; keep it that way.
 
 **Database**: PostgreSQL 16 + pgvector. Tables: papers, chunks, conversations,
-conversation_turns, users, task_executions, usage_counters, paper_scores, score_evidence,
+conversation_turns, users, usage_counters, paper_scores, score_evidence,
 user_paper_states, digests. Migrations in `backend/alembic/versions/`, files named by
 revision id; add one with `uv run alembic revision --rev-id 023_slug -m "..."`. Hybrid
 search is pgvector HNSW + tsvector fused by RRF (`repositories/search_repository.py`).

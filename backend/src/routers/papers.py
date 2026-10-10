@@ -14,11 +14,9 @@ from src.dependencies import (
     FeedServiceDep,
     RedisDep,
     SettingsDep,
-    TaskExecRepoDep,
 )
 from src.exceptions import InvalidParameterError, ScoringLimitExceededError
 from src.models.user import User
-from src.repositories.task_execution_repository import TaskExecutionRepository
 from src.schemas.papers import PaperScoreDetailResponse, ScorePendingResponse
 from src.tasks.score_tasks import ondemand_budget_keys, ondemand_lock_key, score_paper_task
 
@@ -44,7 +42,6 @@ async def get_paper_score(
     user: CurrentUserOptional,
     feed_service: FeedServiceDep,
     redis: RedisDep,
-    task_repo: TaskExecRepoDep,
     settings: SettingsDep,
 ) -> PaperScoreDetailResponse | JSONResponse:
     """The score breakdown for a paper; 202 with its metadata while it is unscored.
@@ -67,7 +64,7 @@ async def get_paper_score(
     paper = await feed_service.get_paper_metadata(arxiv_id)
     task_id = None
     if user is not None:
-        task_id = await _enqueue_ondemand(redis, task_repo, settings, user, arxiv_id)
+        task_id = await _enqueue_ondemand(redis, settings, user, arxiv_id)
 
     pending = ScorePendingResponse(arxiv_id=arxiv_id, paper=paper, task_id=task_id)
     return JSONResponse(status_code=202, content=pending.model_dump(mode="json"))
@@ -75,7 +72,6 @@ async def get_paper_score(
 
 async def _enqueue_ondemand(
     redis: Redis,
-    task_repo: TaskExecutionRepository,
     settings: Settings,
     user: User,
     arxiv_id: str,
@@ -92,12 +88,6 @@ async def _enqueue_ondemand(
     if acquired:
         await _reserve_ondemand_slot(redis, user.id, settings, lock_key)
         score_paper_task.apply_async(kwargs={"arxiv_id": arxiv_id}, task_id=task_id)
-        await task_repo.create(
-            celery_task_id=task_id,
-            user_id=user.id,
-            task_type="score",
-            parameters={"arxiv_id": arxiv_id, "on_demand": True},
-        )
         return task_id
 
     held = await redis.get(lock_key)
