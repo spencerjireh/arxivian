@@ -45,13 +45,12 @@ def _paper(arxiv_id, categories=("cs.LG",), title="T", abstract="A"):
     )
 
 
-def _score(paper, *, method=80, feasibility=80, demand=85, feas_level=3):
+def _score(paper, *, method=80, feasibility=80, feas_level=3):
     return SimpleNamespace(
         paper_id=paper.id,
         method_clarity_score=method,
         resource_feasibility_score=feasibility,
         data_availability_score=100,
-        demand_score=demand,
         dimensions={
             "method_clarity": _dim("method_clarity", 3, 4),
             "resource_feasibility": _dim("resource_feasibility", feas_level, 4),
@@ -89,7 +88,6 @@ def _entry(paper, composite=80.0):
         "method_clarity_score": 80,
         "resource_feasibility_score": 80,
         "data_availability_score": 100,
-        "demand_score": 85,
         "provisional_composite": composite,
     }
 
@@ -156,12 +154,12 @@ class TestGetFeed:
             weeks=[(WEEK, 2)],
             digest=_digest([_entry(a, composite=99.0), _entry(b, composite=10.0)]),
             papers=[a, b],
-            scores=[_score(a, method=40, feasibility=40, demand=20), _score(b)],
+            scores=[_score(a, method=40, feasibility=40), _score(b)],
             states=[],
         )
         out = await svc.get_feed(_user())
         assert [i.paper.arxiv_id for i in out.items] == ["b", "a"]
-        assert out.items[0].scores.composite == 81.5
+        assert out.items[0].scores.composite == 80.0
 
     async def test_filters_category_min_score_and_dismissed(self):
         a, b, c = _paper("a", ["cs.CV"]), _paper("b"), _paper("c")
@@ -169,7 +167,7 @@ class TestGetFeed:
             weeks=[(WEEK, 3)],
             digest=_digest([_entry(a), _entry(b), _entry(c)]),
             papers=[a, b, c],
-            scores=[_score(a), _score(b, method=10, feasibility=10, demand=20), _score(c)],
+            scores=[_score(a), _score(b, method=10, feasibility=10), _score(c)],
             states=[_state(c, "dismissed")],
         )
         assert [i.paper.arxiv_id for i in (await svc.get_feed(_user())).items] == ["a", "b"]
@@ -214,8 +212,8 @@ class TestGetFeed:
             digest=_digest([_entry(fits), _entry(big)]),
             papers=[fits, big],
             scores=[
-                _score(fits, method=50, feasibility=75, demand=20, feas_level=3),
-                _score(big, method=100, feasibility=100, demand=85, feas_level=1),
+                _score(fits, method=50, feasibility=75, feas_level=3),
+                _score(big, method=100, feasibility=100, feas_level=1),
             ],
             states=[],
         )
@@ -234,7 +232,7 @@ class TestGetFeed:
             weeks=[(WEEK, 2)],
             digest=_digest([_entry(kw), _entry(other)]),
             papers=[kw, other],
-            scores=[_score(kw, method=50, feasibility=50, demand=55), _score(other)],
+            scores=[_score(kw, method=50, feasibility=50), _score(other)],
             states=[],
         )
         user = _user({"feed_profile": {"keywords": ["ATTENTION"]}})
@@ -260,7 +258,7 @@ class TestGetFeed:
             weeks=[(WEEK, 2)],
             digest=_digest([_entry(a), _entry(b)]),
             papers=[a, b],
-            scores=[_score(a, method=40, feasibility=40, demand=20, feas_level=4), _score(b)],
+            scores=[_score(a, method=40, feasibility=40, feas_level=4), _score(b)],
             states=[_state(b, "dismissed")],  # never loaded for an anonymous caller
         )
         out = await svc.get_feed(None, include_dismissed=False)
@@ -384,7 +382,7 @@ class TestGetScoreDetail:
         assert out.meta == ["one datacenter GPU", "code released"]
         assert out.paper.abstract == "A"
         assert out.state is not None and out.state.state == "saved"
-        assert out.scores.composite == 81.5
+        assert out.scores.composite == 80.0
 
     async def test_anonymous_detail_has_no_state(self):
         paper = _paper("x")

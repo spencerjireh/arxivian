@@ -31,7 +31,6 @@ DIMENSION_ORDER: tuple[ScoreDimension, ...] = (
     "method_clarity",
     "resource_feasibility",
     "data_availability",
-    "demand",
 )
 
 # A dimension whose argmax mass is below this is flagged on the card rather than hidden
@@ -170,7 +169,7 @@ def low_confidence_dimensions(dims: dict[str, DimensionScore]) -> list[ScoreDime
     return sorted(
         name
         for name in DIMENSION_ORDER
-        if name != "demand" and name in dims and dims[name].confidence < LOW_CONFIDENCE_THRESHOLD
+        if name in dims and dims[name].confidence < LOW_CONFIDENCE_THRESHOLD
     )
 
 
@@ -180,11 +179,9 @@ def build_scores(score: PaperScore, weights: CompositeWeights = DEFAULT_WEIGHTS)
         method_clarity=score.method_clarity_score,
         resource_feasibility=score.resource_feasibility_score,
         data_availability=score.data_availability_score,
-        demand=score.demand_score,
         composite=compute_composite(
             score.method_clarity_score,
             score.resource_feasibility_score,
-            score.demand_score,
             weights=weights,
         ),
     )

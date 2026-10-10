@@ -42,7 +42,6 @@ class PaperScore(Base):
     method_clarity_score: Mapped[int | None] = mapped_column(Integer)
     resource_feasibility_score: Mapped[int | None] = mapped_column(Integer)
     data_availability_score: Mapped[int | None] = mapped_column(Integer)
-    demand_score: Mapped[int | None] = mapped_column(Integer)
 
     # v2: {dimension: DimensionScore JSON} -- level, max_level, expected, probabilities
     # (string keys), confidence, judgments, evidence, reasoning. Read via

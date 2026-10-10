@@ -1,7 +1,7 @@
 """The four dimension nodes (rubric v2).
 
 Three dimensions are Jev judgments over targeted state (method clarity, resource
-feasibility, data availability); one is a Semantic Scholar lookup (demand). Each Jev
+feasibility, data availability). Each Jev
 node makes exactly one `system_one` request and hands the normalized answers to
 `judgments.py` to build its `DimensionScore`.
 
@@ -26,11 +26,9 @@ from src.services.scoring_service.judgments import (
     combine_data_availability,
     combine_method_clarity,
     combine_resource_feasibility,
-    demand_from_band,
     noul_judgment,
 )
 from src.services.scoring_service.state import (
-    DEMAND_BAND_TO_SCORE,
     EvidenceKind,
     EvidenceSpan,
     PaperAttributes,
@@ -44,9 +42,7 @@ if TYPE_CHECKING:
 log = get_logger(__name__)
 
 __all__ = [
-    "DEMAND_BAND_TO_SCORE",
     "score_data_availability_node",
-    "score_demand_node",
     "score_method_clarity_node",
     "score_resource_feasibility_node",
 ]
@@ -200,31 +196,3 @@ async def score_data_availability_node(state: PaperScoreState, config: RunnableC
         raise
     except Exception as e:
         return _soft_fail(keys, state, e)
-
-
-# --- Demand (Semantic Scholar, no Jev) ------------------------------------------------
-
-
-async def score_demand_node(state: PaperScoreState, config: RunnableConfig) -> dict:
-    context: ScoringContext = config["configurable"]["context"]
-    arxiv_id = state["arxiv_id"]
-    try:
-        metrics = await context.semantic_scholar_client.get_citation_metrics(arxiv_id)
-        evidence = [
-            EvidenceSpan(
-                text=(
-                    f"{metrics.citation_count} citations "
-                    f"({metrics.influential_citation_count} influential), "
-                    f"{metrics.citations_per_month} citations/month (band {metrics.demand_band})"
-                ),
-                kind="citation",
-                source="Semantic Scholar",
-            )
-        ]
-        reasoning = (
-            f"Citation velocity {metrics.citations_per_month}/month maps to band "
-            f"{metrics.demand_band} -> demand {DEMAND_BAND_TO_SCORE[metrics.demand_band]}."
-        )
-        return {"demand_result": demand_from_band(metrics.demand_band, evidence, reasoning)}
-    except Exception as e:
-        return _soft_fail(("demand_result",), state, e)

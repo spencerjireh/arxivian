@@ -3,7 +3,6 @@
 from .compose import compose_and_persist_node
 from .dimensions import (
     score_data_availability_node,
-    score_demand_node,
     score_method_clarity_node,
     score_resource_feasibility_node,
 )
@@ -13,7 +12,6 @@ __all__ = [
     "compose_and_persist_node",
     "fetch_and_extract_node",
     "score_data_availability_node",
-    "score_demand_node",
     "score_method_clarity_node",
     "score_resource_feasibility_node",
 ]

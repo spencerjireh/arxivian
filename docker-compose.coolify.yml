@@ -208,7 +208,6 @@ services:
       CLEANUP_SCHEDULE_CRON: ${CLEANUP_SCHEDULE_CRON:-0 3 * * *}
       TRIAGE_SCHEDULE_CRON: ${TRIAGE_SCHEDULE_CRON:-0 6 * * 1}
       DIGEST_SCHEDULE_CRON: ${DIGEST_SCHEDULE_CRON:-0 8 * * *}
-      DEMAND_BACKFILL_SCHEDULE_CRON: ${DEMAND_BACKFILL_SCHEDULE_CRON:-0 4 * * *}
     depends_on:
       redis:
         condition: service_healthy

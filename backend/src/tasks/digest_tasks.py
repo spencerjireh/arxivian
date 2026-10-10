@@ -75,11 +75,9 @@ async def build_digest_for_week(
                 method_clarity_score=score.method_clarity_score,
                 resource_feasibility_score=score.resource_feasibility_score,
                 data_availability_score=score.data_availability_score,
-                demand_score=score.demand_score,
                 provisional_composite=compute_provisional_composite(
                     score.method_clarity_score,
                     score.resource_feasibility_score,
-                    score.demand_score,
                 ),
             )
         )

@@ -704,7 +704,7 @@ export interface components {
        * Dimension
        * @enum {string}
        */
-      dimension: 'method_clarity' | 'resource_feasibility' | 'data_availability' | 'demand'
+      dimension: 'method_clarity' | 'resource_feasibility' | 'data_availability'
       /** Evidence */
       evidence: components['schemas']['EvidenceItem'][]
       /** Expected */
@@ -836,7 +836,7 @@ export interface components {
        * Low Confidence
        * @description Dimensions whose confidence is below the threshold
        */
-      low_confidence: ('method_clarity' | 'resource_feasibility' | 'data_availability' | 'demand')[]
+      low_confidence: ('method_clarity' | 'resource_feasibility' | 'data_availability')[]
       /**
        * Meta
        * @description Ordered truthy-only phrases: compute tier, data access, code, weights, pseudocode, hyperparameters. Never a negative claim.
@@ -924,8 +924,6 @@ export interface components {
       composite: number
       /** Data Availability */
       data_availability: number | null
-      /** Demand */
-      demand: number | null
       /** Method Clarity */
       method_clarity: number | null
       /** Resource Feasibility */
@@ -1142,7 +1140,7 @@ export interface components {
       /** Headline */
       headline: string
       /** Low Confidence */
-      low_confidence: ('method_clarity' | 'resource_feasibility' | 'data_availability' | 'demand')[]
+      low_confidence: ('method_clarity' | 'resource_feasibility' | 'data_availability')[]
       /** Meta */
       meta: string[]
       paper: components['schemas']['PaperMetadata']

@@ -203,10 +203,13 @@ class TestScoresAndWeights:
         assert build_scores(score).composite == 70.0
 
     def test_resolve_weights(self):
-        assert resolve_weights(None).demand == 0.30
-        assert resolve_weights({"bogus": 1.0}).demand == 0.30
-        assert resolve_weights({"method_clarity": 1, "resource_feasibility": 0, "demand": 0}) == (
-            CompositeWeights(method_clarity=1, resource_feasibility=0, demand=0)
+        assert resolve_weights(None).method_clarity == 0.5
+        assert resolve_weights({"bogus": 1.0}).method_clarity == 0.5
+        # A stored profile carrying the removed `demand` key must also fall back rather
+        # than raise -- CompositeWeights is extra="forbid" (ARX-73).
+        assert resolve_weights({"demand": 1.0}).method_clarity == 0.5
+        assert resolve_weights({"method_clarity": 1, "resource_feasibility": 0}) == (
+            CompositeWeights(method_clarity=1, resource_feasibility=0)
         )
 
 

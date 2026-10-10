@@ -21,7 +21,6 @@ export function makeFeedItem(overrides: Partial<FeedItem> = {}): FeedItem {
       method_clarity: 80,
       resource_feasibility: 50,
       data_availability: 100,
-      demand: 85,
       composite: 71,
     },
     headline: 'Transformer for machine translation',

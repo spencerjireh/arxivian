@@ -5,7 +5,6 @@ const scores = {
   method_clarity: 80,
   resource_feasibility: 49.6,
   data_availability: 100,
-  demand: 20,
 }
 
 describe('DimensionMeter', () => {
@@ -17,7 +16,6 @@ describe('DimensionMeter', () => {
       'Method 80 of 100',
       'Compute 50 of 100',
       'Data 100 of 100',
-      'Demand 20 of 100',
     ])
     expect((meters[1].firstElementChild as HTMLElement).style.width).toBe('50%')
     expect(meters[1]).toHaveAttribute('aria-valuemin', '0')
@@ -31,10 +29,10 @@ describe('DimensionMeter', () => {
   })
 
   it('renders a hollow segment for a null value instead of a low fill', () => {
-    render(<DimensionMeter scores={{ ...scores, demand: null }} />)
-    expect(screen.getAllByRole('meter')).toHaveLength(3)
-    const hollow = screen.getByRole('img', { name: 'Demand not available' })
-    expect(hollow).toHaveAttribute('title', 'Demand: not available')
+    render(<DimensionMeter scores={{ ...scores, resource_feasibility: null }} />)
+    expect(screen.getAllByRole('meter')).toHaveLength(2)
+    const hollow = screen.getByRole('img', { name: 'Compute not available' })
+    expect(hollow).toHaveAttribute('title', 'Compute: not available')
     expect(hollow.querySelector('div')).toBeNull()
   })
 })
