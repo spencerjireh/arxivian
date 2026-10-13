@@ -69,8 +69,8 @@ dev = [
     "pytest-cov>=6.0.0",
     # Exact pins: CI, the pre-commit hook and `just lint` all run the locked binary, and
     # ruff/ty change diagnostics between releases. Dependabot bumps these.
-    "ruff==0.16.9",
-    "ty==0.0.84",
+    "ruff==0.17.0",
+    "ty==0.0.86",
     "vulture>=2.14",
 ]
 eval = [
