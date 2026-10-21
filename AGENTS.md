@@ -277,6 +277,19 @@ generated release notes (`release.yml`). Moving the stack between servers:
   `docker compose --profile test build frontend-test-runner`). Stale ones fail as eslint
   `no-unsafe-*` on an "error type" and a vite import-analysis error, which read like real code
   defects rather than a missing package.
+- **nginx caches the upstream IP, and `depends_on` will not save you.** A `proxy_pass` to a
+  literal hostname is resolved once at config load and held for the process lifetime, so an
+  `app` container that comes back on a new IP is proxied to a dead address until nginx itself
+  restarts -- static files keep serving while every `/api/` call 502s, which is a silent
+  outage. `frontend/nginx.conf` therefore sets `resolver 127.0.0.11` and holds the upstream in
+  a `$app_upstream` variable, which is what forces re-resolution per request; the `/api/`
+  block needs an explicit `rewrite` because a variable in `proxy_pass` stops nginx appending
+  the location remainder. The `depends_on: condition: service_healthy` on `frontend` is real
+  but irrelevant here: on a host reboot the Docker daemon restarts containers by restart
+  policy and never consults `depends_on`, which only the compose CLI honours. This took the
+  API down from 2026-10-18 10:00 UTC until it was noticed on 2026-10-21. The `frontend`
+  healthcheck probes `/api/health` through the proxy for exactly this reason -- a static-asset
+  check reports healthy straight through the failure.
 - Host-port overrides (`BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`, `REDIS_PORT`,
   `FLOWER_PORT`, `TEST_DB_PORT`) are compose interpolation from the shell, not `backend/.env`.
 - A real `LOGFIRE_TOKEN` in `backend/.env` turns on live instrumentation for local pytest
