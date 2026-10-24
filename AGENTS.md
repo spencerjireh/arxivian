@@ -123,7 +123,12 @@ in Plane (the rubric is the source of truth).
 `FeedService`; `derive.py` turns a `PaperScore` row into card fields in pure code (read-time
 composite with NULL renormalization, compute-profile match, `headline` "<family> for
 <task>" and the truthy-only `meta` phrases from the Jev judgments, low-confidence marker);
-`service.py` batch-loads the live rows for a digest week. `GET /feed` and `GET
+`service.py` batch-loads the live rows for a digest week, and with no `week` parameter
+defaults to the newest week that **has papers**, not simply the newest week built
+(`_newest_populated`): `build_digest_task` upserts a row even when nothing qualified, so a
+zero-row week would otherwise become the public front page, which is what happened to the
+week of 2026-09-28 (ARX-71). Empty weeks stay in `available_weeks` and an explicit `?week=`
+still reaches them. `GET /feed` and `GET
 /papers/{arxiv_id}/score` are public (`CurrentUserOptional`: no header -> anonymous,
 default weights, no state, no profile match; a bad token is still 401). Routers: `feed`
 (`GET /feed`), `paper_states` (`PUT`/`DELETE /papers/{arxiv_id}/state`, `GET
