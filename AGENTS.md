@@ -123,7 +123,12 @@ in Plane (the rubric is the source of truth).
 `FeedService`; `derive.py` turns a `PaperScore` row into card fields in pure code (read-time
 composite with NULL renormalization, compute-profile match, `headline` "<family> for
 <task>" and the truthy-only `meta` phrases from the Jev judgments, low-confidence marker);
-`service.py` batch-loads the live rows for a digest week. `GET /feed` and `GET
+`service.py` batch-loads the live rows for a digest week, and with no `week` parameter
+defaults to the newest week that **has papers**, not simply the newest week built
+(`_newest_populated`): `build_digest_task` upserts a row even when nothing qualified, so a
+zero-row week would otherwise become the public front page, which is what happened to the
+week of 2026-09-28 (ARX-71). Empty weeks stay in `available_weeks` and an explicit `?week=`
+still reaches them. `GET /feed` and `GET
 /papers/{arxiv_id}/score` are public (`CurrentUserOptional`: no header -> anonymous,
 default weights, no state, no profile match; a bad token is still 401). Routers: `feed`
 (`GET /feed`), `paper_states` (`PUT`/`DELETE /papers/{arxiv_id}/state`, `GET
@@ -277,6 +282,19 @@ generated release notes (`release.yml`). Moving the stack between servers:
   `docker compose --profile test build frontend-test-runner`). Stale ones fail as eslint
   `no-unsafe-*` on an "error type" and a vite import-analysis error, which read like real code
   defects rather than a missing package.
+- **nginx caches the upstream IP, and `depends_on` will not save you.** A `proxy_pass` to a
+  literal hostname is resolved once at config load and held for the process lifetime, so an
+  `app` container that comes back on a new IP is proxied to a dead address until nginx itself
+  restarts -- static files keep serving while every `/api/` call 502s, which is a silent
+  outage. `frontend/nginx.conf` therefore sets `resolver 127.0.0.11` and holds the upstream in
+  a `$app_upstream` variable, which is what forces re-resolution per request; the `/api/`
+  block needs an explicit `rewrite` because a variable in `proxy_pass` stops nginx appending
+  the location remainder. The `depends_on: condition: service_healthy` on `frontend` is real
+  but irrelevant here: on a host reboot the Docker daemon restarts containers by restart
+  policy and never consults `depends_on`, which only the compose CLI honours. This took the
+  API down from 2026-10-18 10:00 UTC until it was noticed on 2026-10-21. The `frontend`
+  healthcheck probes `/api/health` through the proxy for exactly this reason -- a static-asset
+  check reports healthy straight through the failure.
 - Host-port overrides (`BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`, `REDIS_PORT`,
   `FLOWER_PORT`, `TEST_DB_PORT`) are compose interpolation from the shell, not `backend/.env`.
 - A real `LOGFIRE_TOKEN` in `backend/.env` turns on live instrumentation for local pytest
