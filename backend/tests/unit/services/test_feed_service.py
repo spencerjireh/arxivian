@@ -148,6 +148,59 @@ class TestGetFeed:
         await svc.get_feed(_user(), week=date(2026, 8, 6))
         svc.digest_repo.get_by_week.assert_awaited_with(WEEK, KEY)
 
+    async def test_default_week_skips_an_empty_newest_week(self):
+        """A zero-row digest must never become the front page (ARX-71).
+
+        `build_digest_task` upserts a row even when nothing qualified, so the newest built
+        week can be empty while a populated one sits behind it. That is what put an empty
+        feed on the public site for the week of 2026-09-28.
+        """
+        p = _paper("1")
+        empty_week = date(2026, 8, 10)
+        svc = _service(
+            weeks=[(empty_week, 0), (WEEK, 1)],
+            digest=_digest([_entry(p)]),
+            papers=[p],
+            scores=[_score(p)],
+            states=[],
+        )
+        out = await svc.get_feed(_user())
+        assert out.week_start == WEEK
+        svc.digest_repo.get_by_week.assert_awaited_with(WEEK, KEY)
+        # The empty week stays visible in the switcher; it is only skipped as the default.
+        assert [(w.week_start, w.paper_count) for w in out.available_weeks] == [
+            (empty_week, 0),
+            (WEEK, 1),
+        ]
+
+    async def test_default_week_falls_back_when_every_week_is_empty(self):
+        newest = date(2026, 8, 10)
+        svc = _service(
+            weeks=[(newest, 0), (WEEK, 0)],
+            digest=_digest([]),
+            papers=[],
+            scores=[],
+            states=[],
+        )
+        out = await svc.get_feed(_user())
+        assert out.week_start == newest
+        assert out.total == 0
+        assert len(out.available_weeks) == 2
+
+    async def test_default_week_takes_an_explicit_empty_week_when_asked(self):
+        """Skipping empties is a default-only rule; an explicit ?week= is still honoured."""
+        p = _paper("1")
+        empty_week = date(2026, 8, 10)
+        svc = _service(
+            weeks=[(empty_week, 0), (WEEK, 1)],
+            digest=_digest([_entry(p)]),
+            papers=[p],
+            scores=[_score(p)],
+            states=[],
+        )
+        await svc.get_feed(_user(), week=empty_week)
+        svc.digest_repo.get_by_week.assert_awaited_with(empty_week, KEY)
+
     async def test_orders_by_live_composite_not_snapshot(self):
         a, b = _paper("a"), _paper("b")
         svc = _service(

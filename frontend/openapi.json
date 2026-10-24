@@ -2368,7 +2368,7 @@
     },
     "/api/v1/feed": {
       "get": {
-        "description": "One page of ranked paper cards for a digest week (default: the newest built week).\n\nPublic: an anonymous caller gets the global digest under the default weights with no\nlifecycle state and no compute-profile match.",
+        "description": "One page of ranked paper cards for a digest week (default: the newest week that has papers).\n\nPublic: an anonymous caller gets the global digest under the default weights with no\nlifecycle state and no compute-profile match.",
         "operationId": "get_feed_api_v1_feed_get",
         "parameters": [
           {
