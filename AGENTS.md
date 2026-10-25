@@ -205,20 +205,6 @@ conftest applies the marker. Pytest: `asyncio_mode = "auto"` (session loop),
 `vitest.config.ts`; raise them when the number goes up, never lower. Integration tests read
 `TEST_DATABASE_URL` directly (set in `.env.test`; `TEST_DB_PORT` overrides the host port).
 
-**Stage 1 selection eval** (`tests/unit/evals/test_triage_selection.py`, marker `unit`, so it
-runs in CI): measures whether the feed's selection beats chance. It needs no LLM -- the
-sample is produced out of band by `scripts/dump_triage_candidates.py` and
-`scripts/sample_triage_labels.py`, hand-labelled three-way (yes / maybe / no), and committed
-as `tests/evals/fixtures/triage_selection_labels.json`; the label tests skip while that file
-is absent. Labels are collected **blind** (title and abstract only, never `keep` or
-`rough_implementability`), and the sample is **stratified**, so every pool-level figure in
-`tests/evals/fixtures/triage_selection.py` weights each stratum by `population / sampled` --
-rejects are oversampled roughly 8x and an unweighted rate is badly biased. The headline
-numbers are `lift` (the feed's human-positive rate minus the pool's; ~0 means the cap is
-discarding ~1300 papers a week on a signal-free score) and `sort_key_separation` (above the
-cut minus below it, which isolates the sort key from triage). Deliberately **ungated** until
-a first measurement exists to set a threshold against.
-
 CI (`.github/workflows/ci.yml`) runs seven required checks on every PR: Backend lint (uv
 lock check, ruff, ty, OpenAPI export diff), Backend unit + api (coverage gate), Backend
 integration (pgvector service, migration round trip), Frontend lint (generated types diff,
