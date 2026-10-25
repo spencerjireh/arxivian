@@ -1,9 +1,9 @@
-"""Logic checks on the triage dump and sampling scripts (no network, no LLM).
+"""Logic checks on the triage dump script (no network, no LLM).
 
-These two functions decide which stratum every paper lands in and which papers a human is
-asked to judge. A bug in either silently mislabels the sample, and every number the
-selection eval later reports inherits that error without any sign of it, so they are worth
-pinning down even though `scripts/` sits outside the coverage gate.
+`_rows` decides which stratum every candidate lands in -- rejected, capped, survived -- which
+is what makes a dump readable at all. Stage 1 persists nothing, so this script is the only
+window into triage behaviour, and a bug here misreports the funnel silently rather than
+failing. `scripts/` sits outside the coverage gate, so these are the only guard it has.
 """
 
 from types import SimpleNamespace
@@ -11,7 +11,6 @@ from types import SimpleNamespace
 import pytest
 
 from scripts.dump_triage_candidates import _rows
-from scripts.sample_triage_labels import _sample
 
 
 def _verdict(keep: bool, score: int) -> SimpleNamespace:
@@ -79,44 +78,3 @@ class TestRows:
         assert row["keep"] is None
         assert row["rough_implementability"] is None
         assert row["paper_class"] is None
-
-
-@pytest.mark.unit
-class TestSample:
-    def _rows_for(self, counts: dict[str, int]) -> list[dict[str, object]]:
-        out: list[dict[str, object]] = []
-        for outcome, n in counts.items():
-            out.extend({"arxiv_id": f"{outcome}-{i}", "outcome": outcome} for i in range(n))
-        return out
-
-    def test_takes_requested_size_per_stratum_and_reports_population(self):
-        rows = self._rows_for({"rejected": 100, "survived": 100, "capped": 100})
-        picked, populations = _sample(rows, {"rejected": 5, "survived": 7, "capped": 9}, seed=1)
-        counts = {
-            s: sum(1 for r in picked if r["outcome"] == s)
-            for s in ("rejected", "survived", "capped")
-        }
-        assert counts == {"rejected": 5, "survived": 7, "capped": 9}
-        assert populations == {"rejected": 100, "survived": 100, "capped": 100}
-
-    def test_small_stratum_is_taken_whole_not_padded(self):
-        rows = self._rows_for({"rejected": 3, "survived": 50, "capped": 50})
-        picked, populations = _sample(rows, {"rejected": 40, "survived": 5, "capped": 5}, seed=1)
-        assert sum(1 for r in picked if r["outcome"] == "rejected") == 3
-        # The population, not the sample size, is what lets the eval reweight.
-        assert populations["rejected"] == 3
-
-    def test_empty_stratum_is_skipped_without_raising(self):
-        rows = self._rows_for({"survived": 10, "capped": 10})
-        picked, populations = _sample(rows, {"rejected": 5, "survived": 5, "capped": 5}, seed=1)
-        assert populations["rejected"] == 0
-        assert len(picked) == 10
-
-    def test_same_seed_reproduces_the_sample(self):
-        rows = self._rows_for({"rejected": 50, "survived": 50, "capped": 50})
-        sizes = {"rejected": 10, "survived": 10, "capped": 10}
-        first, _ = _sample(rows, sizes, seed=7)
-        second, _ = _sample(rows, sizes, seed=7)
-        other, _ = _sample(rows, sizes, seed=8)
-        assert [r["arxiv_id"] for r in first] == [r["arxiv_id"] for r in second]
-        assert [r["arxiv_id"] for r in first] != [r["arxiv_id"] for r in other]
