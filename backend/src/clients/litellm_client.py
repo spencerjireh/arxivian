@@ -8,9 +8,10 @@ import asyncio
 import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 import litellm
+from litellm import CustomStreamWrapper, ModelResponse
 from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel
 
@@ -132,8 +133,15 @@ class LiteLLMClient(BaseLLMClient):
                 max_tokens=max_tokens,
             )
 
-        content = response.choices[0].message.content or ""  # type: ignore[union-attr]
-        usage = response.usage  # type: ignore[union-attr]
+        # `acompletion` is typed `ModelResponse | CustomStreamWrapper`; this call passes no
+        # `stream`, so only the former is reachable. Narrowing here rather than suppressing
+        # keeps the next attribute access honest.
+        completion = cast(ModelResponse, response)
+        content = completion.choices[0].message.content or ""
+        # `usage` is attached by litellm only when the provider reports it -- it is not a
+        # declared field on ModelResponse -- so read it defensively. The log below already
+        # treats a falsy usage as "unknown", which now also covers the attribute being absent.
+        usage = getattr(completion, "usage", None)
 
         log.debug(
             "litellm response",
@@ -175,8 +183,10 @@ class LiteLLMClient(BaseLLMClient):
                 stream=True,
             )
 
-            async for chunk in response:  # type: ignore[union-attr]
-                delta = chunk.choices[0].delta  # type: ignore[union-attr]
+            # `stream=True` above, so this is the wrapper half of the union -- the only
+            # one that is async-iterable.
+            async for chunk in cast(CustomStreamWrapper, response):
+                delta = chunk.choices[0].delta
                 if delta and delta.content:
                     yield delta.content
 
@@ -211,7 +221,8 @@ class LiteLLMClient(BaseLLMClient):
         async with self._timeout(effective_timeout):
             response = await litellm.acompletion(**call_kwargs)  # type: ignore[arg-type]
 
-        content = response.choices[0].message.content  # type: ignore[union-attr]
+        # `call_kwargs` never sets `stream`, so this is a ModelResponse.
+        content = cast(ModelResponse, response).choices[0].message.content
         if content is None:
             raise ValueError("Failed to parse response: empty content")
 
