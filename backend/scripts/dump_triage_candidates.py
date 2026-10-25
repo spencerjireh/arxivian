@@ -1,10 +1,16 @@
-"""Dump one weekly triage crawl with its verdicts, for offline selection analysis.
+"""Dump one weekly triage crawl with its verdicts, so Stage 1 can be inspected at all.
 
 Stage 1 persists nothing. `triage_tasks.py` writes no database row for any candidate: a
 rejected paper leaves only a log line, a capped paper leaves only an aggregate count, and
-even a survivor's verdict is dropped once Stage 2 re-fetches the paper itself. So the
-question "is the feed selecting the right papers" cannot be answered from stored data --
-the sample has to be generated fresh, which is what this script does.
+even a survivor's verdict is dropped once Stage 2 re-fetches the paper itself. Nothing about
+the crawl, the keep rate or the sort-key distribution can be recovered after a run, so the
+only way to look at any of it is to reproduce the run offline -- which is what this does.
+
+This is how the tie-group defect was found: a dump showed `rough_implementability` taking
+only 38 distinct values across 1363 keepers, with 72% on six round numbers, which meant the
+survivor cap was cutting inside a tie and discarding papers on crawl order
+(`triage_tasks.py::_apply_survivor_cap`). Re-run it after changing the triage prompt or the
+caps; the distribution is the thing to look at.
 
 It mirrors the production path rather than reimplementing it: the same
 `ArxivClient.search_papers` arguments as `triage_tasks.py`, the same
