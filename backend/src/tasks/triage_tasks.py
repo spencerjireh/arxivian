@@ -56,6 +56,36 @@ def _triage_task_id(category: str, arxiv_id: str) -> str:
     return hashlib.sha256(key.encode()).hexdigest()[:32]
 
 
+def _apply_survivor_cap(
+    keepers: list[tuple[int, dict[str, Any]]], cap: int
+) -> list[tuple[int, dict[str, Any]]]:
+    """Trim to `cap`, but never split a group of papers sharing a `rough_implementability`.
+
+    A plain `keepers[:cap]` looks like ranking and is not. The sort key is a coarse LLM guess
+    with very little resolution -- measured on a 1588-paper crawl it took only 38 distinct
+    values across 1363 keepers, with 72% of them on just six round numbers -- so the cut
+    almost always lands inside a large tie group, where inclusion is decided by crawl order.
+    At the cap of 150 that ran in production, 83 papers tied on 72: nine were enqueued and 74
+    were dropped on nothing but their position in the list.
+
+    Taking the whole straddling group removes that arbitrariness. It makes the cap a floor
+    rather than a ceiling, which is the right trade: Stage 1 is cents, Stage 2 is ~$1.50 per
+    1000 papers, and the feed ranks by the Stage 2 composite anyway -- the cap only decides
+    who gets scored. Ordering within a tie is still arbitrary, but it no longer decides
+    whether a paper is seen at all.
+
+    Returns every keeper when `cap` is non-positive, matching the previous slice behaviour.
+    """
+    if cap <= 0 or len(keepers) <= cap:
+        return keepers
+    boundary_score = keepers[cap - 1][0]
+    # keepers is sorted descending, so the tie group runs contiguously past the cut.
+    end = cap
+    while end < len(keepers) and keepers[end][0] == boundary_score:
+        end += 1
+    return keepers[:end]
+
+
 def _chunked(items: Sequence[Any], size: int) -> list[Sequence[Any]]:
     """Split a sequence into consecutive chunks of at most `size`."""
     return [items[i : i + size] for i in range(0, len(items), size)]
@@ -219,15 +249,18 @@ def triage_new_papers_task() -> dict[str, Any]:
             keepers.append((verdict.rough_implementability, candidate))
 
         keepers.sort(key=lambda pair: pair[0], reverse=True)
-        capped = max(0, len(keepers) - settings.triage_max_survivors)
-        if capped:
+        all_keepers = keepers
+        keepers = _apply_survivor_cap(keepers, settings.triage_max_survivors)
+        capped = max(0, len(all_keepers) - len(keepers))
+        if capped or len(keepers) > settings.triage_max_survivors:
             log.warning(
                 "triage_survivors_capped",
-                kept=settings.triage_max_survivors,
+                kept=len(keepers),
                 dropped=capped,
                 cap=settings.triage_max_survivors,
+                tie_extra=len(keepers) - settings.triage_max_survivors,
+                boundary_score=keepers[-1][0] if keepers else None,
             )
-        keepers = keepers[: settings.triage_max_survivors]
 
         enqueued: list[dict[str, str]] = []
         for _, candidate in keepers:

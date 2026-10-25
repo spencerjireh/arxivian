@@ -150,7 +150,13 @@ The onboarding profile lives in `users.preferences["feed_profile"]` (`schemas/us
 `arxiv_searches` is set, and unrelated to the feed since triage crawls arXiv itself),
 `triage_tasks` (weekly Stage 1; `TRIAGE_MAX_PER_CATEGORY` is deliberately wide enough to
 reach the start of the lookback window -- check `stop_reason=window_start` on the `arxiv date
-scan` line, since anything else means the crawl only sampled the newest slice, ARX-70),
+scan` line, since anything else means the crawl only sampled the newest slice, ARX-70.
+`TRIAGE_MAX_SURVIVORS` is a **floor**: `_apply_survivor_cap` takes a tie group straddling the
+cut whole, because `rough_implementability` is far too coarse to split one -- on a
+1588-paper crawl it had 38 distinct values over 1363 keepers with 72% on six round numbers,
+so a plain slice decided inclusion by crawl order. At the cap of 150 that ran in production,
+83 papers tied on 72 and nine were enqueued while 74 were dropped on list position alone.
+Watch `tie_extra` on the `triage_survivors_capped` line),
 `score_tasks` (Stage 2; retries only on no-full-text / TypeSafe transient errors, honors
 `retry_after`), `digest_tasks` (**nightly**: it only ranks scores created inside the current
 ISO week and the feed reads nothing but `digest.ranking`, so a weekly build hid everything
