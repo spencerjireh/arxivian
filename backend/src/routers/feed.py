@@ -22,7 +22,7 @@ async def get_feed(
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
 ) -> FeedResponse:
-    """One page of ranked paper cards for a digest week (default: the newest built week).
+    """One page of ranked paper cards for a digest week (default: the newest week that has papers).
 
     Public: an anonymous caller gets the global digest under the default weights with no
     lifecycle state and no compute-profile match.
