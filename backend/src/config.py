@@ -122,9 +122,13 @@ class Settings(BaseSettings):
     # SIGKILL discarded the whole run (ARX-67). Keep this modest: the cap exists to stay
     # inside the default model's rate limit, not to go as wide as possible.
     triage_batch_concurrency: int = 4
-    # Ceiling on Stage 2 enqueues per run, highest rough_implementability first. Bounds
+    # Target for Stage 2 enqueues per run, highest rough_implementability first. Bounds
     # queue depth at --concurrency=2 so a keep-everything prompt regression cannot flood
     # the worker for hours; it is not a spend control (a full run is cents).
+    # A FLOOR, not a ceiling: a tie group straddling the cut is taken whole, because the
+    # sort key is too coarse to split one (38 distinct values over 1363 keepers on a real
+    # crawl). Expect runs to exceed this by the size of the boundary group -- at 400 on a
+    # 1588-paper crawl that was 456. See `_apply_survivor_cap`.
     triage_max_survivors: int = 150
     # Triage's own limit, overriding celery_task_timeout for this one task. The soft limit
     # fires first and is caught, so a slow run still enqueues the verdicts it already has

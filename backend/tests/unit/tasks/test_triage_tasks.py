@@ -348,6 +348,104 @@ class TestTriageSurvivorCap:
         # Best first, and the weakest keep is the one dropped -- not an arbitrary one.
         assert enqueued == ["2401.002", "2401.003"]
 
+    def test_a_tie_straddling_the_cap_is_taken_whole(self, triage_settings):
+        """The cap must not split papers that scored identically.
+
+        The sort key is coarse -- measured on a real crawl it took 38 distinct values over
+        1363 keepers -- so the cut usually lands inside a tie group, and a plain slice then
+        decides inclusion by crawl order. At the production cap of 150, 83 papers tied on 72
+        and nine of them were enqueued while 74 were dropped on list position alone.
+        """
+        triage_settings.triage_max_survivors = 2
+        papers = [_paper(f"2401.00{i}") for i in range(1, 5)]
+        batch = TriageBatchResult(
+            results=[
+                TriageResult(
+                    arxiv_id="2401.001",
+                    paper_class="method",
+                    rough_implementability=90,
+                    keep=True,
+                    reasoning="clear best",
+                ),
+                # Three-way tie that the cap of 2 would otherwise slice after the first.
+                *(
+                    TriageResult(
+                        arxiv_id=f"2401.00{i}",
+                        paper_class="method",
+                        rough_implementability=70,
+                        keep=True,
+                        reasoning="tied",
+                    )
+                    for i in (2, 3, 4)
+                ),
+            ]
+        )
+        result, apply_async, _ = _run_triage({"cs.LG": papers}, [batch], triage_settings)
+
+        # Cap is 2, but the tie group is taken whole: 1 + 3 = 4.
+        assert result["survivors"] == 4
+        assert result["capped"] == 0
+        enqueued = {c.kwargs["kwargs"]["arxiv_id"] for c in apply_async.call_args_list}
+        assert enqueued == {"2401.001", "2401.002", "2401.003", "2401.004"}
+
+    def test_a_tie_below_the_cap_is_still_dropped(self, triage_settings):
+        """Only the group the cut lands in is rescued; weaker ties stay dropped."""
+        triage_settings.triage_max_survivors = 2
+        papers = [_paper(f"2401.00{i}") for i in range(1, 5)]
+        batch = TriageBatchResult(
+            results=[
+                *(
+                    TriageResult(
+                        arxiv_id=f"2401.00{i}",
+                        paper_class="method",
+                        rough_implementability=80,
+                        keep=True,
+                        reasoning="top tie",
+                    )
+                    for i in (1, 2)
+                ),
+                *(
+                    TriageResult(
+                        arxiv_id=f"2401.00{i}",
+                        paper_class="method",
+                        rough_implementability=30,
+                        keep=True,
+                        reasoning="weak tie",
+                    )
+                    for i in (3, 4)
+                ),
+            ]
+        )
+        result, apply_async, _ = _run_triage({"cs.LG": papers}, [batch], triage_settings)
+
+        assert result["survivors"] == 2
+        assert result["capped"] == 2
+        enqueued = {c.kwargs["kwargs"]["arxiv_id"] for c in apply_async.call_args_list}
+        assert enqueued == {"2401.001", "2401.002"}
+
+    def test_distinct_scores_at_the_boundary_cut_exactly_at_the_cap(self, triage_settings):
+        """With no tie at the cut, behaviour is unchanged from the plain slice."""
+        triage_settings.triage_max_survivors = 2
+        papers = [_paper(f"2401.00{i}") for i in range(1, 4)]
+        batch = TriageBatchResult(
+            results=[
+                TriageResult(
+                    arxiv_id=f"2401.00{i}",
+                    paper_class="method",
+                    rough_implementability=score,
+                    keep=True,
+                    reasoning="r",
+                )
+                for i, score in [(1, 90), (2, 80), (3, 70)]
+            ]
+        )
+        result, apply_async, _ = _run_triage({"cs.LG": papers}, [batch], triage_settings)
+
+        assert result["survivors"] == 2
+        assert result["capped"] == 1
+        enqueued = [c.kwargs["kwargs"]["arxiv_id"] for c in apply_async.call_args_list]
+        assert enqueued == ["2401.001", "2401.002"]
+
     def test_no_cap_reported_when_under_the_limit(self, triage_settings):
         papers = [_paper("2401.001")]
         batch = TriageBatchResult(results=[_verdict("2401.001", True)])

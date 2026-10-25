@@ -123,7 +123,12 @@ in Plane (the rubric is the source of truth).
 `FeedService`; `derive.py` turns a `PaperScore` row into card fields in pure code (read-time
 composite with NULL renormalization, compute-profile match, `headline` "<family> for
 <task>" and the truthy-only `meta` phrases from the Jev judgments, low-confidence marker);
-`service.py` batch-loads the live rows for a digest week. `GET /feed` and `GET
+`service.py` batch-loads the live rows for a digest week, and with no `week` parameter
+defaults to the newest week that **has papers**, not simply the newest week built
+(`_newest_populated`): `build_digest_task` upserts a row even when nothing qualified, so a
+zero-row week would otherwise become the public front page, which is what happened to the
+week of 2026-09-28 (ARX-71). Empty weeks stay in `available_weeks` and an explicit `?week=`
+still reaches them. `GET /feed` and `GET
 /papers/{arxiv_id}/score` are public (`CurrentUserOptional`: no header -> anonymous,
 default weights, no state, no profile match; a bad token is still 401). Routers: `feed`
 (`GET /feed`), `paper_states` (`PUT`/`DELETE /papers/{arxiv_id}/state`, `GET
@@ -145,7 +150,13 @@ The onboarding profile lives in `users.preferences["feed_profile"]` (`schemas/us
 `arxiv_searches` is set, and unrelated to the feed since triage crawls arXiv itself),
 `triage_tasks` (weekly Stage 1; `TRIAGE_MAX_PER_CATEGORY` is deliberately wide enough to
 reach the start of the lookback window -- check `stop_reason=window_start` on the `arxiv date
-scan` line, since anything else means the crawl only sampled the newest slice, ARX-70),
+scan` line, since anything else means the crawl only sampled the newest slice, ARX-70.
+`TRIAGE_MAX_SURVIVORS` is a **floor**: `_apply_survivor_cap` takes a tie group straddling the
+cut whole, because `rough_implementability` is far too coarse to split one -- on a
+1588-paper crawl it had 38 distinct values over 1363 keepers with 72% on six round numbers,
+so a plain slice decided inclusion by crawl order. At the cap of 150 that ran in production,
+83 papers tied on 72 and nine were enqueued while 74 were dropped on list position alone.
+Watch `tie_extra` on the `triage_survivors_capped` line),
 `score_tasks` (Stage 2; retries only on no-full-text / TypeSafe transient errors, honors
 `retry_after`), `digest_tasks` (**nightly**: it only ranks scores created inside the current
 ISO week and the feed reads nothing but `digest.ranking`, so a weekly build hid everything
@@ -277,6 +288,19 @@ generated release notes (`release.yml`). Moving the stack between servers:
   `docker compose --profile test build frontend-test-runner`). Stale ones fail as eslint
   `no-unsafe-*` on an "error type" and a vite import-analysis error, which read like real code
   defects rather than a missing package.
+- **nginx caches the upstream IP, and `depends_on` will not save you.** A `proxy_pass` to a
+  literal hostname is resolved once at config load and held for the process lifetime, so an
+  `app` container that comes back on a new IP is proxied to a dead address until nginx itself
+  restarts -- static files keep serving while every `/api/` call 502s, which is a silent
+  outage. `frontend/nginx.conf` therefore sets `resolver 127.0.0.11` and holds the upstream in
+  a `$app_upstream` variable, which is what forces re-resolution per request; the `/api/`
+  block needs an explicit `rewrite` because a variable in `proxy_pass` stops nginx appending
+  the location remainder. The `depends_on: condition: service_healthy` on `frontend` is real
+  but irrelevant here: on a host reboot the Docker daemon restarts containers by restart
+  policy and never consults `depends_on`, which only the compose CLI honours. This took the
+  API down from 2026-10-18 10:00 UTC until it was noticed on 2026-10-21. The `frontend`
+  healthcheck probes `/api/health` through the proxy for exactly this reason -- a static-asset
+  check reports healthy straight through the failure.
 - Host-port overrides (`BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`, `REDIS_PORT`,
   `FLOWER_PORT`, `TEST_DB_PORT`) are compose interpolation from the shell, not `backend/.env`.
 - A real `LOGFIRE_TOKEN` in `backend/.env` turns on live instrumentation for local pytest
