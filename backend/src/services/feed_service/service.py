@@ -58,6 +58,22 @@ log = get_logger(__name__)
 _ARXIV_METADATA_TIMEOUT_SECONDS = 30.0
 
 
+def _newest_populated(weeks: list[tuple[date, int]]) -> date:
+    """The newest week that actually has papers, else the newest week at all.
+
+    `build_digest_task` upserts a row even when nothing qualified, and `list_weeks` returns
+    those rows like any other, so without this the default feed follows a zero-row week and
+    the site serves an empty front page. That is not hypothetical: the digest for the week of
+    2026-09-28 was written with an empty ranking and was the public front page for a week
+    (ARX-71). The fallback keeps an all-empty database answering with a week rather than
+    pretending none exists.
+    """
+    for week_start, paper_count in weeks:
+        if paper_count > 0:
+            return week_start
+    return weeks[0][0]
+
+
 class FeedService:
     """Ranked weekly feed over the cached digest snapshot."""
 
@@ -91,7 +107,7 @@ class FeedService:
         offset: int = 0,
         limit: int = 20,
     ) -> FeedResponse:
-        """One page of ranked cards for a digest week (default: the newest built week).
+        """One page of ranked cards for a digest week (default: the newest week that has papers).
 
         `include_dismissed` needs no anonymous branch: with no states loaded nothing is
         dismissed.
@@ -109,7 +125,7 @@ class FeedService:
                 items=[],
             )
 
-        target = week_start_for(week) if week is not None else weeks[0][0]
+        target = week_start_for(week) if week is not None else _newest_populated(weeks)
         digest = await self.digest_repo.get_by_week(target, self.category_key)
         if digest is None:
             return FeedResponse(

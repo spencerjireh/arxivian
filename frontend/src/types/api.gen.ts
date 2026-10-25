@@ -101,7 +101,7 @@ export interface paths {
     }
     /**
      * Get Feed
-     * @description One page of ranked paper cards for a digest week (default: the newest built week).
+     * @description One page of ranked paper cards for a digest week (default: the newest week that has papers).
      *
      *     Public: an anonymous caller gets the global digest under the default weights with no
      *     lifecycle state and no compute-profile match.
