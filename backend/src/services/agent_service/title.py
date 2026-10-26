@@ -13,7 +13,7 @@ async def generate_title(llm_client: BaseLLMClient, query: str) -> str | None:
     """Generate a short descriptive title for a conversation.
 
     Uses the client's configured model to produce a 4-8 word title from the first user
-    query (a reasoning model ignores `temperature`; LiteLLM drops it).
+    query (a reasoning model may ignore `temperature`).
     Returns None on any failure so callers can fall back gracefully.
     """
     try:

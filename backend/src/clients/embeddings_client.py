@@ -1,16 +1,21 @@
-"""OpenAI embeddings client (text-embedding-3-small through LiteLLM).
+"""OpenAI embeddings client (text-embedding-3-small), on the vendor SDK.
+
+Anthropic has no embeddings API, so unlike the chat clients there is nothing to abstract
+here: this talks to OpenAI directly and always will.
 
 Vectors are requested at 1024 dimensions so `chunks.embedding Vector(1024)` and its HNSW
-index are model-independent. LiteLLM runs with `drop_params = True` (see
-`litellm_client.py`), which would silently discard `dimensions` for a provider that lacks
-it and yield 1536-wide vectors, so every response is length-checked here.
+index stay model-independent. Every response is still length-checked: the OpenAI SDK will
+not silently drop `dimensions` the way LiteLLM's `drop_params` could (ARX-75), but a
+model swap that ignores the parameter would corrupt the index rather than fail, and that
+is worth one assertion.
 """
 
 import logging
 import math
 from typing import Any
 
-import litellm
+import openai
+from openai import AsyncOpenAI
 from tenacity import (
     RetryCallState,
     before_sleep_log,
@@ -26,7 +31,8 @@ from src.utils.logger import get_logger
 log = get_logger(__name__)
 _tenacity_logger = logging.getLogger(f"{__name__}.retry")
 
-EMBEDDING_MODEL = "openai/text-embedding-3-small"
+# No provider prefix: this client is OpenAI-only, so there is nothing to route.
+EMBEDDING_MODEL = "text-embedding-3-small"
 EMBEDDING_DIMENSION = 1024
 # OpenAI accepts up to 2048 inputs per call; 100 keeps a retry cheap and a request small.
 BATCH_SIZE = 100
@@ -46,7 +52,7 @@ def _rate_limit_aware_wait(retry_state: RetryCallState) -> float:
 
 
 def _retry_after_from(exc: BaseException) -> float | None:
-    """Read a numeric Retry-After header off a LiteLLM/OpenAI exception, if it has one."""
+    """Read a numeric Retry-After header off an OpenAI exception, if it has one."""
     response = getattr(exc, "response", None)
     headers = getattr(response, "headers", None)
     raw = headers.get("retry-after") if headers is not None else None
@@ -57,19 +63,22 @@ def _retry_after_from(exc: BaseException) -> float | None:
 
 
 class EmbeddingsClient:
-    """Embeds queries and documents with OpenAI text-embedding-3-small via LiteLLM."""
+    """Embeds queries and documents with OpenAI text-embedding-3-small."""
 
     def __init__(self, api_key: str, model: str = EMBEDDING_MODEL, timeout: float = 60.0):
         self.api_key = api_key
         self.model = model
         self.timeout = timeout
         self.dimension = EMBEDDING_DIMENSION
+        # Retries are tenacity's job below, not the SDK's; two layers would multiply the
+        # attempts and blow past the task time limit.
+        self._client = AsyncOpenAI(api_key=api_key, timeout=timeout, max_retries=0)
 
     @retry(
         stop=stop_after_attempt(5),
         wait=_rate_limit_aware_wait,
         retry=retry_if_exception_type(
-            (EmbeddingRateLimitError, litellm.APIConnectionError, litellm.Timeout)
+            (EmbeddingRateLimitError, openai.APIConnectionError, openai.APITimeoutError)
         ),
         before_sleep=before_sleep_log(_tenacity_logger, logging.WARNING),
         reraise=True,
@@ -78,21 +87,20 @@ class EmbeddingsClient:
         """Embed one batch; rate limits become ``EmbeddingRateLimitError`` for tenacity."""
         log.debug("embedding batch", batch=batch_num, size=len(batch))
         try:
-            response = await litellm.aembedding(
+            response = await self._client.embeddings.create(
                 model=self.model,
                 input=batch,
                 dimensions=self.dimension,
-                api_key=self.api_key,
-                timeout=self.timeout,
             )
-        except litellm.RateLimitError as e:
+        except openai.RateLimitError as e:
             raise EmbeddingRateLimitError(
                 message=f"Rate limited on batch {batch_num} (429)",
                 retry_after=_retry_after_from(e),
             ) from e
-        except (litellm.APIConnectionError, litellm.Timeout):
+        except (openai.APIConnectionError, openai.APITimeoutError):
+            # Re-raised for tenacity to retry; everything else is terminal.
             raise
-        except Exception as e:  # provider errors are not one litellm base class
+        except Exception as e:
             raise EmbeddingServiceError(
                 f"Embedding request failed on batch {batch_num}: {e}"
             ) from e

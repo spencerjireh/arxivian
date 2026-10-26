@@ -13,16 +13,32 @@ class Settings(BaseSettings):
     # Database
     postgres_url: str = "postgresql+asyncpg://user:password@localhost:5432/arxiv_rag"
 
-    # LLM Configuration (LiteLLM-format model strings: "provider/model"). One model for
-    # every chat/triage call; there is no per-request model selection (Phase 3).
+    # LLM configuration. Model strings are "provider/model" and the prefix picks the client
+    # (`clients/base_llm_client.py::provider_from_model`), so `openai/gpt-5-nano` and
+    # `anthropic/claude-haiku-4-5-20251001` are both valid anywhere a model is named. A bare
+    # id with no prefix is read as OpenAI, which keeps older values working.
     default_llm_model: str = "openai/gpt-5-nano"
     # Model override for structured-output calls (classify_and_route, evaluate_batch, triage).
     # None means use default_llm_model.
     structured_output_model: str | None = "openai/gpt-5-nano"
     default_temperature: float = 0.3
 
+    # Per-role overrides, each falling back to default_llm_model when unset. The roles pull in
+    # different directions, which is why they are separable: triage is bulk and cost-driven
+    # (~1600 abstracts a week in batches of 20, leaning hard on structured output), while the
+    # paper-scoped chat re-sends the same paper context every turn and is where answer quality
+    # and Anthropic prompt caching pay off. Providers can differ per role.
+    triage_llm_model: str | None = None
+    agent_llm_model: str | None = None
+    # Mark the Anthropic system prompt cacheable for the chat role. Off by default: a cache
+    # write costs more than a plain read, so it only pays where the prefix actually recurs.
+    agent_prompt_caching: bool = False
+
     # Provider API Keys
     openai_api_key: str = ""
+    # Required only if a model string names anthropic/; the factory fails loudly if it is
+    # missing rather than falling back to another provider silently.
+    anthropic_api_key: str = ""
 
     # Semantic Scholar -- citation metrics for the paper-scoped chat tool. Not a scoring
     # dimension since ARX-73. Key is optional: the keyless public pool works, just with

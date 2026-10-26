@@ -50,7 +50,8 @@ backend/
   src/services/                agent_service/, scoring_service/, feed_service/, ingest, search, auth, chunking
   src/repositories/            one module per table (async SQLAlchemy)
   src/models/                  ORM models (models/__init__ is star-imported by alembic/env.py)
-  src/clients/                 LiteLLM (chat + embeddings), arXiv, Semantic Scholar, TypeSafe
+  src/clients/                 openai_client + anthropic_client (chat, one per provider),
+                               embeddings (OpenAI only), arXiv, Semantic Scholar, TypeSafe
   src/tasks/                   Celery tasks; runtime.py owns the worker loop; signals.py the hooks
   src/middleware/              error handler, request logging, maintenance curtain
   src/schemas/base.py          ResponseModel: every response schema inherits it so the OpenAPI document marks its fields required
@@ -82,7 +83,17 @@ Layering: `routers -> services -> repositories -> models`. `factories.py` builds
 services, the agent and `AuthService` (`lru_cache` singletons; per-request objects take a
 session). Custom exceptions map to HTTP in `middleware/error_handler.py`. Logging is
 structlog via `get_logger(__name__)` with request-id correlation and the OTel trace id.
-Auth: Clerk JWT for users, `X-Api-Key` for ops endpoints. LLM calls go through LiteLLM;
+Auth: Clerk JWT for users, `X-Api-Key` for ops endpoints. LLM calls go through one client
+per provider on that vendor's own SDK -- `clients/openai_client.py` and
+`clients/anthropic_client.py`, both behind `BaseLLMClient` (ARX-75, replacing LiteLLM). The
+`provider/model` prefix routes the call (`provider_from_model`), so `openai/gpt-5-nano` and
+`anthropic/claude-sonnet-5` are both valid wherever a model is named and a bare id means
+OpenAI. Per-role overrides pick the client: `TRIAGE_LLM_MODEL` and `AGENT_LLM_MODEL` each
+fall back to `DEFAULT_LLM_MODEL`, so the bulk structured-output path and the chat path can sit
+on different providers (`get_triage_llm_client` / `get_agent_llm_client`). `ANTHROPIC_API_KEY`
+is required only when a model string names `anthropic/`, and the factory raises rather than
+falling back to OpenAI. Embeddings are OpenAI-only and not abstracted -- Anthropic has no
+embeddings API.
 `DEFAULT_LLM_MODEL` and `STRUCTURED_OUTPUT_MODEL` (both `openai/gpt-5-nano`) are the only
 model settings.
 
@@ -177,7 +188,9 @@ revision id; add one with `uv run alembic revision --rev-id 023_slug -m "..."`. 
 search is pgvector HNSW + tsvector fused by RRF (`repositories/search_repository.py`).
 
 **Tracing**: Pydantic Logfire over OpenTelemetry (`observability.py`). `configure_tracing()`
-runs at API import and per worker process; it instruments LiteLLM, httpx, LangGraph
+runs at API import and per worker process; it instruments the OpenAI and Anthropic SDKs
+(one `instrument_*` call each -- instrumenting only the provider currently configured would
+make a per-role switch silently untraced), httpx, LangGraph
 (OpenInference), FastAPI, SQLAlchemy and Celery, and `utils/logger.py` ships structlog lines
 to the active span. Empty `LOGFIRE_TOKEN` (dev, CI) exports nothing; the SDK reads the
 token from `backend/.env` itself. Prompts and paper text are sent by design.
@@ -301,6 +314,23 @@ generated release notes (`release.yml`). Moving the stack between servers:
   API down from 2026-10-18 10:00 UTC until it was noticed on 2026-10-21. The `frontend`
   healthcheck probes `/api/health` through the proxy for exactly this reason -- a static-asset
   check reports healthy straight through the failure.
+- **A reasoning model rejects `temperature`, and LiteLLM used to hide that.** `gpt-5-nano`
+  answers `temperature=0.3` with a 400 ("Only the default (1) value is supported"), so
+  `drop_params = True` meant production never actually applied a temperature to OpenAI.
+  `OpenAIClient._create` reproduces that: it sends `temperature`, and on a 400 naming that
+  parameter it records the model in `_NO_TEMPERATURE` and retries without, costing one extra
+  round trip once per process per model. Also use `max_completion_tokens`, not `max_tokens`,
+  and leave room for reasoning tokens -- a 200-token budget on `gpt-5-nano` returns an empty
+  stream because reasoning consumes it all, while the app default of 1000 is fine.
+- **`anthropic` 2.x uses `httpx2`, not `httpx`.** So `logfire.instrument_httpx()` does not
+  cover Anthropic's transport; the SDK-level `instrument_anthropic()` is what produces its
+  spans (verified: an `anthropic.messages.create` span is emitted). Both httpx and httpx2 are
+  therefore in the tree.
+- **Anthropic calls emit a logfire traceback per call.** `Object of type Omit is not JSON
+  serializable`, raised inside logfire's own `llm_providers/anthropic.py` when it serialises
+  request parameters, on both semconv versions. Non-fatal -- the call succeeds and the span is
+  recorded -- but it is one traceback per request, so enabling Anthropic for a bulk path like
+  triage would be noisy. Upstream bug, not ours.
 - Host-port overrides (`BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`, `REDIS_PORT`,
   `FLOWER_PORT`, `TEST_DB_PORT`) are compose interpolation from the shell, not `backend/.env`.
 - A real `LOGFIRE_TOKEN` in `backend/.env` turns on live instrumentation for local pytest
