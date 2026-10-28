@@ -24,8 +24,6 @@ log = get_logger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
-DEFAULT_MAX_TOKENS = 4096
-
 # Models that reject a non-default `temperature`, learned at runtime. The reasoning models do:
 # `gpt-5-nano` answers `temperature=0.3` with a 400 ("Only the default (1) value is
 # supported"). LiteLLM hid this behind `drop_params = True`, so production has in fact never
@@ -170,6 +168,7 @@ class OpenAIClient(BaseLLMClient):
         response_format: type[T],
         model: str | None = None,
         timeout: float | None = None,
+        max_tokens: int | None = None,
     ) -> T:
         model_to_use = model_without_prefix(model or self._structured_output_model or self._model)
         effective_timeout = timeout if timeout is not None else self.default_timeout
@@ -178,24 +177,37 @@ class OpenAIClient(BaseLLMClient):
             "openai structured request",
             model=model_to_use,
             response_format=response_format.__name__,
+            max_tokens=max_tokens,
             timeout=effective_timeout,
         )
+
+        # Only sent when the caller asked for a bound. A fixed cap here truncated every
+        # batched triage call: the 20-abstract schema needs far more than one result's
+        # worth of output, and on a reasoning model the hidden reasoning tokens are drawn
+        # from the same budget, so the visible JSON never completed (ARX-77).
+        extra: dict[str, int] = {}
+        if max_tokens is not None:
+            extra["max_completion_tokens"] = max_tokens
 
         async with self._timeout(effective_timeout):
             completion = await self._client.chat.completions.parse(
                 model=model_to_use,
                 messages=messages,
                 response_format=response_format,
-                max_completion_tokens=DEFAULT_MAX_TOKENS,
+                **extra,
             )
 
         parsed = completion.choices[0].message.parsed
         if parsed is None:
-            # A refusal or a length-truncated response both land here. Callers treat this as
-            # a failed batch rather than as empty data, which matters for triage: a silently
-            # empty verdict set would read as "nothing qualified".
-            refusal = completion.choices[0].message.refusal
-            raise ValueError(f"Structured output returned no parsed object (refusal={refusal})")
+            # A refusal and a length-truncated response both land here, and they need
+            # different fixes, so name which one it was. Callers treat this as a failed
+            # batch rather than as empty data, which matters for triage: a silently empty
+            # verdict set would read as "nothing qualified".
+            choice = completion.choices[0]
+            raise ValueError(
+                "Structured output returned no parsed object "
+                f"(finish_reason={choice.finish_reason}, refusal={choice.message.refusal})"
+            )
 
         log.debug(
             "openai structured response", model=model_to_use, parsed=truncate(str(parsed), 500)

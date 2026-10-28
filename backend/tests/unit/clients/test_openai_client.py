@@ -173,7 +173,53 @@ class TestGenerateStructured:
         resp.choices = [MagicMock()]
         resp.choices[0].message.parsed = None
         resp.choices[0].message.refusal = "nope"
+        resp.choices[0].finish_reason = "stop"
         client._client.chat.completions.parse = AsyncMock(return_value=resp)
 
         with pytest.raises(ValueError, match="no parsed object"):
             await client.generate_structured(messages, SampleResponse)
+
+    async def test_truncation_names_the_finish_reason(self, client, messages):
+        """`length` and a refusal need different fixes, so the error has to tell them apart.
+
+        A fixed output cap truncated every batched triage call and the message said only
+        "refusal=None", which reads as a model refusal rather than as our own cap (ARX-77).
+        """
+        resp = MagicMock()
+        resp.choices = [MagicMock()]
+        resp.choices[0].message.parsed = None
+        resp.choices[0].message.refusal = None
+        resp.choices[0].finish_reason = "length"
+        client._client.chat.completions.parse = AsyncMock(return_value=resp)
+
+        with pytest.raises(ValueError, match="finish_reason=length"):
+            await client.generate_structured(messages, SampleResponse)
+
+    async def test_no_output_cap_is_sent_by_default(self, client, messages):
+        """The batched callers have no fixed output size, so they must not inherit a cap.
+
+        A 20-abstract triage batch needs many results' worth of output, and on a reasoning
+        model the hidden reasoning tokens come out of the same budget: a cap sized for one
+        answer truncated 1120 of 1613 candidates into parse failures (ARX-77).
+        """
+        resp = MagicMock()
+        resp.choices = [MagicMock()]
+        resp.choices[0].message.parsed = SampleResponse(answer="y")
+        client._client.chat.completions.parse = AsyncMock(return_value=resp)
+
+        await client.generate_structured(messages, SampleResponse)
+
+        assert (
+            "max_completion_tokens" not in client._client.chat.completions.parse.await_args.kwargs
+        )
+
+    async def test_an_explicit_cap_is_passed_through(self, client, messages):
+        resp = MagicMock()
+        resp.choices = [MagicMock()]
+        resp.choices[0].message.parsed = SampleResponse(answer="y")
+        client._client.chat.completions.parse = AsyncMock(return_value=resp)
+
+        await client.generate_structured(messages, SampleResponse, max_tokens=256)
+
+        kwargs = client._client.chat.completions.parse.await_args.kwargs
+        assert kwargs["max_completion_tokens"] == 256
