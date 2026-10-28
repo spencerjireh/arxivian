@@ -103,6 +103,13 @@ class BaseLLMClient(ABC):
         response_format: type[T],
         model: str | None = None,
         timeout: float | None = None,
+        max_tokens: int | None = None,
     ) -> T:
-        """Generate structured output using the provider's structured outputs API."""
+        """Generate structured output using the provider's structured outputs API.
+
+        `max_tokens` bounds the completion. None means "do not bound it", which is what
+        batched callers need: a schema holding a list of N results has no fixed output
+        size, and a cap sized for one result truncates the response into a parse failure
+        (ARX-77). Anthropic requires the field, so it substitutes its own default there.
+        """
         pass
