@@ -13,10 +13,11 @@ from uuid import UUID
 from langgraph.graph.state import CompiledStateGraph
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.clients.anthropic_client import AnthropicClient
 from src.clients.arxiv_client import ArxivClient
-from src.clients.base_llm_client import BaseLLMClient
+from src.clients.base_llm_client import ANTHROPIC, OPENAI, BaseLLMClient, provider_from_model
 from src.clients.embeddings_client import EmbeddingsClient
-from src.clients.litellm_client import LiteLLMClient
+from src.clients.openai_client import OpenAIClient
 from src.clients.semantic_scholar_client import SemanticScholarClient
 from src.clients.typesafe_client import TypeSafeClient
 from src.config import get_settings
@@ -103,14 +104,80 @@ def get_typesafe_client(model: str | None = None) -> TypeSafeClient:
     )
 
 
-def get_llm_client() -> BaseLLMClient:
-    """The LiteLLM client for `DEFAULT_LLM_MODEL` (structured calls may use
-    `STRUCTURED_OUTPUT_MODEL`). There is no per-request model selection."""
+@lru_cache(maxsize=8)
+def _build_llm_client(
+    model: str, structured_output_model: str | None, cache_system: bool
+) -> BaseLLMClient:
+    """One client per distinct (model, structured model, caching) triple.
+
+    The provider prefix on `model` picks the implementation. Cached because each client owns
+    an HTTP connection pool, and the roles below resolve to only a handful of combinations.
+    """
     settings = get_settings()
-    return LiteLLMClient(
-        model=settings.default_llm_model,
-        timeout=float(settings.llm_call_timeout_seconds),
-        structured_output_model=settings.structured_output_model or None,
+    timeout = float(settings.llm_call_timeout_seconds)
+    provider = provider_from_model(model)
+
+    if provider == ANTHROPIC:
+        if not settings.anthropic_api_key:
+            # Loud rather than falling back to OpenAI: a silent provider substitution would
+            # change behaviour and cost while every test and log still looked correct.
+            raise ValueError(
+                f"ANTHROPIC_API_KEY is required for model {model!r}. "
+                "Set it, or point this role at an openai/ model."
+            )
+        return AnthropicClient(
+            api_key=settings.anthropic_api_key,
+            model=model,
+            timeout=timeout,
+            structured_output_model=structured_output_model,
+            cache_system=cache_system,
+        )
+
+    if provider != OPENAI:
+        raise ValueError(
+            f"Unsupported provider {provider!r} in model {model!r}. "
+            f"Supported: {OPENAI!r}, {ANTHROPIC!r}."
+        )
+    return OpenAIClient(
+        api_key=settings.openai_api_key,
+        model=model,
+        timeout=timeout,
+        structured_output_model=structured_output_model,
+    )
+
+
+def get_llm_client() -> BaseLLMClient:
+    """The default chat client, for callers with no role of their own."""
+    settings = get_settings()
+    return _build_llm_client(
+        settings.default_llm_model, settings.structured_output_model or None, False
+    )
+
+
+def get_triage_llm_client() -> BaseLLMClient:
+    """Stage 1 triage: bulk, cost-driven, batched structured output.
+
+    Falls back to the default model, so this is a no-op until `TRIAGE_LLM_MODEL` is set.
+    """
+    settings = get_settings()
+    model = settings.triage_llm_model or settings.default_llm_model
+    # Triage is entirely structured calls, so the structured model follows the role.
+    return _build_llm_client(model, model, False)
+
+
+def get_agent_llm_client() -> BaseLLMClient:
+    """The paper-scoped chat agent.
+
+    This is the role where prompt caching can pay off: every turn re-sends the same paper
+    context, so on Anthropic the system prefix is worth marking cacheable
+    (`AGENT_PROMPT_CACHING`).
+    """
+    settings = get_settings()
+    model = settings.agent_llm_model or settings.default_llm_model
+    return _build_llm_client(
+        model,
+        settings.structured_output_model or None,
+        settings.agent_prompt_caching and provider_from_model(model) == ANTHROPIC,
     )
 
 

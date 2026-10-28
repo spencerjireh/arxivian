@@ -22,8 +22,7 @@ dependencies = [
     "alembic>=1.13.3",
     "pgvector>=0.3.4",
     # AI/ML
-    "litellm>=1.50.0",
-    # litellm 1.102 requires openai<3; bump both together.
+    "anthropic>=0.40.0",
     "openai>=1.54.3,<3",
     "langchain>=0.3.7",
     "langchain-openai>=0.2.5",
@@ -44,7 +43,7 @@ dependencies = [
     # Logging
     "structlog>=24.4.0",
     # Observability (Logfire over OpenTelemetry; see src/observability.py)
-    "logfire[celery,fastapi,httpx,litellm,sqlalchemy]>=5.1.0",
+    "logfire[celery,fastapi,httpx,sqlalchemy]>=5.1.0",
     "openinference-instrumentation-langchain>=0.1.76",
     # Direct: observability.current_trace_id reads the active span id for every log line.
     "opentelemetry-api>=1.44.0",
@@ -132,7 +131,7 @@ error-on-warning = false
 [tool.ty.rules]
 # Tool execute methods intentionally use explicit parameters for better DX
 invalid-method-override = "warn"
-# SQLAlchemy / Starlette / LiteLLM column-access false positives
+# SQLAlchemy / Starlette column-access false positives
 invalid-argument-type = "warn"
 invalid-assignment = "warn"
 no-matching-overload = "warn"

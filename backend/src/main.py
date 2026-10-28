@@ -44,12 +44,6 @@ async def lifespan(app: FastAPI):
     await init_db()
     log.info("database initialized")
 
-    # Configure LiteLLM
-    import litellm
-
-    litellm.suppress_debug_info = True  # type: ignore[invalid-assignment]
-    litellm.set_verbose = False
-
     # Redis for rate limiting and caching
     import redis.asyncio as aioredis
 

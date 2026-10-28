@@ -6,10 +6,10 @@ import os
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-import litellm
 import pytest
 
-from src.clients.litellm_client import LiteLLMClient
+from src.clients.base_llm_client import BaseLLMClient
+from src.factories import _build_llm_client
 from src.services.agent_service.context import AgentContext, ConversationFormatter, ScopedPaper
 from src.services.agent_service.graph_builder import build_graph
 from src.services.agent_service.tools import (
@@ -44,16 +44,17 @@ def pytest_collection_modifyitems(items: list) -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture(scope="session", autouse=True)
-def _configure_litellm() -> None:
-    """Drop unsupported params (e.g. temperature) for reasoning models."""
-    litellm.drop_params = True
-
-
 @pytest.fixture(scope="session")
-def real_llm_client() -> LiteLLMClient:
+def real_llm_client() -> BaseLLMClient:
+    """A real client for the model in `EVAL_LLM_MODEL`.
+
+    Built through the factory, so the provider prefix routes it: an eval can be pointed at
+    `anthropic/...` without touching this fixture. The LiteLLM `drop_params` fixture that
+    used to sit here is gone -- `OpenAIClient` drops an unsupported `temperature` itself
+    (ARX-75).
+    """
     model = os.environ.get("EVAL_LLM_MODEL", "openai/gpt-5-nano")
-    return LiteLLMClient(model=model, timeout=120.0)
+    return _build_llm_client(model, model, False)
 
 
 @pytest.fixture(scope="session")
@@ -83,7 +84,7 @@ def mock_paper_repository(service_mocks: ServiceMocks) -> AsyncMock:
 
 @pytest.fixture
 def eval_context(
-    real_llm_client: LiteLLMClient,
+    real_llm_client: BaseLLMClient,
     mock_search_service: AsyncMock,
     mock_paper_repository: AsyncMock,
     service_mocks: ServiceMocks,
