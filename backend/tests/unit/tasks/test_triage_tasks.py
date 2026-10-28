@@ -57,7 +57,12 @@ def _run_triage(crawl_by_category, batch_results, triage_settings):
     from src.tasks.triage_tasks import triage_new_papers_task
 
     async def _search(query, categories, max_results, start_date, end_date):
-        return crawl_by_category.get(categories[0], [])
+        # An Exception value means "this category fails", mirroring how `batch_results`
+        # already lets a classification batch fail.
+        found = crawl_by_category.get(categories[0], [])
+        if isinstance(found, Exception):
+            raise found
+        return found
 
     mock_arxiv = Mock()
     mock_arxiv.search_papers = AsyncMock(side_effect=_search)
@@ -307,6 +312,56 @@ class TestTriageMissingVerdicts:
         assert generate.await_count == 2
         assert result["no_verdict"] == 20
         assert result["survivors"] == 20
+
+
+class TestCrawlCategoryIsolation:
+    """One category must not take the run with it.
+
+    On 2026-10-26 arXiv answered 429 on page 5 of cs.LG, the first of four configured
+    categories. The crawl call was unguarded, so the exception left `_run` and the entire
+    week went unscored -- cs.CL, cs.CV and cs.AI were never attempted.
+    """
+
+    def test_a_failing_category_is_skipped_and_the_rest_proceed(self, triage_settings):
+        triage_settings.triage_categories = ["cs.LG", "cs.CV"]
+        papers = [_paper("2401.001")]
+        batch = TriageBatchResult(results=[_verdict("2401.001", True)])
+
+        result, apply_async, _ = _run_triage(
+            {"cs.LG": RuntimeError("HTTP 429"), "cs.CV": papers}, [batch], triage_settings
+        )
+
+        assert result["status"] == "completed"
+        assert result["failed_categories"] == ["cs.LG"]
+        assert result["crawled"] == 1
+        assert result["survivors"] == 1
+        assert apply_async.call_count == 1
+
+    def test_every_category_failing_reports_failed_not_empty_success(self, triage_settings):
+        """A total crawl failure must not look like "nothing qualified".
+
+        That ambiguity is how ARX-67 stayed hidden for a week.
+        """
+        triage_settings.triage_categories = ["cs.LG", "cs.CV"]
+
+        result, apply_async, generate = _run_triage(
+            {"cs.LG": RuntimeError("429"), "cs.CV": RuntimeError("429")}, [], triage_settings
+        )
+
+        assert result["status"] == "failed"
+        assert result["failed_categories"] == ["cs.LG", "cs.CV"]
+        assert result["crawled"] == 0
+        assert result["survivors"] == 0
+        # No classification spend and no Stage 2 enqueues on a dead crawl.
+        assert generate.call_count == 0
+        assert apply_async.call_count == 0
+
+    def test_no_failures_reports_an_empty_failed_list(self, triage_settings):
+        papers = [_paper("2401.001")]
+        batch = TriageBatchResult(results=[_verdict("2401.001", True)])
+        result, _, _ = _run_triage({"cs.LG": papers}, [batch], triage_settings)
+        assert result["failed_categories"] == []
+        assert result["status"] == "completed"
 
 
 class TestTriageSurvivorCap:
