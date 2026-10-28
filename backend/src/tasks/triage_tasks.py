@@ -121,18 +121,33 @@ def triage_new_papers_task() -> dict[str, Any]:
         # Crawl each category, deduping globally by arxiv_id (first-seen category wins, so
         # cross-listed papers are triaged and enqueued once).
         candidates: dict[str, dict[str, Any]] = {}
+        failed_categories: list[str] = []
         for i, category in enumerate(settings.triage_categories):
             if i > 0:
                 # Pace the crawl so back-to-back category scans do not trip arXiv's
                 # rate limit (ARX-16); the arxiv.Client keeps its own per-page delay.
                 await asyncio.sleep(settings.arxiv_crawl_pause_seconds)
-            papers = await arxiv_client.search_papers(
-                query="",
-                categories=[category],
-                max_results=settings.triage_max_per_category,
-                start_date=start_date,
-                end_date=end_date,
-            )
+            try:
+                papers = await arxiv_client.search_papers(
+                    query="",
+                    categories=[category],
+                    max_results=settings.triage_max_per_category,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+            except SoftTimeLimitExceeded:
+                # Must unwind: the run is out of time and the phases below need what is left
+                # of the budget more than another category does.
+                raise
+            except Exception as exc:
+                # One category must not take the run with it. On 2026-10-26 arXiv answered
+                # 429 on page 5 of cs.LG -- the first of four -- and because this call was
+                # unguarded the exception left `_run` and the whole week went unscored, with
+                # cs.CL, cs.CV and cs.AI never attempted. Three categories out of four is a
+                # thinner feed; nothing at all is an outage.
+                failed_categories.append(category)
+                log.error("triage_category_failed", category=category, error=str(exc))
+                continue
             for paper in papers:
                 if paper.arxiv_id in candidates:
                     continue
@@ -145,8 +160,28 @@ def triage_new_papers_task() -> dict[str, Any]:
 
         crawled = list(candidates.values())
         log.info(
-            "triage_crawl_complete", crawled=len(crawled), categories=settings.triage_categories
+            "triage_crawl_complete",
+            crawled=len(crawled),
+            categories=settings.triage_categories,
+            failed_categories=failed_categories,
         )
+        if not crawled:
+            # Every category failed. Returning here rather than running the phases below
+            # keeps the failure legible: an empty verdict set downstream is indistinguishable
+            # from "nothing qualified", which is how ARX-67 stayed hidden for a week.
+            log.error("triage_crawl_empty", failed_categories=failed_categories)
+            return {
+                "status": "failed",
+                "reason": "every category failed to crawl",
+                "categories": settings.triage_categories,
+                "failed_categories": failed_categories,
+                "crawled": 0,
+                "survivors": 0,
+                "rejected": 0,
+                "capped": 0,
+                "no_verdict": 0,
+                "timed_out": False,
+            }
 
         # Classify in batches, concurrently under a semaphore. Sequentially this was ~33s
         # per batch, so 4x100 candidates ran ~660s past the 600s limit and the SIGKILL threw
@@ -279,6 +314,7 @@ def triage_new_papers_task() -> dict[str, Any]:
         return {
             "status": "completed",
             "categories": settings.triage_categories,
+            "failed_categories": failed_categories,
             "crawled": len(crawled),
             "survivors": len(enqueued),
             "rejected": rejected,
@@ -293,11 +329,15 @@ def triage_new_papers_task() -> dict[str, Any]:
     result = run_async(_run(), timeout=_TRIAGE_TIMEOUT + 30)
     log.info(
         "triage_completed",
+        status=result["status"],
         crawled=result["crawled"],
         survivors=result["survivors"],
         rejected=result["rejected"],
         capped=result["capped"],
         no_verdict=result["no_verdict"],
         timed_out=result["timed_out"],
+        # Non-empty means the crawl was partial: the feed covers fewer categories than
+        # configured, which is the difference between a thin week and a correct one.
+        failed_categories=result.get("failed_categories", []),
     )
     return result
