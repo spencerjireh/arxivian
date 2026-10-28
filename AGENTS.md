@@ -156,7 +156,14 @@ cut whole, because `rough_implementability` is far too coarse to split one -- on
 1588-paper crawl it had 38 distinct values over 1363 keepers with 72% on six round numbers,
 so a plain slice decided inclusion by crawl order. At the cap of 150 that ran in production,
 83 papers tied on 72 and nine were enqueued while 74 were dropped on list position alone.
-Watch `tie_extra` on the `triage_survivors_capped` line),
+Watch `tie_extra` on the `triage_survivors_capped` line. The crawl isolates each category:
+one failing is logged as `triage_category_failed`, named in `failed_categories` on
+`triage_completed`, and the run continues -- an unguarded call cost the entire week of
+2026-10-26 when arXiv answered 429 on page 5 of cs.LG, the first of four. A crawl that
+returns nothing at all reports `status=failed` rather than an empty success, because
+"nothing crawled" and "nothing qualified" must not look alike. Note arXiv tolerated
+`TRIAGE_MAX_PER_CATEGORY=500` (5 pages) twice and 429'd at 1500, so going wider needs
+slower paging, not just a bigger number),
 `score_tasks` (Stage 2; retries only on no-full-text / TypeSafe transient errors, honors
 `retry_after`), `digest_tasks` (**nightly**: it only ranks scores created inside the current
 ISO week and the feed reads nothing but `digest.ranking`, so a weekly build hid everything
