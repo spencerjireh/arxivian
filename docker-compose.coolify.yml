@@ -60,6 +60,14 @@ services:
       # LLM
       DEFAULT_LLM_MODEL: ${DEFAULT_LLM_MODEL:-openai/gpt-5-nano}
       STRUCTURED_OUTPUT_MODEL: ${STRUCTURED_OUTPUT_MODEL:-openai/gpt-5-nano}
+      # Per-role overrides; empty means use DEFAULT_LLM_MODEL. The provider prefix on the
+      # value picks the client, so either role can be pointed at anthropic/ independently.
+      TRIAGE_LLM_MODEL: ${TRIAGE_LLM_MODEL:-}
+      AGENT_LLM_MODEL: ${AGENT_LLM_MODEL:-}
+      AGENT_PROMPT_CACHING: ${AGENT_PROMPT_CACHING:-false}
+      # Required only when a model string names anthropic/; the factory raises if it is
+      # missing rather than quietly falling back to OpenAI.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       # TypeSafe Jev (Stage 2 scoring)
       TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:?Set TYPESAFE_API_KEY}
       TYPESAFE_MODEL: ${TYPESAFE_MODEL:-jev-1.13.0}
@@ -148,6 +156,14 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY}
       DEFAULT_LLM_MODEL: ${DEFAULT_LLM_MODEL:-openai/gpt-5-nano}
       STRUCTURED_OUTPUT_MODEL: ${STRUCTURED_OUTPUT_MODEL:-openai/gpt-5-nano}
+      # Per-role overrides; empty means use DEFAULT_LLM_MODEL. The provider prefix on the
+      # value picks the client, so either role can be pointed at anthropic/ independently.
+      TRIAGE_LLM_MODEL: ${TRIAGE_LLM_MODEL:-}
+      AGENT_LLM_MODEL: ${AGENT_LLM_MODEL:-}
+      AGENT_PROMPT_CACHING: ${AGENT_PROMPT_CACHING:-false}
+      # Required only when a model string names anthropic/; the factory raises if it is
+      # missing rather than quietly falling back to OpenAI.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       # TypeSafe Jev (Stage 2 scoring)
       TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:?Set TYPESAFE_API_KEY}
       TYPESAFE_MODEL: ${TYPESAFE_MODEL:-jev-1.13.0}

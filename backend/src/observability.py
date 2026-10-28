@@ -2,7 +2,7 @@
 
 The only module that imports `logfire`. With no `LOGFIRE_TOKEN` in the environment nothing
 is exported (dev, CI); with one, every FastAPI request, SQL statement, LangGraph node,
-LiteLLM call, outbound httpx call and Celery task lands in one trace, and structlog lines
+OpenAI and Anthropic call, outbound httpx call and Celery task lands in one trace, and structlog lines
 attach to the active span (`utils.logger`). Prompts and paper text are sent by design.
 
 `LOGFIRE_TOKEN` and `LOGFIRE_ENVIRONMENT` are read by the SDK itself; there is no Settings
@@ -29,7 +29,12 @@ def configure_tracing(service_name: str) -> None:
         console=False,  # structlog owns the console
         inspect_arguments=False,  # span messages are plain strings; skip source introspection
     )
-    logfire.instrument_litellm()
+    # One per provider SDK, replacing the single `instrument_litellm()` call (ARX-75).
+    # Both must be here: instrumenting only the provider currently in `DEFAULT_LLM_MODEL`
+    # would make a per-role switch to the other silently untraced, which is the failure
+    # mode the sqlalchemy cap in pyproject.toml also exists to prevent.
+    logfire.instrument_openai()
+    logfire.instrument_anthropic()
     logfire.instrument_httpx()
     LangChainInstrumentor().instrument()
     _configured = True

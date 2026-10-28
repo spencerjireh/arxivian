@@ -1,1 +1,2 @@
-"""External API clients: LiteLLM (chat + embeddings), arXiv, Semantic Scholar, TypeSafe."""
+"""External API clients: OpenAI and Anthropic (chat), OpenAI (embeddings), arXiv,
+Semantic Scholar, TypeSafe."""

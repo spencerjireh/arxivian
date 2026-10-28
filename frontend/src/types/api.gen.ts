@@ -129,7 +129,7 @@ export interface paths {
      *     Checks:
      *     - Database connectivity and counts
      *     - LLM provider configuration
-     *     - Embeddings API key presence (OpenAI through LiteLLM)
+     *     - Embeddings API key presence (OpenAI)
      *
      *     Returns:
      *         HealthResponse with status and service details

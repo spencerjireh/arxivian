@@ -1,8 +1,12 @@
-"""Tests for EmbeddingsClient (OpenAI text-embedding-3-small through LiteLLM)."""
+"""Tests for EmbeddingsClient (OpenAI text-embedding-3-small, on the vendor SDK).
+
+The SDK is stubbed on the client instance rather than patched globally, so the stub sits at
+the same boundary production uses (ARX-75).
+"""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import litellm
+import openai
 import pytest
 from tenacity import stop_after_attempt
 
@@ -23,7 +27,7 @@ def client() -> EmbeddingsClient:
 
 
 def _response(vectors: list[list[float]], shuffle: bool = False) -> MagicMock:
-    """A LiteLLM EmbeddingResponse-shaped object; items carry an explicit index."""
+    """An OpenAI CreateEmbeddingResponse-shaped object; items carry an explicit index."""
     items = [{"object": "embedding", "index": i, "embedding": v} for i, v in enumerate(vectors)]
     if shuffle:
         items.reverse()
@@ -31,11 +35,10 @@ def _response(vectors: list[list[float]], shuffle: bool = False) -> MagicMock:
 
 
 def _provider_error(cls: type[Exception], headers: dict | None = None) -> Exception:
+    """An openai SDK error carrying a response, so `_retry_after_from` has a header to read."""
     response = MagicMock()
     response.headers = headers or {}
-    return cls(
-        message="boom", llm_provider="openai", model="text-embedding-3-small", response=response
-    )
+    return cls("boom", response=response, body=None)
 
 
 class TestRateLimitAwareWait:
@@ -75,28 +78,38 @@ class TestRateLimitAwareWait:
 
 
 class TestEmbedBatch:
-    async def test_passes_model_dimensions_key_and_timeout(self, client: EmbeddingsClient) -> None:
+    async def test_passes_model_and_dimensions_and_reorders_by_index(
+        self, client: EmbeddingsClient
+    ) -> None:
+        """`api_key` and `timeout` are client-level on the SDK, not per-call as under LiteLLM.
+
+        `dimensions` still has to be on every call: it is what keeps vectors at 1024 so
+        `chunks.embedding Vector(1024)` and its HNSW index stay valid.
+        """
         vectors = [[0.1] * EMBEDDING_DIMENSION, [0.2] * EMBEDDING_DIMENSION]
-        with patch(
-            "src.clients.embeddings_client.litellm.aembedding",
+        with patch.object(
+            client._client.embeddings,
+            "create",
             new_callable=AsyncMock,
             return_value=_response(vectors, shuffle=True),
-        ) as aembedding:
+        ) as create:
             result = await client._embed_batch(batch=["a", "b"], batch_num=1)
 
         assert result == vectors  # re-ordered by index despite a shuffled response
-        aembedding.assert_awaited_once_with(
-            model="openai/text-embedding-3-small",
+        create.assert_awaited_once_with(
+            model="text-embedding-3-small",
             input=["a", "b"],
-            dimensions=1024,
-            api_key="test-key",
-            timeout=12.0,
+            dimensions=EMBEDDING_DIMENSION,
         )
+        assert client._client.api_key == "test-key"
+        # Retries are tenacity's; the SDK must not add its own on top.
+        assert client._client.max_retries == 0
 
     async def test_rejects_wrong_dimension(self, client: EmbeddingsClient) -> None:
         """drop_params=True could silently drop `dimensions`; a 1536-wide vector must not reach pgvector."""
-        with patch(
-            "src.clients.embeddings_client.litellm.aembedding",
+        with patch.object(
+            client._client.embeddings,
+            "create",
             new_callable=AsyncMock,
             return_value=_response([[0.1] * 1536]),
         ):
@@ -104,8 +117,9 @@ class TestEmbedBatch:
                 await client._embed_batch(batch=["a"], batch_num=1)
 
     async def test_rejects_count_mismatch(self, client: EmbeddingsClient) -> None:
-        with patch(
-            "src.clients.embeddings_client.litellm.aembedding",
+        with patch.object(
+            client._client.embeddings,
+            "create",
             new_callable=AsyncMock,
             return_value=_response([[0.1] * EMBEDDING_DIMENSION]),
         ):
@@ -113,9 +127,10 @@ class TestEmbedBatch:
                 await client._embed_batch(batch=["a", "b"], batch_num=3)
 
     async def test_rate_limit_maps_with_retry_after(self, client: EmbeddingsClient) -> None:
-        err = _provider_error(litellm.RateLimitError, headers={"retry-after": "30"})
-        with patch(
-            "src.clients.embeddings_client.litellm.aembedding",
+        err = _provider_error(openai.RateLimitError, headers={"retry-after": "30"})
+        with patch.object(
+            client._client.embeddings,
+            "create",
             new_callable=AsyncMock,
             side_effect=err,
         ):
@@ -125,9 +140,10 @@ class TestEmbedBatch:
         assert "batch 2" in str(exc_info.value)
 
     async def test_rate_limit_without_header(self, client: EmbeddingsClient) -> None:
-        err = _provider_error(litellm.RateLimitError)
-        with patch(
-            "src.clients.embeddings_client.litellm.aembedding",
+        err = _provider_error(openai.RateLimitError)
+        with patch.object(
+            client._client.embeddings,
+            "create",
             new_callable=AsyncMock,
             side_effect=err,
         ):
@@ -138,9 +154,10 @@ class TestEmbedBatch:
     async def test_other_provider_errors_become_service_errors(
         self, client: EmbeddingsClient
     ) -> None:
-        err = litellm.AuthenticationError(message="bad key", llm_provider="openai", model="m")
-        with patch(
-            "src.clients.embeddings_client.litellm.aembedding",
+        err = _provider_error(openai.AuthenticationError)
+        with patch.object(
+            client._client.embeddings,
+            "create",
             new_callable=AsyncMock,
             side_effect=err,
         ):
@@ -148,13 +165,14 @@ class TestEmbedBatch:
                 await client._embed_batch(batch=["a"], batch_num=1)
 
     async def test_connection_errors_propagate_for_tenacity(self, client: EmbeddingsClient) -> None:
-        err = litellm.APIConnectionError(message="down", llm_provider="openai", model="m")
-        with patch(
-            "src.clients.embeddings_client.litellm.aembedding",
+        err = openai.APIConnectionError(request=MagicMock())
+        with patch.object(
+            client._client.embeddings,
+            "create",
             new_callable=AsyncMock,
             side_effect=err,
         ):
-            with pytest.raises(litellm.APIConnectionError):
+            with pytest.raises(openai.APIConnectionError):
                 await client._embed_batch(batch=["a"], batch_num=1)
 
 

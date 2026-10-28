@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import litellm
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
@@ -35,14 +34,8 @@ def pytest_collection_modifyitems(items: list) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Session-scoped: LiteLLM config, DB engine, session factory, seed user
+# Session-scoped: DB engine, session factory, seed user
 # ---------------------------------------------------------------------------
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _configure_litellm() -> None:
-    """Drop unsupported params for reasoning models."""
-    litellm.drop_params = True
 
 
 @pytest.fixture(scope="session")

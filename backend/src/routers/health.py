@@ -25,7 +25,7 @@ async def health_check(
     Checks:
     - Database connectivity and counts
     - LLM provider configuration
-    - Embeddings API key presence (OpenAI through LiteLLM)
+    - Embeddings API key presence (OpenAI)
 
     Returns:
         HealthResponse with status and service details
@@ -67,7 +67,7 @@ async def health_check(
         services["llm"] = ServiceStatus(status="unhealthy", message="Service unavailable")
         overall_status = "degraded"
 
-    # Check embeddings (OpenAI text-embedding-3-small through LiteLLM)
+    # Check embeddings (OpenAI text-embedding-3-small)
     try:
         if embeddings_client.api_key:
             services["embeddings"] = ServiceStatus(status="healthy", message="API key configured")

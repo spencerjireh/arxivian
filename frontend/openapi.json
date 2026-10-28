@@ -2511,7 +2511,7 @@
     },
     "/api/v1/health": {
       "get": {
-        "description": "Comprehensive health check for all services.\n\nChecks:\n- Database connectivity and counts\n- LLM provider configuration\n- Embeddings API key presence (OpenAI through LiteLLM)\n\nReturns:\n    HealthResponse with status and service details",
+        "description": "Comprehensive health check for all services.\n\nChecks:\n- Database connectivity and counts\n- LLM provider configuration\n- Embeddings API key presence (OpenAI)\n\nReturns:\n    HealthResponse with status and service details",
         "operationId": "health_check_api_v1_health_get",
         "responses": {
           "200": {
