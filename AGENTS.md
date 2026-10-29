@@ -94,8 +94,10 @@ on different providers (`get_triage_llm_client` / `get_agent_llm_client`). `ANTH
 is required only when a model string names `anthropic/`, and the factory raises rather than
 falling back to OpenAI. Embeddings are OpenAI-only and not abstracted -- Anthropic has no
 embeddings API.
-`DEFAULT_LLM_MODEL` and `STRUCTURED_OUTPUT_MODEL` (both `openai/gpt-5-nano`) are the only
-model settings.
+`DEFAULT_LLM_MODEL` and `STRUCTURED_OUTPUT_MODEL` (both `openai/gpt-5-nano`) are the
+baseline the role overrides fall back to. There is no generic `get_llm_client`: every
+consumer names its role, which is what keeps a new call site from quietly bypassing the
+override it should respect.
 
 **Paper-scoped chat agent** (`services/agent_service/`): a LangGraph graph compiled once,
 no checkpointer: classify_and_route -> executor -> evaluate_batch -> generate, plus

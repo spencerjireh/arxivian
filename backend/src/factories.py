@@ -146,14 +146,6 @@ def _build_llm_client(
     )
 
 
-def get_llm_client() -> BaseLLMClient:
-    """The default chat client, for callers with no role of their own."""
-    settings = get_settings()
-    return _build_llm_client(
-        settings.default_llm_model, settings.structured_output_model or None, False
-    )
-
-
 def get_triage_llm_client() -> BaseLLMClient:
     """Stage 1 triage: bulk, cost-driven, batched structured output.
 
@@ -259,7 +251,7 @@ def get_agent_service(
     """The paper-scoped chat agent for one request. All tuning comes from `Settings`."""
     settings = get_settings()
     return AgentService(
-        llm_client=get_llm_client(),
+        llm_client=get_agent_llm_client(),
         search_service=get_search_service(db_session),
         graph=graph,
         scoped_paper=scoped_paper,

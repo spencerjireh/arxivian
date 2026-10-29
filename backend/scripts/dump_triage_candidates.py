@@ -41,7 +41,7 @@ from pathlib import Path
 from typing import Any
 
 from src.config import get_settings
-from src.factories import get_arxiv_client, get_llm_client
+from src.factories import get_arxiv_client, get_triage_llm_client
 from src.services.scoring_service.triage import (
     TriageBatchResult,
     TriageResult,
@@ -99,7 +99,7 @@ async def _crawl(
 
 async def _classify(crawled: list[dict[str, Any]], concurrency: int) -> dict[str, TriageResult]:
     """Classify every candidate, merging verdicts as each batch lands."""
-    llm_client = get_llm_client()
+    llm_client = get_triage_llm_client()
     verdicts: dict[str, TriageResult] = {}
     semaphore = asyncio.Semaphore(concurrency)
     batches = _chunked(crawled, TRIAGE_BATCH_SIZE)

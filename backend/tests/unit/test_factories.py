@@ -1,17 +1,12 @@
 """Tests for the construction module."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from src.clients.anthropic_client import AnthropicClient
 from src.clients.openai_client import OpenAIClient
-from src.factories import (
-    _build_llm_client,
-    get_agent_llm_client,
-    get_llm_client,
-    get_triage_llm_client,
-)
+from src.factories import _build_llm_client, get_agent_llm_client, get_triage_llm_client
 
 
 def _make_settings(**overrides):
@@ -48,23 +43,23 @@ def _clear_client_cache():
 
 
 @pytest.mark.unit
-class TestGetLlmClient:
+class TestDefaultClientConstruction:
     def test_uses_default_model_and_timeout(self):
         with patch("src.factories.get_settings", return_value=_make_settings()):
-            client = get_llm_client()
+            client = get_agent_llm_client()
         assert client.model == "openai/gpt-5-nano"
         assert client.default_timeout == 30.0
 
     def test_structured_output_model_wired_to_client(self):
         settings = _make_settings(structured_output_model="openai/gpt-5")
         with patch("src.factories.get_settings", return_value=settings):
-            client = get_llm_client()
+            client = get_agent_llm_client()
         assert client._structured_output_model == "openai/gpt-5"
 
     def test_no_structured_model_when_empty(self):
         settings = _make_settings(structured_output_model="")
         with patch("src.factories.get_settings", return_value=settings):
-            client = get_llm_client()
+            client = get_agent_llm_client()
         assert client._structured_output_model is None
 
 
@@ -74,17 +69,17 @@ class TestProviderDispatch:
 
     def test_openai_prefix_builds_the_openai_client(self):
         with patch("src.factories.get_settings", return_value=_make_settings()):
-            assert isinstance(get_llm_client(), OpenAIClient)
+            assert isinstance(get_agent_llm_client(), OpenAIClient)
 
     def test_bare_model_is_treated_as_openai(self):
         settings = _make_settings(default_llm_model="gpt-5-nano")
         with patch("src.factories.get_settings", return_value=settings):
-            assert isinstance(get_llm_client(), OpenAIClient)
+            assert isinstance(get_agent_llm_client(), OpenAIClient)
 
     def test_anthropic_prefix_builds_the_anthropic_client(self):
         settings = _make_settings(default_llm_model="anthropic/claude-haiku-4-5-20251001")
         with patch("src.factories.get_settings", return_value=settings):
-            client = get_llm_client()
+            client = get_agent_llm_client()
         assert isinstance(client, AnthropicClient)
         assert client.provider_name == "anthropic"
 
@@ -97,7 +92,7 @@ class TestProviderDispatch:
             patch("src.factories.get_settings", return_value=settings),
             pytest.raises(ValueError, match="ANTHROPIC_API_KEY"),
         ):
-            get_llm_client()
+            get_agent_llm_client()
 
     def test_unknown_provider_raises(self):
         settings = _make_settings(default_llm_model="cohere/command")
@@ -105,7 +100,7 @@ class TestProviderDispatch:
             patch("src.factories.get_settings", return_value=settings),
             pytest.raises(ValueError, match="Unsupported provider"),
         ):
-            get_llm_client()
+            get_agent_llm_client()
 
 
 @pytest.mark.unit
@@ -145,3 +140,28 @@ class TestPerRoleClients:
         settings = _make_settings(agent_llm_model="openai/gpt-5-nano", agent_prompt_caching=True)
         with patch("src.factories.get_settings", return_value=settings):
             assert isinstance(get_agent_llm_client(), OpenAIClient)
+
+
+@pytest.mark.unit
+class TestRoleClientsReachTheirCallSites:
+    """The roles existed for a release without being called, which made the settings inert.
+
+    `TRIAGE_LLM_MODEL` and `AGENT_LLM_MODEL` were readable, documented and wired into the
+    production compose file while both call sites still built the generic client, so setting
+    either changed nothing and nothing failed (ARX-77). These assert the wiring itself.
+    """
+
+    def test_triage_builds_the_triage_role_client(self):
+        import src.tasks.triage_tasks as triage_tasks
+
+        assert triage_tasks.get_triage_llm_client is get_triage_llm_client
+
+    def test_agent_service_builds_the_agent_role_client(self):
+        from uuid import uuid4
+
+        from src.factories import get_agent_service
+
+        with patch("src.factories.get_agent_llm_client") as role:
+            get_agent_service(MagicMock(), uuid4(), MagicMock(), MagicMock())
+
+        role.assert_called_once()
