@@ -28,7 +28,7 @@ from celery.exceptions import SoftTimeLimitExceeded
 
 from src.celery_app import celery_app
 from src.config import get_settings
-from src.factories import get_arxiv_client, get_llm_client
+from src.factories import get_arxiv_client, get_triage_llm_client
 from src.services.scoring_service.triage import (
     TriageBatchResult,
     TriageResult,
@@ -112,7 +112,7 @@ def triage_new_papers_task() -> dict[str, Any]:
     async def _run() -> dict[str, Any]:
         settings = get_settings()
         arxiv_client = get_arxiv_client()
-        llm_client = get_llm_client()  # cheap default model (no override)
+        llm_client = get_triage_llm_client()  # TRIAGE_LLM_MODEL, else the default
 
         today = datetime.now(UTC).date()
         start_date = (today - timedelta(days=settings.triage_lookback_days)).isoformat()

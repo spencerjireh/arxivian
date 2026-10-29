@@ -94,8 +94,10 @@ on different providers (`get_triage_llm_client` / `get_agent_llm_client`). `ANTH
 is required only when a model string names `anthropic/`, and the factory raises rather than
 falling back to OpenAI. Embeddings are OpenAI-only and not abstracted -- Anthropic has no
 embeddings API.
-`DEFAULT_LLM_MODEL` and `STRUCTURED_OUTPUT_MODEL` (both `openai/gpt-5-nano`) are the only
-model settings.
+`DEFAULT_LLM_MODEL` and `STRUCTURED_OUTPUT_MODEL` (both `openai/gpt-5-nano`) are the
+baseline the role overrides fall back to. There is no generic `get_llm_client`: every
+consumer names its role, which is what keeps a new call site from quietly bypassing the
+override it should respect.
 
 **Paper-scoped chat agent** (`services/agent_service/`): a LangGraph graph compiled once,
 no checkpointer: classify_and_route -> executor -> evaluate_batch -> generate, plus
@@ -344,6 +346,16 @@ generated release notes (`release.yml`). Moving the stack between servers:
   too; run `LOGFIRE_TOKEN="" uv run pytest ...` on the host. The same goes for
   `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` -- clear both.
 - `VITE_*` values are baked at build time in production.
+- **Never put a fixed output cap on `generate_structured`.** Its batched callers have no
+  fixed output size -- `TriageBatchResult` holds one verdict per paper in the batch -- and on
+  a reasoning model the hidden reasoning tokens are drawn from the same budget as the visible
+  JSON. A 4096-token cap introduced with the SDK swap truncated 1120 of 1613 candidates into
+  `finish_reason=length` parse failures on the 2026-10-28 run, and the survivor cap then
+  selected from the 493 that did parse (ARX-77). `max_tokens=None` means "send no cap" for
+  OpenAI; the Anthropic API requires the field, so it substitutes its own default and a
+  batched caller there must size it explicitly. LiteLLM sent no cap, which is why this never
+  appeared before. The symptom is quiet: triage reports `status=completed` and a plausible
+  survivor count, so watch `no_verdict` on `triage_completed`, which should be ~0.
 - `POST /stream` rejects unknown fields; the chat store allows one mounted panel at a time.
 - Scoring needs `TYPESAFE_API_KEY`, but the client is built only inside the task, so the API
   starts without it. An on-demand score joins the feed only at the next digest build.

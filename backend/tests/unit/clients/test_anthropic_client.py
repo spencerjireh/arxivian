@@ -10,7 +10,12 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from src.clients.anthropic_client import AnthropicClient, _split_messages, _text_of
+from src.clients.anthropic_client import (
+    DEFAULT_MAX_TOKENS,
+    AnthropicClient,
+    _split_messages,
+    _text_of,
+)
 from src.exceptions import LLMTimeoutError
 
 
@@ -176,3 +181,15 @@ class TestGenerateStructured:
         client._client.messages.create = AsyncMock(return_value=_tool_use({"wrong": 1}))
         with pytest.raises(ValidationError):
             await client.generate_structured([{"role": "user", "content": "q"}], SampleResponse)
+
+    async def test_an_explicit_cap_overrides_the_default(self, client):
+        """This API requires `max_tokens`, so None keeps the default rather than omitting it."""
+        client._client.messages.create = AsyncMock(return_value=_tool_use({"answer": "yes"}))
+
+        await client.generate_structured([{"role": "user", "content": "q"}], SampleResponse)
+        assert client._client.messages.create.await_args.kwargs["max_tokens"] == DEFAULT_MAX_TOKENS
+
+        await client.generate_structured(
+            [{"role": "user", "content": "q"}], SampleResponse, max_tokens=9000
+        )
+        assert client._client.messages.create.await_args.kwargs["max_tokens"] == 9000

@@ -202,15 +202,20 @@ class AnthropicClient(BaseLLMClient):
         response_format: type[T],
         model: str | None = None,
         timeout: float | None = None,
+        max_tokens: int | None = None,
     ) -> T:
         model_to_use = model_without_prefix(model or self._structured_output_model or self._model)
         effective_timeout = timeout if timeout is not None else self.default_timeout
         system, turns = _split_messages(messages)
+        # Unlike OpenAI this API has no "unbounded" option, so a caller passing None still
+        # gets a cap. A batched caller whose schema holds a list must size it explicitly.
+        effective_max_tokens = max_tokens if max_tokens is not None else DEFAULT_MAX_TOKENS
 
         log.debug(
             "anthropic structured request",
             model=model_to_use,
             response_format=response_format.__name__,
+            max_tokens=effective_max_tokens,
             timeout=effective_timeout,
         )
 
@@ -222,7 +227,7 @@ class AnthropicClient(BaseLLMClient):
         kwargs: dict[str, Any] = {
             "model": model_to_use,
             "messages": turns,
-            "max_tokens": DEFAULT_MAX_TOKENS,
+            "max_tokens": effective_max_tokens,
             "tools": [tool],
             # Forcing the tool is what makes this structured rather than hopeful.
             "tool_choice": {"type": "tool", "name": _STRUCTURED_TOOL},
