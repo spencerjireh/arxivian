@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
-import { buildFeedQuery, useInfiniteFeed } from '@/features/feed/api/get-feed'
+import { buildFeedQuery, useFeedWeek } from '@/features/feed/api/get-feed'
 import { feedKeys, normalizeFeedParams } from '@/lib/query-keys'
 import { makeFeedItem, makeFeedResponse } from '../../../../fixtures/feed'
 import type { ReactNode } from 'react'
@@ -19,38 +19,31 @@ function createWrapper() {
 }
 
 describe('feed api', () => {
-  it('normalizes params so equal filters share a key', () => {
-    expect(normalizeFeedParams({ week: undefined, category: '', min_score: undefined })).toEqual({})
-    expect(feedKeys.list({ category: 'cs.LG' })).toEqual(
-      feedKeys.list({ category: 'cs.LG', week: '' })
+  it('normalizes params so equal weeks share a key', () => {
+    expect(normalizeFeedParams({ week: undefined, include_dismissed: false })).toEqual({})
+    expect(feedKeys.list({ week: '2026-08-03' })).toEqual(
+      feedKeys.list({ week: '2026-08-03', include_dismissed: false })
     )
-    expect(normalizeFeedParams({ include_dismissed: false })).toEqual({})
+    expect(normalizeFeedParams({ week: '', include_dismissed: true })).toEqual({
+      include_dismissed: true,
+    })
   })
 
-  it('builds the query string', () => {
-    expect(buildFeedQuery({}, 0)).toBe('/feed?offset=0&limit=20')
-    expect(
-      buildFeedQuery(
-        { week: '2026-08-03', category: 'cs.LG', min_score: 40, include_dismissed: true },
-        20
-      )
-    ).toBe(
-      '/feed?offset=20&limit=20&week=2026-08-03&category=cs.LG&min_score=40&include_dismissed=true'
+  it('asks for the whole week in one request', () => {
+    expect(buildFeedQuery({})).toBe('/feed?limit=500')
+    expect(buildFeedQuery({ week: '2026-08-03', include_dismissed: true })).toBe(
+      '/feed?limit=500&week=2026-08-03&include_dismissed=true'
     )
   })
 
-  it('fetches the first page and stops when everything is loaded', async () => {
-    apiGet.mockResolvedValueOnce(makeFeedResponse([makeFeedItem()], { total: 1 }))
-    const { result } = renderHook(() => useInfiniteFeed({}), { wrapper: createWrapper() })
+  it('loads the week', async () => {
+    apiGet.mockResolvedValueOnce(makeFeedResponse([makeFeedItem()]))
+    const { result } = renderHook(() => useFeedWeek({ week: '2026-08-03' }), {
+      wrapper: createWrapper(),
+    })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(apiGet).toHaveBeenCalledWith('/feed?offset=0&limit=20')
-    expect(result.current.hasNextPage).toBe(false)
-  })
-
-  it('offers a next page while fewer items than total are loaded', async () => {
-    apiGet.mockResolvedValueOnce(makeFeedResponse([makeFeedItem()], { total: 5 }))
-    const { result } = renderHook(() => useInfiniteFeed({}), { wrapper: createWrapper() })
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.hasNextPage).toBe(true)
+    expect(apiGet).toHaveBeenCalledTimes(1)
+    expect(apiGet).toHaveBeenCalledWith('/feed?limit=500&week=2026-08-03')
+    expect(result.current.data?.items).toHaveLength(1)
   })
 })

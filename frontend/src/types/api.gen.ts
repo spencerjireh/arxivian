@@ -103,6 +103,9 @@ export interface paths {
      * Get Feed
      * @description One page of ranked paper cards for a digest week (default: the newest week that has papers).
      *
+     *     The cap of 500 lets the timeline client load a whole week in one request; the service
+     *     already enriches the full ranking and slices at the end, so the cap only sizes the payload.
+     *
      *     Public: an anonymous caller gets the global digest under the default weights with no
      *     lifecycle state and no compute-profile match.
      */
@@ -798,10 +801,20 @@ export interface components {
      */
     FeedItem: {
       /**
+       * Code Released
+       * @description Whether the authors released code; None when the attribute is missing. The card renders only a true value, never a negative claim
+       */
+      code_released: boolean | null
+      /**
        * Compute Match
        * @description None when the caller has no compute profile (or is anonymous)
        */
       compute_match: boolean | null
+      /**
+       * Compute Tier
+       * @description resource_feasibility level, 0 cluster scale .. 4 laptop or CPU; None when unscored or the dimension soft-failed
+       */
+      compute_tier: number | null
       /**
        * Headline
        * @description '<Model family> for <task type>' from the stored attributes
@@ -833,6 +846,8 @@ export interface components {
      * @description Paper identity as shown on a card.
      */
     FeedPaper: {
+      /** Abstract */
+      abstract: string
       /** Arxiv Id */
       arxiv_id: string
       /** Authors */
@@ -1086,7 +1101,8 @@ export interface components {
     }
     /**
      * PaperMetadata
-     * @description FeedPaper plus the abstract: the detail header and the 202 body.
+     * @description The detail header and the 202 body; the same shape as FeedPaper since the abstract
+     *     moved onto the card (feed timeline).
      */
     PaperMetadata: {
       /** Abstract */

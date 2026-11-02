@@ -14,8 +14,8 @@ export default mergeConfig(
         include: ['src/**/*.{ts,tsx}'],
         exclude: ['src/main.tsx', 'src/vite-env.d.ts', 'src/types/**'],
         reporter: ['text-summary', 'lcov'],
-        // Ratchet: set to the measured value on 2026-09-26; raise, never lower.
-        thresholds: { lines: 78, statements: 77, functions: 73, branches: 71 },
+        // Ratchet: set to the measured value on 2026-11-02; raise, never lower.
+        thresholds: { lines: 80, statements: 79, functions: 75, branches: 73 },
       },
     },
   })

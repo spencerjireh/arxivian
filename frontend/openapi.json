@@ -728,6 +728,18 @@
       "FeedItem": {
         "description": "One card. The feed only emits scored papers; the library also carries papers whose\nscore is missing (rubric bump, ops delete), so the score-derived fields are optional.",
         "properties": {
+          "code_released": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether the authors released code; None when the attribute is missing. The card renders only a true value, never a negative claim",
+            "title": "Code Released"
+          },
           "compute_match": {
             "anyOf": [
               {
@@ -739,6 +751,18 @@
             ],
             "description": "None when the caller has no compute profile (or is anonymous)",
             "title": "Compute Match"
+          },
+          "compute_tier": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "resource_feasibility level, 0 cluster scale .. 4 laptop or CPU; None when unscored or the dimension soft-failed",
+            "title": "Compute Tier"
           },
           "headline": {
             "anyOf": [
@@ -821,6 +845,8 @@
           "meta",
           "compute_match",
           "low_confidence",
+          "compute_tier",
+          "code_released",
           "keyword_match",
           "state",
           "scored_at"
@@ -831,6 +857,10 @@
       "FeedPaper": {
         "description": "Paper identity as shown on a card.",
         "properties": {
+          "abstract": {
+            "title": "Abstract",
+            "type": "string"
+          },
           "arxiv_id": {
             "title": "Arxiv Id",
             "type": "string"
@@ -867,6 +897,7 @@
           "arxiv_id",
           "title",
           "authors",
+          "abstract",
           "categories",
           "published_date",
           "pdf_url"
@@ -1453,7 +1484,7 @@
         "type": "object"
       },
       "PaperMetadata": {
-        "description": "FeedPaper plus the abstract: the detail header and the 202 body.",
+        "description": "The detail header and the 202 body; the same shape as FeedPaper since the abstract\nmoved onto the card (feed timeline).",
         "properties": {
           "abstract": {
             "title": "Abstract",
@@ -1495,10 +1526,10 @@
           "arxiv_id",
           "title",
           "authors",
+          "abstract",
           "categories",
           "published_date",
-          "pdf_url",
-          "abstract"
+          "pdf_url"
         ],
         "title": "PaperMetadata",
         "type": "object"
@@ -2368,7 +2399,7 @@
     },
     "/api/v1/feed": {
       "get": {
-        "description": "One page of ranked paper cards for a digest week (default: the newest week that has papers).\n\nPublic: an anonymous caller gets the global digest under the default weights with no\nlifecycle state and no compute-profile match.",
+        "description": "One page of ranked paper cards for a digest week (default: the newest week that has papers).\n\nThe cap of 500 lets the timeline client load a whole week in one request; the service\nalready enriches the full ranking and slices at the end, so the cap only sizes the payload.\n\nPublic: an anonymous caller gets the global digest under the default weights with no\nlifecycle state and no compute-profile match.",
         "operationId": "get_feed_api_v1_feed_get",
         "parameters": [
           {
@@ -2458,7 +2489,7 @@
             "required": false,
             "schema": {
               "default": 20,
-              "maximum": 100,
+              "maximum": 500,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"

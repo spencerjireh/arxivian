@@ -45,7 +45,26 @@ def _paper(arxiv_id, categories=("cs.LG",), title="T", abstract="A"):
     )
 
 
-def _score(paper, *, method=80, feasibility=80, feas_level=3):
+def _score(paper, *, method=80, feasibility=80, feas_level=3, code=None):
+    attributes = {
+        "model_family": {
+            "key": "model_family",
+            "kind": "choice",
+            "answer": "transformer",
+            "probabilities": {"transformer": 0.9},
+            "confidence": 0.9,
+            "legend": None,
+        }
+    }
+    if code is not None:
+        attributes["code_released"] = {
+            "key": "code_released",
+            "kind": "noul",
+            "answer": code,
+            "probabilities": {"yes": 0.9, "no": 0.1},
+            "confidence": 0.9,
+            "legend": None,
+        }
     return SimpleNamespace(
         paper_id=paper.id,
         method_clarity_score=method,
@@ -56,16 +75,7 @@ def _score(paper, *, method=80, feasibility=80, feas_level=3):
             "resource_feasibility": _dim("resource_feasibility", feas_level, 4),
             "data_availability": _dim("data_availability", 1, 1),
         },
-        attributes={
-            "model_family": {
-                "key": "model_family",
-                "kind": "choice",
-                "answer": "transformer",
-                "probabilities": {"transformer": 0.9},
-                "confidence": 0.9,
-                "legend": None,
-            }
-        },
+        attributes=attributes,
         updated_at=datetime(2026, 8, 4, tzinfo=UTC),
     )
 
@@ -320,7 +330,27 @@ class TestGetFeed:
         card = out.items[0]
         assert card.state is None and card.compute_match is None
         assert card.keyword_match is False
+        assert card.paper.abstract == "A"
         assert card.headline == "Transformer" and card.meta == ["one consumer GPU"]
+
+    async def test_card_carries_compute_tier_and_code_released(self):
+        a, b, c = _paper("a"), _paper("b"), _paper("c")
+        svc = _service(
+            weeks=[(WEEK, 3)],
+            digest=_digest([_entry(a), _entry(b), _entry(c)]),
+            papers=[a, b, c],
+            scores=[
+                _score(a, feas_level=4, code=True),
+                _score(b, feas_level=1, code=False),
+                _score(c, feas_level=2),
+            ],
+            states=[],
+        )
+        out = await svc.get_feed(None)
+        by_id = {i.paper.arxiv_id: i for i in out.items}
+        assert (by_id["a"].compute_tier, by_id["a"].code_released) == (4, True)
+        assert (by_id["b"].compute_tier, by_id["b"].code_released) == (1, False)
+        assert (by_id["c"].compute_tier, by_id["c"].code_released) == (2, None)
 
 
 @pytest.mark.unit
@@ -354,6 +384,7 @@ class TestGetLibrary:
         card = out.implementing[0]
         assert card.scores is None and card.headline is None and card.meta == []
         assert card.compute_match is None
+        assert card.compute_tier is None and card.code_released is None
         assert card.scored_at is None and card.low_confidence == []
         assert card.keyword_match is True
         assert card.state.state == "implementing"

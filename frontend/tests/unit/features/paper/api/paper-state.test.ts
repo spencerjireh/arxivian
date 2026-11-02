@@ -1,5 +1,5 @@
 import { renderHook, waitFor, act } from '@testing-library/react'
-import { QueryClient, QueryClientProvider, type InfiniteData } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
 import { feedKeys, libraryKeys, scoreKeys } from '@/lib/query-keys'
 import { applyStateToCaches, useSetPaperState } from '@/features/paper/api/paper-state'
@@ -17,19 +17,20 @@ vi.mock('@/lib/notifications', () => ({
   notify: { success: vi.fn(), error: vi.fn(), undoable: vi.fn() },
 }))
 
-type FeedData = InfiniteData<FeedResponse>
-
 function seed(queryClient: QueryClient) {
   const items = [
     makeFeedItem({ paper: { ...makeFeedItem().paper, arxiv_id: 'a' } }),
     makeFeedItem({ paper: { ...makeFeedItem().paper, arxiv_id: 'b' } }),
   ]
-  const page = makeFeedResponse(items)
-  queryClient.setQueryData<FeedData>(feedKeys.list({}), { pages: [page], pageParams: [0] })
-  queryClient.setQueryData<FeedData>(feedKeys.list({ include_dismissed: true }), {
-    pages: [page],
-    pageParams: [0],
-  })
+  queryClient.setQueryData<FeedResponse>(feedKeys.list({}), makeFeedResponse(items))
+  queryClient.setQueryData<FeedResponse>(
+    feedKeys.list({ include_dismissed: true }),
+    makeFeedResponse(items)
+  )
+  queryClient.setQueryData<FeedResponse>(
+    feedKeys.list({ week: '2026-07-27' }),
+    makeFeedResponse([makeFeedItem({ paper: { ...makeFeedItem().paper, arxiv_id: 'z' } })])
+  )
 }
 
 function setup() {
@@ -42,6 +43,10 @@ function setup() {
   return { queryClient, wrapper }
 }
 
+function stateOf(state: PaperState['state']): PaperState {
+  return { state, repo_url: null, dismissal_reason: null, updated_at: 'x' }
+}
+
 describe('applyStateToCaches', () => {
   it('removes a dismissed card from caches that hide dismissed and keeps it elsewhere', () => {
     const { queryClient } = setup()
@@ -52,14 +57,16 @@ describe('applyStateToCaches', () => {
       updated_at: 'x',
     })
 
-    const hidden = queryClient.getQueryData<FeedData>(feedKeys.list({}))!
-    expect(hidden.pages[0].items.map((i) => i.paper.arxiv_id)).toEqual(['b'])
-    expect(hidden.pages[0].total).toBe(1)
+    const hidden = queryClient.getQueryData<FeedResponse>(feedKeys.list({}))!
+    expect(hidden.items.map((i) => i.paper.arxiv_id)).toEqual(['b'])
+    expect(hidden.total).toBe(1)
 
-    const shown = queryClient.getQueryData<FeedData>(feedKeys.list({ include_dismissed: true }))!
-    expect(shown.pages[0].items.map((i) => i.paper.arxiv_id)).toEqual(['a', 'b'])
-    expect(shown.pages[0].items[0].state?.state).toBe('dismissed')
-    expect(shown.pages[0].total).toBe(2)
+    const shown = queryClient.getQueryData<FeedResponse>(
+      feedKeys.list({ include_dismissed: true })
+    )!
+    expect(shown.items.map((i) => i.paper.arxiv_id)).toEqual(['a', 'b'])
+    expect(shown.items[0].state?.state).toBe('dismissed')
+    expect(shown.total).toBe(2)
   })
 
   it('patches state in place for save', () => {
@@ -70,15 +77,19 @@ describe('applyStateToCaches', () => {
       dismissal_reason: null,
       updated_at: 'x',
     })
-    const data = queryClient.getQueryData<FeedData>(feedKeys.list({}))!
-    expect(data.pages[0].items[1].state?.state).toBe('saved')
-    expect(data.pages[0].items[0].state).toBeNull()
+    const data = queryClient.getQueryData<FeedResponse>(feedKeys.list({}))!
+    expect(data.items[1].state?.state).toBe('saved')
+    expect(data.items[0].state).toBeNull()
+  })
+
+  it('leaves a cached week that does not hold the paper untouched', () => {
+    const { queryClient } = setup()
+    const otherKey = feedKeys.list({ week: '2026-07-27' })
+    const before = queryClient.getQueryData<FeedResponse>(otherKey)
+    applyStateToCaches(queryClient, 'a', stateOf('dismissed'))
+    expect(queryClient.getQueryData<FeedResponse>(otherKey)).toBe(before)
   })
 })
-
-function stateOf(state: PaperState['state']): PaperState {
-  return { state, repo_url: null, dismissal_reason: null, updated_at: 'x' }
-}
 
 describe('applyStateToCaches (library)', () => {
   function seedLibrary(queryClient: QueryClient) {
@@ -177,14 +188,14 @@ describe('useSetPaperState', () => {
       result.current.mutate({ arxivId: 'a', body: { state: 'dismissed' } })
     })
     await waitFor(() => {
-      const data = queryClient.getQueryData<FeedData>(feedKeys.list({}))!
-      expect(data.pages[0].items.map((i) => i.paper.arxiv_id)).toEqual(['b'])
+      const data = queryClient.getQueryData<FeedResponse>(feedKeys.list({}))!
+      expect(data.items.map((i) => i.paper.arxiv_id)).toEqual(['b'])
     })
 
     act(() => reject(new Error('boom')))
     await waitFor(() => expect(result.current.isError).toBe(true))
-    const restored = queryClient.getQueryData<FeedData>(feedKeys.list({}))!
-    expect(restored.pages[0].items.map((i) => i.paper.arxiv_id)).toEqual(['a', 'b'])
+    const restored = queryClient.getQueryData<FeedResponse>(feedKeys.list({}))!
+    expect(restored.items.map((i) => i.paper.arxiv_id)).toEqual(['a', 'b'])
   })
 
   it('calls PUT with the body', async () => {

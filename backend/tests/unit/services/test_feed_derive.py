@@ -9,6 +9,7 @@ from src.services.feed_service.derive import (
     build_headline,
     build_meta,
     build_scores,
+    code_released,
     compute_match,
     low_confidence_dimensions,
     parse_dimensions,
@@ -156,6 +157,21 @@ class TestMeta:
 
     def test_empty(self):
         assert build_meta({}, None) == []
+
+
+@pytest.mark.unit
+class TestCodeReleased:
+    def test_yes(self):
+        assert code_released(_attrs(code=0.9)) is True
+
+    def test_no_is_false_not_omitted(self):
+        assert code_released(_attrs(code=0.1)) is False
+
+    def test_missing_or_malformed_is_none(self):
+        assert code_released(None) is None
+        assert code_released({}) is None
+        assert code_released({"code_released": {"bogus": 1}}) is None
+        assert code_released({"code_released": "yes"}) is None
 
 
 @pytest.mark.unit

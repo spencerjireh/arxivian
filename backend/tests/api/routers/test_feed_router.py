@@ -27,6 +27,7 @@ def _item():
             arxiv_id="2301.00001",
             title="T",
             authors=["A"],
+            abstract="An abstract.",
             categories=["cs.LG"],
             published_date=datetime(2023, 1, 1, tzinfo=UTC),
             pdf_url="https://arxiv.org/pdf/2301.00001.pdf",
@@ -35,11 +36,12 @@ def _item():
             method_clarity=80,
             resource_feasibility=80,
             data_availability=100,
-            demand=85,
             composite=81.5,
         ),
         headline="Transformer for machine translation",
         meta=["one consumer GPU", "public data", "pseudocode given"],
+        compute_tier=3,
+        code_released=True,
         scored_at=datetime(2026, 8, 4, tzinfo=UTC),
     )
 
@@ -94,10 +96,20 @@ class TestGetFeed:
         )
 
     @pytest.mark.parametrize(
-        "query", ["limit=0", "limit=101", "min_score=101", "offset=-1", "week=foo"]
+        "query", ["limit=0", "limit=501", "min_score=101", "offset=-1", "week=foo"]
     )
     def test_rejects_bad_query(self, client, query):
         assert client.get(f"/api/v1/feed?{query}").status_code == 422
+
+    def test_accepts_a_whole_week_limit(self, client, mock_feed_service):
+        """The timeline client loads a digest week in one request (cap 500)."""
+        mock_feed_service.get_feed.return_value = _response([_item()])
+        resp = client.get("/api/v1/feed?limit=500")
+        assert resp.status_code == 200
+        assert mock_feed_service.get_feed.await_args.kwargs["limit"] == 500
+        item = resp.json()["items"][0]
+        assert item["paper"]["abstract"] == "An abstract."
+        assert item["compute_tier"] == 3 and item["code_released"] is True
 
     def test_future_week_is_400(self, client, mock_feed_service):
         resp = client.get("/api/v1/feed?week=2999-01-01")

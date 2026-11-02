@@ -1,12 +1,6 @@
 // Per-user paper lifecycle state: PUT / DELETE /papers/{id}/state with optimistic cache updates.
 
-import {
-  useMutation,
-  useQueryClient,
-  type InfiniteData,
-  type QueryClient,
-  type QueryKey,
-} from '@tanstack/react-query'
+import { useMutation, useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query'
 import { apiDelete, apiPut } from '@/lib/api-client'
 import { notify } from '@/lib/notifications'
 import { feedKeys, libraryKeys, scoreKeys } from '@/lib/query-keys'
@@ -20,10 +14,8 @@ import type {
   SetPaperStateBody,
 } from '@/types/api'
 
-type FeedData = InfiniteData<FeedResponse>
-
 interface Snapshot {
-  previousFeeds: [QueryKey, FeedData | undefined][]
+  previousFeeds: [QueryKey, FeedResponse | undefined][]
   previousScore: PaperScoreResult | undefined
   previousLibrary: LibraryResponse | undefined
 }
@@ -57,36 +49,30 @@ function feedParamsOf(key: QueryKey): FeedParams {
 }
 
 /**
- * Apply a new state (or null) to every cached feed page, the score detail and the library.
- * A dismissal removes the card from feed caches that hide dismissed papers (decrementing
- * their totals) and from the library.
+ * Apply a new state (or null) to every cached feed week, the score detail and the library.
+ * A dismissal removes the paper from feed caches that hide dismissed papers (decrementing
+ * their totals) and from the library. A cached week that does not hold the paper is left
+ * untouched.
  */
 export function applyStateToCaches(
   queryClient: QueryClient,
   arxivId: string,
   nextState: PaperState | null
 ): Snapshot {
-  const previousFeeds = queryClient.getQueriesData<FeedData>({ queryKey: feedKeys.lists() })
+  const previousFeeds = queryClient.getQueriesData<FeedResponse>({ queryKey: feedKeys.lists() })
 
   for (const [key, data] of previousFeeds) {
-    if (!data) continue
+    if (!data || !data.items.some((item) => item.paper.arxiv_id === arxivId)) continue
     const hidesDismissed = !feedParamsOf(key).include_dismissed
     const removing = nextState?.state === 'dismissed' && hidesDismissed
-    queryClient.setQueryData<FeedData>(key, {
+    queryClient.setQueryData<FeedResponse>(key, {
       ...data,
-      pages: data.pages.map((page) => {
-        const present = page.items.some((item) => item.paper.arxiv_id === arxivId)
-        if (!present) return page
-        return {
-          ...page,
-          total: removing ? page.total - 1 : page.total,
-          items: removing
-            ? page.items.filter((item) => item.paper.arxiv_id !== arxivId)
-            : page.items.map((item) =>
-                item.paper.arxiv_id === arxivId ? { ...item, state: nextState } : item
-              ),
-        }
-      }),
+      total: removing ? data.total - 1 : data.total,
+      items: removing
+        ? data.items.filter((item) => item.paper.arxiv_id !== arxivId)
+        : data.items.map((item) =>
+            item.paper.arxiv_id === arxivId ? { ...item, state: nextState } : item
+          ),
     })
   }
 

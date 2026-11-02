@@ -101,6 +101,15 @@ def feasibility_level(dims: dict[str, DimensionScore]) -> int | None:
     return dim.level if dim is not None else None
 
 
+def code_released(attributes: dict[str, Any] | None) -> bool | None:
+    """Whether the authors released code: the `code_released` Noul's answer, None when the
+    attribute is missing or unparseable. The same rule `build_meta` applies to its phrase."""
+    fact = attribute(attributes, "code_released")
+    if fact is None:
+        return None
+    return fact.answer is True
+
+
 def compute_match(dims: dict[str, DimensionScore], compute_profile: str | None) -> bool | None:
     """Whether the paper's compute tier fits the user's declared hardware (None = no profile)."""
     if compute_profile is None:
