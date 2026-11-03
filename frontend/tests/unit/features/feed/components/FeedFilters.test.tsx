@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
+import FeedFilters from '@/features/feed/components/FeedFilters'
 import WeekSelector from '@/features/feed/components/WeekSelector'
-import FeedFilterBar from '@/features/feed/components/FeedFilterBar'
+import { EMPTY_VIEW } from '@/features/feed/lib/feedView'
 
 const weeks = [
   { week_start: '2026-07-27', paper_count: 5 },
@@ -39,50 +40,63 @@ describe('WeekSelector', () => {
   })
 })
 
-describe('FeedFilterBar', () => {
-  function mountBar(props: Partial<React.ComponentProps<typeof FeedFilterBar>> = {}) {
+describe('FeedFilters', () => {
+  function mount(props: Partial<React.ComponentProps<typeof FeedFilters>> = {}) {
     const onChange = vi.fn()
+    const onDismissedChange = vi.fn()
+    const onClear = vi.fn()
     render(
-      <FeedFilterBar
+      <FeedFilters
+        view={EMPTY_VIEW}
         categories={['cs.CV', 'cs.LG']}
-        category={undefined}
-        minScore={undefined}
-        includeDismissed={false}
         showDismissed
+        includeDismissed={false}
         onChange={onChange}
+        onDismissedChange={onDismissedChange}
+        onClear={onClear}
+        filterCount={0}
         {...props}
       />
     )
-    return onChange
+    return { onChange, onDismissedChange, onClear }
   }
 
-  it('changes category, min score and dismissed independently', () => {
-    const onChange = mountBar()
-    fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'cs.LG' } })
-    expect(onChange).toHaveBeenLastCalledWith({ category: 'cs.LG' })
-    fireEvent.click(screen.getByRole('button', { name: '70+' }))
-    expect(onChange).toHaveBeenLastCalledWith({ minScore: 70 })
-    fireEvent.click(screen.getByRole('button', { name: 'Any' }))
-    expect(onChange).toHaveBeenLastCalledWith({ minScore: undefined })
+  it('adds and removes a category', () => {
+    const { onChange } = mount({ view: { ...EMPTY_VIEW, categories: ['cs.CV'] } })
+    fireEvent.click(screen.getByLabelText('cs.LG'))
+    expect(onChange).toHaveBeenLastCalledWith({ categories: ['cs.CV', 'cs.LG'] })
+    fireEvent.click(screen.getByLabelText('cs.CV'))
+    expect(onChange).toHaveBeenLastCalledWith({ categories: [] })
+  })
+
+  it('picks a compute tier and goes back to any', () => {
+    const { onChange } = mount({ view: { ...EMPTY_VIEW, tier: 'laptop' } })
+    expect(screen.getByLabelText('Laptop / CPU')).toBeChecked()
+    fireEvent.click(screen.getByLabelText('Consumer GPU'))
+    expect(onChange).toHaveBeenLastCalledWith({ tier: 'consumer' })
+    fireEvent.click(screen.getByLabelText('Any hardware'))
+    expect(onChange).toHaveBeenLastCalledWith({ tier: null })
+  })
+
+  it('toggles code released and show dismissed independently', () => {
+    const { onChange, onDismissedChange } = mount()
+    fireEvent.click(screen.getByLabelText('Code released'))
+    expect(onChange).toHaveBeenLastCalledWith({ code: true })
     fireEvent.click(screen.getByLabelText('Show dismissed'))
-    expect(onChange).toHaveBeenLastCalledWith({ includeDismissed: true })
+    expect(onDismissedChange).toHaveBeenLastCalledWith(true)
+    expect(onChange).toHaveBeenCalledTimes(1)
   })
 
-  it('hides the dismissed toggle for an anonymous reader and ignores it in Clear filters', () => {
-    mountBar({ showDismissed: false, includeDismissed: true })
+  it('hides the dismissed toggle for an anonymous reader', () => {
+    mount({ showDismissed: false })
     expect(screen.queryByLabelText('Show dismissed')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument()
   })
 
-  it('shows Clear filters only when something is set and clears everything', () => {
+  it('shows Clear filters only when something is set', () => {
+    mount()
     expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument()
-    const onChange = mountBar({ category: 'cs.LG', minScore: 40 })
-    expect(screen.getByRole('button', { name: '40+' })).toHaveAttribute('aria-pressed', 'true')
+    const { onClear } = mount({ filterCount: 2 })
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
-    expect(onChange).toHaveBeenLastCalledWith({
-      category: undefined,
-      minScore: undefined,
-      includeDismissed: false,
-    })
+    expect(onClear).toHaveBeenCalledTimes(1)
   })
 })

@@ -3,14 +3,16 @@
 // detail and the library) without importing across features.
 import type { FeedParams } from '../types/api'
 
-/** Drop undefined / empty values so equal filters produce equal query keys. */
+/**
+ * Drop undefined / empty values so equal params produce equal query keys. Only the server
+ * params belong here: the client-side view (sort, search, category, tier, code) runs over
+ * the loaded week, and a key that carried it would refetch per keystroke and leave
+ * paper-state.ts patching stale copies.
+ */
 export function normalizeFeedParams(params: FeedParams): FeedParams {
   const out: FeedParams = {}
   if (params.week) out.week = params.week
-  if (params.category) out.category = params.category
-  if (params.min_score !== undefined) out.min_score = params.min_score
   if (params.include_dismissed) out.include_dismissed = true
-  if (params.limit !== undefined) out.limit = params.limit
   return out
 }
 

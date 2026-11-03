@@ -1,5 +1,4 @@
 import { bandWord, dimensionFacts, isLowConfidence } from '@/lib/scoring'
-import { feedParamsFromSearch, formatWeek } from '@/features/feed/lib/feedParams'
 import { matchesNav, returnPathFrom } from '@/lib/nav'
 import { makeDimension } from '../../fixtures/scores'
 
@@ -57,27 +56,6 @@ describe('scoring helpers', () => {
   it('low confidence below 0.5', () => {
     expect(isLowConfidence(0.49)).toBe(true)
     expect(isLowConfidence(0.5)).toBe(false)
-  })
-})
-
-describe('feedParamsFromSearch', () => {
-  it('reads valid params and ignores invalid ones', () => {
-    const params = feedParamsFromSearch(
-      new URLSearchParams('week=2026-08-03&category=cs.LG&min_score=40&dismissed=1')
-    )
-    expect(params).toEqual({
-      week: '2026-08-03',
-      category: 'cs.LG',
-      min_score: 40,
-      include_dismissed: true,
-    })
-    expect(feedParamsFromSearch(new URLSearchParams('week=foo&min_score=101&dismissed=0'))).toEqual(
-      {}
-    )
-  })
-
-  it('formats the week without timezone drift', () => {
-    expect(formatWeek('2026-08-03')).toBe('Aug 3')
   })
 })
 

@@ -70,11 +70,15 @@ describe('LibraryPage', () => {
     renderWithProviders(<LibraryPage />)
 
     expect(screen.getByText('3 papers')).toBeInTheDocument()
-    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
+    const headings = screen
+      .getAllByRole('heading', { level: 2, name: /^(Saved|Implementing|Shipped)$/ })
+      .map((h) => h.textContent)
     expect(headings).toEqual(['Saved', 'Shipped'])
 
     const saved = screen.getByRole('region', { name: 'Saved' })
     expect(within(saved).getByText('2')).toBeInTheDocument()
+    // Library posts open expanded so the lifecycle actions are visible without a click.
+    expect(within(saved).getAllByRole('button', { name: 'Collapse' })).toHaveLength(2)
     expect(within(saved).getByRole('link', { name: 'Saved one' })).toBeInTheDocument()
 
     const shipped = screen.getByRole('region', { name: 'Shipped' })

@@ -19,14 +19,15 @@ src/main.tsx                 Vite entry: createRoot, maintenance switch, <AppPro
 src/app/provider.tsx         Clerk + QueryClient (global mutation error toast) + ErrorBoundary + Toaster
 src/app/router.tsx           the only router (AuthSession > Layout > lazy routes; ProtectedRoute on account routes)
 src/app/routes/              one file per route
-src/features/feed/           GET /feed: api/get-feed.ts, FeedList/FeedCard/FeedFilterBar/WeekSelector/OnboardingPrompt, lib/feedParams.ts
+src/features/feed/           GET /feed: api/get-feed.ts (one request per week), FeedList/FeedPost/FeedToolbar/FeedFilters/WeekSelector/OnboardingPrompt,
+                             lib/feedParams.ts (server params) and lib/feedView.ts (client-side sort / search / filters)
 src/features/paper/          paper detail + chat: api/{get-paper-score,get-library,get-conversation,stream-chat,paper-state}.ts,
                              components/ (PaperHeader, CardActions, ScoreBreakdown and its parts, ScopedChatPanel, chat/*),
                              hooks/{usePaperLifecycle,useChat,useMessageCache,useAutoScroll}.ts, lib/{errorMapping,scopedPrompts}.ts
 src/features/profile/        onboarding form + settings sections; api/update-feed-profile.ts, lib/arxivCategories.ts
 src/features/auth/           AuthSession, ProtectedRoute, AuthLayout, OAuthButtons, SignInForm, SignUpForm
 src/features/landing/        /about page sections (Hero, FeatureGrid, Credibility, ...), hooks/useInView.ts
-src/components/ui/           primitives: Button, Chip, Input, Spinner, StatusBlock, AnimatedCollapse, ErrorBoundary, PageErrorFallback, Toaster, DimensionMeter, SignInLink
+src/components/ui/           primitives: Button, Chip, Input, Spinner, StatusBlock, AnimatedCollapse, Popover, ErrorBoundary, PageErrorFallback, Toaster, DimensionMeter, SignInLink
 src/components/layout/       Layout, TopNav, UserMenu, Footer, MaintenanceScreen
 src/lib/api-client.ts        fetch wrapper (one request() behind the four verbs); API base is /api (nginx rewrites to /api/v1)
 src/lib/auth.ts              the Clerk wrapper: useSession() (isSignedIn, me, user, signOut) and the me query (GET /users/me)
@@ -73,10 +74,32 @@ Sign-in returns to `location.state.from` (`lib/nav.ts::returnPathFrom`, same-ori
 only) through `OAuthButtons`' `redirectUrlComplete`; every sign-in prompt is
 `components/ui/SignInLink.tsx`.
 
-Cards (`features/feed/components/FeedCard.tsx`) show the API's `headline` and `meta`
-phrases (plus a "Fits your compute" chip on `compute_match`) and a `DimensionMeter` over the
-four 0-100 sub-scores (a null sub-score is a hollow "not available" segment); no composite
-number, band word or confidence icon on a card. Actions are Save and Dismiss;
+The feed is a timeline: `app/routes/FeedPage.tsx` loads the whole digest week in one
+request (`features/feed/api/get-feed.ts::useFeedWeek`, `limit=500`, the router's cap) and
+everything else runs in the browser. The query key carries only the server params (`week`,
+`include_dismissed`; `lib/query-keys.ts::normalizeFeedParams`); the view (`sort=newest`,
+`q`, repeated `category`, `tier` laptop / consumer / datacenter as "runs on at most",
+`code=1`) is parsed, written and applied by the pure `features/feed/lib/feedView.ts`
+(`feedViewFromSearch`, `writeFeedView`, `applyView`), so a filter change never refetches.
+`FeedToolbar` is the sticky bar under the top nav: Ranked / Newest, the search box (filters
+as you type; the URL write is debounced 150 ms, and a URL change from Back or a pasted link
+wins over the draft), `WeekSelector`, and a `Popover` holding `FeedFilters`. The header count
+reads "37 of 240 papers" when the view narrows the week; the list is keyed by the view so a
+view change remounts it and only a dismissal animates out; a "Week of ..." link under the
+list loads the previous week in place and scrolls to top. `min_score` is no longer exposed
+in the UI.
+
+A post (`features/feed/components/FeedPost.tsx`, shared with Library) shows the first
+category and date, the title, the abstract clamped to two lines, chips that only ever make
+positive claims (the compute tier from `compute_tier` through `LEVEL_LABELS`, "Code" on
+`code_released === true`, "Fits your compute" on `compute_match`, "Keyword match"), and a
+`DimensionMeter` over Method and Compute only (the data gate is always full on the feed; a
+null sub-score is a hollow "not available" segment; a dimension in `low_confidence` gets a
+hatched fill with "(low confidence)" in its name). No composite number or band word on a
+post. The chevron (`aria-expanded`, `aria-controls`) is the keyboard control and a click on
+the body toggles too; expanded, the post shows the whole abstract, the authors, the actions
+and the PDF / arXiv links. Library passes `defaultExpanded` so its actions are visible
+without a click. Actions are Save and Dismiss;
 `features/paper/components/CardActions.tsx` owns them through
 `hooks/usePaperLifecycle(arxivId, state)` (save toggles saved / cleared, implementing
 toggles implementing / saved, ship takes the repo URL, dismiss is one click with an Undo

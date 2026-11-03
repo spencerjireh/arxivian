@@ -14,9 +14,8 @@ export function makePaperMetadata(overrides: Partial<PaperMetadata> = {}): Paper
 }
 
 export function makeFeedItem(overrides: Partial<FeedItem> = {}): FeedItem {
-  const { arxiv_id, title, authors, categories, published_date, pdf_url } = makePaperMetadata()
   return {
-    paper: { arxiv_id, title, authors, categories, published_date, pdf_url },
+    paper: makePaperMetadata(),
     scores: {
       method_clarity: 80,
       resource_feasibility: 50,
@@ -27,6 +26,8 @@ export function makeFeedItem(overrides: Partial<FeedItem> = {}): FeedItem {
     meta: ['one datacenter GPU', 'public data', 'pseudocode given'],
     compute_match: null,
     low_confidence: [],
+    compute_tier: 2,
+    code_released: null,
     keyword_match: false,
     state: null,
     scored_at: '2026-08-04T00:00:00Z',
@@ -44,7 +45,7 @@ export function makeFeedResponse(
     categories_available: ['cs.AI', 'cs.CL', 'cs.LG'],
     total: items.length,
     offset: 0,
-    limit: 20,
+    limit: 500,
     items,
     ...overrides,
   }

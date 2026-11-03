@@ -60,7 +60,7 @@ export type FeedPaper = Schemas['FeedPaper']
 export type ScoreDimension = Schemas['DimensionDetail']['dimension']
 type FeedScores = Schemas['FeedScores']
 
-/** The four derived sub-scores a card meter draws; null is "not available", never low. */
+/** The three derived sub-scores a meter can draw; null is "not available", never low. */
 export type DimensionScores = Pick<FeedScores, ScoreDimension>
 
 export type FeedItem = Schemas['FeedItem']
@@ -69,13 +69,14 @@ export type LibraryGroup = keyof LibraryResponse
 export type AvailableWeek = Schemas['AvailableWeek']
 export type FeedResponse = Schemas['FeedResponse']
 
-/** GET /feed query parameters as the client builds them (client only). */
+/**
+ * GET /feed query parameters the client sends (client only). The feed loads a whole digest
+ * week in one request; sort, search and the other filters are applied in the browser
+ * (features/feed/lib/feedView.ts) and never reach the server.
+ */
 export interface FeedParams {
   week?: string
-  category?: string
-  min_score?: number
   include_dismissed?: boolean
-  limit?: number
 }
 
 // Paper score detail (backend schemas/papers.py)

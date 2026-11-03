@@ -24,6 +24,7 @@ class FeedPaper(ResponseModel):
     arxiv_id: str
     title: str
     authors: list[str]
+    abstract: str
     categories: list[str]
     published_date: datetime
     pdf_url: str
@@ -57,6 +58,16 @@ class FeedItem(ResponseModel):
     )
     low_confidence: list[ScoreDimension] = Field(
         default_factory=list, description="Dimensions whose confidence is below the threshold"
+    )
+    compute_tier: int | None = Field(
+        default=None,
+        description="resource_feasibility level, 0 cluster scale .. 4 laptop or CPU; None when "
+        "unscored or the dimension soft-failed",
+    )
+    code_released: bool | None = Field(
+        default=None,
+        description="Whether the authors released code; None when the attribute is missing. "
+        "The card renders only a true value, never a negative claim",
     )
     keyword_match: bool = False
     state: UserPaperStateResponse | None = None
