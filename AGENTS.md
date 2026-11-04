@@ -135,7 +135,9 @@ in Plane (the rubric is the source of truth).
 `compute_composite`) is written by the nightly `build_digest_task` and read by
 `FeedService`; `derive.py` turns a `PaperScore` row into card fields in pure code (read-time
 composite with NULL renormalization, compute-profile match, `headline` "<family> for
-<task>" and the truthy-only `meta` phrases from the Jev judgments, low-confidence marker);
+<task>" and the truthy-only `meta` phrases from the Jev judgments, low-confidence marker,
+plus the structured `compute_tier` level and `code_released` flag the timeline chips and
+filters read, and the paper's `abstract` since the post shows it);
 `service.py` batch-loads the live rows for a digest week, and with no `week` parameter
 defaults to the newest week that **has papers**, not simply the newest week built
 (`_newest_populated`): `build_digest_task` upserts a row even when nothing qualified, so a
@@ -144,7 +146,8 @@ week of 2026-09-28 (ARX-71). Empty weeks stay in `available_weeks` and an explic
 still reaches them. `GET /feed` and `GET
 /papers/{arxiv_id}/score` are public (`CurrentUserOptional`: no header -> anonymous,
 default weights, no state, no profile match; a bad token is still 401). Routers: `feed`
-(`GET /feed`), `paper_states` (`PUT`/`DELETE /papers/{arxiv_id}/state`, `GET
+(`GET /feed`; `limit` goes up to 500 so the timeline loads a whole week in one request),
+`paper_states` (`PUT`/`DELETE /papers/{arxiv_id}/state`, `GET
 /users/me/library` grouped saved / implementing / shipped), `papers` (`GET
 /papers/{arxiv_id}/score`: full breakdown with `score_evidence` spans; a version suffix is
 stripped; an unscored paper answers 202 with its metadata, and for a signed-in caller

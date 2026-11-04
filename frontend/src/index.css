@@ -257,6 +257,16 @@ input[type='range']::-moz-range-thumb {
   animation-delay: calc(var(--stagger-index, 0) * 50ms);
 }
 
+/* DimensionMeter: hatched fill for a low-confidence sub-score (a class, not an inline
+   gradient, so tests can assert it: jsdom drops gradient style values). */
+.meter-hatched {
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--color-stone-800) 0 2px,
+    transparent 2px 4px
+  );
+}
+
 /* Chevron rotation for expand/collapse toggles */
 .chevron-rotate {
   transition: transform 0.15s ease-out;

@@ -49,9 +49,8 @@ class PaperAttributesDetail(ResponseModel):
 
 
 class PaperMetadata(FeedPaper):
-    """FeedPaper plus the abstract: the detail header and the 202 body."""
-
-    abstract: str
+    """The detail header and the 202 body; the same shape as FeedPaper since the abstract
+    moved onto the card (feed timeline)."""
 
 
 class PaperScoreDetailResponse(ResponseModel):

@@ -64,7 +64,7 @@ export default function LibraryPage() {
                   </h2>
                   <Chip>{library[g.key].length}</Chip>
                 </div>
-                <FeedList items={library[g.key]} signedIn offerImplementing />
+                <FeedList items={library[g.key]} signedIn offerImplementing defaultExpanded />
               </section>
             ))}
           </div>
