@@ -152,6 +152,12 @@ describe('FeedPage', () => {
     expect(screen.getByRole('button', { name: 'Filters 2' })).toBeInTheDocument()
   })
 
+  it('admits when the week beat the request cap', () => {
+    mockUseFeedWeek.mockReturnValue(week([makeFeedItem(), second], { total: 576 }))
+    renderPage()
+    expect(screen.getByText('top 2 of 576 papers')).toBeInTheDocument()
+  })
+
   it('searches the loaded week from the URL and shows the narrowed count', () => {
     mockUseFeedWeek.mockReturnValue(week([makeFeedItem(), second]))
     renderPage('/?q=sparse')

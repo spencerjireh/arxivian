@@ -63,8 +63,13 @@ export default function FeedPage() {
     return () => clearTimeout(timer)
   }, [query, view.q, setSearchParams])
 
-  // `items.length` is the week: the request asks for the router's cap, which no week reaches.
+  // `items.length` is the week unless it beat the router's cap (576 papers on 2026-10-26
+  // after a triage re-run), in which case `total` says so and the header admits it.
   const loaded = data?.items ?? EMPTY_ITEMS
+  const truncated = data !== undefined && data.total > loaded.length
+  const weekCount = truncated
+    ? `top ${loaded.length} of ${paperCount(data.total)}`
+    : paperCount(loaded.length)
   const liveView = useMemo(() => ({ ...view, q: query }), [view, query])
   const shown = useMemo(() => applyView(loaded, liveView), [loaded, liveView])
   const filterCount = countViewFilters(view) + (params.include_dismissed ? 1 : 0)
@@ -156,7 +161,7 @@ export default function FeedPage() {
           {data && (
             <span className="font-mono text-sm text-stone-400">
               {shown.length === loaded.length
-                ? paperCount(loaded.length)
+                ? weekCount
                 : `${shown.length} of ${paperCount(loaded.length)}`}
             </span>
           )}

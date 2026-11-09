@@ -82,7 +82,12 @@ export default function FeedToolbar({
           placeholder="Search this week"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          className={clsx(selectClass, 'order-4 w-full sm:order-2 sm:ml-auto sm:w-44')}
+          className={clsx(
+            selectClass,
+            // From `sm` up the search gives way first: a long week label or the Filters
+            // badge must not push the bar onto a second row.
+            'order-4 w-full sm:order-2 sm:ml-auto sm:w-auto sm:max-w-44 sm:min-w-28 sm:flex-1 sm:basis-28'
+          )}
         />
 
         <div className="order-3 w-full sm:w-auto">

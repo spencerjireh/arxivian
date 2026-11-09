@@ -45,7 +45,7 @@ export function makeFeedResponse(
     categories_available: ['cs.AI', 'cs.CL', 'cs.LG'],
     total: items.length,
     offset: 0,
-    limit: 500,
+    limit: 1000,
     items,
     ...overrides,
   }
