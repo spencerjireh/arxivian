@@ -6,8 +6,8 @@ import { apiGet } from '@/lib/api-client'
 import { feedKeys, normalizeFeedParams } from '@/lib/query-keys'
 import type { FeedParams, FeedResponse } from '@/types/api'
 
-/** The router's cap; a digest week has a few hundred papers at most, so one page is the week. */
-const FEED_WEEK_LIMIT = 500
+/** The router's cap; the largest week so far held 576 papers (2026-10-26), so one page is the week. */
+const FEED_WEEK_LIMIT = 1000
 
 export function buildFeedQuery(params: FeedParams): string {
   const p = normalizeFeedParams(params)

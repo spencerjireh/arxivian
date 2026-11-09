@@ -2399,7 +2399,7 @@
     },
     "/api/v1/feed": {
       "get": {
-        "description": "One page of ranked paper cards for a digest week (default: the newest week that has papers).\n\nThe cap of 500 lets the timeline client load a whole week in one request; the service\nalready enriches the full ranking and slices at the end, so the cap only sizes the payload.\n\nPublic: an anonymous caller gets the global digest under the default weights with no\nlifecycle state and no compute-profile match.",
+        "description": "One page of ranked paper cards for a digest week (default: the newest week that has papers).\n\nThe cap of 1000 lets the timeline client load a whole week in one request; the service\nalready enriches the full ranking and slices at the end, so the cap only sizes the payload.\n\nPublic: an anonymous caller gets the global digest under the default weights with no\nlifecycle state and no compute-profile match.",
         "operationId": "get_feed_api_v1_feed_get",
         "parameters": [
           {
@@ -2489,7 +2489,7 @@
             "required": false,
             "schema": {
               "default": 20,
-              "maximum": 500,
+              "maximum": 1000,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"

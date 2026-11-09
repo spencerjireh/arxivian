@@ -20,11 +20,11 @@ async def get_feed(
     min_score: int | None = Query(None, ge=0, le=100, description="Minimum composite"),
     include_dismissed: bool = Query(False),
     offset: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=500),
+    limit: int = Query(20, ge=1, le=1000),
 ) -> FeedResponse:
     """One page of ranked paper cards for a digest week (default: the newest week that has papers).
 
-    The cap of 500 lets the timeline client load a whole week in one request; the service
+    The cap of 1000 lets the timeline client load a whole week in one request; the service
     already enriches the full ranking and slices at the end, so the cap only sizes the payload.
 
     Public: an anonymous caller gets the global digest under the default weights with no

@@ -96,17 +96,17 @@ class TestGetFeed:
         )
 
     @pytest.mark.parametrize(
-        "query", ["limit=0", "limit=501", "min_score=101", "offset=-1", "week=foo"]
+        "query", ["limit=0", "limit=1001", "min_score=101", "offset=-1", "week=foo"]
     )
     def test_rejects_bad_query(self, client, query):
         assert client.get(f"/api/v1/feed?{query}").status_code == 422
 
     def test_accepts_a_whole_week_limit(self, client, mock_feed_service):
-        """The timeline client loads a digest week in one request (cap 500)."""
+        """The timeline client loads a digest week in one request (cap 1000)."""
         mock_feed_service.get_feed.return_value = _response([_item()])
-        resp = client.get("/api/v1/feed?limit=500")
+        resp = client.get("/api/v1/feed?limit=1000")
         assert resp.status_code == 200
-        assert mock_feed_service.get_feed.await_args.kwargs["limit"] == 500
+        assert mock_feed_service.get_feed.await_args.kwargs["limit"] == 1000
         item = resp.json()["items"][0]
         assert item["paper"]["abstract"] == "An abstract."
         assert item["compute_tier"] == 3 and item["code_released"] is True

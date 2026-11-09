@@ -103,7 +103,7 @@ export interface paths {
      * Get Feed
      * @description One page of ranked paper cards for a digest week (default: the newest week that has papers).
      *
-     *     The cap of 500 lets the timeline client load a whole week in one request; the service
+     *     The cap of 1000 lets the timeline client load a whole week in one request; the service
      *     already enriches the full ranking and slices at the end, so the cap only sizes the payload.
      *
      *     Public: an anonymous caller gets the global digest under the default weights with no

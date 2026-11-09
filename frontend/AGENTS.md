@@ -75,7 +75,7 @@ only) through `OAuthButtons`' `redirectUrlComplete`; every sign-in prompt is
 `components/ui/SignInLink.tsx`.
 
 The feed is a timeline: `app/routes/FeedPage.tsx` loads the whole digest week in one
-request (`features/feed/api/get-feed.ts::useFeedWeek`, `limit=500`, the router's cap) and
+request (`features/feed/api/get-feed.ts::useFeedWeek`, `limit=1000`, the router's cap) and
 everything else runs in the browser. The query key carries only the server params (`week`,
 `include_dismissed`; `lib/query-keys.ts::normalizeFeedParams`); the view (`sort=newest`,
 `q`, repeated `category`, `tier` laptop / consumer / datacenter as "runs on at most",
