@@ -30,9 +30,9 @@ describe('feed api', () => {
   })
 
   it('asks for the whole week in one request', () => {
-    expect(buildFeedQuery({})).toBe('/feed?limit=500')
+    expect(buildFeedQuery({})).toBe('/feed?limit=1000')
     expect(buildFeedQuery({ week: '2026-08-03', include_dismissed: true })).toBe(
-      '/feed?limit=500&week=2026-08-03&include_dismissed=true'
+      '/feed?limit=1000&week=2026-08-03&include_dismissed=true'
     )
   })
 
@@ -43,7 +43,7 @@ describe('feed api', () => {
     })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(apiGet).toHaveBeenCalledTimes(1)
-    expect(apiGet).toHaveBeenCalledWith('/feed?limit=500&week=2026-08-03')
+    expect(apiGet).toHaveBeenCalledWith('/feed?limit=1000&week=2026-08-03')
     expect(result.current.data?.items).toHaveLength(1)
   })
 })

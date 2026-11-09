@@ -146,7 +146,7 @@ week of 2026-09-28 (ARX-71). Empty weeks stay in `available_weeks` and an explic
 still reaches them. `GET /feed` and `GET
 /papers/{arxiv_id}/score` are public (`CurrentUserOptional`: no header -> anonymous,
 default weights, no state, no profile match; a bad token is still 401). Routers: `feed`
-(`GET /feed`; `limit` goes up to 500 so the timeline loads a whole week in one request),
+(`GET /feed`; `limit` goes up to 1000 so the timeline loads a whole week in one request),
 `paper_states` (`PUT`/`DELETE /papers/{arxiv_id}/state`, `GET
 /users/me/library` grouped saved / implementing / shipped), `papers` (`GET
 /papers/{arxiv_id}/score`: full breakdown with `score_evidence` spans; a version suffix is
